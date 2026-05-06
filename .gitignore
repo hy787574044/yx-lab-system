@@ -1,0 +1,6 @@
+yx-lab-frontend/node_modules/
+yx-lab-frontend/dist/
+yx-lab-backend/target/
+yx-lab-backend/uploads/
+.idea/
+.vscode/

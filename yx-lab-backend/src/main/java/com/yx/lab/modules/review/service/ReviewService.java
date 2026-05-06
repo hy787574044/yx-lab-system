@@ -1,0 +1,84 @@
+package com.yx.lab.modules.review.service;
+
+import cn.hutool.core.util.StrUtil;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.yx.lab.common.exception.BusinessException;
+import com.yx.lab.common.model.PageResult;
+import com.yx.lab.common.security.CurrentUser;
+import com.yx.lab.common.security.SecurityContext;
+import com.yx.lab.common.util.PageUtils;
+import com.yx.lab.modules.detection.entity.DetectionRecord;
+import com.yx.lab.modules.detection.mapper.DetectionRecordMapper;
+import com.yx.lab.modules.report.service.ReportService;
+import com.yx.lab.modules.review.dto.ReviewCommand;
+import com.yx.lab.modules.review.dto.ReviewQuery;
+import com.yx.lab.modules.review.entity.ReviewRecord;
+import com.yx.lab.modules.review.mapper.ReviewRecordMapper;
+import com.yx.lab.modules.sample.entity.LabSample;
+import com.yx.lab.modules.sample.mapper.LabSampleMapper;
+import com.yx.lab.modules.sample.service.LabSampleService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+
+@Service
+@RequiredArgsConstructor
+public class ReviewService {
+
+    private final ReviewRecordMapper reviewRecordMapper;
+
+    private final DetectionRecordMapper detectionRecordMapper;
+
+    private final LabSampleMapper labSampleMapper;
+
+    private final LabSampleService labSampleService;
+
+    private final ReportService reportService;
+
+    public PageResult<ReviewRecord> page(ReviewQuery query) {
+        CurrentUser currentUser = SecurityContext.getCurrentUser();
+        Page<ReviewRecord> page = reviewRecordMapper.selectPage(
+                PageUtils.buildPage(query),
+                new LambdaQueryWrapper<ReviewRecord>()
+                        .and(StrUtil.isNotBlank(query.getKeyword()), wrapper -> wrapper.like(ReviewRecord::getSampleNo, query.getKeyword()))
+                        .eq(StrUtil.isNotBlank(query.getReviewResult()), ReviewRecord::getReviewResult, query.getReviewResult())
+                        .eq(Boolean.TRUE.equals(query.getMine()), ReviewRecord::getReviewerId, currentUser.getUserId())
+                        .orderByDesc(ReviewRecord::getReviewTime));
+        return new PageResult<>(page.getTotal(), page.getRecords());
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void review(ReviewCommand command) {
+        DetectionRecord record = detectionRecordMapper.selectById(command.getDetectionRecordId());
+        if (record == null) {
+            throw new BusinessException("检测记录不存在");
+        }
+        LabSample sample = labSampleMapper.selectById(record.getSampleId());
+        CurrentUser currentUser = SecurityContext.getCurrentUser();
+
+        ReviewRecord reviewRecord = new ReviewRecord();
+        reviewRecord.setDetectionRecordId(record.getId());
+        reviewRecord.setSampleId(record.getSampleId());
+        reviewRecord.setSampleNo(record.getSampleNo());
+        reviewRecord.setReviewerId(currentUser.getUserId());
+        reviewRecord.setReviewerName(currentUser.getRealName());
+        reviewRecord.setReviewTime(LocalDateTime.now());
+        reviewRecord.setReviewResult(command.getReviewResult());
+        reviewRecord.setRejectReason(command.getRejectReason());
+        reviewRecord.setReviewRemark(command.getReviewRemark());
+        reviewRecordMapper.insert(reviewRecord);
+
+        record.setDetectionStatus("APPROVED".equals(command.getReviewResult()) ? "APPROVED" : "REJECTED");
+        detectionRecordMapper.updateById(record);
+
+        if ("APPROVED".equals(command.getReviewResult())) {
+            labSampleService.updateStatus(sample.getId(), "APPROVED", "审核通过");
+            reportService.createApprovedReport(sample, record);
+        } else {
+            labSampleService.updateStatus(sample.getId(), "REJECTED", command.getRejectReason());
+        }
+    }
+}

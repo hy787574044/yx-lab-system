@@ -1,0 +1,101 @@
+package com.yx.lab.modules.asset.controller;
+
+import com.yx.lab.common.model.ApiResponse;
+import com.yx.lab.common.model.PageResult;
+import com.yx.lab.modules.asset.dto.DocumentQuery;
+import com.yx.lab.modules.asset.dto.InstrumentQuery;
+import com.yx.lab.modules.asset.dto.MaintenanceQuery;
+import com.yx.lab.modules.asset.entity.Instrument;
+import com.yx.lab.modules.asset.entity.InstrumentMaintenance;
+import com.yx.lab.modules.asset.entity.LabDocument;
+import com.yx.lab.modules.asset.service.AssetService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/api/assets")
+@RequiredArgsConstructor
+public class AssetController {
+
+    private final AssetService assetService;
+
+    @GetMapping("/instruments")
+    public ApiResponse<PageResult<Instrument>> instruments(@Validated InstrumentQuery query) {
+        return ApiResponse.success(assetService.instrumentPage(query));
+    }
+
+    @PostMapping("/instruments")
+    public ApiResponse<Void> saveInstrument(@RequestBody Instrument entity) {
+        assetService.saveInstrument(entity);
+        return ApiResponse.successMessage("新增成功");
+    }
+
+    @PutMapping("/instruments/{id}")
+    public ApiResponse<Void> updateInstrument(@PathVariable Long id, @RequestBody Instrument entity) {
+        entity.setId(id);
+        assetService.updateInstrument(entity);
+        return ApiResponse.successMessage("更新成功");
+    }
+
+    @DeleteMapping("/instruments/{id}")
+    public ApiResponse<Void> deleteInstrument(@PathVariable Long id) {
+        assetService.deleteInstrument(id);
+        return ApiResponse.successMessage("删除成功");
+    }
+
+    @GetMapping("/maintenances")
+    public ApiResponse<PageResult<InstrumentMaintenance>> maintenances(@Validated MaintenanceQuery query) {
+        return ApiResponse.success(assetService.maintenancePage(query));
+    }
+
+    @PostMapping("/maintenances")
+    public ApiResponse<Void> saveMaintenance(@RequestBody InstrumentMaintenance entity) {
+        assetService.saveMaintenance(entity);
+        return ApiResponse.successMessage("新增成功");
+    }
+
+    @PutMapping("/maintenances/{id}")
+    public ApiResponse<Void> updateMaintenance(@PathVariable Long id, @RequestBody InstrumentMaintenance entity) {
+        entity.setId(id);
+        assetService.updateMaintenance(entity);
+        return ApiResponse.successMessage("更新成功");
+    }
+
+    @DeleteMapping("/maintenances/{id}")
+    public ApiResponse<Void> deleteMaintenance(@PathVariable Long id) {
+        assetService.deleteMaintenance(id);
+        return ApiResponse.successMessage("删除成功");
+    }
+
+    @GetMapping("/documents")
+    public ApiResponse<PageResult<LabDocument>> documents(@Validated DocumentQuery query) {
+        return ApiResponse.success(assetService.documentPage(query));
+    }
+
+    @PostMapping("/documents")
+    public ApiResponse<Void> saveDocument(@RequestBody LabDocument entity) {
+        assetService.saveDocument(entity);
+        return ApiResponse.successMessage("新增成功");
+    }
+
+    @PutMapping("/documents/{id}")
+    public ApiResponse<Void> updateDocument(@PathVariable Long id, @RequestBody LabDocument entity) {
+        entity.setId(id);
+        assetService.updateDocument(entity);
+        return ApiResponse.successMessage("更新成功");
+    }
+
+    @DeleteMapping("/documents/{id}")
+    public ApiResponse<Void> deleteDocument(@PathVariable Long id) {
+        assetService.deleteDocument(id);
+        return ApiResponse.successMessage("删除成功");
+    }
+}
