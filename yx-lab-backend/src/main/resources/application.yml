@@ -44,3 +44,17 @@ lab:
     token-expire-hours: 12
   storage:
     upload-dir: ./uploads
+  unified:
+    base-url: http://172.168.1.55:8187
+    api-token:
+    client-id:
+    client-secret:
+    scope:
+    response-type: code
+    timeout: 10000
+    headers:
+      x-ltdno-header:
+      x-tenant-schema:
+      x-tenantid-header:
+      x-userid-header:
+      x-username-header:
