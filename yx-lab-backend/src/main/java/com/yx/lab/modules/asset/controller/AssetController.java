@@ -9,7 +9,12 @@ import com.yx.lab.modules.asset.entity.Instrument;
 import com.yx.lab.modules.asset.entity.InstrumentMaintenance;
 import com.yx.lab.modules.asset.entity.LabDocument;
 import com.yx.lab.modules.asset.service.AssetService;
+import com.yx.lab.modules.asset.vo.InstrumentImportResultVO;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -19,6 +24,11 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.multipart.MultipartFile;
+
+import javax.validation.Valid;
+import java.nio.charset.StandardCharsets;
 
 @RestController
 @RequestMapping("/api/assets")
@@ -32,14 +42,36 @@ public class AssetController {
         return ApiResponse.success(assetService.instrumentPage(query));
     }
 
+    @GetMapping("/instruments/{id}")
+    public ApiResponse<Instrument> instrumentDetail(@PathVariable Long id) {
+        return ApiResponse.success(assetService.instrumentDetail(id));
+    }
+
+    @GetMapping("/instruments/import-template")
+    public ResponseEntity<byte[]> downloadInstrumentImportTemplate() {
+        ContentDisposition contentDisposition = ContentDisposition.attachment()
+                .filename("设备台账导入模板.xlsx", StandardCharsets.UTF_8)
+                .build();
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, contentDisposition.toString())
+                .contentType(MediaType.parseMediaType(
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(assetService.buildInstrumentImportTemplate());
+    }
+
+    @PostMapping("/instruments/import")
+    public ApiResponse<InstrumentImportResultVO> importInstruments(@RequestParam("file") MultipartFile file) {
+        return ApiResponse.success(assetService.importInstruments(file));
+    }
+
     @PostMapping("/instruments")
-    public ApiResponse<Void> saveInstrument(@RequestBody Instrument entity) {
+    public ApiResponse<Void> saveInstrument(@Valid @RequestBody Instrument entity) {
         assetService.saveInstrument(entity);
         return ApiResponse.successMessage("新增成功");
     }
 
     @PutMapping("/instruments/{id}")
-    public ApiResponse<Void> updateInstrument(@PathVariable Long id, @RequestBody Instrument entity) {
+    public ApiResponse<Void> updateInstrument(@PathVariable Long id, @Valid @RequestBody Instrument entity) {
         entity.setId(id);
         assetService.updateInstrument(entity);
         return ApiResponse.successMessage("更新成功");

@@ -1,4 +1,6 @@
+import axios from 'axios'
 import request from './http'
+import { getToken } from '../utils/auth'
 
 export const loginApi = (data) => request.post('/api/auth/login', data)
 export const getMeApi = () => request.get('/api/auth/me')
@@ -29,7 +31,23 @@ export const createTemplateApi = (data) => request.post('/api/reports/templates'
 export const publishReportApi = (id) => request.post(`/api/reports/${id}/publish`)
 
 export const fetchInstrumentsApi = (params) => request.get('/api/assets/instruments', { params })
+export const getInstrumentDetailApi = (id) => request.get(`/api/assets/instruments/${id}`)
+export const downloadInstrumentTemplateApi = () => axios.get('/api/assets/instruments/import-template', {
+  responseType: 'blob',
+  headers: getToken() ? { Authorization: `Bearer ${getToken()}` } : {}
+})
+export const importInstrumentsApi = (file) => {
+  const formData = new FormData()
+  formData.append('file', file)
+  return request.post('/api/assets/instruments/import', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  })
+}
 export const createInstrumentApi = (data) => request.post('/api/assets/instruments', data)
+export const updateInstrumentApi = (id, data) => request.put(`/api/assets/instruments/${id}`, data)
+export const deleteInstrumentApi = (id) => request.delete(`/api/assets/instruments/${id}`)
 export const fetchDocumentsApi = (params) => request.get('/api/assets/documents', { params })
 export const createDocumentApi = (data) => request.post('/api/assets/documents', data)
 

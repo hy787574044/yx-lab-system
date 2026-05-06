@@ -17,3 +17,8 @@
 5. 统计看板与移动端复用接口
 
 详细启动说明见后端与前端目录下 README。
+
+补充说明：
+
+- 后端已新增第三方统一平台鉴权接入模块，包含授权码、Access-Token、用户信息、角色用户、菜单权限等代理接口
+- 详细功能描述、配置项与调用示例见 [yx-lab-backend/README.md](</e:/share/yx-lab-system/yx-lab-backend/README.md>)
