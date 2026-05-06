@@ -1,83 +1,25 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { getToken } from '../utils/auth'
-import { labMenuGroups, legacyRedirects } from './menuConfig'
-
-const componentMap = {
-  DashboardView: () => import('../views/DashboardView.vue'),
-  MonitoringPointView: () => import('../views/MonitoringPointView.vue'),
-  SamplingView: () => import('../views/SamplingView.vue'),
-  DetectionSplitView: () => import('../views/DetectionSplitView.vue'),
-  DetectionAnalysisView: () => import('../views/DetectionAnalysisView.vue'),
-  DetectionView: () => import('../views/DetectionView.vue'),
-  DetectionConfigView: () => import('../views/DetectionConfigView.vue'),
-  DetectionMethodView: () => import('../views/DetectionMethodView.vue'),
-  ReviewView: () => import('../views/ReviewView.vue'),
-  ReportView: () => import('../views/ReportView.vue'),
-  AssetView: () => import('../views/AssetView.vue'),
-  InstrumentMaintenanceView: () => import('../views/InstrumentMaintenanceView.vue'),
-  SystemManagementView: () => import('../views/SystemManagementView.vue'),
-  FlowConfigView: () => import('../views/FlowConfigView.vue'),
-  StatisticsView: () => import('../views/StatisticsView.vue'),
-  FeaturePlaceholderView: () => import('../views/FeaturePlaceholderView.vue')
-}
-
-function buildMenuChildrenRoutes() {
-  return labMenuGroups.flatMap((group) => (
-    group.children.map((item) => ({
-      path: item.path.replace(/^\//, ''),
-      component: componentMap[item.componentKey],
-      meta: {
-        title: item.title,
-        subtitle: item.subtitle,
-        primaryId: group.id,
-        primaryMenu: group.title,
-        primaryShortTitle: group.shortTitle,
-        secondaryMenu: item.title,
-        secondaryShortTitle: item.shortTitle,
-        defaultTab: item.defaultTab,
-        defaultStatKey: item.defaultStatKey,
-        defaultStatLabel: item.defaultStatLabel,
-        placeholderNote: item.placeholderNote
-      }
-    }))
-  ))
-}
 
 const routes = [
   {
     path: '/login',
-    meta: {
-      title: '系统登录',
-      subtitle: '登录阳新化验室水质管理平台'
-    },
     component: () => import('../views/LoginView.vue')
-  },
-  {
-    path: '/mobile/login',
-    meta: {
-      title: '移动端登录',
-      subtitle: '进入移动端采样、检测、审查与报告闭环'
-    },
-    component: () => import('../views/MobileLoginView.vue')
-  },
-  {
-    path: '/mobile',
-    meta: {
-      title: '移动工作台',
-      subtitle: '面向移动终端的一体化化验室业务工作台'
-    },
-    component: () => import('../views/MobileWorkbenchView.vue')
   },
   {
     path: '/',
     component: () => import('../views/layout/AppLayout.vue'),
     redirect: '/dashboard',
-    children: buildMenuChildrenRoutes()
-  },
-  ...legacyRedirects,
-  {
-    path: '/:pathMatch(.*)*',
-    redirect: '/dashboard'
+    children: [
+      { path: 'dashboard', component: () => import('../views/DashboardView.vue') },
+      { path: 'monitoring', component: () => import('../views/MonitoringPointView.vue') },
+      { path: 'samples', component: () => import('../views/SamplingView.vue') },
+      { path: 'detections', component: () => import('../views/DetectionView.vue') },
+      { path: 'reviews', component: () => import('../views/ReviewView.vue') },
+      { path: 'reports', component: () => import('../views/ReportView.vue') },
+      { path: 'assets', component: () => import('../views/AssetView.vue') },
+      { path: 'statistics', component: () => import('../views/StatisticsView.vue') }
+    ]
   }
 ]
 
@@ -87,20 +29,14 @@ const router = createRouter({
 })
 
 router.beforeEach((to, from, next) => {
-  document.title = to.meta?.title
-    ? `${to.meta.title} - 阳新化验室水质管理平台`
-    : '阳新化验室水质管理平台'
-
-  if (to.path === '/login' || to.path === '/mobile/login') {
+  if (to.path === '/login') {
     next()
     return
   }
-
   if (!getToken()) {
-    next(to.path.startsWith('/mobile') ? '/mobile/login' : '/login')
+    next('/login')
     return
   }
-
   next()
 })
 

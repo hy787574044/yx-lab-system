@@ -2,378 +2,100 @@ package com.yx.lab.modules.asset.controller;
 
 import com.yx.lab.common.model.ApiResponse;
 import com.yx.lab.common.model.PageResult;
-import com.yx.lab.common.constant.LabWorkflowConstants;
-import com.yx.lab.common.util.ExcelExportUtil;
 import com.yx.lab.modules.asset.dto.DocumentQuery;
-import com.yx.lab.modules.asset.dto.DocumentSaveCommand;
-import com.yx.lab.modules.asset.dto.InstrumentMaintenanceSaveCommand;
 import com.yx.lab.modules.asset.dto.InstrumentQuery;
-import com.yx.lab.modules.asset.dto.InstrumentSaveCommand;
 import com.yx.lab.modules.asset.dto.MaintenanceQuery;
 import com.yx.lab.modules.asset.entity.Instrument;
 import com.yx.lab.modules.asset.entity.InstrumentMaintenance;
-import com.yx.lab.modules.asset.service.AssetDocumentService;
-import com.yx.lab.modules.asset.service.InstrumentAssetImportService;
-import com.yx.lab.modules.asset.service.InstrumentAssetService;
-import com.yx.lab.modules.asset.vo.DocumentPreviewFile;
-import com.yx.lab.modules.asset.vo.DocumentUserOptionVO;
-import com.yx.lab.modules.asset.vo.InstrumentImportResultVO;
-import com.yx.lab.modules.asset.vo.LabDocumentVO;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
+import com.yx.lab.modules.asset.entity.LabDocument;
+import com.yx.lab.modules.asset.service.AssetService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ContentDisposition;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.multipart.MultipartFile;
 
-import javax.validation.Valid;
-import java.nio.charset.StandardCharsets;
-import java.util.List;
-
-/**
- * 资产与文档控制器。
- * 负责仪器台账、维保记录与化验室文档的查询和维护。
- */
 @RestController
 @RequestMapping("/api/assets")
 @RequiredArgsConstructor
-@Tag(name = "资产与文档管理")
 public class AssetController {
 
-    private final InstrumentAssetService instrumentAssetService;
+    private final AssetService assetService;
 
-    private final InstrumentAssetImportService instrumentAssetImportService;
-
-    private final AssetDocumentService assetDocumentService;
-
-    /**
-     * 分页查询仪器台账。
-     *
-     * @param query 仪器查询条件。
-     * @return 仪器台账分页结果。
-     */
     @GetMapping("/instruments")
-    @Operation(summary = "仪器台账分页")
     public ApiResponse<PageResult<Instrument>> instruments(@Validated InstrumentQuery query) {
-        return ApiResponse.success(instrumentAssetService.instrumentPage(query));
+        return ApiResponse.success(assetService.instrumentPage(query));
     }
 
-    /**
-     * 导出仪器台账。
-     *
-     * @param query 仪器查询条件。
-     * @return Excel 文件流。
-     */
-    @GetMapping("/instruments/export")
-    @Operation(summary = "导出仪器台账")
-    public ResponseEntity<byte[]> exportInstruments(@Validated InstrumentQuery query) {
-        ExcelExportUtil.prepareExportQuery(query);
-        return ExcelExportUtil.buildResponse(
-                "设备台账.xlsx",
-                "设备台账",
-                instrumentAssetService.instrumentPage(query).getRecords(),
-                java.util.Arrays.asList(
-                        ExcelExportUtil.column("设备名称", Instrument::getInstrumentName),
-                        ExcelExportUtil.column("设备型号", Instrument::getInstrumentModel),
-                        ExcelExportUtil.column("生产厂家", Instrument::getManufacturer),
-                        ExcelExportUtil.column("负责人", Instrument::getOwnerName),
-                        ExcelExportUtil.column("存放位置", Instrument::getStorageLocation),
-                        ExcelExportUtil.column("购置日期", Instrument::getPurchaseDate),
-                        ExcelExportUtil.column("使用年限", Instrument::getServiceLifeYears),
-                        ExcelExportUtil.column("校准周期", Instrument::getCalibrationCycle),
-                        ExcelExportUtil.column("设备状态", item -> LabWorkflowConstants.getInstrumentStatusLabel(item.getInstrumentStatus())),
-                        ExcelExportUtil.column("备注", Instrument::getRemark),
-                        ExcelExportUtil.column("更新时间", Instrument::getUpdatedTime)
-                ));
-    }
-
-    /**
-     * 获取仪器台账详情。
-     *
-     * @param id 仪器主键。
-     * @return 仪器详情。
-     */
-    @GetMapping("/instruments/{id}")
-    @Operation(summary = "仪器台账详情")
-    public ApiResponse<Instrument> instrumentDetail(@PathVariable Long id) {
-        return ApiResponse.success(instrumentAssetService.instrumentDetail(id));
-    }
-
-    /**
-     * 下载仪器导入模板。
-     *
-     * @return 模板文件流。
-     */
-    @GetMapping("/instruments/importTemplate")
-    @Operation(summary = "下载仪器导入模板")
-    public ResponseEntity<byte[]> downloadInstrumentImportTemplate() {
-        ContentDisposition contentDisposition = ContentDisposition.attachment()
-                .filename("\u8bbe\u5907\u53f0\u8d26\u5bfc\u5165\u6a21\u677f.xlsx", StandardCharsets.UTF_8)
-                .build();
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, contentDisposition.toString())
-                .contentType(MediaType.parseMediaType(
-                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
-                .body(instrumentAssetImportService.buildInstrumentImportTemplate());
-    }
-
-    /**
-     * 导入仪器台账。
-     *
-     * @param file 导入文件。
-     * @return 导入结果。
-     */
-    @PostMapping("/instruments/import")
-    @Operation(summary = "导入仪器台账")
-    public ApiResponse<InstrumentImportResultVO> importInstruments(@RequestParam("file") MultipartFile file) {
-        return ApiResponse.success(instrumentAssetImportService.importInstruments(file));
-    }
-
-    /**
-     * 新增仪器台账。
-     *
-     * @param command 仪器保存命令。
-     * @return 保存结果。
-     */
     @PostMapping("/instruments")
-    @Operation(summary = "新增仪器台账")
-    public ApiResponse<Void> saveInstrument(@Valid @RequestBody InstrumentSaveCommand command) {
-        instrumentAssetService.saveInstrument(command);
-        return ApiResponse.successMessage("\u65b0\u589e\u6210\u529f");
+    public ApiResponse<Void> saveInstrument(@RequestBody Instrument entity) {
+        assetService.saveInstrument(entity);
+        return ApiResponse.successMessage("新增成功");
     }
 
-    /**
-     * 更新仪器台账。
-     *
-     * @param id 仪器主键。
-     * @param command 仪器保存命令。
-     * @return 更新结果。
-     */
-    @PostMapping("/instruments/{id}")
-    @Operation(summary = "更新仪器台账")
-    public ApiResponse<Void> updateInstrument(@PathVariable Long id, @Valid @RequestBody InstrumentSaveCommand command) {
-        instrumentAssetService.updateInstrument(id, command);
-        return ApiResponse.successMessage("\u66f4\u65b0\u6210\u529f");
+    @PutMapping("/instruments/{id}")
+    public ApiResponse<Void> updateInstrument(@PathVariable Long id, @RequestBody Instrument entity) {
+        entity.setId(id);
+        assetService.updateInstrument(entity);
+        return ApiResponse.successMessage("更新成功");
     }
 
-    /**
-     * 删除仪器台账。
-     *
-     * @param id 仪器主键。
-     * @return 删除结果。
-     */
-    @PostMapping("/instruments/{id}/delete")
-    @Operation(summary = "删除仪器台账")
+    @DeleteMapping("/instruments/{id}")
     public ApiResponse<Void> deleteInstrument(@PathVariable Long id) {
-        instrumentAssetService.deleteInstrument(id);
-        return ApiResponse.successMessage("\u5220\u9664\u6210\u529f");
+        assetService.deleteInstrument(id);
+        return ApiResponse.successMessage("删除成功");
     }
 
-    /**
-     * 分页查询维保记录。
-     *
-     * @param query 维保查询条件。
-     * @return 维保分页结果。
-     */
     @GetMapping("/maintenances")
-    @Operation(summary = "维保记录分页")
     public ApiResponse<PageResult<InstrumentMaintenance>> maintenances(@Validated MaintenanceQuery query) {
-        return ApiResponse.success(instrumentAssetService.maintenancePage(query));
+        return ApiResponse.success(assetService.maintenancePage(query));
     }
 
-    /**
-     * 导出维保记录。
-     *
-     * @param query 维保查询条件。
-     * @return Excel 文件流。
-     */
-    @GetMapping("/maintenances/export")
-    @Operation(summary = "导出维保记录")
-    public ResponseEntity<byte[]> exportMaintenances(@Validated MaintenanceQuery query) {
-        ExcelExportUtil.prepareExportQuery(query);
-        return ExcelExportUtil.buildResponse(
-                "设备维修.xlsx",
-                "设备维修",
-                instrumentAssetService.maintenancePage(query).getRecords(),
-                java.util.Arrays.asList(
-                        ExcelExportUtil.column("设备名称", InstrumentMaintenance::getInstrumentName),
-                        ExcelExportUtil.column("维修时间", InstrumentMaintenance::getMaintenanceTime),
-                        ExcelExportUtil.column("维修原因", InstrumentMaintenance::getMaintenanceReason),
-                        ExcelExportUtil.column("维修人", InstrumentMaintenance::getMaintainerName),
-                        ExcelExportUtil.column("维修公司", InstrumentMaintenance::getMaintenanceCompany),
-                        ExcelExportUtil.column("维修结果", InstrumentMaintenance::getMaintenanceResult),
-                        ExcelExportUtil.column("维修费用", InstrumentMaintenance::getMaintenanceCost),
-                        ExcelExportUtil.column("备注", InstrumentMaintenance::getRemark),
-                        ExcelExportUtil.column("更新时间", InstrumentMaintenance::getUpdatedTime)
-                ));
-    }
-
-    /**
-     * 新增维保记录。
-     *
-     * @param command 维保保存命令。
-     * @return 保存结果。
-     */
     @PostMapping("/maintenances")
-    @Operation(summary = "新增维保记录")
-    public ApiResponse<Void> saveMaintenance(@Valid @RequestBody InstrumentMaintenanceSaveCommand command) {
-        instrumentAssetService.saveMaintenance(command);
-        return ApiResponse.successMessage("\u65b0\u589e\u6210\u529f");
+    public ApiResponse<Void> saveMaintenance(@RequestBody InstrumentMaintenance entity) {
+        assetService.saveMaintenance(entity);
+        return ApiResponse.successMessage("新增成功");
     }
 
-    /**
-     * 更新维保记录。
-     *
-     * @param id 维保主键。
-     * @param command 维保保存命令。
-     * @return 更新结果。
-     */
-    @PostMapping("/maintenances/{id}")
-    @Operation(summary = "更新维保记录")
-    public ApiResponse<Void> updateMaintenance(@PathVariable Long id, @Valid @RequestBody InstrumentMaintenanceSaveCommand command) {
-        instrumentAssetService.updateMaintenance(id, command);
-        return ApiResponse.successMessage("\u66f4\u65b0\u6210\u529f");
+    @PutMapping("/maintenances/{id}")
+    public ApiResponse<Void> updateMaintenance(@PathVariable Long id, @RequestBody InstrumentMaintenance entity) {
+        entity.setId(id);
+        assetService.updateMaintenance(entity);
+        return ApiResponse.successMessage("更新成功");
     }
 
-    /**
-     * 删除维保记录。
-     *
-     * @param id 维保主键。
-     * @return 删除结果。
-     */
-    @PostMapping("/maintenances/{id}/delete")
-    @Operation(summary = "删除维保记录")
+    @DeleteMapping("/maintenances/{id}")
     public ApiResponse<Void> deleteMaintenance(@PathVariable Long id) {
-        instrumentAssetService.deleteMaintenance(id);
-        return ApiResponse.successMessage("\u5220\u9664\u6210\u529f");
+        assetService.deleteMaintenance(id);
+        return ApiResponse.successMessage("删除成功");
     }
 
-    /**
-     * 获取文档可见人员选项。
-     *
-     * @return 可见人员列表。
-     */
-    @GetMapping("/documentUsers")
-    @Operation(summary = "文档可见人员选项")
-    public ApiResponse<List<DocumentUserOptionVO>> documentUsers() {
-        return ApiResponse.success(assetDocumentService.documentUserOptions());
-    }
-
-    /**
-     * 分页查询化验室文档。
-     *
-     * @param query 文档查询条件。
-     * @return 文档分页结果。
-     */
     @GetMapping("/documents")
-    @Operation(summary = "化验室文档分页")
-    public ApiResponse<PageResult<LabDocumentVO>> documents(@Validated DocumentQuery query) {
-        return ApiResponse.success(assetDocumentService.documentPage(query));
+    public ApiResponse<PageResult<LabDocument>> documents(@Validated DocumentQuery query) {
+        return ApiResponse.success(assetService.documentPage(query));
     }
 
-    /**
-     * 导出化验室文档台账。
-     *
-     * @param query 文档查询条件。
-     * @return Excel 文件流。
-     */
-    @GetMapping("/documents/export")
-    @Operation(summary = "导出化验室文档台账")
-    public ResponseEntity<byte[]> exportDocuments(@Validated DocumentQuery query) {
-        ExcelExportUtil.prepareExportQuery(query);
-        return ExcelExportUtil.buildResponse(
-                "文档台账.xlsx",
-                "文档台账",
-                assetDocumentService.documentPage(query).getRecords(),
-                java.util.Arrays.asList(
-                        ExcelExportUtil.column("文档名称", LabDocumentVO::getDocumentName),
-                        ExcelExportUtil.column("分类", LabDocumentVO::getDocumentCategory),
-                        ExcelExportUtil.column("文件类型", LabDocumentVO::getFileType),
-                        ExcelExportUtil.column("上传人", LabDocumentVO::getCreatedName),
-                        ExcelExportUtil.column("可查看人员", LabDocumentVO::getViewerNames),
-                        ExcelExportUtil.column("上传时间", LabDocumentVO::getCreatedTime),
-                        ExcelExportUtil.column("备注", LabDocumentVO::getRemark)
-                ));
-    }
-
-    /**
-     * 获取化验室文档详情。
-     *
-     * @param id 文档主键。
-     * @return 文档详情。
-     */
-    @GetMapping("/documents/{id}")
-    @Operation(summary = "化验室文档详情")
-    public ApiResponse<LabDocumentVO> documentDetail(@PathVariable Long id) {
-        return ApiResponse.success(assetDocumentService.documentDetail(id));
-    }
-
-    /**
-     * 预览化验室文档。
-     *
-     * @param id 文档主键。
-     * @return 文档文件流。
-     */
-    @GetMapping("/documents/{id}/preview")
-    @Operation(summary = "预览化验室文档")
-    public ResponseEntity<byte[]> previewDocument(@PathVariable Long id) {
-        DocumentPreviewFile previewFile = assetDocumentService.previewDocument(id);
-        ContentDisposition contentDisposition = ContentDisposition.inline()
-                .filename(previewFile.getFileName(), StandardCharsets.UTF_8)
-                .build();
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, contentDisposition.toString())
-                .contentType(MediaType.parseMediaType(previewFile.getContentType()))
-                .body(previewFile.getContent());
-    }
-
-    /**
-     * 新增化验室文档。
-     *
-     * @param command 文档保存命令。
-     * @return 保存结果。
-     */
     @PostMapping("/documents")
-    @Operation(summary = "新增化验室文档")
-    public ApiResponse<Void> saveDocument(@Valid @RequestBody DocumentSaveCommand command) {
-        assetDocumentService.saveDocument(command);
-        return ApiResponse.successMessage("\u65b0\u589e\u6210\u529f");
+    public ApiResponse<Void> saveDocument(@RequestBody LabDocument entity) {
+        assetService.saveDocument(entity);
+        return ApiResponse.successMessage("新增成功");
     }
 
-    /**
-     * 更新化验室文档。
-     *
-     * @param id 文档主键。
-     * @param command 文档保存命令。
-     * @return 更新结果。
-     */
-    @PostMapping("/documents/{id}")
-    @Operation(summary = "更新化验室文档")
-    public ApiResponse<Void> updateDocument(@PathVariable Long id, @Valid @RequestBody DocumentSaveCommand command) {
-        assetDocumentService.updateDocument(id, command);
-        return ApiResponse.successMessage("\u66f4\u65b0\u6210\u529f");
+    @PutMapping("/documents/{id}")
+    public ApiResponse<Void> updateDocument(@PathVariable Long id, @RequestBody LabDocument entity) {
+        entity.setId(id);
+        assetService.updateDocument(entity);
+        return ApiResponse.successMessage("更新成功");
     }
 
-    /**
-     * 删除化验室文档。
-     *
-     * @param id 文档主键。
-     * @return 删除结果。
-     */
-    @PostMapping("/documents/{id}/delete")
-    @Operation(summary = "删除化验室文档")
+    @DeleteMapping("/documents/{id}")
     public ApiResponse<Void> deleteDocument(@PathVariable Long id) {
-        assetDocumentService.deleteDocumentWithPermission(id);
-        return ApiResponse.successMessage("\u5220\u9664\u6210\u529f");
+        assetService.deleteDocument(id);
+        return ApiResponse.successMessage("删除成功");
     }
 }

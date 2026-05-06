@@ -9,8 +9,4 @@ import lombok.EqualsAndHashCode;
 public class MaintenanceQuery extends PageQuery {
 
     private Long instrumentId;
-
-    private String keyword;
-
-    private String maintenanceCompany;
 }

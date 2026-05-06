@@ -9,7 +9,6 @@ import java.math.BigDecimal;
 @Data
 public class DetectionItemCommand {
 
-    @NotNull(message = "检测参数ID不能为空")
     private Long parameterId;
 
     @NotBlank(message = "检测参数不能为空")

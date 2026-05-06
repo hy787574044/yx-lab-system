@@ -9,10 +9,4 @@ import lombok.EqualsAndHashCode;
 public class DetectionTypeQuery extends PageQuery {
 
     private String keyword;
-
-    private Long groupId;
-
-    private Long detectorId;
-
-    private Integer enabled;
 }

@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { ElMessage } from 'element-plus/es/components/message/index.mjs'
+import { ElMessage } from 'element-plus'
 import router from '../router'
 import { clearToken, getToken } from '../utils/auth'
 
@@ -7,16 +7,6 @@ const request = axios.create({
   baseURL: '/',
   timeout: 15000
 })
-
-function shouldRedirectToLogin(message) {
-  if (!message) {
-    return false
-  }
-  return message.includes('请先登录')
-    || message.includes('登录已失效')
-    || message.includes('登录信息已失效')
-    || message.includes('请重新登录')
-}
 
 request.interceptors.request.use((config) => {
   const token = getToken()
@@ -31,7 +21,7 @@ request.interceptors.response.use(
     const payload = response.data
     if (payload.code !== 0) {
       ElMessage.error(payload.message || '请求失败')
-      if (shouldRedirectToLogin(payload.message)) {
+      if (payload.message?.includes('登录')) {
         clearToken()
         router.push('/login')
       }
@@ -40,10 +30,6 @@ request.interceptors.response.use(
     return payload.data
   },
   (error) => {
-    if (error.response?.status === 401) {
-      clearToken()
-      router.push('/login')
-    }
     ElMessage.error(error.message || '网络异常')
     return Promise.reject(error)
   }
