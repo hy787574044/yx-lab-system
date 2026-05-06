@@ -10,13 +10,14 @@ spring:
       max-request-size: 20MB
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://127.0.0.1:3306/yx_lab?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false
+    url: jdbc:mysql://192.168.7.17:3306/yx_lab?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false
     username: root
-    password: root
+    password: GlcLMg3SNPrTczvoRN
   redis:
-    host: 127.0.0.1
+    host: 192.168.7.108
     port: 6379
-    database: 8
+    database: 15
+    password: CoOHvRWRlaBgb%Jf)R
     timeout: 5000ms
   jackson:
     date-format: yyyy-MM-dd HH:mm:ss
