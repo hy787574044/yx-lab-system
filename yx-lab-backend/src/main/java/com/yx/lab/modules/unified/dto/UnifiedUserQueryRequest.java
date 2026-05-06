@@ -7,9 +7,9 @@ import javax.validation.constraints.NotBlank;
 @Data
 public class UnifiedUserQueryRequest {
 
-    @NotBlank(message = "用户工号不能为空")
+    @NotBlank(message = "jobNo cannot be blank")
     private String jobNo;
 
-    @NotBlank(message = "手机号不能为空")
+    @NotBlank(message = "mobile cannot be blank")
     private String mobile;
 }

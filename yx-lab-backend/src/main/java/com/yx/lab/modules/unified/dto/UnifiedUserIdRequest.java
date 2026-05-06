@@ -7,6 +7,6 @@ import javax.validation.constraints.NotBlank;
 @Data
 public class UnifiedUserIdRequest {
 
-    @NotBlank(message = "用户ID不能为空")
+    @NotBlank(message = "id cannot be blank")
     private String id;
 }
