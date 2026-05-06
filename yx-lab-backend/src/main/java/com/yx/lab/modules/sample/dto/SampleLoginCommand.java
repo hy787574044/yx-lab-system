@@ -1,5 +1,6 @@
 package com.yx.lab.modules.sample.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
 
 import javax.validation.constraints.NotBlank;
@@ -24,6 +25,7 @@ public class SampleLoginCommand {
     private String detectionItems;
 
     @NotNull(message = "采样时间不能为空")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime samplingTime;
 
     @NotNull(message = "采样人不能为空")
