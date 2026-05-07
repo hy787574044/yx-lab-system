@@ -76,6 +76,20 @@ import { statisticsApi } from '../api/lab'
 const loading = ref(false)
 const data = ref({})
 
+function toSafeNumber(value) {
+  const num = Number(value)
+  return Number.isFinite(num) ? num : 0
+}
+
+function calcPercent(part, total) {
+  const safePart = toSafeNumber(part)
+  const safeTotal = toSafeNumber(total)
+  if (!safeTotal) {
+    return 0
+  }
+  return Math.round((safePart / safeTotal) * 100)
+}
+
 const cards = computed(() => [
   { label: '样品总数', value: data.value.sampleTotal || 0, desc: '系统内已登记样品总量' },
   { label: '正常样品', value: data.value.normalTotal || 0, desc: '判定结果为正常的样品数' },
@@ -84,29 +98,29 @@ const cards = computed(() => [
 ])
 
 const sampleNormalPercent = computed(() => {
-  const total = (data.value.normalTotal || 0) + (data.value.abnormalTotal || 0)
-  return total ? Math.round(((data.value.normalTotal || 0) / total) * 100) : 0
+  const total = toSafeNumber(data.value.normalTotal) + toSafeNumber(data.value.abnormalTotal)
+  return calcPercent(data.value.normalTotal, total)
 })
 
 const sampleAbnormalPercent = computed(() => {
-  const total = (data.value.normalTotal || 0) + (data.value.abnormalTotal || 0)
-  return total ? Math.round(((data.value.abnormalTotal || 0) / total) * 100) : 0
+  const total = toSafeNumber(data.value.normalTotal) + toSafeNumber(data.value.abnormalTotal)
+  return calcPercent(data.value.abnormalTotal, total)
 })
 
 const reviewApprovedPercent = computed(() => {
-  const total = (data.value.approvedTotal || 0) + (data.value.rejectedTotal || 0)
-  return total ? Math.round(((data.value.approvedTotal || 0) / total) * 100) : 0
+  const total = toSafeNumber(data.value.approvedTotal) + toSafeNumber(data.value.rejectedTotal)
+  return calcPercent(data.value.approvedTotal, total)
 })
 
 const reviewRejectedPercent = computed(() => {
-  const total = (data.value.approvedTotal || 0) + (data.value.rejectedTotal || 0)
-  return total ? Math.round(((data.value.rejectedTotal || 0) / total) * 100) : 0
+  const total = toSafeNumber(data.value.approvedTotal) + toSafeNumber(data.value.rejectedTotal)
+  return calcPercent(data.value.rejectedTotal, total)
 })
 
 onMounted(async () => {
   loading.value = true
   try {
-    data.value = await statisticsApi()
+    data.value = await statisticsApi() || {}
   } finally {
     loading.value = false
   }

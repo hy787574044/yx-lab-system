@@ -401,6 +401,10 @@ async function completeFirstPendingTask() {
 async function loginSample() {
   const completedTask = firstLoggableTask.value
   if (!completedTask) {
+    ElMessage.warning('当前没有待登录的已完成采样任务')
+    return
+  }
+  if (!completedTask) {
     ElMessage.warning('请先完成一条采样任务')
     return
   }
