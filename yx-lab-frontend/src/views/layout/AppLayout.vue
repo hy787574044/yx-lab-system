@@ -100,7 +100,9 @@ function logout() {
 
 <style scoped>
 .layout-root {
+  width: 100%;
   min-height: 100vh;
+  overflow-x: hidden;
   background: var(--bg-page);
 }
 
@@ -158,6 +160,8 @@ function logout() {
 
 .main-panel {
   min-width: 0;
+  width: calc(100% - 190px);
+  max-width: calc(100vw - 190px);
   min-height: 100vh;
   margin-left: 190px;
   padding: 0 16px 16px;
@@ -202,6 +206,7 @@ function logout() {
 }
 
 .view-body {
+  min-width: 0;
   padding-bottom: 8px;
 }
 
@@ -244,6 +249,8 @@ function logout() {
   }
 
   .main-panel {
+    width: auto;
+    max-width: none;
     margin-left: 0;
     padding: 0 12px 12px;
   }

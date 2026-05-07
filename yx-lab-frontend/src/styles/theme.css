@@ -93,6 +93,7 @@ a {
 
 .content-grid {
   display: grid;
+  min-width: 0;
   gap: var(--space-16);
 }
 
@@ -126,15 +127,21 @@ a {
 }
 
 .section-block {
+  min-width: 0;
   padding: var(--space-16);
 }
 
 .table-card {
+  width: 100%;
+  min-width: 0;
+  overflow-x: auto;
   padding: var(--space-4) 0 0;
 }
 
 .list-table {
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .pager-wrap {
