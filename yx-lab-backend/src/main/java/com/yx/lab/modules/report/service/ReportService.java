@@ -66,15 +66,23 @@ public class ReportService {
     }
 
     public void publish(Long id) {
+        LabReport existing = requireReport(id);
+        if (!LabWorkflowConstants.canPublishReport(existing.getReportStatus())) {
+            throw new BusinessException("当前报告状态不允许发布");
+        }
         LabReport report = new LabReport();
-        report.setId(id);
+        report.setId(existing.getId());
         report.setReportStatus(LabWorkflowConstants.ReportStatus.PUBLISHED);
         labReportMapper.updateById(report);
     }
 
     public void unpublish(Long id) {
+        LabReport existing = requireReport(id);
+        if (!LabWorkflowConstants.canUnpublishReport(existing.getReportStatus())) {
+            throw new BusinessException("当前报告状态不允许取消发布");
+        }
         LabReport report = new LabReport();
-        report.setId(id);
+        report.setId(existing.getId());
         report.setReportStatus(LabWorkflowConstants.ReportStatus.DRAFT);
         labReportMapper.updateById(report);
     }
@@ -124,5 +132,13 @@ public class ReportService {
         template.setDefaultTemplate(command.getDefaultTemplate());
         template.setTemplateContent(StrUtil.trim(command.getTemplateContent()));
         template.setRemark(StrUtil.trim(command.getRemark()));
+    }
+
+    private LabReport requireReport(Long id) {
+        LabReport report = labReportMapper.selectById(id);
+        if (report == null) {
+            throw new BusinessException("报告不存在");
+        }
+        return report;
     }
 }

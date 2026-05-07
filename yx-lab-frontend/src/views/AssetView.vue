@@ -391,8 +391,11 @@ import {
   DEFAULT_PAGE_SIZE,
   getEnumLabel,
   getStatusClass,
+  inactiveInstrumentStatuses,
+  instrumentCalibratingStatus,
   instrumentStatusLabelMap,
-  instrumentStatusOptions
+  instrumentStatusOptions,
+  instrumentNormalStatus
 } from '../utils/labEnums'
 
 const active = ref('inst')
@@ -435,17 +438,17 @@ const instrumentStats = computed(() => [
   },
   {
     label: '正常设备',
-    value: countInstrumentByStatus('NORMAL'),
+    value: countInstrumentByStatus(instrumentNormalStatus),
     desc: '当前状态为正常的设备'
   },
   {
     label: '停用/维护',
-    value: countInstrumentByStatuses(['DISABLED', 'MAINTENANCE']),
+    value: countInstrumentByStatuses(inactiveInstrumentStatuses),
     desc: '停用及维护中的设备'
   },
   {
     label: '待校准',
-    value: countInstrumentByStatus('CALIBRATING'),
+    value: countInstrumentByStatus(instrumentCalibratingStatus),
     desc: '待校准或需重点关注设备'
   }
 ])
@@ -496,7 +499,7 @@ const emptyInstrumentForm = () => ({
   serviceLifeYears: null,
   calibrationCycle: '',
   ownerName: '',
-  instrumentStatus: 'NORMAL',
+  instrumentStatus: instrumentNormalStatus,
   storageLocation: '',
   certificateUrl: '',
   remark: ''
