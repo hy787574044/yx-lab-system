@@ -24,6 +24,8 @@ public class LabReport extends BaseEntity {
 
     private String sampleNo;
 
+    private String sealNo;
+
     private Long detectionRecordId;
 
     private String reportStatus;

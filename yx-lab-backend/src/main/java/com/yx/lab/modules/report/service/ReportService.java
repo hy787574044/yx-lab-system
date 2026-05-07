@@ -15,6 +15,7 @@ import com.yx.lab.modules.report.entity.ReportTemplate;
 import com.yx.lab.modules.report.mapper.LabReportMapper;
 import com.yx.lab.modules.report.mapper.ReportTemplateMapper;
 import com.yx.lab.modules.sample.entity.LabSample;
+import com.yx.lab.modules.sample.service.LabSampleService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -28,12 +29,16 @@ public class ReportService {
 
     private final ReportTemplateMapper reportTemplateMapper;
 
+    private final LabSampleService labSampleService;
+
     public PageResult<LabReport> page(ReportQuery query) {
         Page<LabReport> page = labReportMapper.selectPage(
                 PageUtils.buildPage(query),
                 new LambdaQueryWrapper<LabReport>()
                         .and(StrUtil.isNotBlank(query.getKeyword()), wrapper -> wrapper
                                 .like(LabReport::getReportName, query.getKeyword())
+                                .or()
+                                .like(LabReport::getSealNo, query.getKeyword())
                                 .or()
                                 .like(LabReport::getSampleNo, query.getKeyword()))
                         .eq(StrUtil.isNotBlank(query.getReportType()), LabReport::getReportType, query.getReportType())
@@ -95,12 +100,14 @@ public class ReportService {
         String content;
         if (template == null) {
             content = "样品编号：" + sample.getSampleNo()
+                    + "\n封签编号：" + sample.getSealNo()
                     + "\n点位名称：" + sample.getPointName()
                     + "\n检测类型：" + record.getDetectionTypeName()
                     + "\n检测结果：" + record.getDetectionResult();
         } else {
             content = template.getTemplateContent()
                     .replace("${sampleNo}", sample.getSampleNo())
+                    .replace("${sealNo}", StrUtil.blankToDefault(sample.getSealNo(), "-"))
                     .replace("${pointName}", sample.getPointName())
                     .replace("${detectionType}", record.getDetectionTypeName())
                     .replace("${detectionResult}", record.getDetectionResult());
@@ -112,10 +119,15 @@ public class ReportService {
         report.setGeneratedTime(LocalDateTime.now());
         report.setSampleId(sample.getId());
         report.setSampleNo(sample.getSampleNo());
+        report.setSealNo(sample.getSealNo());
         report.setDetectionRecordId(record.getId());
         report.setReportStatus(LabWorkflowConstants.ReportStatus.GENERATED);
         report.setContentSnapshot(content);
         labReportMapper.insert(report);
+        labSampleService.appendTrace(sample.getId(),
+                "报告生成：封签号=" + sample.getSealNo()
+                        + "，报告名称=" + report.getReportName()
+                        + "，状态=已生成");
     }
 
     private ReportTemplate requireTemplate(Long id) {

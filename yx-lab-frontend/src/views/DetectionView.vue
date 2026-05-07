@@ -22,9 +22,10 @@
       </div>
 
       <div class="table-card">
-        <el-table class="list-table" :data="records" stripe max-height="420" empty-text="暂无检测记录数据">
-          <el-table-column prop="sampleNo" label="样品编号" min-width="180" />
-          <el-table-column prop="detectionTypeName" label="检测类别" min-width="160" />
+          <el-table class="list-table" :data="records" stripe max-height="420" empty-text="暂无检测记录数据">
+            <el-table-column prop="sampleNo" label="样品编号" min-width="180" />
+            <el-table-column prop="sealNo" label="封签编号" min-width="180" />
+            <el-table-column prop="detectionTypeName" label="检测类别" min-width="160" />
           <el-table-column prop="detectorName" label="检测人" width="120" />
           <el-table-column label="检测结果" width="120">
             <template #default="{ row }">

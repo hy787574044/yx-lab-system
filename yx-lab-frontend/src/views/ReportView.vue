@@ -43,6 +43,7 @@
         <el-table class="list-table" :data="reports" stripe max-height="420" empty-text="暂无报告台账数据">
           <el-table-column prop="reportName" label="报告名称" min-width="180" />
           <el-table-column prop="sampleNo" label="样品编号" width="150" />
+          <el-table-column prop="sealNo" label="封签编号" width="170" />
           <el-table-column label="报告类型" width="120">
             <template #default="{ row }">
               {{ getEnumLabel(reportTypeLabelMap, row.reportType) }}
@@ -149,7 +150,7 @@ async function createTemplate() {
     reportType: monthlyReportType,
     templateName: '月报模板',
     defaultTemplate: 0,
-    templateContent: '月报模板内容：${sampleNo} - ${detectionResult}'
+    templateContent: '月报模板内容：${sampleNo} / ${sealNo} - ${detectionResult}'
   })
   ElMessage.success('模板已创建')
 }

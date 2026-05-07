@@ -17,6 +17,8 @@ public class DetectionRecord extends BaseEntity {
 
     private String sampleNo;
 
+    private String sealNo;
+
     private Long detectionTypeId;
 
     private String detectionTypeName;
