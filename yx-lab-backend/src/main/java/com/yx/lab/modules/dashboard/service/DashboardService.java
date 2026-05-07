@@ -1,6 +1,13 @@
 package com.yx.lab.modules.dashboard.service;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.yx.lab.modules.dashboard.vo.DashboardOverviewVO;
+import com.yx.lab.modules.detection.entity.DetectionRecord;
+import com.yx.lab.modules.detection.mapper.DetectionRecordMapper;
+import com.yx.lab.modules.report.entity.LabReport;
+import com.yx.lab.modules.report.mapper.LabReportMapper;
+import com.yx.lab.modules.sample.entity.LabSample;
+import com.yx.lab.modules.sample.mapper.LabSampleMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -9,26 +16,25 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * 首页看板服务，负责组织统计摘要与快捷操作展示数据。
- */
 @Service
 @RequiredArgsConstructor
 public class DashboardService {
 
-    private final DashboardQueryService dashboardQueryService;
+    private final LabSampleMapper labSampleMapper;
 
-    /**
-     * 组装首页看板总览数据。
-     *
-     * @return 首页看板总览
-     */
+    private final DetectionRecordMapper detectionRecordMapper;
+
+    private final LabReportMapper labReportMapper;
+
     public DashboardOverviewVO overview() {
         DashboardOverviewVO vo = new DashboardOverviewVO();
-        vo.setSampleTotal(dashboardQueryService.sampleTotal());
-        vo.setPendingReviewTotal(dashboardQueryService.pendingReviewTotal());
-        vo.setApprovedTotal(dashboardQueryService.approvedDetectionTotal());
-        vo.setPublishedReportTotal(dashboardQueryService.publishedReportTotal());
+        vo.setSampleTotal(labSampleMapper.selectCount(new LambdaQueryWrapper<LabSample>()));
+        vo.setPendingReviewTotal(detectionRecordMapper.selectCount(new LambdaQueryWrapper<DetectionRecord>()
+                .eq(DetectionRecord::getDetectionStatus, "SUBMITTED")));
+        vo.setApprovedTotal(detectionRecordMapper.selectCount(new LambdaQueryWrapper<DetectionRecord>()
+                .eq(DetectionRecord::getDetectionStatus, "APPROVED")));
+        vo.setPublishedReportTotal(labReportMapper.selectCount(new LambdaQueryWrapper<LabReport>()
+                .eq(LabReport::getReportStatus, "PUBLISHED")));
         vo.setResultSummary(buildResultSummary());
         vo.setQuickActions(buildQuickActions());
         return vo;
@@ -36,16 +42,14 @@ public class DashboardService {
 
     private Map<String, Long> buildResultSummary() {
         Map<String, Long> resultSummary = new LinkedHashMap<>();
-        resultSummary.put("\u6b63\u5e38", dashboardQueryService.normalResultTotal());
-        resultSummary.put("\u5f02\u5e38", dashboardQueryService.abnormalResultTotal());
+        resultSummary.put("正常", detectionRecordMapper.selectCount(new LambdaQueryWrapper<DetectionRecord>()
+                .eq(DetectionRecord::getDetectionResult, "NORMAL")));
+        resultSummary.put("异常", detectionRecordMapper.selectCount(new LambdaQueryWrapper<DetectionRecord>()
+                .eq(DetectionRecord::getDetectionResult, "ABNORMAL")));
         return resultSummary;
     }
 
     private List<String> buildQuickActions() {
-        return Arrays.asList(
-                "\u6837\u54c1\u767b\u5f55",
-                "\u68c0\u6d4b\u5f55\u5165",
-                "\u5ba1\u6838\u5ba1\u6279",
-                "\u62a5\u544a\u53d1\u5e03");
+        return Arrays.asList("样品登录", "检测录入", "审核审批", "报告发布");
     }
 }

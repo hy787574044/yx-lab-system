@@ -133,6 +133,18 @@ a {
   padding: var(--space-4) 0 0;
 }
 
+.list-table {
+  width: 100%;
+}
+
+.pager-wrap {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 18px;
+  width: 100%;
+  min-height: 40px;
+}
+
 .status-chip {
   display: inline-flex;
   align-items: center;
@@ -353,7 +365,46 @@ a {
 
 .el-pagination {
   margin-top: var(--space-16);
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
   justify-content: flex-end;
+  color: var(--text-main);
+}
+
+.el-pagination .el-pagination__total,
+.el-pagination .el-pagination__jump {
+  color: var(--text-sub);
+}
+
+.el-pagination .btn-prev,
+.el-pagination .btn-next,
+.el-pagination .el-pager li {
+  min-width: 32px;
+  height: 32px;
+  line-height: 32px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line-strong);
+  background: #ffffff;
+  color: var(--text-main);
+}
+
+.el-pagination .btn-prev:hover,
+.el-pagination .btn-next:hover,
+.el-pagination .el-pager li:hover {
+  border-color: var(--brand);
+  color: var(--brand);
+}
+
+.el-pagination.is-background .el-pager li.is-active {
+  border-color: var(--brand);
+  background: var(--brand);
+  color: #ffffff;
+}
+
+.el-pagination .el-pagination__sizes .el-select {
+  min-width: 108px;
 }
 
 @media (max-width: 1100px) {
@@ -389,6 +440,10 @@ a {
   }
 
   .el-pagination {
+    justify-content: flex-start;
+  }
+
+  .pager-wrap {
     justify-content: flex-start;
   }
 }

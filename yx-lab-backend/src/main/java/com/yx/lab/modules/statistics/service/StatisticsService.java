@@ -1,38 +1,40 @@
 package com.yx.lab.modules.statistics.service;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.yx.lab.modules.detection.entity.DetectionRecord;
+import com.yx.lab.modules.detection.mapper.DetectionRecordMapper;
+import com.yx.lab.modules.review.entity.ReviewRecord;
+import com.yx.lab.modules.review.mapper.ReviewRecordMapper;
+import com.yx.lab.modules.sample.entity.LabSample;
+import com.yx.lab.modules.sample.mapper.LabSampleMapper;
 import com.yx.lab.modules.statistics.vo.StatisticsSummaryVO;
-import com.yx.lab.modules.statistics.vo.StatisticsTimeBucketVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.Arrays;
-import java.util.List;
 
-/**
- * 统计汇总服务，负责把基础计数组装成页面可直接展示的统计摘要。
- */
 @Service
 @RequiredArgsConstructor
 public class StatisticsService {
 
-    private final StatisticsQueryService statisticsQueryService;
+    private final LabSampleMapper labSampleMapper;
 
-    /**
-     * 汇总统计概览数据。
-     *
-     * @return 统计摘要结果
-     */
+    private final DetectionRecordMapper detectionRecordMapper;
+
+    private final ReviewRecordMapper reviewRecordMapper;
+
     public StatisticsSummaryVO summary() {
-        long sampleTotal = statisticsQueryService.sampleTotal();
-        long normalTotal = statisticsQueryService.normalTotal();
-        long abnormalTotal = statisticsQueryService.abnormalTotal();
-        long reviewTotal = statisticsQueryService.reviewTotal();
-        long approvedTotal = statisticsQueryService.approvedReviewTotal();
-        long rejectedTotal = statisticsQueryService.rejectedReviewTotal();
+        long sampleTotal = labSampleMapper.selectCount(new LambdaQueryWrapper<LabSample>());
+        long normalTotal = detectionRecordMapper.selectCount(new LambdaQueryWrapper<DetectionRecord>()
+                .eq(DetectionRecord::getDetectionResult, "NORMAL"));
+        long abnormalTotal = detectionRecordMapper.selectCount(new LambdaQueryWrapper<DetectionRecord>()
+                .eq(DetectionRecord::getDetectionResult, "ABNORMAL"));
+        long reviewTotal = reviewRecordMapper.selectCount(new LambdaQueryWrapper<ReviewRecord>());
+        long approvedTotal = reviewRecordMapper.selectCount(new LambdaQueryWrapper<ReviewRecord>()
+                .eq(ReviewRecord::getReviewResult, "APPROVED"));
+        long rejectedTotal = reviewRecordMapper.selectCount(new LambdaQueryWrapper<ReviewRecord>()
+                .eq(ReviewRecord::getReviewResult, "REJECTED"));
 
         StatisticsSummaryVO vo = new StatisticsSummaryVO();
         vo.setSampleTotal(sampleTotal);
@@ -43,34 +45,7 @@ public class StatisticsService {
         vo.setApprovedTotal(approvedTotal);
         vo.setRejectedTotal(rejectedTotal);
         vo.setApprovalRate(rate(approvedTotal, reviewTotal));
-        vo.setTimeBuckets(buildTimeBuckets());
-        vo.setSampleTypeDistribution(statisticsQueryService.sampleTypeDistribution());
-        vo.setSampleStatusDistribution(statisticsQueryService.sampleStatusDistribution());
-        vo.setDetectionStatusDistribution(statisticsQueryService.detectionStatusDistribution());
-        vo.setDetectionResultDistribution(statisticsQueryService.detectionResultDistribution());
-        vo.setReviewResultDistribution(statisticsQueryService.reviewResultDistribution());
-        vo.setReportStatusDistribution(statisticsQueryService.reportStatusDistribution());
-        vo.setDetectionTypeRanking(statisticsQueryService.detectionTypeRanking());
         return vo;
-    }
-
-    private List<StatisticsTimeBucketVO> buildTimeBuckets() {
-        LocalDate today = LocalDate.now();
-        return Arrays.asList(
-                buildTimeBucket("今日", today.atStartOfDay()),
-                buildTimeBucket("近7日", today.minusDays(6).atStartOfDay()),
-                buildTimeBucket("近30日", today.minusDays(29).atStartOfDay()),
-                buildTimeBucket("全部", null));
-    }
-
-    private StatisticsTimeBucketVO buildTimeBucket(String label, LocalDateTime startTime) {
-        StatisticsTimeBucketVO bucket = new StatisticsTimeBucketVO();
-        bucket.setLabel(label);
-        bucket.setSampleTotal(statisticsQueryService.sampleTotalFrom(startTime));
-        bucket.setDetectionTotal(statisticsQueryService.detectionTotalFrom(startTime));
-        bucket.setReviewTotal(statisticsQueryService.reviewTotalFrom(startTime));
-        bucket.setReportTotal(statisticsQueryService.reportTotalFrom(startTime));
-        return bucket;
     }
 
     private BigDecimal rate(long numerator, long denominator) {

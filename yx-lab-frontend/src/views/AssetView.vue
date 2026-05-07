@@ -45,7 +45,7 @@
           </div>
 
           <div class="table-card">
-            <el-table :data="instruments" stripe v-loading="instrumentLoading" empty-text="暂无设备台账数据">
+            <el-table class="list-table" :data="instruments" stripe max-height="420" v-loading="instrumentLoading" empty-text="暂无设备台账数据">
               <el-table-column prop="instrumentName" label="设备名称" min-width="180" />
               <el-table-column prop="instrumentModel" label="设备型号" min-width="140" />
               <el-table-column prop="manufacturer" label="生产厂家" min-width="180" />
@@ -72,17 +72,12 @@
               </el-table-column>
             </el-table>
 
-            <div class="pager-wrap">
-              <el-pagination
-                v-model:current-page="instrumentQuery.pageNum"
-                v-model:page-size="instrumentQuery.pageSize"
-                :page-sizes="[10, 20, 50]"
-                :total="instrumentTotal"
-                layout="total, sizes, prev, pager, next"
-                @size-change="loadInstruments"
-                @current-change="loadInstruments"
-              />
-            </div>
+            <TablePagination
+              v-model:current-page="instrumentQuery.pageNum"
+              v-model:page-size="instrumentQuery.pageSize"
+              :total="instrumentTotal"
+              @change="loadInstruments"
+            />
           </div>
         </el-tab-pane>
 
@@ -114,7 +109,7 @@
           </div>
 
           <div class="table-card">
-            <el-table :data="documents" stripe v-loading="documentLoading" empty-text="暂无文档台账数据">
+            <el-table class="list-table" :data="documents" stripe max-height="420" v-loading="documentLoading" empty-text="暂无文档台账数据">
               <el-table-column prop="documentName" label="文档名称" min-width="180" />
               <el-table-column prop="documentCategory" label="分类" min-width="120" />
               <el-table-column prop="fileType" label="文件类型" width="100" />
@@ -139,17 +134,12 @@
               </el-table-column>
             </el-table>
 
-            <div class="pager-wrap">
-              <el-pagination
-                v-model:current-page="documentQuery.pageNum"
-                v-model:page-size="documentQuery.pageSize"
-                :page-sizes="[10, 20, 50]"
-                :total="documentTotal"
-                layout="total, sizes, prev, pager, next"
-                @size-change="loadDocuments"
-                @current-change="loadDocuments"
-              />
-            </div>
+            <TablePagination
+              v-model:current-page="documentQuery.pageNum"
+              v-model:page-size="documentQuery.pageSize"
+              :total="documentTotal"
+              @change="loadDocuments"
+            />
           </div>
         </el-tab-pane>
       </el-tabs>
@@ -353,6 +343,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import TablePagination from '../components/common/TablePagination.vue'
 import {
   createDocumentApi,
   createInstrumentApi,
@@ -456,14 +447,14 @@ const documentStats = computed(() => [
 
 const instrumentQuery = reactive({
   pageNum: 1,
-  pageSize: 10,
+  pageSize: 30,
   keyword: '',
   instrumentStatus: ''
 })
 
 const documentQuery = reactive({
   pageNum: 1,
-  pageSize: 10,
+  pageSize: 30,
   keyword: '',
   documentCategory: ''
 })
@@ -518,7 +509,7 @@ function resetDocumentForm() {
 
 function resetInstrumentQuery() {
   instrumentQuery.pageNum = 1
-  instrumentQuery.pageSize = 10
+  instrumentQuery.pageSize = 30
   instrumentQuery.keyword = ''
   instrumentQuery.instrumentStatus = ''
   loadInstruments()
@@ -526,7 +517,7 @@ function resetInstrumentQuery() {
 
 function resetDocumentQuery() {
   documentQuery.pageNum = 1
-  documentQuery.pageSize = 10
+  documentQuery.pageSize = 30
   documentQuery.keyword = ''
   documentQuery.documentCategory = ''
   loadDocuments()

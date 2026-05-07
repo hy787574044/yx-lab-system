@@ -22,13 +22,13 @@
           <el-option label="启用" value="ENABLED" />
           <el-option label="禁用" value="DISABLED" />
         </el-select>
-        <el-button type="primary" @click="loadData">查询</el-button>
+        <el-button type="primary" @click="handleSearch">查询</el-button>
         <el-button @click="resetQuery">重置</el-button>
         <el-button type="primary" plain @click="openDialog">新增点位</el-button>
       </div>
 
       <div class="table-card">
-        <el-table :data="records" stripe empty-text="暂无监测点位数据">
+        <el-table class="list-table" :data="records" stripe max-height="420" empty-text="暂无监测点位数据">
           <el-table-column prop="pointName" label="点位名称" min-width="180" />
           <el-table-column prop="regionName" label="所属区域" min-width="160" />
           <el-table-column label="点位类型" width="120">
@@ -51,6 +51,13 @@
             </template>
           </el-table-column>
         </el-table>
+
+        <TablePagination
+          v-model:current-page="query.pageNum"
+          v-model:page-size="query.pageSize"
+          :total="total"
+          @change="loadData"
+        />
       </div>
     </section>
 
@@ -98,6 +105,7 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { createMonitoringPointApi, fetchMonitoringPointsApi } from '../api/lab'
+import TablePagination from '../components/common/TablePagination.vue'
 import {
   frequencyTypeLabelMap,
   getEnumLabel,
@@ -106,8 +114,9 @@ import {
   pointTypeLabelMap
 } from '../utils/labEnums'
 
-const query = reactive({ pageNum: 1, pageSize: 10, keyword: '', pointStatus: '' })
+const query = reactive({ pageNum: 1, pageSize: 30, keyword: '', pointStatus: '' })
 const records = ref([])
+const total = ref(0)
 const dialogVisible = ref(false)
 const form = reactive({
   pointName: '',
@@ -121,17 +130,24 @@ const form = reactive({
 })
 
 const stats = computed(() => [
-  { label: '点位总数', value: records.value.length, desc: '当前页已加载监测点位数量' },
-  { label: '启用点位', value: records.value.filter((item) => item.pointStatus === 'ENABLED').length, desc: '当前状态为启用的点位' },
-  { label: '禁用点位', value: records.value.filter((item) => item.pointStatus === 'DISABLED').length, desc: '已暂停使用的点位数量' },
-  { label: '出厂水点位', value: records.value.filter((item) => item.pointType === 'FACTORY').length, desc: '用于出厂水检测的点位' }
+  { label: '点位总数', value: total.value, desc: '当前监测点位总量' },
+  { label: '本页记录', value: records.value.length, desc: '当前分页已加载的点位数量' },
+  { label: '启用点位', value: records.value.filter((item) => item.pointStatus === 'ENABLED').length, desc: '当前页状态为启用的点位' },
+  { label: '出厂水点位', value: records.value.filter((item) => item.pointType === 'FACTORY').length, desc: '当前页出厂水检测点位' }
 ])
 
 function openDialog() {
   dialogVisible.value = true
 }
 
+function handleSearch() {
+  query.pageNum = 1
+  loadData()
+}
+
 function resetQuery() {
+  query.pageNum = 1
+  query.pageSize = 30
   query.keyword = ''
   query.pointStatus = ''
   loadData()
@@ -140,12 +156,14 @@ function resetQuery() {
 async function loadData() {
   const result = await fetchMonitoringPointsApi(query)
   records.value = result.records || []
+  total.value = result.total || 0
 }
 
 async function submit() {
   await createMonitoringPointApi(form)
   ElMessage.success('保存成功')
   dialogVisible.value = false
+  query.pageNum = 1
   loadData()
 }
 

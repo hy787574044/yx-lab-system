@@ -21,45 +21,59 @@
         <el-button @click="approveFirst" :disabled="!records.length">通过首条</el-button>
       </div>
 
-      <el-table :data="records" stripe empty-text="暂无审核记录数据">
-        <el-table-column prop="sampleNo" label="样品编号" min-width="180" />
-        <el-table-column prop="reviewerName" label="审核人" width="120" />
-        <el-table-column label="审核结果" width="120">
-          <template #default="{ row }">
-            <span class="status-chip" :class="getStatusClass('reviewResult', row.reviewResult)">
-              {{ row.reviewResult ? getEnumLabel(reviewResultLabelMap, row.reviewResult) : '待审核' }}
-            </span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="reviewTime" label="审核时间" width="170" />
-        <el-table-column prop="reviewRemark" label="审核意见" min-width="180" show-overflow-tooltip />
-        <el-table-column prop="rejectReason" label="驳回原因" min-width="180" show-overflow-tooltip />
-      </el-table>
+      <div class="table-card">
+        <el-table class="list-table" :data="records" stripe max-height="420" empty-text="暂无审核记录数据">
+          <el-table-column prop="sampleNo" label="样品编号" min-width="180" />
+          <el-table-column prop="reviewerName" label="审核人" width="120" />
+          <el-table-column label="审核结果" width="120">
+            <template #default="{ row }">
+              <span class="status-chip" :class="getStatusClass('reviewResult', row.reviewResult)">
+                {{ row.reviewResult ? getEnumLabel(reviewResultLabelMap, row.reviewResult) : '待审核' }}
+              </span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="reviewTime" label="审核时间" width="170" />
+          <el-table-column prop="reviewRemark" label="审核意见" min-width="180" show-overflow-tooltip />
+          <el-table-column prop="rejectReason" label="驳回原因" min-width="180" show-overflow-tooltip />
+        </el-table>
+
+        <TablePagination
+          v-model:current-page="query.pageNum"
+          v-model:page-size="query.pageSize"
+          :total="total"
+          @change="loadData"
+        />
+      </div>
     </section>
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { fetchDetectionsApi, fetchReviewsApi, submitReviewApi } from '../api/lab'
+import TablePagination from '../components/common/TablePagination.vue'
 import { getEnumLabel, getStatusClass, reviewResultLabelMap } from '../utils/labEnums'
 
+const query = reactive({ pageNum: 1, pageSize: 30 })
 const records = ref([])
+const total = ref(0)
 
 const stats = computed(() => [
-  { label: '审核记录', value: records.value.length, desc: '当前页已加载审核记录数' },
-  { label: '审核通过', value: records.value.filter((item) => item.reviewResult === 'APPROVED').length, desc: '已通过审核的数据记录' },
-  { label: '审核驳回', value: records.value.filter((item) => item.reviewResult === 'REJECTED').length, desc: '已被驳回的数据记录' },
-  { label: '待处理检测', value: records.value.filter((item) => !item.reviewResult).length, desc: '尚未形成审核结果的记录' }
+  { label: '审核总数', value: total.value, desc: '审核记录总量' },
+  { label: '本页记录', value: records.value.length, desc: '当前分页已加载的审核记录' },
+  { label: '审核通过', value: records.value.filter((item) => item.reviewResult === 'APPROVED').length, desc: '当前页通过审核的数据记录' },
+  { label: '审核驳回', value: records.value.filter((item) => item.reviewResult === 'REJECTED').length, desc: '当前页驳回的数据记录' }
 ])
 
 async function loadData() {
-  records.value = (await fetchReviewsApi({ pageNum: 1, pageSize: 10 })).records || []
+  const result = await fetchReviewsApi(query)
+  records.value = result.records || []
+  total.value = result.total || 0
 }
 
 async function approveFirst() {
-  const detectionResult = await fetchDetectionsApi({ pageNum: 1, pageSize: 10 })
+  const detectionResult = await fetchDetectionsApi({ pageNum: 1, pageSize: 30 })
   const record = detectionResult.records?.find((item) => item.detectionStatus === 'SUBMITTED')
   if (!record) {
     ElMessage.warning('当前没有待审核检测记录')
@@ -71,6 +85,7 @@ async function approveFirst() {
     reviewRemark: '数据合格，允许出具报告'
   })
   ElMessage.success('审核通过')
+  query.pageNum = 1
   loadData()
 }
 

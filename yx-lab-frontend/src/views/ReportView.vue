@@ -21,36 +21,46 @@
         <el-button type="primary" plain @click="createTemplate">新增模板</el-button>
       </div>
 
-      <el-table :data="reports" stripe empty-text="暂无报告台账数据">
-        <el-table-column prop="reportName" label="报告名称" min-width="180" />
-        <el-table-column prop="sampleNo" label="样品编号" width="150" />
-        <el-table-column label="报告类型" width="120">
-          <template #default="{ row }">
-            {{ getEnumLabel(reportTypeLabelMap, row.reportType) }}
-          </template>
-        </el-table-column>
-        <el-table-column label="状态" width="120">
-          <template #default="{ row }">
-            <span class="status-chip" :class="getStatusClass('reportStatus', row.reportStatus)">
-              {{ getEnumLabel(reportStatusLabelMap, row.reportStatus) }}
-            </span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="generatedTime" label="生成时间" width="170" />
-        <el-table-column label="操作" width="120">
-          <template #default="{ row }">
-            <el-button size="small" @click="publish(row.id)" :disabled="row.reportStatus === 'PUBLISHED'">发布</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
+      <div class="table-card">
+        <el-table class="list-table" :data="reports" stripe max-height="420" empty-text="暂无报告台账数据">
+          <el-table-column prop="reportName" label="报告名称" min-width="180" />
+          <el-table-column prop="sampleNo" label="样品编号" width="150" />
+          <el-table-column label="报告类型" width="120">
+            <template #default="{ row }">
+              {{ getEnumLabel(reportTypeLabelMap, row.reportType) }}
+            </template>
+          </el-table-column>
+          <el-table-column label="状态" width="120">
+            <template #default="{ row }">
+              <span class="status-chip" :class="getStatusClass('reportStatus', row.reportStatus)">
+                {{ getEnumLabel(reportStatusLabelMap, row.reportStatus) }}
+              </span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="generatedTime" label="生成时间" width="170" />
+          <el-table-column label="操作" width="120">
+            <template #default="{ row }">
+              <el-button size="small" @click="publish(row.id)" :disabled="row.reportStatus === 'PUBLISHED'">发布</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+
+        <TablePagination
+          v-model:current-page="query.pageNum"
+          v-model:page-size="query.pageSize"
+          :total="total"
+          @change="loadReports"
+        />
+      </div>
     </section>
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { createTemplateApi, fetchReportsApi, publishReportApi } from '../api/lab'
+import TablePagination from '../components/common/TablePagination.vue'
 import {
   getEnumLabel,
   getStatusClass,
@@ -58,17 +68,21 @@ import {
   reportTypeLabelMap
 } from '../utils/labEnums'
 
+const query = reactive({ pageNum: 1, pageSize: 30 })
 const reports = ref([])
+const total = ref(0)
 
 const stats = computed(() => [
-  { label: '报告数量', value: reports.value.length, desc: '当前页报告记录总量' },
-  { label: '已发布', value: reports.value.filter((item) => item.reportStatus === 'PUBLISHED').length, desc: '已完成正式发布的报告' },
-  { label: '待发布', value: reports.value.filter((item) => item.reportStatus !== 'PUBLISHED').length, desc: '仍待确认或待发布的报告' },
-  { label: '月报模板', value: reports.value.filter((item) => item.reportType === 'MONTHLY').length, desc: '月报类报告记录数量' }
+  { label: '报告总数', value: total.value, desc: '报告记录总量' },
+  { label: '本页记录', value: reports.value.length, desc: '当前分页已加载的报告记录' },
+  { label: '已发布', value: reports.value.filter((item) => item.reportStatus === 'PUBLISHED').length, desc: '当前页已发布的报告' },
+  { label: '月报模板', value: reports.value.filter((item) => item.reportType === 'MONTHLY').length, desc: '当前页月报类报告数量' }
 ])
 
 async function loadReports() {
-  reports.value = (await fetchReportsApi({ pageNum: 1, pageSize: 10 })).records || []
+  const result = await fetchReportsApi(query)
+  reports.value = result.records || []
+  total.value = result.total || 0
 }
 
 async function createTemplate() {
@@ -84,6 +98,7 @@ async function createTemplate() {
 async function publish(id) {
   await publishReportApi(id)
   ElMessage.success('报告已发布')
+  query.pageNum = 1
   loadReports()
 }
 
