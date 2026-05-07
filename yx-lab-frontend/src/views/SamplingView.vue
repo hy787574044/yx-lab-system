@@ -162,7 +162,7 @@
 
           <div class="toolbar">
             <el-button type="primary" @click="loadSamples">刷新</el-button>
-            <el-button @click="loginSample">样品登录</el-button>
+            <el-button @click="loginSample" :disabled="!firstLoggableTask">样品登录</el-button>
           </div>
 
           <div class="table-card">
@@ -261,6 +261,10 @@ const taskTotal = ref(0)
 const sampleTotal = ref(0)
 
 const firstCompletableTask = computed(() => tasks.value.find((item) => completableTaskStatuses.includes(item.taskStatus)))
+const firstLoggableTask = computed(() => tasks.value.find((item) =>
+  item.taskStatus === completedTaskStatus
+  && !samples.value.some((sample) => sample.taskId === item.id)
+))
 
 const currentStats = computed(() => {
   if (active.value === 'plans') {
@@ -395,7 +399,7 @@ async function completeFirstPendingTask() {
 }
 
 async function loginSample() {
-  const completedTask = tasks.value.find((item) => item.taskStatus === completedTaskStatus)
+  const completedTask = firstLoggableTask.value
   if (!completedTask) {
     ElMessage.warning('请先完成一条采样任务')
     return

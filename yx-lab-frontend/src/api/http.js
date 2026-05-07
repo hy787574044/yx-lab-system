@@ -8,6 +8,16 @@ const request = axios.create({
   timeout: 15000
 })
 
+function shouldRedirectToLogin(message) {
+  if (!message) {
+    return false
+  }
+  return message.includes('请先登录')
+    || message.includes('登录已失效')
+    || message.includes('登录信息已失效')
+    || message.includes('请重新登录')
+}
+
 request.interceptors.request.use((config) => {
   const token = getToken()
   if (token) {
@@ -21,7 +31,7 @@ request.interceptors.response.use(
     const payload = response.data
     if (payload.code !== 0) {
       ElMessage.error(payload.message || '请求失败')
-      if (payload.message?.includes('登录')) {
+      if (shouldRedirectToLogin(payload.message)) {
         clearToken()
         router.push('/login')
       }
@@ -30,6 +40,10 @@ request.interceptors.response.use(
     return payload.data
   },
   (error) => {
+    if (error.response?.status === 401) {
+      clearToken()
+      router.push('/login')
+    }
     ElMessage.error(error.message || '网络异常')
     return Promise.reject(error)
   }
