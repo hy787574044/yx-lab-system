@@ -15,6 +15,8 @@ public class LabSample extends BaseEntity {
 
     private String sampleNo;
 
+    private String sealNo;
+
     private Long taskId;
 
     private Long pointId;
@@ -27,6 +29,9 @@ public class LabSample extends BaseEntity {
 
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime samplingTime;
+
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime sealTime;
 
     private Long samplerId;
 
@@ -41,4 +46,6 @@ public class LabSample extends BaseEntity {
     private String resultSummary;
 
     private String remark;
+
+    private String traceLog;
 }

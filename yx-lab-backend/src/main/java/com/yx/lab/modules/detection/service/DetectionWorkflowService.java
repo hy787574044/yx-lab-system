@@ -55,6 +55,8 @@ public class DetectionWorkflowService {
                         .and(StrUtil.isNotBlank(query.getKeyword()), wrapper -> wrapper
                                 .like(DetectionRecord::getSampleNo, query.getKeyword())
                                 .or()
+                                .like(DetectionRecord::getSealNo, query.getKeyword())
+                                .or()
                                 .like(DetectionRecord::getDetectionTypeName, query.getKeyword()))
                         .eq(StrUtil.isNotBlank(query.getDetectionStatus()), DetectionRecord::getDetectionStatus, query.getDetectionStatus())
                         .eq(Boolean.TRUE.equals(query.getMine()), DetectionRecord::getDetectorId, currentUser.getUserId())
@@ -99,6 +101,7 @@ public class DetectionWorkflowService {
         DetectionRecord record = new DetectionRecord();
         record.setSampleId(sample.getId());
         record.setSampleNo(sample.getSampleNo());
+        record.setSealNo(sample.getSealNo());
         record.setDetectionTypeId(command.getDetectionTypeId());
         record.setDetectionTypeName(detectionType == null ? command.getDetectionTypeName() : detectionType.getTypeName());
         record.setDetectionTime(LocalDateTime.now());
@@ -122,7 +125,14 @@ public class DetectionWorkflowService {
             detectionItemMapper.insert(item);
         }
 
-        labSampleService.updateStatus(sample.getId(), LabWorkflowConstants.SampleStatus.REVIEWING, record.getDetectionResult());
+        labSampleService.updateStatus(
+                sample.getId(),
+                LabWorkflowConstants.SampleStatus.REVIEWING,
+                record.getDetectionResult(),
+                "检测提交：封签号=" + sample.getSealNo()
+                        + "，检测类型=" + record.getDetectionTypeName()
+                        + "，检测人=" + currentUser.getRealName()
+                        + "，结果=" + record.getDetectionResult());
     }
 
     private void validateRetestSubmission(LabSample sample) {

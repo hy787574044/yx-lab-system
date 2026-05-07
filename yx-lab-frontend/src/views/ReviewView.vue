@@ -25,6 +25,7 @@
       <div class="table-card">
         <el-table class="list-table" :data="records" stripe max-height="420" empty-text="暂无审核记录数据">
           <el-table-column prop="sampleNo" label="样品编号" min-width="180" />
+          <el-table-column prop="sealNo" label="封签编号" min-width="180" />
           <el-table-column prop="reviewerName" label="审核人" width="120" />
           <el-table-column label="审核结果" width="120">
             <template #default="{ row }">

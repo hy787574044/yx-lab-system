@@ -168,6 +168,7 @@
           <div class="table-card">
             <el-table class="list-table" :data="samples" stripe max-height="420" empty-text="暂无样品台账数据">
               <el-table-column prop="sampleNo" label="样品编号" min-width="180" />
+              <el-table-column prop="sealNo" label="封签编号" min-width="180" />
               <el-table-column prop="pointName" label="点位名称" min-width="160" />
               <el-table-column label="样品类型" width="120">
                 <template #default="{ row }">
@@ -182,7 +183,9 @@
                 </template>
               </el-table-column>
               <el-table-column prop="samplingTime" label="采样时间" width="170" />
+              <el-table-column prop="storageCondition" label="存储条件" width="140" />
               <el-table-column prop="resultSummary" label="结果摘要" min-width="180" show-overflow-tooltip />
+              <el-table-column prop="traceLog" label="流程留痕" min-width="260" show-overflow-tooltip />
             </el-table>
 
             <TablePagination
@@ -397,7 +400,7 @@ async function loginSample() {
     ElMessage.warning('请先完成一条采样任务')
     return
   }
-  await loginSampleApi({
+  const sample = await loginSampleApi({
     taskId: completedTask.id,
     pointId: completedTask.pointId || 2001,
     pointName: completedTask.pointName || '城东水厂出厂水',
@@ -409,7 +412,7 @@ async function loginSample() {
     weather: '晴',
     storageCondition: '冷藏'
   })
-  ElMessage.success('样品登录完成')
+  ElMessage.success(`样品登录完成，封签号：${sample.sealNo}`)
   sampleQuery.pageNum = 1
   await loadSamples()
 }

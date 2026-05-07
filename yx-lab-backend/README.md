@@ -250,3 +250,14 @@ curl -G "http://localhost:8080/api/unified/users/menus" \
 - `lab_document_share`
 
 如果你的数据库已经初始化过，需要手动补充该表结构，或重新执行 `sql/init.sql` 中对应的建表语句。
+
+### 样品封签与留痕字段调整
+
+本次样品封签与留痕功能对以下表新增了字段：
+
+- `lab_sample`：`seal_no`、`seal_time`、`trace_log`
+- `lab_detection_record`：`seal_no`
+- `lab_review_record`：`seal_no`
+- `lab_report`：`seal_no`
+
+如果你的数据库已经初始化过，需要同步执行 `sql/init.sql` 中对应的字段调整，保证样品封签号和流程留痕能够正常入库。

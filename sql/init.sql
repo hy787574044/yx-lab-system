@@ -98,12 +98,14 @@ DROP TABLE IF EXISTS lab_sample;
 CREATE TABLE lab_sample (
     id BIGINT PRIMARY KEY,
     sample_no VARCHAR(64) NOT NULL,
+    seal_no VARCHAR(64),
     task_id BIGINT,
     point_id BIGINT NOT NULL,
     point_name VARCHAR(128) NOT NULL,
     sample_type VARCHAR(32),
     detection_items VARCHAR(1000),
     sampling_time DATETIME,
+    seal_time DATETIME,
     sampler_id BIGINT,
     sampler_name VARCHAR(64),
     weather VARCHAR(32),
@@ -111,6 +113,7 @@ CREATE TABLE lab_sample (
     sample_status VARCHAR(32),
     result_summary VARCHAR(255),
     remark VARCHAR(500),
+    trace_log TEXT,
     deleted TINYINT DEFAULT 0,
     created_by BIGINT,
     created_name VARCHAR(64),
@@ -118,7 +121,8 @@ CREATE TABLE lab_sample (
     updated_by BIGINT,
     updated_name VARCHAR(64),
     updated_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    KEY idx_lab_sample_no (sample_no)
+    KEY idx_lab_sample_no (sample_no),
+    KEY idx_lab_sample_seal_no (seal_no)
 );
 
 DROP TABLE IF EXISTS lab_detection_type;
@@ -183,6 +187,7 @@ CREATE TABLE lab_detection_record (
     id BIGINT PRIMARY KEY,
     sample_id BIGINT NOT NULL,
     sample_no VARCHAR(64) NOT NULL,
+    seal_no VARCHAR(64),
     detection_type_id BIGINT,
     detection_type_name VARCHAR(64),
     detection_time DATETIME,
@@ -226,6 +231,7 @@ CREATE TABLE lab_review_record (
     detection_record_id BIGINT NOT NULL,
     sample_id BIGINT,
     sample_no VARCHAR(64),
+    seal_no VARCHAR(64),
     reviewer_id BIGINT,
     reviewer_name VARCHAR(64),
     review_time DATETIME,
@@ -266,6 +272,7 @@ CREATE TABLE lab_report (
     generated_time DATETIME,
     sample_id BIGINT,
     sample_no VARCHAR(64),
+    seal_no VARCHAR(64),
     detection_record_id BIGINT,
     report_status VARCHAR(32),
     file_path VARCHAR(500),

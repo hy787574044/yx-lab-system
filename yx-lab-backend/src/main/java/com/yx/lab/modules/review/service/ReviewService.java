@@ -44,7 +44,10 @@ public class ReviewService {
         Page<ReviewRecord> page = reviewRecordMapper.selectPage(
                 PageUtils.buildPage(query),
                 new LambdaQueryWrapper<ReviewRecord>()
-                        .and(StrUtil.isNotBlank(query.getKeyword()), wrapper -> wrapper.like(ReviewRecord::getSampleNo, query.getKeyword()))
+                        .and(StrUtil.isNotBlank(query.getKeyword()), wrapper -> wrapper
+                                .like(ReviewRecord::getSampleNo, query.getKeyword())
+                                .or()
+                                .like(ReviewRecord::getSealNo, query.getKeyword()))
                         .eq(StrUtil.isNotBlank(query.getReviewResult()), ReviewRecord::getReviewResult, query.getReviewResult())
                         .eq(Boolean.TRUE.equals(query.getMine()), ReviewRecord::getReviewerId, currentUser.getUserId())
                         .orderByDesc(ReviewRecord::getReviewTime));
@@ -78,6 +81,7 @@ public class ReviewService {
         reviewRecord.setDetectionRecordId(record.getId());
         reviewRecord.setSampleId(record.getSampleId());
         reviewRecord.setSampleNo(record.getSampleNo());
+        reviewRecord.setSealNo(sample.getSealNo());
         reviewRecord.setReviewerId(currentUser.getUserId());
         reviewRecord.setReviewerName(currentUser.getRealName());
         reviewRecord.setReviewTime(LocalDateTime.now());
@@ -91,10 +95,22 @@ public class ReviewService {
 
         String nextSampleStatus = LabWorkflowConstants.sampleStatusForReviewResult(command.getReviewResult());
         if (LabWorkflowConstants.ReviewResult.APPROVED.equals(command.getReviewResult())) {
-            labSampleService.updateStatus(sample.getId(), nextSampleStatus, record.getDetectionResult());
+            labSampleService.updateStatus(
+                    sample.getId(),
+                    nextSampleStatus,
+                    record.getDetectionResult(),
+                    "审核通过：封签号=" + sample.getSealNo()
+                            + "，审核人=" + currentUser.getRealName()
+                            + "，结果=" + record.getDetectionResult());
             reportService.createApprovedReport(sample, record);
         } else {
-            labSampleService.updateStatus(sample.getId(), nextSampleStatus, buildRetestSummary(rejectReason, reviewRemark));
+            labSampleService.updateStatus(
+                    sample.getId(),
+                    nextSampleStatus,
+                    buildRetestSummary(rejectReason, reviewRemark),
+                    "审核驳回：封签号=" + sample.getSealNo()
+                            + "，审核人=" + currentUser.getRealName()
+                            + "，原因=" + rejectReason);
         }
     }
 

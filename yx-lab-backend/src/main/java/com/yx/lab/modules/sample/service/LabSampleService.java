@@ -21,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Date;
+import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -36,6 +37,8 @@ public class LabSampleService {
                 new LambdaQueryWrapper<LabSample>()
                         .and(StrUtil.isNotBlank(query.getKeyword()), wrapper -> wrapper
                                 .like(LabSample::getSampleNo, query.getKeyword())
+                                .or()
+                                .like(LabSample::getSealNo, query.getKeyword())
                                 .or()
                                 .like(LabSample::getPointName, query.getKeyword()))
                         .eq(StrUtil.isNotBlank(query.getSampleStatus()), LabSample::getSampleStatus, query.getSampleStatus())
@@ -73,18 +76,21 @@ public class LabSampleService {
 
         LabSample sample = new LabSample();
         sample.setSampleNo(generateSampleNo());
+        sample.setSealNo(generateSealNo());
         sample.setTaskId(command.getTaskId());
         sample.setPointId(task == null || task.getPointId() == null ? command.getPointId() : task.getPointId());
         sample.setPointName(task == null || StrUtil.isBlank(task.getPointName()) ? command.getPointName() : task.getPointName());
         sample.setSampleType(task == null || StrUtil.isBlank(task.getSampleType()) ? command.getSampleType() : task.getSampleType());
         sample.setDetectionItems(command.getDetectionItems());
         sample.setSamplingTime(command.getSamplingTime());
+        sample.setSealTime(LocalDateTime.now());
         sample.setSamplerId(resolveSamplerId(command, task, currentUser));
         sample.setSamplerName(resolveSamplerName(command, task, currentUser));
         sample.setWeather(command.getWeather());
         sample.setStorageCondition(command.getStorageCondition());
         sample.setSampleStatus(LabWorkflowConstants.SampleStatus.LOGGED);
         sample.setRemark(command.getRemark());
+        sample.setTraceLog(buildLoginTrace(sample, task));
         labSampleMapper.insert(sample);
 
         if (task != null) {
@@ -95,12 +101,29 @@ public class LabSampleService {
     }
 
     public void updateStatus(Long sampleId, String status, String resultSummary) {
+        updateStatus(sampleId, status, resultSummary, null);
+    }
+
+    public void updateStatus(Long sampleId, String status, String resultSummary, String traceMessage) {
         LabSample sample = labSampleMapper.selectById(sampleId);
         if (sample == null) {
             throw new BusinessException("样品不存在");
         }
         sample.setSampleStatus(status);
         sample.setResultSummary(resultSummary);
+        appendTraceLog(sample, traceMessage);
+        labSampleMapper.updateById(sample);
+    }
+
+    public void appendTrace(Long sampleId, String traceMessage) {
+        if (StrUtil.isBlank(traceMessage)) {
+            return;
+        }
+        LabSample sample = labSampleMapper.selectById(sampleId);
+        if (sample == null) {
+            throw new BusinessException("样品不存在");
+        }
+        appendTraceLog(sample, traceMessage);
         labSampleMapper.updateById(sample);
     }
 
@@ -108,6 +131,14 @@ public class LabSampleService {
         String prefix = DateUtil.format(new Date(), "yyyyMM");
         Long count = labSampleMapper.selectCount(new LambdaQueryWrapper<LabSample>()
                 .likeRight(LabSample::getSampleNo, prefix));
+        long next = count == null ? 1L : count + 1L;
+        return prefix + String.format("%04d", next);
+    }
+
+    private String generateSealNo() {
+        String prefix = "SEAL" + DateUtil.format(new Date(), "yyyyMM");
+        Long count = labSampleMapper.selectCount(new LambdaQueryWrapper<LabSample>()
+                .likeRight(LabSample::getSealNo, prefix));
         long next = count == null ? 1L : count + 1L;
         return prefix + String.format("%04d", next);
     }
@@ -157,5 +188,41 @@ public class LabSampleService {
 
     private boolean isAdmin(CurrentUser currentUser) {
         return currentUser != null && "ADMIN".equalsIgnoreCase(currentUser.getRoleCode());
+    }
+
+    private String buildLoginTrace(LabSample sample, SamplingTask task) {
+        StringBuilder builder = new StringBuilder();
+        builder.append(formatTraceEntry("样品登录",
+                "封签号=" + sample.getSealNo()
+                        + "，样品编号=" + sample.getSampleNo()
+                        + "，点位=" + sample.getPointName()
+                        + "，采样人=" + sample.getSamplerName()
+                        + "，采样时间=" + DateUtil.formatLocalDateTime(sample.getSamplingTime())));
+        if (StrUtil.isNotBlank(sample.getStorageCondition())) {
+            builder.append("\n").append(formatTraceEntry("样品保存", "存储条件=" + sample.getStorageCondition()));
+        }
+        if (StrUtil.isNotBlank(sample.getWeather())) {
+            builder.append("\n").append(formatTraceEntry("采样环境", "天气=" + sample.getWeather()));
+        }
+        if (task != null) {
+            builder.append("\n").append(formatTraceEntry("来源任务", "采样任务ID=" + task.getId()));
+        }
+        return builder.toString();
+    }
+
+    private void appendTraceLog(LabSample sample, String traceMessage) {
+        if (sample == null || StrUtil.isBlank(traceMessage)) {
+            return;
+        }
+        String entry = formatTraceEntry("流程留痕", traceMessage);
+        if (StrUtil.isBlank(sample.getTraceLog())) {
+            sample.setTraceLog(entry);
+            return;
+        }
+        sample.setTraceLog(sample.getTraceLog() + "\n" + entry);
+    }
+
+    private String formatTraceEntry(String title, String content) {
+        return DateUtil.formatDateTime(new Date()) + " [" + title + "] " + StrUtil.trim(content);
     }
 }

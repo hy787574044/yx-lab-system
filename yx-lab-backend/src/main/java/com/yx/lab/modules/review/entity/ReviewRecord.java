@@ -19,6 +19,8 @@ public class ReviewRecord extends BaseEntity {
 
     private String sampleNo;
 
+    private String sealNo;
+
     private Long reviewerId;
 
     private String reviewerName;
