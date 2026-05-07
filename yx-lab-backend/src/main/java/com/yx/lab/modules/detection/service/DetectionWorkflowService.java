@@ -13,10 +13,14 @@ import com.yx.lab.modules.detection.dto.DetectionItemCommand;
 import com.yx.lab.modules.detection.dto.DetectionRecordQuery;
 import com.yx.lab.modules.detection.dto.DetectionSubmitCommand;
 import com.yx.lab.modules.detection.entity.DetectionItem;
+import com.yx.lab.modules.detection.entity.DetectionParameter;
 import com.yx.lab.modules.detection.entity.DetectionRecord;
+import com.yx.lab.modules.detection.entity.DetectionStep;
 import com.yx.lab.modules.detection.entity.DetectionType;
 import com.yx.lab.modules.detection.mapper.DetectionItemMapper;
+import com.yx.lab.modules.detection.mapper.DetectionParameterMapper;
 import com.yx.lab.modules.detection.mapper.DetectionRecordMapper;
+import com.yx.lab.modules.detection.mapper.DetectionStepMapper;
 import com.yx.lab.modules.detection.mapper.DetectionTypeMapper;
 import com.yx.lab.modules.detection.vo.DetectionRecordDetailVO;
 import com.yx.lab.modules.review.entity.ReviewRecord;
@@ -29,7 +33,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -40,6 +48,10 @@ public class DetectionWorkflowService {
     private final DetectionItemMapper detectionItemMapper;
 
     private final DetectionTypeMapper detectionTypeMapper;
+
+    private final DetectionParameterMapper detectionParameterMapper;
+
+    private final DetectionStepMapper detectionStepMapper;
 
     private final LabSampleMapper labSampleMapper;
 
@@ -97,31 +109,36 @@ public class DetectionWorkflowService {
 
         CurrentUser currentUser = SecurityContext.getCurrentUser();
         DetectionType detectionType = detectionTypeMapper.selectById(command.getDetectionTypeId());
+        DetectionType usableType = requireUsableType(command, detectionType);
+        List<DetectionParameter> configuredParameters = resolveConfiguredParameters(usableType);
+        ensureTypeHasSteps(usableType.getId());
+        Map<Long, DetectionItemCommand> itemMap = validateSubmittedItems(command.getItems(), configuredParameters);
 
         DetectionRecord record = new DetectionRecord();
         record.setSampleId(sample.getId());
         record.setSampleNo(sample.getSampleNo());
         record.setSealNo(sample.getSealNo());
         record.setDetectionTypeId(command.getDetectionTypeId());
-        record.setDetectionTypeName(detectionType == null ? command.getDetectionTypeName() : detectionType.getTypeName());
+        record.setDetectionTypeName(usableType.getTypeName());
         record.setDetectionTime(LocalDateTime.now());
         record.setDetectorId(currentUser.getUserId());
         record.setDetectorName(currentUser.getRealName());
         record.setAbnormalRemark(command.getAbnormalRemark());
         record.setDetectionStatus(LabWorkflowConstants.DetectionStatus.SUBMITTED);
-        record.setDetectionResult(buildResult(command.getItems()));
+        record.setDetectionResult(buildResult(configuredParameters, itemMap));
         detectionRecordMapper.insert(record);
 
-        for (DetectionItemCommand itemCommand : command.getItems()) {
+        for (DetectionParameter parameter : configuredParameters) {
+            DetectionItemCommand itemCommand = itemMap.get(parameter.getId());
             DetectionItem item = new DetectionItem();
             item.setRecordId(record.getId());
-            item.setParameterId(itemCommand.getParameterId());
-            item.setParameterName(itemCommand.getParameterName());
-            item.setStandardMin(itemCommand.getStandardMin());
-            item.setStandardMax(itemCommand.getStandardMax());
+            item.setParameterId(parameter.getId());
+            item.setParameterName(parameter.getParameterName());
+            item.setStandardMin(parameter.getStandardMin());
+            item.setStandardMax(parameter.getStandardMax());
             item.setResultValue(itemCommand.getResultValue());
-            item.setUnit(itemCommand.getUnit());
-            item.setExceedFlag(isExceeded(itemCommand) ? 1 : 0);
+            item.setUnit(parameter.getUnit());
+            item.setExceedFlag(isExceeded(parameter, itemCommand.getResultValue()) ? 1 : 0);
             detectionItemMapper.insert(item);
         }
 
@@ -149,21 +166,138 @@ public class DetectionWorkflowService {
         }
     }
 
-    private String buildResult(List<DetectionItemCommand> items) {
-        return items.stream().anyMatch(this::isExceeded)
+    private DetectionType requireUsableType(DetectionSubmitCommand command, DetectionType detectionType) {
+        if (detectionType == null) {
+            throw new BusinessException("检测类型不存在");
+        }
+        if (!Integer.valueOf(1).equals(detectionType.getEnabled())) {
+            throw new BusinessException("当前检测类型已停用，不能提交检测");
+        }
+        if (StrUtil.isNotBlank(command.getDetectionTypeName())
+                && !StrUtil.equals(command.getDetectionTypeName(), detectionType.getTypeName())) {
+            throw new BusinessException("检测类型名称与配置不一致，请刷新后重试");
+        }
+        return detectionType;
+    }
+
+    private List<DetectionParameter> resolveConfiguredParameters(DetectionType detectionType) {
+        List<Long> parameterIds = parseParameterIds(detectionType.getParameterIds());
+        if (parameterIds.isEmpty()) {
+            throw new BusinessException("当前检测类型未配置检测参数，不能提交检测");
+        }
+        List<DetectionParameter> parameters = detectionParameterMapper.selectList(new LambdaQueryWrapper<DetectionParameter>()
+                .in(DetectionParameter::getId, parameterIds));
+        Map<Long, DetectionParameter> parameterMap = parameters.stream()
+                .collect(Collectors.toMap(DetectionParameter::getId, parameter -> parameter));
+        List<DetectionParameter> orderedParameters = new ArrayList<>();
+        for (Long parameterId : parameterIds) {
+            DetectionParameter parameter = parameterMap.get(parameterId);
+            if (parameter == null) {
+                throw new BusinessException("检测类型绑定的参数不存在，请先修正检测配置");
+            }
+            if (!Integer.valueOf(1).equals(parameter.getEnabled())) {
+                throw new BusinessException("检测类型绑定了已停用的检测参数，请先修正检测配置");
+            }
+            orderedParameters.add(parameter);
+        }
+        return orderedParameters;
+    }
+
+    private void ensureTypeHasSteps(Long typeId) {
+        Long stepCount = detectionStepMapper.selectCount(new LambdaQueryWrapper<DetectionStep>()
+                .eq(DetectionStep::getTypeId, typeId));
+        if (stepCount == null || stepCount == 0) {
+            throw new BusinessException("当前检测类型未配置检测步骤，不能提交检测");
+        }
+    }
+
+    private Map<Long, DetectionItemCommand> validateSubmittedItems(List<DetectionItemCommand> items,
+                                                                   List<DetectionParameter> configuredParameters) {
+        if (items == null || items.isEmpty()) {
+            throw new BusinessException("检测项不能为空");
+        }
+        Map<Long, DetectionItemCommand> itemMap = new LinkedHashMap<>();
+        for (DetectionItemCommand item : items) {
+            if (itemMap.put(item.getParameterId(), item) != null) {
+                throw new BusinessException("同一检测参数不能重复提交");
+            }
+        }
+        if (itemMap.size() != configuredParameters.size()) {
+            throw new BusinessException("提交的检测项数量与检测配置不一致");
+        }
+        for (DetectionParameter parameter : configuredParameters) {
+            DetectionItemCommand item = itemMap.get(parameter.getId());
+            if (item == null) {
+                throw new BusinessException("缺少检测参数：" + parameter.getParameterName());
+            }
+            validateItemAgainstConfig(item, parameter);
+        }
+        return itemMap;
+    }
+
+    private void validateItemAgainstConfig(DetectionItemCommand item, DetectionParameter parameter) {
+        if (!StrUtil.equals(item.getParameterName(), parameter.getParameterName())) {
+            throw new BusinessException("检测参数名称与配置不一致：" + parameter.getParameterName());
+        }
+        if (StrUtil.isNotBlank(item.getUnit()) && !StrUtil.equals(item.getUnit(), StrUtil.blankToDefault(parameter.getUnit(), ""))) {
+            throw new BusinessException("检测参数单位与配置不一致：" + parameter.getParameterName());
+        }
+        if (item.getStandardMin() != null && compareNullableDecimal(item.getStandardMin(), parameter.getStandardMin()) != 0) {
+            throw new BusinessException("检测参数标准下限与配置不一致：" + parameter.getParameterName());
+        }
+        if (item.getStandardMax() != null && compareNullableDecimal(item.getStandardMax(), parameter.getStandardMax()) != 0) {
+            throw new BusinessException("检测参数标准上限与配置不一致：" + parameter.getParameterName());
+        }
+    }
+
+    private int compareNullableDecimal(java.math.BigDecimal left, java.math.BigDecimal right) {
+        if (left == null && right == null) {
+            return 0;
+        }
+        if (left == null) {
+            return -1;
+        }
+        if (right == null) {
+            return 1;
+        }
+        return left.compareTo(right);
+    }
+
+    private List<Long> parseParameterIds(String parameterIdsText) {
+        List<Long> parameterIds = new ArrayList<>();
+        if (StrUtil.isBlank(parameterIdsText)) {
+            return parameterIds;
+        }
+        for (String rawId : StrUtil.split(parameterIdsText, ',')) {
+            String idText = StrUtil.trim(rawId);
+            if (StrUtil.isBlank(idText)) {
+                continue;
+            }
+            try {
+                parameterIds.add(Long.valueOf(idText));
+            } catch (NumberFormatException ex) {
+                throw new BusinessException("检测类型参数配置格式不合法，请先修正检测配置");
+            }
+        }
+        return parameterIds;
+    }
+
+    private String buildResult(List<DetectionParameter> configuredParameters, Map<Long, DetectionItemCommand> itemMap) {
+        return configuredParameters.stream()
+                .anyMatch(parameter -> isExceeded(parameter, itemMap.get(parameter.getId()).getResultValue()))
                 ? LabWorkflowConstants.DetectionResult.ABNORMAL
                 : LabWorkflowConstants.DetectionResult.NORMAL;
     }
 
-    private boolean isExceeded(DetectionItemCommand itemCommand) {
-        if (itemCommand.getResultValue() == null) {
+    private boolean isExceeded(DetectionParameter parameter, java.math.BigDecimal resultValue) {
+        if (resultValue == null) {
             return false;
         }
-        if (itemCommand.getStandardMin() != null
-                && itemCommand.getResultValue().compareTo(itemCommand.getStandardMin()) < 0) {
+        if (parameter.getStandardMin() != null
+                && resultValue.compareTo(parameter.getStandardMin()) < 0) {
             return true;
         }
-        return itemCommand.getStandardMax() != null
-                && itemCommand.getResultValue().compareTo(itemCommand.getStandardMax()) > 0;
+        return parameter.getStandardMax() != null
+                && resultValue.compareTo(parameter.getStandardMax()) > 0;
     }
 }

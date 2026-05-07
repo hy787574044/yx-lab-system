@@ -59,7 +59,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import { fetchDetectionsApi, fetchSamplesApi, submitDetectionApi } from '../api/lab'
+import { fetchDetectionParametersApi, fetchDetectionsApi, fetchDetectionTypesApi, fetchSamplesApi, submitDetectionApi } from '../api/lab'
 import TablePagination from '../components/common/TablePagination.vue'
 import {
   abnormalDetectionResult,
@@ -103,21 +103,62 @@ async function submitDemo() {
     return
   }
 
+  const typeResult = await fetchDetectionTypesApi({ pageNum: 1, pageSize: 100 })
+  const detectionType = typeResult.records?.find((item) => item.enabled === 1)
+  if (!detectionType) {
+    ElMessage.warning('请先启用一个检测类型配置')
+    return
+  }
+
+  const parameterIdList = (detectionType.parameterIds || '')
+    .split(',')
+    .map((item) => Number(item.trim()))
+    .filter((item) => Number.isFinite(item))
+  if (!parameterIdList.length) {
+    ElMessage.warning('当前检测类型未配置检测参数')
+    return
+  }
+
+  const parameterResult = await fetchDetectionParametersApi({ pageNum: 1, pageSize: 200 })
+  const parameterMap = new Map((parameterResult.records || []).map((item) => [item.id, item]))
+  const configuredParameters = parameterIdList
+    .map((id) => parameterMap.get(id))
+    .filter((item) => item && item.enabled === 1)
+  if (configuredParameters.length !== parameterIdList.length) {
+    ElMessage.warning('当前检测类型存在未启用或缺失的检测参数，请先修正配置')
+    return
+  }
+
   await submitDetectionApi({
     sampleId: sample.id,
-    detectionTypeId: 3101,
-    detectionTypeName: '日检九项',
-    items: [
-      { parameterId: 3001, parameterName: 'pH', standardMin: 6.5, standardMax: 8.5, resultValue: 7.12, unit: '' },
-      { parameterId: 3002, parameterName: '浊度', standardMin: 0, standardMax: 1, resultValue: 0.66, unit: 'NTU' },
-      { parameterId: 3003, parameterName: '余氯', standardMin: 0.05, standardMax: 2, resultValue: 0.31, unit: 'mg/L' },
-      { parameterId: 3004, parameterName: '氨氮', standardMin: 0, standardMax: 0.5, resultValue: 0.18, unit: 'mg/L' }
-    ]
+    detectionTypeId: detectionType.id,
+    detectionTypeName: detectionType.typeName,
+    items: configuredParameters.map((parameter, index) => ({
+      parameterId: parameter.id,
+      parameterName: parameter.parameterName,
+      standardMin: parameter.standardMin,
+      standardMax: parameter.standardMax,
+      resultValue: buildDemoResult(parameter, index),
+      unit: parameter.unit
+    }))
   })
 
   ElMessage.success(sample.sampleStatus === retestSampleStatus ? '重检记录已提交，样品重新进入审核流程' : '检测记录已提交')
   query.pageNum = 1
   await loadData()
+}
+
+function buildDemoResult(parameter, index) {
+  if (parameter.standardMin != null && parameter.standardMax != null) {
+    return Number(((Number(parameter.standardMin) + Number(parameter.standardMax)) / 2).toFixed(2))
+  }
+  if (parameter.standardMax != null) {
+    return Number((Math.max(Number(parameter.standardMax) - 0.1, 0)).toFixed(2))
+  }
+  if (parameter.standardMin != null) {
+    return Number((Number(parameter.standardMin) + 0.1).toFixed(2))
+  }
+  return Number((0.5 + index * 0.1).toFixed(2))
 }
 
 onMounted(loadData)
