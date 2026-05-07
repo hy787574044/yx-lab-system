@@ -55,6 +55,18 @@ public class SamplingPlanController {
         return ApiResponse.successMessage("删除成功");
     }
 
+    @PostMapping("/{id}/pause")
+    public ApiResponse<Void> pause(@PathVariable Long id) {
+        samplingPlanService.pause(id);
+        return ApiResponse.successMessage("计划已暂停");
+    }
+
+    @PostMapping("/{id}/resume")
+    public ApiResponse<Void> resume(@PathVariable Long id) {
+        samplingPlanService.resume(id);
+        return ApiResponse.successMessage("计划已恢复");
+    }
+
     @PostMapping("/dispatch")
     public ApiResponse<Void> dispatch(@Valid @RequestBody SamplingPlanDispatchCommand command) {
         samplingPlanService.dispatch(command);

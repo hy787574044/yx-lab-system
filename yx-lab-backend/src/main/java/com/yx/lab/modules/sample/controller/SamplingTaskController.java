@@ -2,6 +2,7 @@ package com.yx.lab.modules.sample.controller;
 
 import com.yx.lab.common.model.ApiResponse;
 import com.yx.lab.common.model.PageResult;
+import com.yx.lab.modules.sample.dto.SamplingTaskActionCommand;
 import com.yx.lab.modules.sample.dto.SamplingTaskCompleteCommand;
 import com.yx.lab.modules.sample.dto.SamplingTaskQuery;
 import com.yx.lab.modules.sample.entity.SamplingTask;
@@ -38,6 +39,27 @@ public class SamplingTaskController {
     @GetMapping("/todo/mine")
     public ApiResponse<List<SamplingTask>> todoMine() {
         return ApiResponse.success(samplingTaskService.todoMine());
+    }
+
+    @PostMapping("/{id}/start")
+    public ApiResponse<Void> start(@PathVariable Long id,
+                                   @RequestBody(required = false) SamplingTaskActionCommand command) {
+        samplingTaskService.start(id, command);
+        return ApiResponse.successMessage("任务已开始");
+    }
+
+    @PostMapping("/{id}/abandon")
+    public ApiResponse<Void> abandon(@PathVariable Long id,
+                                     @RequestBody(required = false) SamplingTaskActionCommand command) {
+        samplingTaskService.abandon(id, command);
+        return ApiResponse.successMessage("任务已废弃");
+    }
+
+    @PostMapping("/{id}/resume")
+    public ApiResponse<Void> resume(@PathVariable Long id,
+                                    @RequestBody(required = false) SamplingTaskActionCommand command) {
+        samplingTaskService.resume(id, command);
+        return ApiResponse.successMessage("任务已恢复");
     }
 
     @PostMapping("/complete")

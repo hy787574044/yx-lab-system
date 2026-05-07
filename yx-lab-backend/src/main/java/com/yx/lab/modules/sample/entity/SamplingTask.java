@@ -32,9 +32,14 @@ public class SamplingTask extends BaseEntity {
 
     private String taskStatus;
 
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime startedTime;
+
     private String onsiteMetrics;
 
     private String photoUrls;
+
+    private String abandonReason;
 
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime finishedTime;

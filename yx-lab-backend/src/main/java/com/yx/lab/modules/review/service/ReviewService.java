@@ -56,8 +56,19 @@ public class ReviewService {
         if (record == null) {
             throw new BusinessException("检测记录不存在");
         }
+        if (!"SUBMITTED".equals(record.getDetectionStatus())) {
+            throw new BusinessException("当前检测记录不在待审核状态");
+        }
+
         LabSample sample = labSampleMapper.selectById(record.getSampleId());
+        if (sample == null) {
+            throw new BusinessException("样品不存在");
+        }
+
         CurrentUser currentUser = SecurityContext.getCurrentUser();
+        if ("REJECTED".equals(command.getReviewResult()) && StrUtil.isBlank(command.getRejectReason())) {
+            throw new BusinessException("驳回时必须填写驳回原因");
+        }
 
         ReviewRecord reviewRecord = new ReviewRecord();
         reviewRecord.setDetectionRecordId(record.getId());
@@ -75,10 +86,10 @@ public class ReviewService {
         detectionRecordMapper.updateById(record);
 
         if ("APPROVED".equals(command.getReviewResult())) {
-            labSampleService.updateStatus(sample.getId(), "APPROVED", "审核通过");
+            labSampleService.updateStatus(sample.getId(), "COMPLETED", record.getDetectionResult());
             reportService.createApprovedReport(sample, record);
         } else {
-            labSampleService.updateStatus(sample.getId(), "REJECTED", command.getRejectReason());
+            labSampleService.updateStatus(sample.getId(), "RETEST", "待重检");
         }
     }
 }

@@ -1,7 +1,7 @@
 export const instrumentStatusLabelMap = {
   NORMAL: '正常',
   DISABLED: '停用',
-  MAINTENANCE: '维修中',
+  MAINTENANCE: '维护中',
   CALIBRATING: '待校准'
 }
 
@@ -22,17 +22,27 @@ export const frequencyTypeLabelMap = {
   MONTHLY: '每月'
 }
 
+export const cycleTypeLabelMap = {
+  ONCE: '单次',
+  DAILY: '每日',
+  WEEKLY: '每周',
+  MONTHLY: '每月'
+}
+
 export const planStatusLabelMap = {
-  PENDING: '待执行',
+  ACTIVE: '启用中',
+  PAUSED: '已暂停',
   DISPATCHED: '已派发',
   COMPLETED: '已完成',
-  UNPUBLISHED: '未派发',
+  PENDING: '待执行',
+  UNPUBLISHED: '待派发',
   PUBLISHED: '已派发'
 }
 
 export const taskStatusLabelMap = {
   PENDING: '待处理',
   IN_PROGRESS: '进行中',
+  ABANDONED: '已废弃',
   COMPLETED: '已完成'
 }
 
@@ -44,8 +54,8 @@ export const sampleTypeLabelMap = {
 
 export const sampleStatusLabelMap = {
   LOGGED: '已登录',
-  SUBMITTED: '已登记',
-  IN_TEST: '检测中',
+  REVIEWING: '审核中',
+  RETEST: '待重检',
   COMPLETED: '已完成'
 }
 
@@ -89,21 +99,24 @@ const statusClassMaps = {
     DISABLED: 'warning'
   },
   planStatus: {
-    PENDING: 'warning',
+    ACTIVE: 'success',
+    PAUSED: 'warning',
     DISPATCHED: 'info',
     COMPLETED: 'success',
+    PENDING: 'warning',
     UNPUBLISHED: 'warning',
-    PUBLISHED: 'success'
+    PUBLISHED: 'info'
   },
   taskStatus: {
     PENDING: 'warning',
     IN_PROGRESS: 'info',
+    ABANDONED: 'danger',
     COMPLETED: 'success'
   },
   sampleStatus: {
     LOGGED: 'info',
-    SUBMITTED: 'info',
-    IN_TEST: 'warning',
+    REVIEWING: 'warning',
+    RETEST: 'danger',
     COMPLETED: 'success'
   },
   detectionStatus: {

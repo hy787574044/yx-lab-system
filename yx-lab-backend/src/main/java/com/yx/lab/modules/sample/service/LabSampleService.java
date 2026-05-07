@@ -47,6 +47,17 @@ public class LabSampleService {
 
     @Transactional(rollbackFor = Exception.class)
     public LabSample loginSample(SampleLoginCommand command) {
+        SamplingTask task = null;
+        if (command.getTaskId() != null) {
+            task = samplingTaskMapper.selectById(command.getTaskId());
+            if (task == null) {
+                throw new BusinessException("采样任务不存在");
+            }
+            if (!"COMPLETED".equals(task.getTaskStatus())) {
+                throw new BusinessException("采样任务未完成，不能进行样品登录");
+            }
+        }
+
         LabSample sample = new LabSample();
         sample.setSampleNo(generateSampleNo());
         sample.setTaskId(command.getTaskId());
@@ -59,16 +70,13 @@ public class LabSampleService {
         sample.setSamplerName(command.getSamplerName());
         sample.setWeather(command.getWeather());
         sample.setStorageCondition(command.getStorageCondition());
-        sample.setSampleStatus("SUBMITTED");
+        sample.setSampleStatus("LOGGED");
         sample.setRemark(command.getRemark());
         labSampleMapper.insert(sample);
 
-        if (command.getTaskId() != null) {
-            SamplingTask task = samplingTaskMapper.selectById(command.getTaskId());
-            if (task != null) {
-                task.setTaskStatus("COMPLETED");
-                samplingTaskMapper.updateById(task);
-            }
+        if (task != null) {
+            task.setTaskStatus("COMPLETED");
+            samplingTaskMapper.updateById(task);
         }
         return sample;
     }

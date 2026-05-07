@@ -33,6 +33,8 @@ public class SamplingPlan extends BaseEntity {
 
     private String sampleType;
 
+    private String cycleType;
+
     private String planStatus;
 
     private String remark;

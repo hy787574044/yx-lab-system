@@ -76,13 +76,21 @@ public class ReportService {
         ReportTemplate template = reportTemplateMapper.selectOne(new LambdaQueryWrapper<ReportTemplate>()
                 .eq(ReportTemplate::getDefaultTemplate, 1)
                 .last("limit 1"));
-        String content = template == null
-                ? "样品编号：" + sample.getSampleNo() + "\n检测类型：" + record.getDetectionTypeName() + "\n检测结果：" + record.getDetectionResult()
-                : template.getTemplateContent()
-                .replace("${sampleNo}", sample.getSampleNo())
-                .replace("${pointName}", sample.getPointName())
-                .replace("${detectionType}", record.getDetectionTypeName())
-                .replace("${detectionResult}", record.getDetectionResult());
+
+        String content;
+        if (template == null) {
+            content = "样品编号：" + sample.getSampleNo()
+                    + "\n点位名称：" + sample.getPointName()
+                    + "\n检测类型：" + record.getDetectionTypeName()
+                    + "\n检测结果：" + record.getDetectionResult();
+        } else {
+            content = template.getTemplateContent()
+                    .replace("${sampleNo}", sample.getSampleNo())
+                    .replace("${pointName}", sample.getPointName())
+                    .replace("${detectionType}", record.getDetectionTypeName())
+                    .replace("${detectionResult}", record.getDetectionResult());
+        }
+
         LabReport report = new LabReport();
         report.setReportName(sample.getSampleNo() + "-检测报告");
         report.setReportType("DAILY");
@@ -90,7 +98,7 @@ public class ReportService {
         report.setSampleId(sample.getId());
         report.setSampleNo(sample.getSampleNo());
         report.setDetectionRecordId(record.getId());
-        report.setReportStatus("DRAFT");
+        report.setReportStatus("GENERATED");
         report.setContentSnapshot(content);
         labReportMapper.insert(report);
     }
