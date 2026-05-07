@@ -49,6 +49,23 @@ export const createInstrumentApi = (data) => request.post('/api/assets/instrumen
 export const updateInstrumentApi = (id, data) => request.put(`/api/assets/instruments/${id}`, data)
 export const deleteInstrumentApi = (id) => request.delete(`/api/assets/instruments/${id}`)
 export const fetchDocumentsApi = (params) => request.get('/api/assets/documents', { params })
+export const getDocumentDetailApi = (id) => request.get(`/api/assets/documents/${id}`)
+export const fetchDocumentUsersApi = () => request.get('/api/assets/document-users')
+export const uploadStorageFileApi = (file) => {
+  const formData = new FormData()
+  formData.append('file', file)
+  return request.post('/api/storage/upload', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  })
+}
+export const previewDocumentApi = (id) => axios.get(`/api/assets/documents/${id}/preview`, {
+  responseType: 'blob',
+  headers: getToken() ? { Authorization: `Bearer ${getToken()}` } : {}
+})
 export const createDocumentApi = (data) => request.post('/api/assets/documents', data)
+export const updateDocumentApi = (id, data) => request.put(`/api/assets/documents/${id}`, data)
+export const deleteDocumentApi = (id) => request.delete(`/api/assets/documents/${id}`)
 
 export const statisticsApi = () => request.get('/api/statistics/summary')

@@ -2,8 +2,8 @@
   <div class="login-shell">
     <div class="login-hero">
       <span class="hero-tag">Yangxin Lab OS</span>
-      <h1>把样品、检测、审核和报告，收拢到一条清晰的业务线里。</h1>
-      <p>面向县级水厂化验室的轻量实验管理平台，突出简洁录入、标准检测和结果追溯。</p>
+      <h1>把样品、检测、审核和报告，收拢到一条清晰的业务线上。</h1>
+      <p>面向县级水务化验室的轻量实验管理平台，突出简洁录入、标准检测和结果追溯。</p>
     </div>
     <div class="login-card glass-panel">
       <h2>系统登录</h2>
@@ -48,70 +48,71 @@ async function submit() {
 .login-shell {
   min-height: 100vh;
   display: grid;
-  grid-template-columns: 1.2fr 420px;
-  gap: 36px;
-  padding: 40px;
-  background:
-    radial-gradient(circle at top left, rgba(15, 109, 122, 0.18), transparent 32%),
-    radial-gradient(circle at bottom right, rgba(240, 139, 87, 0.18), transparent 28%),
-    var(--bg-page);
+  grid-template-columns: minmax(0, 1fr) 420px;
+  gap: 24px;
+  padding: 24px;
+  background: linear-gradient(180deg, #f3f7fb 0%, #eef4fb 100%);
 }
 
 .login-hero {
   align-self: center;
-  padding: 0 4vw;
+  padding: 0 6vw;
 }
 
 .hero-tag {
   display: inline-block;
   padding: 6px 12px;
   border-radius: 999px;
-  background: rgba(15, 109, 122, 0.1);
+  background: var(--brand-soft);
   color: var(--brand);
-  font-size: 12px;
-  letter-spacing: 1px;
+  font-size: 14px;
+  font-weight: 600;
 }
 
 .login-hero h1 {
-  max-width: 580px;
-  margin: 20px 0 16px;
-  font-size: 52px;
-  line-height: 1.15;
+  max-width: 640px;
+  margin: 18px 0 14px;
+  font-size: 36px;
+  line-height: 1.35;
+  color: var(--text-main);
 }
 
 .login-hero p {
-  max-width: 520px;
+  max-width: 560px;
   color: var(--text-sub);
-  font-size: 17px;
-  line-height: 1.7;
+  font-size: 14px;
+  line-height: 1.8;
 }
 
 .login-card {
   align-self: center;
-  padding: 36px;
-  background: var(--bg-panel-strong);
+  padding: 28px 24px;
+  background: var(--bg-panel);
+  border-radius: 16px;
+  box-shadow: var(--shadow-md);
 }
 
 .login-card h2 {
   margin-top: 0;
-  margin-bottom: 22px;
+  margin-bottom: 20px;
+  font-size: 22px;
 }
 
 .submit-btn {
   width: 100%;
-  height: 46px;
+  height: 40px;
 }
 
 .tips {
-  margin-top: 18px;
+  margin-top: 14px;
   color: var(--text-sub);
-  font-size: 13px;
+  font-size: 14px;
 }
 
 @media (max-width: 980px) {
   .login-shell {
     grid-template-columns: 1fr;
-    padding: 24px;
+    padding: 16px;
   }
 
   .login-hero {
@@ -119,7 +120,7 @@ async function submit() {
   }
 
   .login-hero h1 {
-    font-size: 36px;
+    font-size: 28px;
   }
 }
 </style>

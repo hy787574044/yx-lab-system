@@ -1,31 +1,71 @@
 <template>
   <div class="content-grid">
-    <div class="glass-panel section-block">
+    <section class="stats-grid">
+      <article class="metric-card" v-for="item in stats" :key="item.label">
+        <span>{{ item.label }}</span>
+        <strong>{{ item.value }}</strong>
+        <p>{{ item.desc }}</p>
+      </article>
+    </section>
+
+    <section class="glass-panel section-block">
+      <div class="section-head">
+        <div>
+          <h3 class="section-title">报告台账</h3>
+          <p class="page-subtitle">统一查看报告状态、样品来源及生成时间，并管理报告模板与发布动作。</p>
+        </div>
+      </div>
+
       <div class="toolbar">
         <el-button type="primary" @click="loadReports">刷新报告</el-button>
-        <el-button @click="createTemplate">新增模板</el-button>
+        <el-button type="primary" plain @click="createTemplate">新增模板</el-button>
       </div>
-      <el-table :data="reports" stripe>
-        <el-table-column prop="reportName" label="报告名称" />
-        <el-table-column prop="sampleNo" label="样品编号" />
-        <el-table-column prop="reportStatus" label="状态" />
-        <el-table-column prop="generatedTime" label="生成时间" />
-        <el-table-column label="操作" width="160">
+
+      <el-table :data="reports" stripe empty-text="暂无报告台账数据">
+        <el-table-column prop="reportName" label="报告名称" min-width="180" />
+        <el-table-column prop="sampleNo" label="样品编号" width="150" />
+        <el-table-column label="报告类型" width="120">
           <template #default="{ row }">
-            <el-button size="small" @click="publish(row.id)">发布</el-button>
+            {{ getEnumLabel(reportTypeLabelMap, row.reportType) }}
+          </template>
+        </el-table-column>
+        <el-table-column label="状态" width="120">
+          <template #default="{ row }">
+            <span class="status-chip" :class="getStatusClass('reportStatus', row.reportStatus)">
+              {{ getEnumLabel(reportStatusLabelMap, row.reportStatus) }}
+            </span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="generatedTime" label="生成时间" width="170" />
+        <el-table-column label="操作" width="120">
+          <template #default="{ row }">
+            <el-button size="small" @click="publish(row.id)" :disabled="row.reportStatus === 'PUBLISHED'">发布</el-button>
           </template>
         </el-table-column>
       </el-table>
-    </div>
+    </section>
   </div>
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { createTemplateApi, fetchReportsApi, publishReportApi } from '../api/lab'
+import {
+  getEnumLabel,
+  getStatusClass,
+  reportStatusLabelMap,
+  reportTypeLabelMap
+} from '../utils/labEnums'
 
 const reports = ref([])
+
+const stats = computed(() => [
+  { label: '报告数量', value: reports.value.length, desc: '当前页报告记录总量' },
+  { label: '已发布', value: reports.value.filter((item) => item.reportStatus === 'PUBLISHED').length, desc: '已完成正式发布的报告' },
+  { label: '待发布', value: reports.value.filter((item) => item.reportStatus !== 'PUBLISHED').length, desc: '仍待确认或待发布的报告' },
+  { label: '月报模板', value: reports.value.filter((item) => item.reportType === 'MONTHLY').length, desc: '月报类报告记录数量' }
+])
 
 async function loadReports() {
   reports.value = (await fetchReportsApi({ pageNum: 1, pageSize: 10 })).records || []
@@ -49,3 +89,22 @@ async function publish(id) {
 
 onMounted(loadReports)
 </script>
+
+<style scoped>
+.section-head {
+  margin-bottom: 16px;
+}
+
+.section-title {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.4;
+}
+
+.metric-card p {
+  margin: 10px 0 0;
+  color: var(--text-sub);
+  font-size: 14px;
+  line-height: 1.6;
+}
+</style>

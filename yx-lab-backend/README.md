@@ -191,3 +191,62 @@ curl -G "http://localhost:8080/api/unified/users/menus" \
   -H "Authorization: Bearer YOUR_TOKEN" \
   --data-urlencode "id=123456"
 ```
+
+## 设备台账与文档台账补充说明
+
+### 设备台账
+
+- 已支持设备台账分页查询、新增、编辑、删除
+- 已支持设备导入模板下载
+- 已支持按模板批量导入，并对必填项、状态值、日期格式、重复设备进行校验
+
+相关接口：
+
+- `GET /api/assets/instruments`
+- `GET /api/assets/instruments/{id}`
+- `POST /api/assets/instruments`
+- `PUT /api/assets/instruments/{id}`
+- `DELETE /api/assets/instruments/{id}`
+- `GET /api/assets/instruments/import-template`
+- `POST /api/assets/instruments/import`
+
+### 文档台账
+
+- 已支持文档台账分页查询、新增、编辑、删除
+- 新增文档时可先上传本地文件，再保存台账信息
+- 支持将文档推送给指定用户查看
+- 管理员或上传人可管理文档；被分享用户仅可查看/预览
+- 前端不提供下载按钮，文档通过受控预览接口访问
+
+相关接口：
+
+- `GET /api/assets/document-users`
+- `GET /api/assets/documents`
+- `GET /api/assets/documents/{id}`
+- `GET /api/assets/documents/{id}/preview`
+- `POST /api/assets/documents`
+- `PUT /api/assets/documents/{id}`
+- `DELETE /api/assets/documents/{id}`
+- `POST /api/storage/upload`
+
+文档保存请求体示例：
+
+```json
+{
+  "documentName": "化验操作规程",
+  "documentCategory": "制度文件",
+  "fileType": "pdf",
+  "fileSize": 102400,
+  "fileUrl": "E:/upload/xxxx.pdf",
+  "remark": "仅化验人员查看",
+  "viewerUserIds": ["1002", "1003"]
+}
+```
+
+### 数据库调整
+
+本次文档台账分享功能新增了表：
+
+- `lab_document_share`
+
+如果你的数据库已经初始化过，需要手动补充该表结构，或重新执行 `sql/init.sql` 中对应的建表语句。
