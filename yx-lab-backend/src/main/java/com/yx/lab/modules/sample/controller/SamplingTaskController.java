@@ -21,6 +21,10 @@ import org.springframework.web.bind.annotation.RestController;
 import javax.validation.Valid;
 import java.util.List;
 
+/**
+ * 采样任务控制器。
+ * 负责采样任务查询、开始、废弃、恢复和完成。
+ */
 @RestController
 @RequestMapping("/api/sampling-tasks")
 @RequiredArgsConstructor
@@ -29,24 +33,48 @@ public class SamplingTaskController {
 
     private final SamplingTaskService samplingTaskService;
 
+    /**
+     * 分页查询采样任务。
+     *
+     * @param query 采样任务查询条件。
+     * @return 采样任务分页结果。
+     */
     @GetMapping
     @Operation(summary = "采样任务分页")
     public ApiResponse<PageResult<SamplingTask>> page(@Validated SamplingTaskQuery query) {
         return ApiResponse.success(samplingTaskService.page(query));
     }
 
+    /**
+     * 获取采样任务详情。
+     *
+     * @param id 采样任务主键。
+     * @return 采样任务详情。
+     */
     @GetMapping("/{id}")
     @Operation(summary = "采样任务详情")
     public ApiResponse<SamplingTask> detail(@PathVariable Long id) {
         return ApiResponse.success(samplingTaskService.detail(id));
     }
 
+    /**
+     * 获取当前登录人的采样待办。
+     *
+     * @return 当前登录人的采样待办列表。
+     */
     @GetMapping("/todo/mine")
     @Operation(summary = "我的采样待办")
     public ApiResponse<List<SamplingTask>> todoMine() {
         return ApiResponse.success(samplingTaskService.todoMine());
     }
 
+    /**
+     * 开始采样任务。
+     *
+     * @param id 采样任务主键。
+     * @param command 任务操作命令。
+     * @return 开始结果。
+     */
     @PostMapping("/{id}/start")
     @Operation(summary = "开始采样任务")
     public ApiResponse<Void> start(@PathVariable Long id,
@@ -55,6 +83,13 @@ public class SamplingTaskController {
         return ApiResponse.successMessage("任务已开始");
     }
 
+    /**
+     * 废弃采样任务。
+     *
+     * @param id 采样任务主键。
+     * @param command 任务操作命令。
+     * @return 废弃结果。
+     */
     @PostMapping("/{id}/abandon")
     @Operation(summary = "废弃采样任务")
     public ApiResponse<Void> abandon(@PathVariable Long id,
@@ -63,6 +98,13 @@ public class SamplingTaskController {
         return ApiResponse.successMessage("任务已废弃");
     }
 
+    /**
+     * 恢复采样任务。
+     *
+     * @param id 采样任务主键。
+     * @param command 任务操作命令。
+     * @return 恢复结果。
+     */
     @PostMapping("/{id}/resume")
     @Operation(summary = "恢复采样任务")
     public ApiResponse<Void> resume(@PathVariable Long id,
@@ -71,6 +113,12 @@ public class SamplingTaskController {
         return ApiResponse.successMessage("任务已恢复");
     }
 
+    /**
+     * 完成采样任务。
+     *
+     * @param command 采样完成命令。
+     * @return 完成结果。
+     */
     @PostMapping("/complete")
     @Operation(summary = "完成采样任务")
     public ApiResponse<Void> complete(@Valid @RequestBody SamplingTaskCompleteCommand command) {

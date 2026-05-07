@@ -10,6 +10,10 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * 统计分析控制器。
+ * 负责业务统计汇总查询。
+ */
 @RestController
 @RequestMapping("/api/statistics")
 @RequiredArgsConstructor
@@ -18,6 +22,11 @@ public class StatisticsController {
 
     private final StatisticsService statisticsService;
 
+    /**
+     * 获取统计汇总数据。
+     *
+     * @return 统计汇总结果。
+     */
     @GetMapping("/summary")
     @Operation(summary = "获取统计汇总")
     public ApiResponse<StatisticsSummaryVO> summary() {

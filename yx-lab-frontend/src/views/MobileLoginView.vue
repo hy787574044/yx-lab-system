@@ -39,7 +39,11 @@ const form = reactive({
   password: 'Admin@123'
 })
 
-// 登录成功后同步拉取当前用户信息，保证移动工作台能直接读取角色和姓名。
+/**
+ * 提交移动端登录请求，并在成功后同步写入令牌与当前用户信息。
+ *
+ * @returns {Promise<void>} 登录完成后跳转到移动端工作台。
+ */
 async function submit() {
   const loginResult = await mobileLoginApi(form)
   setToken(loginResult.token)
@@ -49,7 +53,11 @@ async function submit() {
   router.push('/mobile')
 }
 
-// 允许从移动端入口快速切回桌面端登录页。
+/**
+ * 切换到桌面端登录页。
+ *
+ * @returns {void} 无返回值。
+ */
 function goDesktop() {
   router.push('/login')
 }

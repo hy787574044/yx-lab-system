@@ -105,7 +105,14 @@ const router = createRouter({
   routes
 })
 
-// 路由守卫同时兼顾桌面端与移动端：未登录时按访问入口分别跳转到对应登录页。
+/**
+ * 路由前置守卫，同时处理桌面端与移动端的登录门禁。
+ *
+ * @param {import('vue-router').RouteLocationNormalized} to 目标路由。
+ * @param {import('vue-router').RouteLocationNormalized} from 来源路由。
+ * @param {import('vue-router').NavigationGuardNext} next 路由放行或重定向回调。
+ * @returns {void} 无返回值。
+ */
 router.beforeEach((to, from, next) => {
   document.title = to.meta?.title ? `${to.meta.title} - 阳新化验室管理系统` : '阳新化验室管理系统'
   if (to.path === '/login' || to.path === '/mobile/login') {

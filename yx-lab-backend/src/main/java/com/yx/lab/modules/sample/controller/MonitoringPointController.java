@@ -21,6 +21,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.Valid;
 
+/**
+ * 监测点位控制器。
+ * 负责监测点位的新增、查询、更新与删除。
+ */
 @RestController
 @RequestMapping("/api/monitoring-points")
 @RequiredArgsConstructor
@@ -29,18 +33,36 @@ public class MonitoringPointController {
 
     private final MonitoringPointService monitoringPointService;
 
+    /**
+     * 分页查询监测点位。
+     *
+     * @param query 监测点位查询条件。
+     * @return 监测点位分页结果。
+     */
     @GetMapping
     @Operation(summary = "监测点位分页")
     public ApiResponse<PageResult<MonitoringPoint>> page(@Validated MonitoringPointQuery query) {
         return ApiResponse.success(monitoringPointService.page(query));
     }
 
+    /**
+     * 获取监测点位详情。
+     *
+     * @param id 监测点位主键。
+     * @return 监测点位详情。
+     */
     @GetMapping("/{id}")
     @Operation(summary = "监测点位详情")
     public ApiResponse<MonitoringPoint> detail(@PathVariable Long id) {
         return ApiResponse.success(monitoringPointService.detail(id));
     }
 
+    /**
+     * 新增监测点位。
+     *
+     * @param command 监测点位保存命令。
+     * @return 保存结果。
+     */
     @PostMapping
     @Operation(summary = "新增监测点位")
     public ApiResponse<Void> save(@Valid @RequestBody MonitoringPointSaveCommand command) {
@@ -48,6 +70,13 @@ public class MonitoringPointController {
         return ApiResponse.successMessage("新增成功");
     }
 
+    /**
+     * 更新监测点位。
+     *
+     * @param id 监测点位主键。
+     * @param command 监测点位保存命令。
+     * @return 更新结果。
+     */
     @PutMapping("/{id}")
     @Operation(summary = "更新监测点位")
     public ApiResponse<Void> update(@PathVariable Long id, @Valid @RequestBody MonitoringPointSaveCommand command) {
@@ -55,6 +84,12 @@ public class MonitoringPointController {
         return ApiResponse.successMessage("更新成功");
     }
 
+    /**
+     * 删除监测点位。
+     *
+     * @param id 监测点位主键。
+     * @return 删除结果。
+     */
     @DeleteMapping("/{id}")
     @Operation(summary = "删除监测点位")
     public ApiResponse<Void> delete(@PathVariable Long id) {

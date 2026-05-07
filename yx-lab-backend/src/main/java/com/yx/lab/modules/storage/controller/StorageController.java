@@ -15,6 +15,10 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
 
+/**
+ * 文件存储控制器。
+ * 负责统一附件上传。
+ */
 @RestController
 @RequestMapping("/api/storage")
 @RequiredArgsConstructor
@@ -23,6 +27,13 @@ public class StorageController {
 
     private final StorageService storageService;
 
+    /**
+     * 上传文件到统一存储。
+     *
+     * @param file 上传文件。
+     * @return 上传后的文件路径。
+     * @throws IOException 文件写入异常。
+     */
     @PostMapping("/upload")
     @Operation(summary = "上传文件")
     public ApiResponse<Map<String, String>> upload(@RequestParam("file") MultipartFile file) throws IOException {

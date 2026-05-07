@@ -10,6 +10,10 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * 驾驶舱总览控制器。
+ * 负责首页汇总指标查询。
+ */
 @RestController
 @RequestMapping("/api/dashboard")
 @RequiredArgsConstructor
@@ -18,6 +22,11 @@ public class DashboardController {
 
     private final DashboardService dashboardService;
 
+    /**
+     * 获取驾驶舱总览数据。
+     *
+     * @return 驾驶舱总览结果。
+     */
     @GetMapping("/overview")
     @Operation(summary = "获取驾驶舱总览")
     public ApiResponse<DashboardOverviewVO> overview() {

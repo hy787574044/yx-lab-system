@@ -22,6 +22,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.Valid;
 
+/**
+ * 采样计划控制器。
+ * 负责采样计划的维护、暂停恢复与派发。
+ */
 @RestController
 @RequestMapping("/api/sampling-plans")
 @RequiredArgsConstructor
@@ -30,18 +34,36 @@ public class SamplingPlanController {
 
     private final SamplingPlanService samplingPlanService;
 
+    /**
+     * 分页查询采样计划。
+     *
+     * @param query 采样计划查询条件。
+     * @return 采样计划分页结果。
+     */
     @GetMapping
     @Operation(summary = "采样计划分页")
     public ApiResponse<PageResult<SamplingPlan>> page(@Validated SamplingPlanQuery query) {
         return ApiResponse.success(samplingPlanService.page(query));
     }
 
+    /**
+     * 获取采样计划详情。
+     *
+     * @param id 采样计划主键。
+     * @return 采样计划详情。
+     */
     @GetMapping("/{id}")
     @Operation(summary = "采样计划详情")
     public ApiResponse<SamplingPlan> detail(@PathVariable Long id) {
         return ApiResponse.success(samplingPlanService.detail(id));
     }
 
+    /**
+     * 新增采样计划。
+     *
+     * @param command 采样计划保存命令。
+     * @return 保存结果。
+     */
     @PostMapping
     @Operation(summary = "新增采样计划")
     public ApiResponse<Void> save(@Valid @RequestBody SamplingPlanSaveCommand command) {
@@ -49,6 +71,13 @@ public class SamplingPlanController {
         return ApiResponse.successMessage("新增成功");
     }
 
+    /**
+     * 更新采样计划。
+     *
+     * @param id 采样计划主键。
+     * @param command 采样计划保存命令。
+     * @return 更新结果。
+     */
     @PutMapping("/{id}")
     @Operation(summary = "更新采样计划")
     public ApiResponse<Void> update(@PathVariable Long id, @Valid @RequestBody SamplingPlanSaveCommand command) {
@@ -56,6 +85,12 @@ public class SamplingPlanController {
         return ApiResponse.successMessage("更新成功");
     }
 
+    /**
+     * 删除采样计划。
+     *
+     * @param id 采样计划主键。
+     * @return 删除结果。
+     */
     @DeleteMapping("/{id}")
     @Operation(summary = "删除采样计划")
     public ApiResponse<Void> delete(@PathVariable Long id) {
@@ -63,6 +98,12 @@ public class SamplingPlanController {
         return ApiResponse.successMessage("删除成功");
     }
 
+    /**
+     * 暂停采样计划。
+     *
+     * @param id 采样计划主键。
+     * @return 暂停结果。
+     */
     @PostMapping("/{id}/pause")
     @Operation(summary = "暂停采样计划")
     public ApiResponse<Void> pause(@PathVariable Long id) {
@@ -70,6 +111,12 @@ public class SamplingPlanController {
         return ApiResponse.successMessage("计划已暂停");
     }
 
+    /**
+     * 恢复采样计划。
+     *
+     * @param id 采样计划主键。
+     * @return 恢复结果。
+     */
     @PostMapping("/{id}/resume")
     @Operation(summary = "恢复采样计划")
     public ApiResponse<Void> resume(@PathVariable Long id) {
@@ -77,6 +124,12 @@ public class SamplingPlanController {
         return ApiResponse.successMessage("计划已恢复");
     }
 
+    /**
+     * 派发采样计划。
+     *
+     * @param command 采样计划派发命令。
+     * @return 派发结果。
+     */
     @PostMapping("/dispatch")
     @Operation(summary = "派发采样计划")
     public ApiResponse<Void> dispatch(@Valid @RequestBody SamplingPlanDispatchCommand command) {

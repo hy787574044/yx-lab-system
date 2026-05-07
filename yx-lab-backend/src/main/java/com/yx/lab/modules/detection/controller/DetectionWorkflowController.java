@@ -20,6 +20,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.Valid;
 
+/**
+ * 检测流程控制器。
+ * 负责检测记录查询与检测结果提交流程。
+ */
 @RestController
 @RequestMapping("/api/detections")
 @RequiredArgsConstructor
@@ -28,18 +32,36 @@ public class DetectionWorkflowController {
 
     private final DetectionWorkflowService detectionWorkflowService;
 
+    /**
+     * 分页查询检测记录。
+     *
+     * @param query 检测记录查询条件。
+     * @return 检测记录分页结果。
+     */
     @GetMapping
     @Operation(summary = "检测记录分页")
     public ApiResponse<PageResult<DetectionRecord>> page(@Validated DetectionRecordQuery query) {
         return ApiResponse.success(detectionWorkflowService.page(query));
     }
 
+    /**
+     * 获取检测记录详情。
+     *
+     * @param id 检测记录主键。
+     * @return 检测记录详情。
+     */
     @GetMapping("/{id}")
     @Operation(summary = "检测记录详情")
     public ApiResponse<DetectionRecordDetailVO> detail(@PathVariable Long id) {
         return ApiResponse.success(detectionWorkflowService.detail(id));
     }
 
+    /**
+     * 提交检测结果。
+     *
+     * @param command 检测提交命令。
+     * @return 提交结果。
+     */
     @PostMapping("/submit")
     @Operation(summary = "提交检测结果")
     public ApiResponse<Void> submit(@Valid @RequestBody DetectionSubmitCommand command) {

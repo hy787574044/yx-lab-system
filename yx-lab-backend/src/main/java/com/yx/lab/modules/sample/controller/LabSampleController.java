@@ -19,6 +19,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.Valid;
 
+/**
+ * 样品控制器。
+ * 负责样品分页查询、详情查询和样品登录。
+ */
 @RestController
 @RequestMapping("/api/samples")
 @RequiredArgsConstructor
@@ -27,18 +31,36 @@ public class LabSampleController {
 
     private final LabSampleService labSampleService;
 
+    /**
+     * 分页查询样品。
+     *
+     * @param query 样品查询条件。
+     * @return 样品分页结果。
+     */
     @GetMapping
     @Operation(summary = "样品分页")
     public ApiResponse<PageResult<LabSample>> page(@Validated LabSampleQuery query) {
         return ApiResponse.success(labSampleService.page(query));
     }
 
+    /**
+     * 获取样品详情。
+     *
+     * @param id 样品主键。
+     * @return 样品详情。
+     */
     @GetMapping("/{id}")
     @Operation(summary = "样品详情")
     public ApiResponse<LabSample> detail(@PathVariable Long id) {
         return ApiResponse.success(labSampleService.detail(id));
     }
 
+    /**
+     * 提交样品登录。
+     *
+     * @param command 样品登录命令。
+     * @return 登录后的样品信息。
+     */
     @PostMapping("/login")
     @Operation(summary = "样品登录")
     public ApiResponse<LabSample> login(@Valid @RequestBody SampleLoginCommand command) {

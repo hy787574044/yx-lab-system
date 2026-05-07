@@ -18,6 +18,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.Valid;
 
+/**
+ * 审核流程控制器。
+ * 负责审核记录查询与审核结果提交。
+ */
 @RestController
 @RequestMapping("/api/reviews")
 @RequiredArgsConstructor
@@ -26,12 +30,24 @@ public class ReviewController {
 
     private final ReviewService reviewService;
 
+    /**
+     * 分页查询审核记录。
+     *
+     * @param query 审核查询条件。
+     * @return 审核记录分页结果。
+     */
     @GetMapping
     @Operation(summary = "审核记录分页")
     public ApiResponse<PageResult<ReviewRecord>> page(@Validated ReviewQuery query) {
         return ApiResponse.success(reviewService.page(query));
     }
 
+    /**
+     * 提交审核结果。
+     *
+     * @param command 审核命令。
+     * @return 提交结果。
+     */
     @PostMapping
     @Operation(summary = "提交审核结果")
     public ApiResponse<Void> review(@Valid @RequestBody ReviewCommand command) {

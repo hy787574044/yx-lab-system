@@ -538,6 +538,12 @@ const tabOptions = computed(() => [
   { value: 'report', label: '报告', count: reports.value.length }
 ])
 
+/**
+ * 将报告推送状态码转换为前端可展示的中文文案。
+ *
+ * @param {string} status 推送状态编码。
+ * @returns {string} 推送状态中文说明。
+ */
 function getPushStatusLabel(status) {
   if (status === 'SUCCESS') {
     return '已推送'
@@ -551,14 +557,22 @@ function getPushStatusLabel(status) {
   return status || '-'
 }
 
-// 重新拉取当前用户，避免仅凭本地缓存导致角色或姓名不一致。
+/**
+ * 重新获取当前登录人信息，并同步更新本地缓存与页面状态。
+ *
+ * @returns {Promise<void>} 用户信息刷新完成。
+ */
 async function refreshCurrentUser() {
   const user = await getMeApi()
   setUser(user)
   currentUser.value = user
 }
 
-// 一次性刷新移动端全部看板数据，保证各环节状态同步推进。
+/**
+ * 并行刷新移动端工作台所需的全部业务数据。
+ *
+ * @returns {Promise<void>} 采样、检测、审核和报告数据刷新完成。
+ */
 async function refreshAll() {
   refreshing.value = true
   try {
@@ -591,14 +605,24 @@ async function refreshAll() {
   }
 }
 
-// 采样员开始任务后，任务会从待执行流转到执行中。
+/**
+ * 将指定采样任务推进到“执行中”状态。
+ *
+ * @param {Object} task 当前选中的采样任务。
+ * @returns {Promise<void>} 任务开始后刷新工作台数据。
+ */
 async function startTask(task) {
   await startSamplingTaskApi(task.id, { remark: '移动端开始采样' })
   ElMessage.success('采样任务已开始')
   await refreshAll()
 }
 
-// 现场无法执行时，要求填写原因后再废弃任务，便于后续追溯。
+/**
+ * 废弃采样任务，并要求填写废弃原因用于业务追溯。
+ *
+ * @param {Object} task 当前选中的采样任务。
+ * @returns {Promise<void>} 废弃完成后刷新工作台数据。
+ */
 async function abandonTask(task) {
   try {
     const { value } = await ElMessageBox.prompt('请填写废弃原因', '废弃采样任务', {
@@ -617,7 +641,12 @@ async function abandonTask(task) {
   }
 }
 
-// 打开采样完成弹窗，并把当前任务上下文灌入表单。
+/**
+ * 打开采样完成弹窗，并将当前任务信息写入表单上下文。
+ *
+ * @param {Object} task 当前选中的采样任务。
+ * @returns {void} 无返回值。
+ */
 function openCompleteDialog(task) {
   completeForm.taskId = task.id
   completeForm.onsiteMetrics = ''
@@ -626,7 +655,11 @@ function openCompleteDialog(task) {
   completeDialogVisible.value = true
 }
 
-// 关闭弹窗时重置表单，避免串用上一条任务的数据。
+/**
+ * 重置采样完成表单，避免不同任务间数据串用。
+ *
+ * @returns {void} 无返回值。
+ */
 function resetCompleteForm() {
   completeForm.taskId = null
   completeForm.onsiteMetrics = ''
@@ -634,7 +667,11 @@ function resetCompleteForm() {
   completeForm.remark = ''
 }
 
-// 提交采样完成信息，为样品登录和后续检测做准备。
+/**
+ * 提交采样完成结果，并推动流程进入样品登录阶段。
+ *
+ * @returns {Promise<void>} 提交完成后刷新工作台数据。
+ */
 async function submitComplete() {
   if (!completeForm.taskId) {
     ElMessage.warning('请选择要完成的采样任务')
@@ -656,7 +693,12 @@ async function submitComplete() {
   }
 }
 
-// 样品登录会承接采样任务信息，并允许现场补齐天气、保存条件等留痕字段。
+/**
+ * 打开样品登录弹窗，并根据采样任务预填核心字段。
+ *
+ * @param {Object} task 当前选中的采样任务。
+ * @returns {void} 无返回值。
+ */
 function openLoginDialog(task) {
   loginForm.taskId = task.id
   loginForm.pointId = task.pointId
@@ -672,7 +714,11 @@ function openLoginDialog(task) {
   loginDialogVisible.value = true
 }
 
-// 重置样品登录表单，避免不同样品之间的数据残留。
+/**
+ * 重置样品登录表单。
+ *
+ * @returns {void} 无返回值。
+ */
 function resetLoginForm() {
   loginForm.taskId = null
   loginForm.pointId = null
@@ -687,7 +733,11 @@ function resetLoginForm() {
   loginForm.remark = ''
 }
 
-// 提交样品登录后直接切到检测页，让移动端闭环继续向下推进。
+/**
+ * 提交样品登录信息，生成实验室样品并切换到检测标签页。
+ *
+ * @returns {Promise<void>} 登录完成后刷新工作台数据。
+ */
 async function submitSampleLogin() {
   if (!loginForm.pointId || !loginForm.pointName || !loginForm.sampleType || !loginForm.detectionItems || !loginForm.samplingTime) {
     ElMessage.warning('请完整填写样品登录信息')
@@ -705,7 +755,11 @@ async function submitSampleLogin() {
   }
 }
 
-// 检测配置只在首次进入检测环节时加载一次，减少移动端重复请求。
+/**
+ * 加载检测类型与检测参数配置，并在已存在缓存时直接复用。
+ *
+ * @returns {Promise<void>} 检测配置加载完成。
+ */
 async function ensureDetectionConfig() {
   if (detectionTypes.value.length && detectionParameters.value.length) {
     return
@@ -718,7 +772,12 @@ async function ensureDetectionConfig() {
   detectionParameters.value = parameterResult.records || []
 }
 
-// 打开检测弹窗前先校验是否存在可用检测类型和参数配置。
+/**
+ * 打开检测提交弹窗，并根据样品信息初始化检测表单。
+ *
+ * @param {Object} sample 当前选中的样品待检记录。
+ * @returns {Promise<void>} 弹窗初始化完成。
+ */
 async function openDetectionDialog(sample) {
   await ensureDetectionConfig()
   if (!enabledDetectionTypes.value.length) {
@@ -736,7 +795,12 @@ async function openDetectionDialog(sample) {
   detectionDialogVisible.value = true
 }
 
-// 根据所选检测类型展开参数项，形成移动端可直接录入的结果清单。
+/**
+ * 根据检测类型生成检测参数录入项。
+ *
+ * @param {number} typeId 检测类型主键。
+ * @returns {void} 无返回值。
+ */
 function handleDetectionTypeChange(typeId) {
   const type = enabledDetectionTypes.value.find((item) => item.id === typeId)
   detectionForm.detectionTypeId = typeId
@@ -763,7 +827,11 @@ function handleDetectionTypeChange(typeId) {
     }))
 }
 
-// 检测弹窗关闭时清理上下文，避免上一次结果残留到下一份样品。
+/**
+ * 重置检测提交表单。
+ *
+ * @returns {void} 无返回值。
+ */
 function resetDetectionForm() {
   detectionForm.sampleId = null
   detectionForm.detectionTypeId = null
@@ -772,7 +840,11 @@ function resetDetectionForm() {
   detectionForm.items = []
 }
 
-// 检测提交要求所有参数都有结果值，确保移动端不会绕过配置约束。
+/**
+ * 提交检测结果，并校验所有必填检测参数均已录入。
+ *
+ * @returns {Promise<void>} 检测提交完成后刷新工作台数据。
+ */
 async function submitDetection() {
   if (!detectionForm.sampleId || !detectionForm.detectionTypeId) {
     ElMessage.warning('请选择检测类型')
@@ -807,7 +879,13 @@ async function submitDetection() {
   }
 }
 
-// 审核弹窗同时支持通过与驳回重检，两种动作共用一套表单。
+/**
+ * 打开审核弹窗，并初始化通过或驳回重检所需的数据。
+ *
+ * @param {Object} row 当前选中的检测记录。
+ * @param {string} reviewResult 审核结果编码。
+ * @returns {void} 无返回值。
+ */
 function openReviewDialog(row, reviewResult) {
   reviewForm.detectionRecordId = row.id
   reviewForm.reviewResult = reviewResult
@@ -816,7 +894,11 @@ function openReviewDialog(row, reviewResult) {
   reviewDialogVisible.value = true
 }
 
-// 清空审核表单，防止上一条审核意见误带到下一条记录。
+/**
+ * 重置审核表单。
+ *
+ * @returns {void} 无返回值。
+ */
 function resetReviewForm() {
   reviewForm.detectionRecordId = null
   reviewForm.reviewResult = approvedReviewResult
@@ -824,7 +906,11 @@ function resetReviewForm() {
   reviewForm.reviewRemark = ''
 }
 
-// 驳回时强制填写原因，让退回重检链路在移动端也能完整闭环。
+/**
+ * 提交审核结果；若驳回，则必须附带重检原因。
+ *
+ * @returns {Promise<void>} 审核完成后刷新工作台数据。
+ */
 async function submitReview() {
   if (!reviewForm.detectionRecordId) {
     ElMessage.warning('请选择待审核记录')
@@ -846,7 +932,12 @@ async function submitReview() {
   }
 }
 
-// 报告预览优先按正式产物展示，失败时再回退到错误提示。
+/**
+ * 预览正式报告产物，并在失败时展示后端返回的错误信息。
+ *
+ * @param {Object} row 当前选中的报告记录。
+ * @returns {Promise<void>} 预览弹窗打开完成。
+ */
 async function previewReport(row) {
   revokePreviewUrl()
   previewTitle.value = row.reportName || '报告预览'
@@ -868,7 +959,11 @@ async function previewReport(row) {
   }
 }
 
-// 预览链接是临时 blob 地址，关闭前需要主动释放，避免浏览器内存泄漏。
+/**
+ * 释放报告预览产生的临时 Blob 地址。
+ *
+ * @returns {void} 无返回值。
+ */
 function revokePreviewUrl() {
   if (previewUrl.value) {
     window.URL.revokeObjectURL(previewUrl.value)
@@ -876,7 +971,11 @@ function revokePreviewUrl() {
   }
 }
 
-// 关闭报告预览弹窗时同时清理标题、错误信息和 blob 地址。
+/**
+ * 关闭报告预览弹窗，并清理相关的临时状态。
+ *
+ * @returns {void} 无返回值。
+ */
 function closePreviewDialog() {
   revokePreviewUrl()
   previewDialogVisible.value = false
@@ -884,7 +983,12 @@ function closePreviewDialog() {
   previewError.value = ''
 }
 
-// 预览接口失败时尝试把二进制响应解析成后端统一错误结构。
+/**
+ * 将预览接口返回的 Blob 错误内容解析为后端统一错误消息。
+ *
+ * @param {Blob} blob 预览接口返回的错误二进制内容。
+ * @returns {Promise<string>} 解析后的错误消息。
+ */
 async function parsePreviewError(blob) {
   try {
     const text = await blob.text()
@@ -895,7 +999,14 @@ async function parsePreviewError(blob) {
   }
 }
 
-// 检测参数标准区间统一在前端格式化，便于移动端直接展示阈值。
+/**
+ * 格式化检测参数的标准范围显示文本。
+ *
+ * @param {number | null} min 最小标准值。
+ * @param {number | null} max 最大标准值。
+ * @param {string} unit 检测单位。
+ * @returns {string} 标准范围展示文案。
+ */
 function formatStandardRange(min, max, unit) {
   const suffix = unit ? ` ${unit}` : ''
   if (min != null && max != null) {
@@ -910,7 +1021,11 @@ function formatStandardRange(min, max, unit) {
   return `无范围${suffix}`
 }
 
-// 退出移动端时只清理令牌，并回到移动端专属登录页。
+/**
+ * 退出移动端登录态，并跳转到移动端登录页。
+ *
+ * @returns {void} 无返回值。
+ */
 function logout() {
   clearToken()
   router.push('/mobile/login')

@@ -27,6 +27,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.Valid;
 
+/**
+ * 检测配置控制器。
+ * 负责检测类型、检测参数与检测步骤的维护。
+ */
 @RestController
 @RequestMapping("/api/detection-config")
 @RequiredArgsConstructor
@@ -35,12 +39,24 @@ public class DetectionConfigController {
 
     private final DetectionConfigService detectionConfigService;
 
+    /**
+     * 分页查询检测类型。
+     *
+     * @param query 检测类型查询条件。
+     * @return 检测类型分页结果。
+     */
     @GetMapping("/types")
     @Operation(summary = "检测类型分页")
     public ApiResponse<PageResult<DetectionType>> typePage(@Validated DetectionTypeQuery query) {
         return ApiResponse.success(detectionConfigService.typePage(query));
     }
 
+    /**
+     * 新增检测类型。
+     *
+     * @param command 检测类型保存命令。
+     * @return 保存结果。
+     */
     @PostMapping("/types")
     @Operation(summary = "新增检测类型")
     public ApiResponse<Void> saveType(@Valid @RequestBody DetectionTypeSaveCommand command) {
@@ -48,6 +64,13 @@ public class DetectionConfigController {
         return ApiResponse.successMessage("新增成功");
     }
 
+    /**
+     * 更新检测类型。
+     *
+     * @param id 检测类型主键。
+     * @param command 检测类型保存命令。
+     * @return 更新结果。
+     */
     @PutMapping("/types/{id}")
     @Operation(summary = "更新检测类型")
     public ApiResponse<Void> updateType(@PathVariable Long id, @Valid @RequestBody DetectionTypeSaveCommand command) {
@@ -55,6 +78,12 @@ public class DetectionConfigController {
         return ApiResponse.successMessage("更新成功");
     }
 
+    /**
+     * 删除检测类型。
+     *
+     * @param id 检测类型主键。
+     * @return 删除结果。
+     */
     @DeleteMapping("/types/{id}")
     @Operation(summary = "删除检测类型")
     public ApiResponse<Void> deleteType(@PathVariable Long id) {
@@ -62,12 +91,24 @@ public class DetectionConfigController {
         return ApiResponse.successMessage("删除成功");
     }
 
+    /**
+     * 分页查询检测参数。
+     *
+     * @param query 检测参数查询条件。
+     * @return 检测参数分页结果。
+     */
     @GetMapping("/parameters")
     @Operation(summary = "检测参数分页")
     public ApiResponse<PageResult<DetectionParameter>> parameterPage(@Validated DetectionParameterQuery query) {
         return ApiResponse.success(detectionConfigService.parameterPage(query));
     }
 
+    /**
+     * 新增检测参数。
+     *
+     * @param command 检测参数保存命令。
+     * @return 保存结果。
+     */
     @PostMapping("/parameters")
     @Operation(summary = "新增检测参数")
     public ApiResponse<Void> saveParameter(@Valid @RequestBody DetectionParameterSaveCommand command) {
@@ -75,6 +116,13 @@ public class DetectionConfigController {
         return ApiResponse.successMessage("新增成功");
     }
 
+    /**
+     * 更新检测参数。
+     *
+     * @param id 检测参数主键。
+     * @param command 检测参数保存命令。
+     * @return 更新结果。
+     */
     @PutMapping("/parameters/{id}")
     @Operation(summary = "更新检测参数")
     public ApiResponse<Void> updateParameter(@PathVariable Long id, @Valid @RequestBody DetectionParameterSaveCommand command) {
@@ -82,6 +130,12 @@ public class DetectionConfigController {
         return ApiResponse.successMessage("更新成功");
     }
 
+    /**
+     * 删除检测参数。
+     *
+     * @param id 检测参数主键。
+     * @return 删除结果。
+     */
     @DeleteMapping("/parameters/{id}")
     @Operation(summary = "删除检测参数")
     public ApiResponse<Void> deleteParameter(@PathVariable Long id) {
@@ -89,12 +143,24 @@ public class DetectionConfigController {
         return ApiResponse.successMessage("删除成功");
     }
 
+    /**
+     * 分页查询检测步骤。
+     *
+     * @param query 检测步骤查询条件。
+     * @return 检测步骤分页结果。
+     */
     @GetMapping("/steps")
     @Operation(summary = "检测步骤分页")
     public ApiResponse<PageResult<DetectionStep>> stepPage(@Validated DetectionStepQuery query) {
         return ApiResponse.success(detectionConfigService.stepPage(query));
     }
 
+    /**
+     * 新增检测步骤。
+     *
+     * @param command 检测步骤保存命令。
+     * @return 保存结果。
+     */
     @PostMapping("/steps")
     @Operation(summary = "新增检测步骤")
     public ApiResponse<Void> saveStep(@Valid @RequestBody DetectionStepSaveCommand command) {
@@ -102,6 +168,13 @@ public class DetectionConfigController {
         return ApiResponse.successMessage("新增成功");
     }
 
+    /**
+     * 更新检测步骤。
+     *
+     * @param id 检测步骤主键。
+     * @param command 检测步骤保存命令。
+     * @return 更新结果。
+     */
     @PutMapping("/steps/{id}")
     @Operation(summary = "更新检测步骤")
     public ApiResponse<Void> updateStep(@PathVariable Long id, @Valid @RequestBody DetectionStepSaveCommand command) {
@@ -109,6 +182,12 @@ public class DetectionConfigController {
         return ApiResponse.successMessage("更新成功");
     }
 
+    /**
+     * 删除检测步骤。
+     *
+     * @param id 检测步骤主键。
+     * @return 删除结果。
+     */
     @DeleteMapping("/steps/{id}")
     @Operation(summary = "删除检测步骤")
     public ApiResponse<Void> deleteStep(@PathVariable Long id) {
