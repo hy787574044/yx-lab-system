@@ -14,7 +14,7 @@
           <div class="section-head">
             <div>
               <h3 class="section-title">采样计划</h3>
-              <p class="page-subtitle">维护采样计划信息，支持计划暂停、恢复和派发任务。</p>
+              <p class="page-subtitle">维护采样计划信息，支持周期计划自动生成采样任务，并保留手工派发能力。</p>
             </div>
           </div>
 
@@ -226,6 +226,7 @@ import {
   completedTaskStatus,
   completableTaskStatuses,
   cycleTypeLabelMap,
+  dailyCycleType,
   DEFAULT_PAGE_SIZE,
   dispatchedPlanStatuses,
   factorySampleType,
@@ -233,7 +234,6 @@ import {
   getStatusClass,
   inProgressTaskStatus,
   loggedSampleStatus,
-  onceCycleType,
   pausedPlanStatus,
   pendingTaskStatus,
   planStatusLabelMap,
@@ -316,14 +316,14 @@ async function createPlan() {
     pointId: 2001,
     pointName: '城东水厂出厂水',
     startTime: dayjs().format('YYYY-MM-DD HH:mm:ss'),
-    endTime: dayjs().add(2, 'hour').format('YYYY-MM-DD HH:mm:ss'),
+    endTime: dayjs().add(7, 'day').format('YYYY-MM-DD HH:mm:ss'),
     samplerId: 1002,
     samplerName: '采样员',
     samplingType: routineSamplingType,
     sampleType: factorySampleType,
-    cycleType: onceCycleType
+    cycleType: dailyCycleType
   })
-  ElMessage.success('采样计划已创建')
+  ElMessage.success('周期采样计划已创建，系统会按计划时间自动生成任务')
   planQuery.pageNum = 1
   await loadPlans()
 }
