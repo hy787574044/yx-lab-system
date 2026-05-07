@@ -56,6 +56,7 @@ public class SamplingTaskService {
 
     public void start(Long taskId, SamplingTaskActionCommand command) {
         SamplingTask task = requireTask(taskId);
+        validateTaskOperator(task);
         if (!LabWorkflowConstants.canStartTask(task.getTaskStatus())) {
             throw new BusinessException("当前任务状态不允许开始执行");
         }
@@ -69,6 +70,7 @@ public class SamplingTaskService {
 
     public void abandon(Long taskId, SamplingTaskActionCommand command) {
         SamplingTask task = requireTask(taskId);
+        validateTaskOperator(task);
         if (!LabWorkflowConstants.canAbandonTask(task.getTaskStatus())) {
             throw new BusinessException("当前任务状态不允许废弃");
         }
@@ -86,6 +88,7 @@ public class SamplingTaskService {
 
     public void resume(Long taskId, SamplingTaskActionCommand command) {
         SamplingTask task = requireTask(taskId);
+        validateTaskOperator(task);
         if (!LabWorkflowConstants.canResumeTask(task.getTaskStatus())) {
             throw new BusinessException("当前任务不处于废弃状态");
         }
@@ -100,6 +103,7 @@ public class SamplingTaskService {
     @Transactional(rollbackFor = Exception.class)
     public void complete(SamplingTaskCompleteCommand command) {
         SamplingTask task = requireTask(command.getTaskId());
+        validateTaskOperator(task);
         if (LabWorkflowConstants.SamplingTaskStatus.ABANDONED.equals(task.getTaskStatus())) {
             throw new BusinessException("已废弃的任务不能直接完成");
         }
@@ -134,5 +138,22 @@ public class SamplingTaskService {
             throw new BusinessException("采样任务不存在");
         }
         return task;
+    }
+
+    private void validateTaskOperator(SamplingTask task) {
+        CurrentUser currentUser = SecurityContext.getCurrentUser();
+        if (currentUser == null || currentUser.getUserId() == null) {
+            throw new BusinessException("当前登录信息已失效，请重新登录");
+        }
+        if (isAdmin(currentUser)) {
+            return;
+        }
+        if (task.getSamplerId() == null || !task.getSamplerId().equals(currentUser.getUserId())) {
+            throw new BusinessException("当前用户不是该采样任务的责任采样员，不能执行此操作");
+        }
+    }
+
+    private boolean isAdmin(CurrentUser currentUser) {
+        return currentUser != null && "ADMIN".equalsIgnoreCase(currentUser.getRoleCode());
     }
 }
