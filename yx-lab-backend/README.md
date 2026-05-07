@@ -272,3 +272,29 @@ curl -G "http://localhost:8080/api/unified/users/menus" \
 同时，报告生成后会落地正式 HTML 文件产物，文件路径写入 `lab_report.file_path`；报告发布后会生成推送留痕记录。
 
 如果你的数据库已经初始化过，需要同步执行 `sql/init.sql` 中对应的建表和字段调整。
+### 移动端闭环入口
+本次已补齐移动端业务闭环，前端新增：
+
+- `GET /mobile/login`：移动端登录页
+- `GET /mobile`：移动工作台
+
+移动工作台支持以下业务动作：
+
+- 采样任务开始、完成、废弃
+- 已完成采样任务的样品登录
+- 待检样品与退回重检样品的检测提交
+- 移动端审核通过 / 驳回重检
+- 正式报告在线预览与推送结果回看
+
+后端移动端聚合接口包括：
+
+- `GET /api/mobile/sampling/todo`
+- `GET /api/mobile/detection/todo`
+- `GET /api/mobile/detection/history`
+- `GET /api/mobile/review/todo`
+- `GET /api/mobile/review/history`
+- `GET /api/mobile/reports/mine`
+
+移动端登录接口：
+
+- `POST /api/auth/mobile-login`

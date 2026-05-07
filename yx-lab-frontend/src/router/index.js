@@ -11,6 +11,22 @@ const routes = [
     component: () => import('../views/LoginView.vue')
   },
   {
+    path: '/mobile/login',
+    meta: {
+      title: '移动端登录',
+      subtitle: '进入移动端采样、检测、审核与报告闭环'
+    },
+    component: () => import('../views/MobileLoginView.vue')
+  },
+  {
+    path: '/mobile',
+    meta: {
+      title: '移动工作台',
+      subtitle: '面向手机端的一体化业务闭环工作台'
+    },
+    component: () => import('../views/MobileWorkbenchView.vue')
+  },
+  {
     path: '/',
     component: () => import('../views/layout/AppLayout.vue'),
     redirect: '/dashboard',
@@ -90,12 +106,12 @@ const router = createRouter({
 
 router.beforeEach((to, from, next) => {
   document.title = to.meta?.title ? `${to.meta.title} - 阳新化验室管理系统` : '阳新化验室管理系统'
-  if (to.path === '/login') {
+  if (to.path === '/login' || to.path === '/mobile/login') {
     next()
     return
   }
   if (!getToken()) {
-    next('/login')
+    next(to.path.startsWith('/mobile') ? '/mobile/login' : '/login')
     return
   }
   next()

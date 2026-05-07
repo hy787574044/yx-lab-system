@@ -33,4 +33,14 @@ public class MobileSamplingTodoVO {
     private LocalDateTime finishedTime;
 
     private String remark;
+
+    private Long sampleId;
+
+    private String sampleNo;
+
+    private String sealNo;
+
+    private String sampleStatus;
+
+    private Boolean sampleLogged;
 }

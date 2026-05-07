@@ -3,8 +3,16 @@ import request from './http'
 import { getToken } from '../utils/auth'
 
 export const loginApi = (data) => request.post('/api/auth/login', data)
+export const mobileLoginApi = (data) => request.post('/api/auth/mobile-login', data)
 export const getMeApi = () => request.get('/api/auth/me')
 export const dashboardApi = () => request.get('/api/dashboard/overview')
+
+export const fetchMobileSamplingTodoApi = () => request.get('/api/mobile/sampling/todo')
+export const fetchMobileDetectionTodoApi = () => request.get('/api/mobile/detection/todo')
+export const fetchMobileDetectionHistoryApi = () => request.get('/api/mobile/detection/history')
+export const fetchMobileReviewTodoApi = () => request.get('/api/mobile/review/todo')
+export const fetchMobileReviewHistoryApi = () => request.get('/api/mobile/review/history')
+export const fetchMobileReportsApi = () => request.get('/api/mobile/reports/mine')
 
 export const fetchMonitoringPointsApi = (params) => request.get('/api/monitoring-points', { params })
 export const createMonitoringPointApi = (data) => request.post('/api/monitoring-points', data)

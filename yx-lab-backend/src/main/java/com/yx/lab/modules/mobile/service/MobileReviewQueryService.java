@@ -46,8 +46,8 @@ public class MobileReviewQueryService {
 
     private CurrentUser requireCurrentUser() {
         CurrentUser currentUser = SecurityContext.getCurrentUser();
-        if (currentUser == null) {
-            throw new BusinessException("Please login first");
+        if (currentUser == null || currentUser.getUserId() == null) {
+            throw new BusinessException("当前登录信息已失效，请重新登录");
         }
         return currentUser;
     }
