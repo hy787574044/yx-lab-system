@@ -317,6 +317,16 @@ public final class LabWorkflowConstants {
         return ReportStatus.PUBLISHED.equals(reportStatus);
     }
 
+    public static boolean isRecurringCycle(String cycleType) {
+        return CycleType.DAILY.equals(cycleType)
+                || CycleType.WEEKLY.equals(cycleType)
+                || CycleType.MONTHLY.equals(cycleType);
+    }
+
+    public static boolean isOnceCycle(String cycleType) {
+        return CycleType.ONCE.equals(cycleType);
+    }
+
     private static Set<String> unmodifiableSet(String... values) {
         return Collections.unmodifiableSet(new HashSet<>(Arrays.asList(values)));
     }

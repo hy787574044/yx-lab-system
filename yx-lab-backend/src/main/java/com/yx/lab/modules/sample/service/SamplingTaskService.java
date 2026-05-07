@@ -12,9 +12,7 @@ import com.yx.lab.common.util.PageUtils;
 import com.yx.lab.modules.sample.dto.SamplingTaskActionCommand;
 import com.yx.lab.modules.sample.dto.SamplingTaskCompleteCommand;
 import com.yx.lab.modules.sample.dto.SamplingTaskQuery;
-import com.yx.lab.modules.sample.entity.SamplingPlan;
 import com.yx.lab.modules.sample.entity.SamplingTask;
-import com.yx.lab.modules.sample.mapper.SamplingPlanMapper;
 import com.yx.lab.modules.sample.mapper.SamplingTaskMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -29,7 +27,7 @@ public class SamplingTaskService {
 
     private final SamplingTaskMapper samplingTaskMapper;
 
-    private final SamplingPlanMapper samplingPlanMapper;
+    private final SamplingPlanService samplingPlanService;
 
     public PageResult<SamplingTask> page(SamplingTaskQuery query) {
         Page<SamplingTask> page = samplingTaskMapper.selectPage(
@@ -123,13 +121,7 @@ public class SamplingTaskService {
         task.setFinishedTime(LocalDateTime.now());
         samplingTaskMapper.updateById(task);
 
-        if (task.getPlanId() != null) {
-            SamplingPlan plan = samplingPlanMapper.selectById(task.getPlanId());
-            if (plan != null) {
-                plan.setPlanStatus(LabWorkflowConstants.SamplingPlanStatus.COMPLETED);
-                samplingPlanMapper.updateById(plan);
-            }
-        }
+        samplingPlanService.refreshPlanStatusAfterTaskCompletion(task.getPlanId());
     }
 
     private SamplingTask requireTask(Long id) {
