@@ -84,8 +84,8 @@ import { dashboardApi } from '../api/lab'
 const loading = ref(false)
 const overview = ref({})
 
-const normalCount = computed(() => overview.value.resultSummary?.['正常'] || 0)
-const abnormalCount = computed(() => overview.value.resultSummary?.['异常'] || 0)
+const normalCount = computed(() => overview.value.resultSummary?.正常 || 0)
+const abnormalCount = computed(() => overview.value.resultSummary?.异常 || 0)
 const resultTotal = computed(() => normalCount.value + abnormalCount.value)
 const normalPercent = computed(() => (resultTotal.value ? Math.round((normalCount.value / resultTotal.value) * 100) : 0))
 const abnormalPercent = computed(() => (resultTotal.value ? Math.round((abnormalCount.value / resultTotal.value) * 100) : 0))

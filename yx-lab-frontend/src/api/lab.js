@@ -12,8 +12,15 @@ export const createMonitoringPointApi = (data) => request.post('/api/monitoring-
 export const fetchSamplingPlansApi = (params) => request.get('/api/sampling-plans', { params })
 export const createSamplingPlanApi = (data) => request.post('/api/sampling-plans', data)
 export const dispatchSamplingPlanApi = (data) => request.post('/api/sampling-plans/dispatch', data)
+export const pauseSamplingPlanApi = (id) => request.post(`/api/sampling-plans/${id}/pause`)
+export const resumeSamplingPlanApi = (id) => request.post(`/api/sampling-plans/${id}/resume`)
+
 export const fetchSamplingTasksApi = (params) => request.get('/api/sampling-tasks', { params })
+export const startSamplingTaskApi = (id, data = {}) => request.post(`/api/sampling-tasks/${id}/start`, data)
+export const abandonSamplingTaskApi = (id, data = {}) => request.post(`/api/sampling-tasks/${id}/abandon`, data)
+export const resumeSamplingTaskApi = (id, data = {}) => request.post(`/api/sampling-tasks/${id}/resume`, data)
 export const completeSamplingTaskApi = (data) => request.post('/api/sampling-tasks/complete', data)
+
 export const fetchSamplesApi = (params) => request.get('/api/samples', { params })
 export const loginSampleApi = (data) => request.post('/api/samples/login', data)
 
@@ -29,6 +36,7 @@ export const fetchReportsApi = (params) => request.get('/api/reports', { params 
 export const fetchTemplatesApi = (params) => request.get('/api/reports/templates', { params })
 export const createTemplateApi = (data) => request.post('/api/reports/templates', data)
 export const publishReportApi = (id) => request.post(`/api/reports/${id}/publish`)
+export const unpublishReportApi = (id) => request.post(`/api/reports/${id}/unpublish`)
 
 export const fetchInstrumentsApi = (params) => request.get('/api/assets/instruments', { params })
 export const getInstrumentDetailApi = (id) => request.get(`/api/assets/instruments/${id}`)

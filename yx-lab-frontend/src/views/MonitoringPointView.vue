@@ -24,6 +24,7 @@
         </el-select>
         <el-button type="primary" @click="handleSearch">查询</el-button>
         <el-button @click="resetQuery">重置</el-button>
+        <el-button type="primary" @click="loadData">刷新</el-button>
         <el-button type="primary" plain @click="openDialog">新增点位</el-button>
       </div>
 
@@ -61,13 +62,21 @@
       </div>
     </section>
 
-    <el-dialog v-model="dialogVisible" title="新增监测点位" width="640px">
+    <el-dialog v-model="dialogVisible" title="新增监测点位" width="640px" @closed="resetForm">
       <el-form :model="form" label-width="100px">
         <div class="form-grid">
-          <el-form-item label="点位名称"><el-input v-model="form.pointName" /></el-form-item>
-          <el-form-item label="所属区域"><el-input v-model="form.regionName" /></el-form-item>
-          <el-form-item label="负责人"><el-input v-model="form.ownerName" /></el-form-item>
-          <el-form-item label="联系电话"><el-input v-model="form.contactPhone" /></el-form-item>
+          <el-form-item label="点位名称">
+            <el-input v-model="form.pointName" />
+          </el-form-item>
+          <el-form-item label="所属区域">
+            <el-input v-model="form.regionName" />
+          </el-form-item>
+          <el-form-item label="负责人">
+            <el-input v-model="form.ownerName" />
+          </el-form-item>
+          <el-form-item label="联系电话">
+            <el-input v-model="form.contactPhone" />
+          </el-form-item>
           <el-form-item label="点位类型">
             <el-select v-model="form.pointType" style="width: 100%">
               <el-option label="出厂水" value="FACTORY" />
@@ -118,7 +127,8 @@ const query = reactive({ pageNum: 1, pageSize: 30, keyword: '', pointStatus: '' 
 const records = ref([])
 const total = ref(0)
 const dialogVisible = ref(false)
-const form = reactive({
+
+const defaultForm = () => ({
   pointName: '',
   regionName: '',
   ownerName: '',
@@ -129,11 +139,13 @@ const form = reactive({
   servicePopulation: 0
 })
 
+const form = reactive(defaultForm())
+
 const stats = computed(() => [
   { label: '点位总数', value: total.value, desc: '当前监测点位总量' },
-  { label: '本页记录', value: records.value.length, desc: '当前分页已加载的点位数量' },
+  { label: '本页记录', value: records.value.length, desc: '当前分页加载的点位数量' },
   { label: '启用点位', value: records.value.filter((item) => item.pointStatus === 'ENABLED').length, desc: '当前页状态为启用的点位' },
-  { label: '出厂水点位', value: records.value.filter((item) => item.pointType === 'FACTORY').length, desc: '当前页出厂水检测点位' }
+  { label: '出厂水点位', value: records.value.filter((item) => item.pointType === 'FACTORY').length, desc: '当前页出厂水监测点位数量' }
 ])
 
 function openDialog() {
@@ -153,6 +165,10 @@ function resetQuery() {
   loadData()
 }
 
+function resetForm() {
+  Object.assign(form, defaultForm())
+}
+
 async function loadData() {
   const result = await fetchMonitoringPointsApi(query)
   records.value = result.records || []
@@ -163,8 +179,9 @@ async function submit() {
   await createMonitoringPointApi(form)
   ElMessage.success('保存成功')
   dialogVisible.value = false
+  resetForm()
   query.pageNum = 1
-  loadData()
+  await loadData()
 }
 
 onMounted(loadData)

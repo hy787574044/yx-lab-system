@@ -12,13 +12,14 @@
       <div class="section-head">
         <div>
           <h3 class="section-title">结果审核</h3>
-          <p class="page-subtitle">统一查看审核记录、审核结果及驳回原因，支撑检测结果复核流程。</p>
+          <p class="page-subtitle">统一查看审核记录、审核结果和驳回原因，支持检测结果闭环流转。</p>
         </div>
       </div>
 
       <div class="toolbar">
         <el-button type="primary" @click="loadData">刷新审核队列</el-button>
-        <el-button @click="approveFirst" :disabled="!records.length">通过首条</el-button>
+        <el-button @click="approveFirst">通过首条</el-button>
+        <el-button type="danger" plain @click="rejectFirst">驳回首条</el-button>
       </div>
 
       <div class="table-card">
@@ -61,9 +62,9 @@ const total = ref(0)
 
 const stats = computed(() => [
   { label: '审核总数', value: total.value, desc: '审核记录总量' },
-  { label: '本页记录', value: records.value.length, desc: '当前分页已加载的审核记录' },
-  { label: '审核通过', value: records.value.filter((item) => item.reviewResult === 'APPROVED').length, desc: '当前页通过审核的数据记录' },
-  { label: '审核驳回', value: records.value.filter((item) => item.reviewResult === 'REJECTED').length, desc: '当前页驳回的数据记录' }
+  { label: '本页记录', value: records.value.length, desc: '当前分页加载的审核记录' },
+  { label: '审核通过', value: records.value.filter((item) => item.reviewResult === 'APPROVED').length, desc: '当前页审核通过记录' },
+  { label: '审核驳回', value: records.value.filter((item) => item.reviewResult === 'REJECTED').length, desc: '当前页审核驳回记录' }
 ])
 
 async function loadData() {
@@ -76,17 +77,39 @@ async function approveFirst() {
   const detectionResult = await fetchDetectionsApi({ pageNum: 1, pageSize: 30 })
   const record = detectionResult.records?.find((item) => item.detectionStatus === 'SUBMITTED')
   if (!record) {
-    ElMessage.warning('当前没有待审核检测记录')
+    ElMessage.warning('当前没有待审核的检测记录')
     return
   }
+
   await submitReviewApi({
     detectionRecordId: record.id,
     reviewResult: 'APPROVED',
     reviewRemark: '数据合格，允许出具报告'
   })
+
   ElMessage.success('审核通过')
   query.pageNum = 1
-  loadData()
+  await loadData()
+}
+
+async function rejectFirst() {
+  const detectionResult = await fetchDetectionsApi({ pageNum: 1, pageSize: 30 })
+  const record = detectionResult.records?.find((item) => item.detectionStatus === 'SUBMITTED')
+  if (!record) {
+    ElMessage.warning('当前没有待审核的检测记录')
+    return
+  }
+
+  await submitReviewApi({
+    detectionRecordId: record.id,
+    reviewResult: 'REJECTED',
+    rejectReason: '原始记录不完整，退回重检',
+    reviewRemark: '请补充记录后重新提交'
+  })
+
+  ElMessage.success('已驳回并退回重检')
+  query.pageNum = 1
+  await loadData()
 }
 
 onMounted(loadData)

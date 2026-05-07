@@ -26,11 +26,17 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
 public class DetectionWorkflowService {
+
+    private static final Set<String> DETECTABLE_SAMPLE_STATUSES =
+            new HashSet<>(Arrays.asList("LOGGED", "RETEST"));
 
     private final DetectionRecordMapper detectionRecordMapper;
 
@@ -74,6 +80,17 @@ public class DetectionWorkflowService {
         if (sample == null) {
             throw new BusinessException("样品不存在");
         }
+        if (!DETECTABLE_SAMPLE_STATUSES.contains(sample.getSampleStatus())) {
+            throw new BusinessException("当前样品状态不允许提交检测");
+        }
+
+        Long pendingCount = detectionRecordMapper.selectCount(new LambdaQueryWrapper<DetectionRecord>()
+                .eq(DetectionRecord::getSampleId, sample.getId())
+                .eq(DetectionRecord::getDetectionStatus, "SUBMITTED"));
+        if (pendingCount != null && pendingCount > 0) {
+            throw new BusinessException("当前样品已存在待审核的检测记录");
+        }
+
         CurrentUser currentUser = SecurityContext.getCurrentUser();
         DetectionType detectionType = detectionTypeMapper.selectById(command.getDetectionTypeId());
 
@@ -102,6 +119,7 @@ public class DetectionWorkflowService {
             item.setExceedFlag(isExceeded(itemCommand) ? 1 : 0);
             detectionItemMapper.insert(item);
         }
+
         labSampleService.updateStatus(sample.getId(), "REVIEWING", record.getDetectionResult());
     }
 
@@ -113,7 +131,8 @@ public class DetectionWorkflowService {
         if (itemCommand.getResultValue() == null) {
             return false;
         }
-        if (itemCommand.getStandardMin() != null && itemCommand.getResultValue().compareTo(itemCommand.getStandardMin()) < 0) {
+        if (itemCommand.getStandardMin() != null
+                && itemCommand.getResultValue().compareTo(itemCommand.getStandardMin()) < 0) {
             return true;
         }
         return itemCommand.getStandardMax() != null

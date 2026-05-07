@@ -12,7 +12,7 @@
       <div class="section-head">
         <div>
           <h3 class="section-title">检测分析</h3>
-          <p class="page-subtitle">统一查看检测记录及检测状态，并可快速生成演示检测数据。</p>
+          <p class="page-subtitle">统一查看检测记录及检测状态，并支持快速生成演示检测数据。</p>
         </div>
       </div>
 
@@ -73,9 +73,10 @@ const total = ref(0)
 
 const stats = computed(() => [
   { label: '检测总数', value: total.value, desc: '检测记录总量' },
-  { label: '本页记录', value: records.value.length, desc: '当前分页已加载的检测记录' },
+  { label: '本页记录', value: records.value.length, desc: '当前分页加载的检测记录' },
   { label: '待审核', value: records.value.filter((item) => item.detectionStatus === 'SUBMITTED').length, desc: '当前页待审核的检测记录' },
-  { label: '异常结果', value: records.value.filter((item) => item.detectionResult === 'ABNORMAL').length, desc: '当前页异常检测记录' }
+  { label: '已驳回', value: records.value.filter((item) => item.detectionStatus === 'REJECTED').length, desc: '当前页已驳回的检测记录' },
+  { label: '异常结果', value: records.value.filter((item) => item.detectionResult === 'ABNORMAL').length, desc: '当前页异常检测结果' }
 ])
 
 async function loadData() {
@@ -85,12 +86,13 @@ async function loadData() {
 }
 
 async function submitDemo() {
-  const sampleResult = await fetchSamplesApi({ pageNum: 1, pageSize: 1 })
-  const sample = sampleResult.records?.[0]
+  const sampleResult = await fetchSamplesApi({ pageNum: 1, pageSize: 30 })
+  const sample = sampleResult.records?.find((item) => ['LOGGED', 'RETEST'].includes(item.sampleStatus))
   if (!sample) {
-    ElMessage.warning('请先完成样品登录')
+    ElMessage.warning('请先准备一条已登录或待重检的样品')
     return
   }
+
   await submitDetectionApi({
     sampleId: sample.id,
     detectionTypeId: 3101,
@@ -102,9 +104,10 @@ async function submitDemo() {
       { parameterId: 3004, parameterName: '氨氮', standardMin: 0, standardMax: 0.5, resultValue: 0.18, unit: 'mg/L' }
     ]
   })
+
   ElMessage.success('检测记录已提交')
   query.pageNum = 1
-  loadData()
+  await loadData()
 }
 
 onMounted(loadData)
