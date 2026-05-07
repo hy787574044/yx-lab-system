@@ -71,6 +71,8 @@ public class ReviewService {
                 && StrUtil.isBlank(command.getRejectReason())) {
             throw new BusinessException("驳回时必须填写驳回原因");
         }
+        String rejectReason = StrUtil.trim(command.getRejectReason());
+        String reviewRemark = StrUtil.trim(command.getReviewRemark());
 
         ReviewRecord reviewRecord = new ReviewRecord();
         reviewRecord.setDetectionRecordId(record.getId());
@@ -80,8 +82,8 @@ public class ReviewService {
         reviewRecord.setReviewerName(currentUser.getRealName());
         reviewRecord.setReviewTime(LocalDateTime.now());
         reviewRecord.setReviewResult(command.getReviewResult());
-        reviewRecord.setRejectReason(command.getRejectReason());
-        reviewRecord.setReviewRemark(command.getReviewRemark());
+        reviewRecord.setRejectReason(rejectReason);
+        reviewRecord.setReviewRemark(reviewRemark);
         reviewRecordMapper.insert(reviewRecord);
 
         record.setDetectionStatus(LabWorkflowConstants.detectionStatusForReviewResult(command.getReviewResult()));
@@ -92,7 +94,17 @@ public class ReviewService {
             labSampleService.updateStatus(sample.getId(), nextSampleStatus, record.getDetectionResult());
             reportService.createApprovedReport(sample, record);
         } else {
-            labSampleService.updateStatus(sample.getId(), LabWorkflowConstants.SampleStatus.RETEST, "待重检");
+            labSampleService.updateStatus(sample.getId(), nextSampleStatus, buildRetestSummary(rejectReason, reviewRemark));
         }
+    }
+
+    private String buildRetestSummary(String rejectReason, String reviewRemark) {
+        if (StrUtil.isNotBlank(rejectReason)) {
+            return "退回重检：" + rejectReason;
+        }
+        if (StrUtil.isNotBlank(reviewRemark)) {
+            return "退回重检：" + reviewRemark;
+        }
+        return "退回重检";
     }
 }

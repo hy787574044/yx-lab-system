@@ -68,7 +68,9 @@ import {
   detectionStatusLabelMap,
   getEnumLabel,
   getStatusClass,
+  loggedSampleStatus,
   rejectedDetectionStatus,
+  retestSampleStatus,
   reviewPendingDetectionStatus
 } from '../utils/labEnums'
 
@@ -92,7 +94,9 @@ async function loadData() {
 
 async function submitDemo() {
   const sampleResult = await fetchSamplesApi({ pageNum: 1, pageSize: DEFAULT_PAGE_SIZE })
-  const sample = sampleResult.records?.find((item) => availableDetectionSampleStatuses.includes(item.sampleStatus))
+  const availableSamples = sampleResult.records?.filter((item) => availableDetectionSampleStatuses.includes(item.sampleStatus)) || []
+  const sample = availableSamples.find((item) => item.sampleStatus === retestSampleStatus)
+    || availableSamples.find((item) => item.sampleStatus === loggedSampleStatus)
   if (!sample) {
     ElMessage.warning('请先准备一条已登录或待重检的样品')
     return
@@ -110,7 +114,7 @@ async function submitDemo() {
     ]
   })
 
-  ElMessage.success('检测记录已提交')
+  ElMessage.success(sample.sampleStatus === retestSampleStatus ? '重检记录已提交，样品重新进入审核流程' : '检测记录已提交')
   query.pageNum = 1
   await loadData()
 }

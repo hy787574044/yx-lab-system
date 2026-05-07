@@ -108,7 +108,7 @@ public class LabSampleService {
         String prefix = DateUtil.format(new Date(), "yyyyMM");
         Long count = labSampleMapper.selectCount(new LambdaQueryWrapper<LabSample>()
                 .likeRight(LabSample::getSampleNo, prefix));
-        long next = count == null ? 1L : count.longValue() + 1L;
+        long next = count == null ? 1L : count + 1L;
         return prefix + String.format("%04d", next);
     }
 
