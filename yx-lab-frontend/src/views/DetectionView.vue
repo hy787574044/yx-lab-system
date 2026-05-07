@@ -21,35 +21,45 @@
         <el-button @click="submitDemo">提交演示检测</el-button>
       </div>
 
-      <el-table :data="records" stripe empty-text="暂无检测记录数据">
-        <el-table-column prop="sampleNo" label="样品编号" min-width="180" />
-        <el-table-column prop="detectionTypeName" label="检测类别" min-width="160" />
-        <el-table-column prop="detectorName" label="检测人" width="120" />
-        <el-table-column label="检测结果" width="120">
-          <template #default="{ row }">
-            <span class="status-chip" :class="getStatusClass('detectionResult', row.detectionResult)">
-              {{ getEnumLabel(detectionResultLabelMap, row.detectionResult) }}
-            </span>
-          </template>
-        </el-table-column>
-        <el-table-column label="状态" width="120">
-          <template #default="{ row }">
-            <span class="status-chip" :class="getStatusClass('detectionStatus', row.detectionStatus)">
-              {{ getEnumLabel(detectionStatusLabelMap, row.detectionStatus) }}
-            </span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="detectionTime" label="检测时间" width="170" />
-        <el-table-column prop="abnormalRemark" label="异常说明" min-width="180" show-overflow-tooltip />
-      </el-table>
+      <div class="table-card">
+        <el-table class="list-table" :data="records" stripe max-height="420" empty-text="暂无检测记录数据">
+          <el-table-column prop="sampleNo" label="样品编号" min-width="180" />
+          <el-table-column prop="detectionTypeName" label="检测类别" min-width="160" />
+          <el-table-column prop="detectorName" label="检测人" width="120" />
+          <el-table-column label="检测结果" width="120">
+            <template #default="{ row }">
+              <span class="status-chip" :class="getStatusClass('detectionResult', row.detectionResult)">
+                {{ getEnumLabel(detectionResultLabelMap, row.detectionResult) }}
+              </span>
+            </template>
+          </el-table-column>
+          <el-table-column label="状态" width="120">
+            <template #default="{ row }">
+              <span class="status-chip" :class="getStatusClass('detectionStatus', row.detectionStatus)">
+                {{ getEnumLabel(detectionStatusLabelMap, row.detectionStatus) }}
+              </span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="detectionTime" label="检测时间" width="170" />
+          <el-table-column prop="abnormalRemark" label="异常说明" min-width="180" show-overflow-tooltip />
+        </el-table>
+
+        <TablePagination
+          v-model:current-page="query.pageNum"
+          v-model:page-size="query.pageSize"
+          :total="total"
+          @change="loadData"
+        />
+      </div>
     </section>
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { fetchDetectionsApi, fetchSamplesApi, submitDetectionApi } from '../api/lab'
+import TablePagination from '../components/common/TablePagination.vue'
 import {
   detectionResultLabelMap,
   detectionStatusLabelMap,
@@ -57,21 +67,25 @@ import {
   getStatusClass
 } from '../utils/labEnums'
 
+const query = reactive({ pageNum: 1, pageSize: 30 })
 const records = ref([])
+const total = ref(0)
 
 const stats = computed(() => [
-  { label: '检测记录', value: records.value.length, desc: '当前页已加载检测记录数' },
-  { label: '已提交', value: records.value.filter((item) => item.detectionStatus === 'SUBMITTED').length, desc: '待审核的检测记录' },
-  { label: '已通过', value: records.value.filter((item) => item.detectionStatus === 'APPROVED').length, desc: '已审核通过的记录' },
-  { label: '异常结果', value: records.value.filter((item) => item.detectionResult === 'ABNORMAL').length, desc: '检测结果判定为异常的记录' }
+  { label: '检测总数', value: total.value, desc: '检测记录总量' },
+  { label: '本页记录', value: records.value.length, desc: '当前分页已加载的检测记录' },
+  { label: '待审核', value: records.value.filter((item) => item.detectionStatus === 'SUBMITTED').length, desc: '当前页待审核的检测记录' },
+  { label: '异常结果', value: records.value.filter((item) => item.detectionResult === 'ABNORMAL').length, desc: '当前页异常检测记录' }
 ])
 
 async function loadData() {
-  records.value = (await fetchDetectionsApi({ pageNum: 1, pageSize: 10 })).records || []
+  const result = await fetchDetectionsApi(query)
+  records.value = result.records || []
+  total.value = result.total || 0
 }
 
 async function submitDemo() {
-  const sampleResult = await fetchSamplesApi({ pageNum: 1, pageSize: 10 })
+  const sampleResult = await fetchSamplesApi({ pageNum: 1, pageSize: 1 })
   const sample = sampleResult.records?.[0]
   if (!sample) {
     ElMessage.warning('请先完成样品登录')
@@ -89,6 +103,7 @@ async function submitDemo() {
     ]
   })
   ElMessage.success('检测记录已提交')
+  query.pageNum = 1
   loadData()
 }
 

@@ -21,25 +21,34 @@
             <el-button type="primary" @click="loadPlans">刷新</el-button>
             <el-button type="primary" plain @click="createPlan">新增计划</el-button>
           </div>
-          <el-table :data="plans" stripe empty-text="暂无采样计划数据">
-            <el-table-column prop="planName" label="计划名称" min-width="180" />
-            <el-table-column prop="pointName" label="采样点位" min-width="160" />
-            <el-table-column prop="samplerName" label="采样人" width="120" />
-            <el-table-column prop="startTime" label="开始时间" width="170" />
-            <el-table-column prop="endTime" label="结束时间" width="170" />
-            <el-table-column label="状态" width="120">
-              <template #default="{ row }">
-                <span class="status-chip" :class="getStatusClass('planStatus', row.planStatus)">
-                  {{ getEnumLabel(planStatusLabelMap, row.planStatus) }}
-                </span>
-              </template>
-            </el-table-column>
-            <el-table-column label="操作" width="120">
-              <template #default="{ row }">
-                <el-button size="small" @click="dispatch(row)">派发</el-button>
-              </template>
-            </el-table-column>
-          </el-table>
+          <div class="table-card">
+            <el-table class="list-table" :data="plans" stripe max-height="420" empty-text="暂无采样计划数据">
+              <el-table-column prop="planName" label="计划名称" min-width="180" />
+              <el-table-column prop="pointName" label="采样点位" min-width="160" />
+              <el-table-column prop="samplerName" label="采样人" width="120" />
+              <el-table-column prop="startTime" label="开始时间" width="170" />
+              <el-table-column prop="endTime" label="结束时间" width="170" />
+              <el-table-column label="状态" width="120">
+                <template #default="{ row }">
+                  <span class="status-chip" :class="getStatusClass('planStatus', row.planStatus)">
+                    {{ getEnumLabel(planStatusLabelMap, row.planStatus) }}
+                  </span>
+                </template>
+              </el-table-column>
+              <el-table-column label="操作" width="120">
+                <template #default="{ row }">
+                  <el-button size="small" @click="dispatch(row)">派发</el-button>
+                </template>
+              </el-table-column>
+            </el-table>
+
+            <TablePagination
+              v-model:current-page="planQuery.pageNum"
+              v-model:page-size="planQuery.pageSize"
+              :total="planTotal"
+              @change="loadPlans"
+            />
+          </div>
         </el-tab-pane>
 
         <el-tab-pane label="采样任务" name="tasks">
@@ -53,24 +62,33 @@
             <el-button type="primary" @click="loadTasks">刷新</el-button>
             <el-button @click="completeFirstTask" :disabled="!tasks.length">完成首条任务</el-button>
           </div>
-          <el-table :data="tasks" stripe empty-text="暂无采样任务数据">
-            <el-table-column prop="pointName" label="点位名称" min-width="180" />
-            <el-table-column prop="samplerName" label="采样人" width="120" />
-            <el-table-column label="样品类型" width="120">
-              <template #default="{ row }">
-                {{ getEnumLabel(sampleTypeLabelMap, row.sampleType) }}
-              </template>
-            </el-table-column>
-            <el-table-column label="状态" width="120">
-              <template #default="{ row }">
-                <span class="status-chip" :class="getStatusClass('taskStatus', row.taskStatus)">
-                  {{ getEnumLabel(taskStatusLabelMap, row.taskStatus) }}
-                </span>
-              </template>
-            </el-table-column>
-            <el-table-column prop="samplingTime" label="采样时间" width="170" />
-            <el-table-column prop="remark" label="备注" min-width="180" show-overflow-tooltip />
-          </el-table>
+          <div class="table-card">
+            <el-table class="list-table" :data="tasks" stripe max-height="420" empty-text="暂无采样任务数据">
+              <el-table-column prop="pointName" label="点位名称" min-width="180" />
+              <el-table-column prop="samplerName" label="采样人" width="120" />
+              <el-table-column label="样品类型" width="120">
+                <template #default="{ row }">
+                  {{ getEnumLabel(sampleTypeLabelMap, row.sampleType) }}
+                </template>
+              </el-table-column>
+              <el-table-column label="状态" width="120">
+                <template #default="{ row }">
+                  <span class="status-chip" :class="getStatusClass('taskStatus', row.taskStatus)">
+                    {{ getEnumLabel(taskStatusLabelMap, row.taskStatus) }}
+                  </span>
+                </template>
+              </el-table-column>
+              <el-table-column prop="samplingTime" label="采样时间" width="170" />
+              <el-table-column prop="remark" label="备注" min-width="180" show-overflow-tooltip />
+            </el-table>
+
+            <TablePagination
+              v-model:current-page="taskQuery.pageNum"
+              v-model:page-size="taskQuery.pageSize"
+              :total="taskTotal"
+              @change="loadTasks"
+            />
+          </div>
         </el-tab-pane>
 
         <el-tab-pane label="样品台账" name="samples">
@@ -84,24 +102,33 @@
             <el-button type="primary" @click="loadSamples">刷新</el-button>
             <el-button @click="loginSample">样品登录</el-button>
           </div>
-          <el-table :data="samples" stripe empty-text="暂无样品台账数据">
-            <el-table-column prop="sampleNo" label="样品编号" min-width="180" />
-            <el-table-column prop="pointName" label="点位名称" min-width="160" />
-            <el-table-column label="样品类型" width="120">
-              <template #default="{ row }">
-                {{ getEnumLabel(sampleTypeLabelMap, row.sampleType) }}
-              </template>
-            </el-table-column>
-            <el-table-column label="状态" width="120">
-              <template #default="{ row }">
-                <span class="status-chip" :class="getStatusClass('sampleStatus', row.sampleStatus)">
-                  {{ getEnumLabel(sampleStatusLabelMap, row.sampleStatus) }}
-                </span>
-              </template>
-            </el-table-column>
-            <el-table-column prop="samplingTime" label="采样时间" width="170" />
-            <el-table-column prop="resultSummary" label="检测结果" min-width="180" show-overflow-tooltip />
-          </el-table>
+          <div class="table-card">
+            <el-table class="list-table" :data="samples" stripe max-height="420" empty-text="暂无样品台账数据">
+              <el-table-column prop="sampleNo" label="样品编号" min-width="180" />
+              <el-table-column prop="pointName" label="点位名称" min-width="160" />
+              <el-table-column label="样品类型" width="120">
+                <template #default="{ row }">
+                  {{ getEnumLabel(sampleTypeLabelMap, row.sampleType) }}
+                </template>
+              </el-table-column>
+              <el-table-column label="状态" width="120">
+                <template #default="{ row }">
+                  <span class="status-chip" :class="getStatusClass('sampleStatus', row.sampleStatus)">
+                    {{ getEnumLabel(sampleStatusLabelMap, row.sampleStatus) }}
+                  </span>
+                </template>
+              </el-table-column>
+              <el-table-column prop="samplingTime" label="采样时间" width="170" />
+              <el-table-column prop="resultSummary" label="检测结果" min-width="180" show-overflow-tooltip />
+            </el-table>
+
+            <TablePagination
+              v-model:current-page="sampleQuery.pageNum"
+              v-model:page-size="sampleQuery.pageSize"
+              :total="sampleTotal"
+              @change="loadSamples"
+            />
+          </div>
         </el-tab-pane>
       </el-tabs>
     </section>
@@ -110,8 +137,9 @@
 
 <script setup>
 import dayjs from 'dayjs'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
+import TablePagination from '../components/common/TablePagination.vue'
 import {
   completeSamplingTaskApi,
   createSamplingPlanApi,
@@ -131,45 +159,58 @@ import {
 } from '../utils/labEnums'
 
 const active = ref('plans')
+const planQuery = reactive({ pageNum: 1, pageSize: 30 })
+const taskQuery = reactive({ pageNum: 1, pageSize: 30 })
+const sampleQuery = reactive({ pageNum: 1, pageSize: 30 })
+
 const plans = ref([])
 const tasks = ref([])
 const samples = ref([])
+const planTotal = ref(0)
+const taskTotal = ref(0)
+const sampleTotal = ref(0)
 
 const currentStats = computed(() => {
   if (active.value === 'plans') {
     return [
-      { label: '计划数', value: plans.value.length, desc: '当前页采样计划总量' },
-      { label: '已派发', value: plans.value.filter((item) => ['DISPATCHED', 'PUBLISHED'].includes(item.planStatus)).length, desc: '已完成派发的采样计划' },
-      { label: '待执行', value: plans.value.filter((item) => ['PENDING', 'UNPUBLISHED'].includes(item.planStatus)).length, desc: '待流转执行的计划' },
-      { label: '常规采样', value: plans.value.filter((item) => item.samplingType === 'ROUTINE').length, desc: '常规采样类型计划数量' }
+      { label: '计划总数', value: planTotal.value, desc: '采样计划记录总量' },
+      { label: '本页记录', value: plans.value.length, desc: '当前分页已加载的采样计划' },
+      { label: '已派发', value: plans.value.filter((item) => ['DISPATCHED', 'PUBLISHED'].includes(item.planStatus)).length, desc: '当前页已派发的采样计划' },
+      { label: '待执行', value: plans.value.filter((item) => ['PENDING', 'UNPUBLISHED'].includes(item.planStatus)).length, desc: '当前页待执行的采样计划' }
     ]
   }
   if (active.value === 'tasks') {
     return [
-      { label: '任务数', value: tasks.value.length, desc: '当前页采样任务总量' },
-      { label: '待处理', value: tasks.value.filter((item) => item.taskStatus === 'PENDING').length, desc: '等待执行的任务' },
-      { label: '进行中', value: tasks.value.filter((item) => item.taskStatus === 'IN_PROGRESS').length, desc: '正在处理的采样任务' },
-      { label: '已完成', value: tasks.value.filter((item) => item.taskStatus === 'COMPLETED').length, desc: '已完成的采样任务' }
+      { label: '任务总数', value: taskTotal.value, desc: '采样任务记录总量' },
+      { label: '本页记录', value: tasks.value.length, desc: '当前分页已加载的采样任务' },
+      { label: '待处理', value: tasks.value.filter((item) => item.taskStatus === 'PENDING').length, desc: '当前页待处理任务' },
+      { label: '已完成', value: tasks.value.filter((item) => item.taskStatus === 'COMPLETED').length, desc: '当前页已完成任务' }
     ]
   }
   return [
-    { label: '样品数', value: samples.value.length, desc: '当前页样品记录总量' },
-    { label: '已登记', value: samples.value.filter((item) => ['LOGGED', 'SUBMITTED'].includes(item.sampleStatus)).length, desc: '已完成样品登记的记录' },
-    { label: '流转中', value: samples.value.filter((item) => item.sampleStatus === 'IN_TEST').length, desc: '已进入检测流程的样品' },
-    { label: '结果已出', value: samples.value.filter((item) => item.resultSummary).length, desc: '已存在结果摘要的样品' }
+    { label: '样品总数', value: sampleTotal.value, desc: '样品台账记录总量' },
+    { label: '本页记录', value: samples.value.length, desc: '当前分页已加载的样品记录' },
+    { label: '已登记', value: samples.value.filter((item) => ['LOGGED', 'SUBMITTED'].includes(item.sampleStatus)).length, desc: '当前页已登记样品' },
+    { label: '流转中', value: samples.value.filter((item) => item.sampleStatus === 'IN_TEST').length, desc: '当前页检测中的样品' }
   ]
 })
 
 async function loadPlans() {
-  plans.value = (await fetchSamplingPlansApi({ pageNum: 1, pageSize: 10 })).records || []
+  const result = await fetchSamplingPlansApi(planQuery)
+  plans.value = result.records || []
+  planTotal.value = result.total || 0
 }
 
 async function loadTasks() {
-  tasks.value = (await fetchSamplingTasksApi({ pageNum: 1, pageSize: 10 })).records || []
+  const result = await fetchSamplingTasksApi(taskQuery)
+  tasks.value = result.records || []
+  taskTotal.value = result.total || 0
 }
 
 async function loadSamples() {
-  samples.value = (await fetchSamplesApi({ pageNum: 1, pageSize: 10 })).records || []
+  const result = await fetchSamplesApi(sampleQuery)
+  samples.value = result.records || []
+  sampleTotal.value = result.total || 0
 }
 
 async function createPlan() {
@@ -185,6 +226,7 @@ async function createPlan() {
     sampleType: 'FACTORY'
   })
   ElMessage.success('采样计划已创建')
+  planQuery.pageNum = 1
   loadPlans()
 }
 
@@ -194,6 +236,8 @@ async function dispatch(row) {
     samplingTime: row.startTime
   })
   ElMessage.success('计划已派发')
+  planQuery.pageNum = 1
+  taskQuery.pageNum = 1
   loadPlans()
   loadTasks()
 }
@@ -205,6 +249,7 @@ async function completeFirstTask() {
     remark: '现场采样完成'
   })
   ElMessage.success('任务已完成')
+  taskQuery.pageNum = 1
   loadTasks()
 }
 
@@ -226,6 +271,7 @@ async function loginSample() {
     storageCondition: '冷藏'
   })
   ElMessage.success('样品登录完成')
+  sampleQuery.pageNum = 1
   loadSamples()
 }
 
