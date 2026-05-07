@@ -9,6 +9,10 @@ import com.yx.lab.modules.report.entity.LabReport;
 import com.yx.lab.modules.report.entity.ReportTemplate;
 import com.yx.lab.modules.report.service.ReportService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,6 +24,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.Valid;
+import java.nio.charset.StandardCharsets;
 
 @RestController
 @RequestMapping("/api/reports")
@@ -31,6 +36,18 @@ public class ReportController {
     @GetMapping
     public ApiResponse<PageResult<LabReport>> page(@Validated ReportQuery query) {
         return ApiResponse.success(reportService.page(query));
+    }
+
+    @GetMapping("/{id}/preview")
+    public ResponseEntity<byte[]> preview(@PathVariable Long id) {
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        ContentDisposition.builder("inline")
+                                .filename("report-" + id + ".html", StandardCharsets.UTF_8)
+                                .build()
+                                .toString())
+                .contentType(MediaType.TEXT_HTML)
+                .body(reportService.preview(id));
     }
 
     @GetMapping("/templates")

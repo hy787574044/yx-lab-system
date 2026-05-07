@@ -12,7 +12,9 @@
       <div class="section-head">
         <div>
           <h3 class="section-title">报告台账</h3>
-          <p class="page-subtitle">统一查看报告状态、来源样品及生成时间，并管理报告发布流转。</p>
+          <p class="page-subtitle">
+            统一查看正式报告产物、发布状态、推送结果与留痕信息，并支持在线预览正式报告。
+          </p>
         </div>
       </div>
 
@@ -35,21 +37,28 @@
         </el-select>
         <el-button type="primary" @click="handleSearch">查询</el-button>
         <el-button @click="resetQuery">重置</el-button>
-        <el-button type="primary" @click="loadReports">刷新报告</el-button>
+        <el-button @click="loadReports" :loading="loading">刷新报告</el-button>
         <el-button type="primary" plain @click="createTemplate">新增模板</el-button>
       </div>
 
       <div class="table-card">
-        <el-table class="list-table" :data="reports" stripe max-height="420" empty-text="暂无报告台账数据">
-          <el-table-column prop="reportName" label="报告名称" min-width="180" />
+        <el-table
+          class="list-table"
+          :data="reports"
+          stripe
+          max-height="460"
+          v-loading="loading"
+          empty-text="暂无报告台账数据"
+        >
+          <el-table-column prop="reportName" label="报告名称" min-width="200" />
           <el-table-column prop="sampleNo" label="样品编号" width="150" />
-          <el-table-column prop="sealNo" label="封签编号" width="170" />
-          <el-table-column label="报告类型" width="120">
+          <el-table-column prop="sealNo" label="封签编号" width="160" />
+          <el-table-column label="报告类型" width="110">
             <template #default="{ row }">
               {{ getEnumLabel(reportTypeLabelMap, row.reportType) }}
             </template>
           </el-table-column>
-          <el-table-column label="状态" width="120">
+          <el-table-column label="报告状态" width="110">
             <template #default="{ row }">
               <span class="status-chip" :class="getStatusClass('reportStatus', row.reportStatus)">
                 {{ getEnumLabel(reportStatusLabelMap, row.reportStatus) }}
@@ -57,12 +66,41 @@
             </template>
           </el-table-column>
           <el-table-column prop="generatedTime" label="生成时间" width="170" />
+          <el-table-column prop="publishedByName" label="发布人" width="120">
+            <template #default="{ row }">
+              {{ row.publishedByName || '-' }}
+            </template>
+          </el-table-column>
+          <el-table-column prop="publishedTime" label="发布时间" width="170">
+            <template #default="{ row }">
+              {{ row.publishedTime || '-' }}
+            </template>
+          </el-table-column>
+          <el-table-column label="推送状态" width="120">
+            <template #default="{ row }">
+              <span class="status-chip" :class="getPushStatusClass(row.pushStatus)">
+                {{ getPushStatusLabel(row.pushStatus) }}
+              </span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="lastPushTime" label="最近推送时间" width="170">
+            <template #default="{ row }">
+              {{ row.lastPushTime || '-' }}
+            </template>
+          </el-table-column>
+          <el-table-column prop="lastPushMessage" label="推送结果" min-width="240" show-overflow-tooltip>
+            <template #default="{ row }">
+              {{ row.lastPushMessage || '-' }}
+            </template>
+          </el-table-column>
           <el-table-column prop="contentSnapshot" label="内容摘要" min-width="220" show-overflow-tooltip />
-          <el-table-column label="操作" min-width="180" fixed="right">
+          <el-table-column label="操作" min-width="220" fixed="right">
             <template #default="{ row }">
               <div class="action-row">
+                <el-button size="small" @click="previewReport(row)">预览</el-button>
                 <el-button
                   size="small"
+                  type="primary"
                   @click="publish(row.id)"
                   :disabled="row.reportStatus === publishedReportStatus"
                 >
@@ -88,13 +126,34 @@
         />
       </div>
     </section>
+
+    <el-dialog
+      v-model="previewDialogVisible"
+      :title="previewTitle"
+      width="980px"
+      destroy-on-close
+      @closed="closePreviewDialog"
+    >
+      <div v-if="previewError" class="preview-empty">{{ previewError }}</div>
+      <iframe v-else-if="previewUrl" :src="previewUrl" class="preview-frame" />
+      <div v-else class="preview-empty">暂无可预览内容</div>
+      <template #footer>
+        <el-button @click="closePreviewDialog">关闭</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import { createTemplateApi, fetchReportsApi, publishReportApi, unpublishReportApi } from '../api/lab'
+import {
+  createTemplateApi,
+  fetchReportsApi,
+  previewReportApi,
+  publishReportApi,
+  unpublishReportApi
+} from '../api/lab'
 import TablePagination from '../components/common/TablePagination.vue'
 import {
   DEFAULT_PAGE_SIZE,
@@ -105,9 +164,15 @@ import {
   publishedReportStatus,
   reportStatusLabelMap,
   reportStatusOptions,
-  reportTypeOptions,
-  reportTypeLabelMap
+  reportTypeLabelMap,
+  reportTypeOptions
 } from '../utils/labEnums'
+
+const pushStatusLabelMap = {
+  PENDING: '待推送',
+  SUCCESS: '已推送',
+  CANCELLED: '已撤回'
+}
 
 const query = reactive({
   pageNum: 1,
@@ -115,16 +180,52 @@ const query = reactive({
   reportType: '',
   reportStatus: ''
 })
+
+const loading = ref(false)
 const reports = ref([])
 const total = ref(0)
 
+const previewDialogVisible = ref(false)
+const previewUrl = ref('')
+const previewTitle = ref('')
+const previewError = ref('')
+
 const stats = computed(() => [
-  { label: '报告总数', value: total.value, desc: '报告记录总量' },
-  { label: '本页记录', value: reports.value.length, desc: '当前分页加载的报告记录' },
-  { label: '已生成', value: reports.value.filter((item) => item.reportStatus === generatedReportStatus).length, desc: '当前页已生成但未发布的报告' },
-  { label: '已发布', value: reports.value.filter((item) => item.reportStatus === publishedReportStatus).length, desc: '当前页已发布报告' },
-  { label: '月报数量', value: reports.value.filter((item) => item.reportType === monthlyReportType).length, desc: '当前页月报类报告数量' }
+  { label: '报告总数', value: total.value, desc: '报告台账记录总量' },
+  { label: '本页记录', value: reports.value.length, desc: '当前分页加载的报告数量' },
+  {
+    label: '待发布',
+    value: reports.value.filter((item) => item.reportStatus === generatedReportStatus).length,
+    desc: '当前页已生成但尚未正式发布的报告'
+  },
+  {
+    label: '已发布',
+    value: reports.value.filter((item) => item.reportStatus === publishedReportStatus).length,
+    desc: '当前页已进入正式发布状态的报告'
+  },
+  {
+    label: '已推送',
+    value: reports.value.filter((item) => item.pushStatus === 'SUCCESS').length,
+    desc: '当前页已完成推送留痕的报告'
+  }
 ])
+
+function getPushStatusLabel(status) {
+  return pushStatusLabelMap[status] || status || '-'
+}
+
+function getPushStatusClass(status) {
+  if (status === 'SUCCESS') {
+    return 'success'
+  }
+  if (status === 'CANCELLED') {
+    return 'info'
+  }
+  if (status === 'PENDING') {
+    return 'warning'
+  }
+  return 'info'
+}
 
 function handleSearch() {
   query.pageNum = 1
@@ -140,9 +241,14 @@ function resetQuery() {
 }
 
 async function loadReports() {
+  loading.value = true
+  try {
     const result = await fetchReportsApi(query)
-  reports.value = result.records || []
-  total.value = result.total || 0
+    reports.value = result.records || []
+    total.value = result.total || 0
+  } finally {
+    loading.value = false
+  }
 }
 
 async function createTemplate() {
@@ -169,7 +275,53 @@ async function unpublish(id) {
   await loadReports()
 }
 
+async function previewReport(row) {
+  revokePreviewUrl()
+  previewTitle.value = row.reportName || '报告预览'
+  previewError.value = ''
+  try {
+    const response = await previewReportApi(row.id)
+    const contentType = response.headers['content-type'] || 'text/html'
+    if (contentType.includes('application/json')) {
+      previewError.value = (await parsePreviewError(response.data)) || '报告预览失败'
+      previewDialogVisible.value = true
+      return
+    }
+    const blob = new Blob([response.data], { type: contentType })
+    previewUrl.value = window.URL.createObjectURL(blob)
+    previewDialogVisible.value = true
+  } catch (error) {
+    previewError.value = error?.message || '报告预览失败'
+    previewDialogVisible.value = true
+  }
+}
+
+function revokePreviewUrl() {
+  if (previewUrl.value) {
+    window.URL.revokeObjectURL(previewUrl.value)
+    previewUrl.value = ''
+  }
+}
+
+function closePreviewDialog() {
+  revokePreviewUrl()
+  previewDialogVisible.value = false
+  previewTitle.value = ''
+  previewError.value = ''
+}
+
+async function parsePreviewError(blob) {
+  try {
+    const text = await blob.text()
+    const payload = JSON.parse(text)
+    return payload.message || ''
+  } catch {
+    return ''
+  }
+}
+
 onMounted(loadReports)
+onBeforeUnmount(revokePreviewUrl)
 </script>
 
 <style scoped>
@@ -194,5 +346,22 @@ onMounted(loadReports)
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.preview-frame {
+  width: 100%;
+  height: 72vh;
+  border: none;
+  border-radius: 12px;
+  background: #f5f7fa;
+}
+
+.preview-empty {
+  min-height: 160px;
+  display: grid;
+  place-items: center;
+  color: var(--text-sub);
+  text-align: center;
+  line-height: 1.8;
 }
 </style>

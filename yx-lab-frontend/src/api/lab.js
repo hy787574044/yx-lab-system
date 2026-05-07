@@ -37,6 +37,10 @@ export const fetchTemplatesApi = (params) => request.get('/api/reports/templates
 export const createTemplateApi = (data) => request.post('/api/reports/templates', data)
 export const publishReportApi = (id) => request.post(`/api/reports/${id}/publish`)
 export const unpublishReportApi = (id) => request.post(`/api/reports/${id}/unpublish`)
+export const previewReportApi = (id) => axios.get(`/api/reports/${id}/preview`, {
+  responseType: 'blob',
+  headers: getToken() ? { Authorization: `Bearer ${getToken()}` } : {}
+})
 
 export const fetchInstrumentsApi = (params) => request.get('/api/assets/instruments', { params })
 export const getInstrumentDetailApi = (id) => request.get(`/api/assets/instruments/${id}`)

@@ -10,6 +10,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -54,6 +55,17 @@ public class StorageService {
         Files.deleteIfExists(resolvePath(filePath));
     }
 
+    public String storeText(String relativePath, String content) throws IOException {
+        Path targetPath = resolveWritePath(relativePath);
+        Files.createDirectories(targetPath.getParent());
+        Files.write(targetPath, StrUtil.blankToDefault(content, "").getBytes(StandardCharsets.UTF_8));
+        return normalizeRelativePath(relativePath);
+    }
+
+    public byte[] readAllBytes(String filePath) throws IOException {
+        return Files.readAllBytes(resolvePath(filePath));
+    }
+
     private Path resolveUploadRoot() {
         Path configuredPath = Paths.get(getConfiguredUploadDir());
         if (configuredPath.isAbsolute()) {
@@ -68,5 +80,14 @@ public class StorageService {
 
     private String getConfiguredUploadDir() {
         return StrUtil.blankToDefault(StrUtil.trim(storageProperties.getUploadDir()), "uploads");
+    }
+
+    private Path resolveWritePath(String relativePath) {
+        String normalizedPath = normalizeRelativePath(relativePath);
+        return resolveUploadRoot().resolve(normalizedPath).normalize();
+    }
+
+    private String normalizeRelativePath(String relativePath) {
+        return StrUtil.blankToDefault(StrUtil.trim(relativePath), IdUtil.fastSimpleUUID()).replace("\\", "/");
     }
 }

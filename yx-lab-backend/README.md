@@ -261,3 +261,14 @@ curl -G "http://localhost:8080/api/unified/users/menus" \
 - `lab_report`：`seal_no`
 
 如果你的数据库已经初始化过，需要同步执行 `sql/init.sql` 中对应的字段调整，保证样品封签号和流程留痕能够正常入库。
+
+### 报告正式产物与推送调整
+
+本次报告正式产物与推送功能对以下结构进行了扩展：
+
+- `lab_report`：新增 `published_time`、`published_by`、`published_by_name`、`push_status`、`last_push_time`、`last_push_message`
+- `lab_report_push_record`：新增报告推送留痕表
+
+同时，报告生成后会落地正式 HTML 文件产物，文件路径写入 `lab_report.file_path`；报告发布后会生成推送留痕记录。
+
+如果你的数据库已经初始化过，需要同步执行 `sql/init.sql` 中对应的建表和字段调整。

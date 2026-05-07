@@ -30,6 +30,20 @@ public class LabReport extends BaseEntity {
 
     private String reportStatus;
 
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime publishedTime;
+
+    private Long publishedBy;
+
+    private String publishedByName;
+
+    private String pushStatus;
+
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime lastPushTime;
+
+    private String lastPushMessage;
+
     private String filePath;
 
     private String contentSnapshot;

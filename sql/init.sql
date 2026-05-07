@@ -275,6 +275,12 @@ CREATE TABLE lab_report (
     seal_no VARCHAR(64),
     detection_record_id BIGINT,
     report_status VARCHAR(32),
+    published_time DATETIME,
+    published_by BIGINT,
+    published_by_name VARCHAR(64),
+    push_status VARCHAR(32),
+    last_push_time DATETIME,
+    last_push_message VARCHAR(500),
     file_path VARCHAR(500),
     content_snapshot TEXT,
     deleted TINYINT DEFAULT 0,
@@ -284,6 +290,31 @@ CREATE TABLE lab_report (
     updated_by BIGINT,
     updated_name VARCHAR(64),
     updated_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+DROP TABLE IF EXISTS lab_report_push_record;
+CREATE TABLE lab_report_push_record (
+    id BIGINT PRIMARY KEY,
+    report_id BIGINT NOT NULL,
+    sample_id BIGINT,
+    sample_no VARCHAR(64),
+    seal_no VARCHAR(64),
+    recipient_user_id BIGINT,
+    recipient_name VARCHAR(64),
+    recipient_phone VARCHAR(32),
+    push_channel VARCHAR(32),
+    push_status VARCHAR(32),
+    push_message VARCHAR(500),
+    push_time DATETIME,
+    deleted TINYINT DEFAULT 0,
+    created_by BIGINT,
+    created_name VARCHAR(64),
+    created_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_by BIGINT,
+    updated_name VARCHAR(64),
+    updated_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    KEY idx_lab_report_push_report_id (report_id),
+    KEY idx_lab_report_push_sample_id (sample_id)
 );
 
 DROP TABLE IF EXISTS lab_instrument;
