@@ -6,6 +6,8 @@ import com.yx.lab.modules.sample.dto.LabSampleQuery;
 import com.yx.lab.modules.sample.dto.SampleLoginCommand;
 import com.yx.lab.modules.sample.entity.LabSample;
 import com.yx.lab.modules.sample.service.LabSampleService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,21 +22,25 @@ import javax.validation.Valid;
 @RestController
 @RequestMapping("/api/samples")
 @RequiredArgsConstructor
+@Tag(name = "样品管理")
 public class LabSampleController {
 
     private final LabSampleService labSampleService;
 
     @GetMapping
+    @Operation(summary = "样品分页")
     public ApiResponse<PageResult<LabSample>> page(@Validated LabSampleQuery query) {
         return ApiResponse.success(labSampleService.page(query));
     }
 
     @GetMapping("/{id}")
+    @Operation(summary = "样品详情")
     public ApiResponse<LabSample> detail(@PathVariable Long id) {
         return ApiResponse.success(labSampleService.detail(id));
     }
 
     @PostMapping("/login")
+    @Operation(summary = "样品登录")
     public ApiResponse<LabSample> login(@Valid @RequestBody SampleLoginCommand command) {
         return ApiResponse.success("样品登录成功", labSampleService.loginSample(command));
     }

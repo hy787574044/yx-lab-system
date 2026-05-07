@@ -451,6 +451,7 @@ import {
   taskStatusLabelMap
 } from '../utils/labEnums'
 
+// 移动端工作台负责把采样、样品登录、检测、审核、报告预览串成一个闭环页面。
 const router = useRouter()
 
 const activeTab = ref('overview')
@@ -459,6 +460,7 @@ const submitting = ref(false)
 
 const currentUser = ref(getUser())
 
+// 各业务阶段的数据源按标签页拆分，刷新时统一并行拉取。
 const samplingTodos = ref([])
 const detectionTodos = ref([])
 const detectionHistory = ref([])
@@ -479,6 +481,7 @@ const previewUrl = ref('')
 const previewTitle = ref('')
 const previewError = ref('')
 
+// 采样完成弹窗表单
 const completeForm = reactive({
   taskId: null,
   onsiteMetrics: '',
@@ -486,6 +489,7 @@ const completeForm = reactive({
   remark: ''
 })
 
+// 样品登录表单，补齐点位、时间、样品类型和留样信息。
 const loginForm = reactive({
   taskId: null,
   pointId: null,
@@ -500,6 +504,7 @@ const loginForm = reactive({
   remark: ''
 })
 
+// 检测提交表单，items 会根据检测类型自动带出参数清单。
 const detectionForm = reactive({
   sampleId: null,
   detectionTypeId: null,
@@ -515,6 +520,7 @@ const reviewForm = reactive({
   reviewRemark: ''
 })
 
+// 只允许启用状态的检测类型进入移动端闭环。
 const enabledDetectionTypes = computed(() => detectionTypes.value.filter((item) => item.enabled === 1))
 
 const stats = computed(() => [
@@ -545,12 +551,14 @@ function getPushStatusLabel(status) {
   return status || '-'
 }
 
+// 重新拉取当前用户，避免仅凭本地缓存导致角色或姓名不一致。
 async function refreshCurrentUser() {
   const user = await getMeApi()
   setUser(user)
   currentUser.value = user
 }
 
+// 一次性刷新移动端全部看板数据，保证各环节状态同步推进。
 async function refreshAll() {
   refreshing.value = true
   try {
@@ -583,12 +591,14 @@ async function refreshAll() {
   }
 }
 
+// 采样员开始任务后，任务会从待执行流转到执行中。
 async function startTask(task) {
   await startSamplingTaskApi(task.id, { remark: '移动端开始采样' })
   ElMessage.success('采样任务已开始')
   await refreshAll()
 }
 
+// 现场无法执行时，要求填写原因后再废弃任务，便于后续追溯。
 async function abandonTask(task) {
   try {
     const { value } = await ElMessageBox.prompt('请填写废弃原因', '废弃采样任务', {
@@ -607,6 +617,7 @@ async function abandonTask(task) {
   }
 }
 
+// 打开采样完成弹窗，并把当前任务上下文灌入表单。
 function openCompleteDialog(task) {
   completeForm.taskId = task.id
   completeForm.onsiteMetrics = ''
@@ -615,6 +626,7 @@ function openCompleteDialog(task) {
   completeDialogVisible.value = true
 }
 
+// 关闭弹窗时重置表单，避免串用上一条任务的数据。
 function resetCompleteForm() {
   completeForm.taskId = null
   completeForm.onsiteMetrics = ''
@@ -622,6 +634,7 @@ function resetCompleteForm() {
   completeForm.remark = ''
 }
 
+// 提交采样完成信息，为样品登录和后续检测做准备。
 async function submitComplete() {
   if (!completeForm.taskId) {
     ElMessage.warning('请选择要完成的采样任务')
@@ -643,6 +656,7 @@ async function submitComplete() {
   }
 }
 
+// 样品登录会承接采样任务信息，并允许现场补齐天气、保存条件等留痕字段。
 function openLoginDialog(task) {
   loginForm.taskId = task.id
   loginForm.pointId = task.pointId
@@ -658,6 +672,7 @@ function openLoginDialog(task) {
   loginDialogVisible.value = true
 }
 
+// 重置样品登录表单，避免不同样品之间的数据残留。
 function resetLoginForm() {
   loginForm.taskId = null
   loginForm.pointId = null
@@ -672,6 +687,7 @@ function resetLoginForm() {
   loginForm.remark = ''
 }
 
+// 提交样品登录后直接切到检测页，让移动端闭环继续向下推进。
 async function submitSampleLogin() {
   if (!loginForm.pointId || !loginForm.pointName || !loginForm.sampleType || !loginForm.detectionItems || !loginForm.samplingTime) {
     ElMessage.warning('请完整填写样品登录信息')
@@ -689,6 +705,7 @@ async function submitSampleLogin() {
   }
 }
 
+// 检测配置只在首次进入检测环节时加载一次，减少移动端重复请求。
 async function ensureDetectionConfig() {
   if (detectionTypes.value.length && detectionParameters.value.length) {
     return
@@ -701,6 +718,7 @@ async function ensureDetectionConfig() {
   detectionParameters.value = parameterResult.records || []
 }
 
+// 打开检测弹窗前先校验是否存在可用检测类型和参数配置。
 async function openDetectionDialog(sample) {
   await ensureDetectionConfig()
   if (!enabledDetectionTypes.value.length) {
@@ -718,6 +736,7 @@ async function openDetectionDialog(sample) {
   detectionDialogVisible.value = true
 }
 
+// 根据所选检测类型展开参数项，形成移动端可直接录入的结果清单。
 function handleDetectionTypeChange(typeId) {
   const type = enabledDetectionTypes.value.find((item) => item.id === typeId)
   detectionForm.detectionTypeId = typeId
@@ -744,6 +763,7 @@ function handleDetectionTypeChange(typeId) {
     }))
 }
 
+// 检测弹窗关闭时清理上下文，避免上一次结果残留到下一份样品。
 function resetDetectionForm() {
   detectionForm.sampleId = null
   detectionForm.detectionTypeId = null
@@ -752,6 +772,7 @@ function resetDetectionForm() {
   detectionForm.items = []
 }
 
+// 检测提交要求所有参数都有结果值，确保移动端不会绕过配置约束。
 async function submitDetection() {
   if (!detectionForm.sampleId || !detectionForm.detectionTypeId) {
     ElMessage.warning('请选择检测类型')
@@ -786,6 +807,7 @@ async function submitDetection() {
   }
 }
 
+// 审核弹窗同时支持通过与驳回重检，两种动作共用一套表单。
 function openReviewDialog(row, reviewResult) {
   reviewForm.detectionRecordId = row.id
   reviewForm.reviewResult = reviewResult
@@ -794,6 +816,7 @@ function openReviewDialog(row, reviewResult) {
   reviewDialogVisible.value = true
 }
 
+// 清空审核表单，防止上一条审核意见误带到下一条记录。
 function resetReviewForm() {
   reviewForm.detectionRecordId = null
   reviewForm.reviewResult = approvedReviewResult
@@ -801,6 +824,7 @@ function resetReviewForm() {
   reviewForm.reviewRemark = ''
 }
 
+// 驳回时强制填写原因，让退回重检链路在移动端也能完整闭环。
 async function submitReview() {
   if (!reviewForm.detectionRecordId) {
     ElMessage.warning('请选择待审核记录')
@@ -822,6 +846,7 @@ async function submitReview() {
   }
 }
 
+// 报告预览优先按正式产物展示，失败时再回退到错误提示。
 async function previewReport(row) {
   revokePreviewUrl()
   previewTitle.value = row.reportName || '报告预览'
@@ -843,6 +868,7 @@ async function previewReport(row) {
   }
 }
 
+// 预览链接是临时 blob 地址，关闭前需要主动释放，避免浏览器内存泄漏。
 function revokePreviewUrl() {
   if (previewUrl.value) {
     window.URL.revokeObjectURL(previewUrl.value)
@@ -850,6 +876,7 @@ function revokePreviewUrl() {
   }
 }
 
+// 关闭报告预览弹窗时同时清理标题、错误信息和 blob 地址。
 function closePreviewDialog() {
   revokePreviewUrl()
   previewDialogVisible.value = false
@@ -857,6 +884,7 @@ function closePreviewDialog() {
   previewError.value = ''
 }
 
+// 预览接口失败时尝试把二进制响应解析成后端统一错误结构。
 async function parsePreviewError(blob) {
   try {
     const text = await blob.text()
@@ -867,6 +895,7 @@ async function parsePreviewError(blob) {
   }
 }
 
+// 检测参数标准区间统一在前端格式化，便于移动端直接展示阈值。
 function formatStandardRange(min, max, unit) {
   const suffix = unit ? ` ${unit}` : ''
   if (min != null && max != null) {
@@ -881,6 +910,7 @@ function formatStandardRange(min, max, unit) {
   return `无范围${suffix}`
 }
 
+// 退出移动端时只清理令牌，并回到移动端专属登录页。
 function logout() {
   clearToken()
   router.push('/mobile/login')

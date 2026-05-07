@@ -33,11 +33,13 @@ import { getMeApi, mobileLoginApi } from '../api/lab'
 import { setToken, setUser } from '../utils/auth'
 
 const router = useRouter()
+// 移动端默认账号用于演示和联调，正式环境可由后端账号体系接管。
 const form = reactive({
   username: 'admin',
   password: 'Admin@123'
 })
 
+// 登录成功后同步拉取当前用户信息，保证移动工作台能直接读取角色和姓名。
 async function submit() {
   const loginResult = await mobileLoginApi(form)
   setToken(loginResult.token)
@@ -47,6 +49,7 @@ async function submit() {
   router.push('/mobile')
 }
 
+// 允许从移动端入口快速切回桌面端登录页。
 function goDesktop() {
   router.push('/login')
 }

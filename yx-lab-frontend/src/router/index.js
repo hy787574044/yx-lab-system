@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { getToken } from '../utils/auth'
 
+// 统一维护 PC 端与移动端入口，方便根据业务场景做登录分流。
 const routes = [
   {
     path: '/login',
@@ -104,6 +105,7 @@ const router = createRouter({
   routes
 })
 
+// 路由守卫同时兼顾桌面端与移动端：未登录时按访问入口分别跳转到对应登录页。
 router.beforeEach((to, from, next) => {
   document.title = to.meta?.title ? `${to.meta.title} - 阳新化验室管理系统` : '阳新化验室管理系统'
   if (to.path === '/login' || to.path === '/mobile/login') {
