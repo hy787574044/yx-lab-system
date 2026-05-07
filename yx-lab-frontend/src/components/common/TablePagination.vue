@@ -112,14 +112,15 @@ function handleSizeChange(size) {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin-top: 18px;
-  padding-top: 12px;
+  margin-top: 0;
+  padding: 12px 14px;
   border-top: 1px solid var(--line-soft);
+  background: #ffffff;
 }
 
 .table-pagination__summary {
   color: var(--text-sub);
-  font-size: 14px;
+  font-size: 12px;
   white-space: nowrap;
 }
 
@@ -133,21 +134,21 @@ function handleSizeChange(size) {
 
 .table-pagination__label {
   color: var(--text-sub);
-  font-size: 14px;
+  font-size: 12px;
 }
 
 .table-pagination__size {
-  width: 120px;
+  width: 112px;
 }
 
 .table-pagination__page {
-  min-width: 42px;
+  min-width: 32px;
 }
 
 .table-pagination__ellipsis {
   padding: 0 4px;
   color: var(--text-light);
-  font-size: 14px;
+  font-size: 12px;
 }
 
 @media (max-width: 900px) {
