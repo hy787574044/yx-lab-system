@@ -8,10 +8,10 @@
       </div>
 
       <el-form :model="form" @submit.prevent="submit">
-        <el-form-item>
+        <el-form-item label="用户名" label-position="top">
           <el-input v-model="form.username" placeholder="请输入用户名" size="large" />
         </el-form-item>
-        <el-form-item>
+        <el-form-item label="密码" label-position="top">
           <el-input v-model="form.password" type="password" placeholder="请输入密码" show-password size="large" />
         </el-form-item>
         <el-button type="primary" class="submit-btn" size="large" @click="submit">进入移动端</el-button>
@@ -33,6 +33,7 @@ import { getMeApi, mobileLoginApi } from '../api/lab'
 import { setToken, setUser } from '../utils/auth'
 
 const router = useRouter()
+
 // 移动端默认账号用于演示和联调，正式环境可由后端账号体系接管。
 const form = reactive({
   username: 'admin',
@@ -117,6 +118,10 @@ function goDesktop() {
   margin-top: 6px;
 }
 
+.mobile-login-card :deep(.el-form-item) {
+  margin-bottom: 18px;
+}
+
 .mobile-login-foot {
   display: flex;
   justify-content: space-between;
@@ -125,6 +130,16 @@ function goDesktop() {
   margin-top: 16px;
   color: #6a8098;
   font-size: 13px;
+}
+
+.mobile-login-card :deep(.el-form-item__label) {
+  padding-bottom: 8px;
+  color: #3a4a63;
+  font-size: 14px;
+}
+
+.mobile-login-card :deep(.el-input__wrapper) {
+  min-height: 46px;
 }
 
 @media (max-width: 480px) {

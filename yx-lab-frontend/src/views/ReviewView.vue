@@ -1,11 +1,17 @@
 <template>
   <div class="content-grid">
     <section class="stats-grid">
-      <article class="metric-card" v-for="item in stats" :key="item.label">
+      <button
+        v-for="item in stats"
+        :key="item.label"
+        type="button"
+        :class="['metric-card', 'metric-card--action', { 'is-active': activeStatKey === item.key }]"
+        @click="handleStatClick(item.key)"
+      >
         <span>{{ item.label }}</span>
         <strong>{{ item.value }}</strong>
         <p>{{ item.desc }}</p>
-      </article>
+      </button>
     </section>
 
     <section class="glass-panel section-block">
@@ -16,18 +22,23 @@
         </div>
       </div>
 
-      <div class="toolbar">
-        <el-button type="primary" @click="loadData">刷新审核队列</el-button>
-        <el-button @click="approveFirst">通过首条</el-button>
-        <el-button type="danger" plain @click="rejectFirst">驳回首条</el-button>
+      <div class="toolbar-panel">
+        <div class="toolbar-row">
+          <div class="panel-note">点击上方统计卡片可筛选当前页审核记录，适合快速查看通过与驳回情况。</div>
+          <div class="toolbar-actions">
+            <el-button type="primary" @click="loadData">刷新审核队列</el-button>
+            <el-button @click="approveFirst">通过首条</el-button>
+            <el-button type="danger" plain @click="rejectFirst">驳回首条</el-button>
+          </div>
+        </div>
       </div>
 
       <div class="table-card">
-        <el-table class="list-table" :data="records" stripe max-height="420" empty-text="暂无审核记录数据">
+        <el-table class="list-table" :data="visibleRecords" stripe max-height="420" empty-text="暂无审核记录数据">
           <el-table-column prop="sampleNo" label="样品编号" min-width="180" />
           <el-table-column prop="sealNo" label="封签编号" min-width="180" />
           <el-table-column prop="reviewerName" label="审核人" width="120" />
-          <el-table-column label="审核结果" width="120">
+          <el-table-column label="审核结果" width="120" header-cell-class-name="cell-center" class-name="cell-center">
             <template #default="{ row }">
               <span class="status-chip" :class="getStatusClass('reviewResult', row.reviewResult)">
                 {{ row.reviewResult ? getEnumLabel(reviewResultLabelMap, row.reviewResult) : '待审核' }}
@@ -68,13 +79,38 @@ import {
 const query = reactive({ pageNum: 1, pageSize: DEFAULT_PAGE_SIZE })
 const records = ref([])
 const total = ref(0)
+const activeStatKey = ref('all')
 
 const stats = computed(() => [
-  { label: '审核总数', value: total.value, desc: '审核记录总量' },
-  { label: '本页记录', value: records.value.length, desc: '当前分页加载的审核记录' },
-  { label: '审核通过', value: records.value.filter((item) => item.reviewResult === approvedReviewResult).length, desc: '当前页审核通过记录' },
-  { label: '审核驳回', value: records.value.filter((item) => item.reviewResult === rejectedReviewResult).length, desc: '当前页审核驳回记录' }
+  { key: 'all', label: '审核总数', value: total.value, desc: '审核记录总量' },
+  { key: 'page', label: '本页记录', value: records.value.length, desc: '当前分页加载的审核记录条数' },
+  {
+    key: 'approved',
+    label: '审核通过',
+    value: records.value.filter((item) => item.reviewResult === approvedReviewResult).length,
+    desc: '当前页审核通过记录'
+  },
+  {
+    key: 'rejected',
+    label: '审核驳回',
+    value: records.value.filter((item) => item.reviewResult === rejectedReviewResult).length,
+    desc: '当前页审核驳回记录'
+  }
 ])
+
+const visibleRecords = computed(() => {
+  if (activeStatKey.value === 'approved') {
+    return records.value.filter((item) => item.reviewResult === approvedReviewResult)
+  }
+  if (activeStatKey.value === 'rejected') {
+    return records.value.filter((item) => item.reviewResult === rejectedReviewResult)
+  }
+  return records.value
+})
+
+function handleStatClick(key) {
+  activeStatKey.value = key === activeStatKey.value ? 'all' : key
+}
 
 async function loadData() {
   const result = await fetchReviewsApi(query)
@@ -86,7 +122,7 @@ async function approveFirst() {
   const detectionResult = await fetchDetectionsApi({ pageNum: 1, pageSize: DEFAULT_PAGE_SIZE })
   const record = detectionResult.records?.find((item) => item.detectionStatus === reviewPendingDetectionStatus)
   if (!record) {
-    ElMessage.warning('当前没有待审核的检测记录')
+    ElMessage.warning('当前没有待审核的检测记录。')
     return
   }
 
@@ -96,7 +132,7 @@ async function approveFirst() {
     reviewRemark: '数据合格，允许出具报告'
   })
 
-  ElMessage.success('审核通过')
+  ElMessage.success('审核通过。')
   query.pageNum = 1
   await loadData()
 }
@@ -105,7 +141,7 @@ async function rejectFirst() {
   const detectionResult = await fetchDetectionsApi({ pageNum: 1, pageSize: DEFAULT_PAGE_SIZE })
   const record = detectionResult.records?.find((item) => item.detectionStatus === reviewPendingDetectionStatus)
   if (!record) {
-    ElMessage.warning('当前没有待审核的检测记录')
+    ElMessage.warning('当前没有待审核的检测记录。')
     return
   }
 
@@ -113,10 +149,10 @@ async function rejectFirst() {
     detectionRecordId: record.id,
     reviewResult: rejectedReviewResult,
     rejectReason: '原始记录不完整，退回重检',
-    reviewRemark: '请补充记录后重新提交'
+    reviewRemark: '请补全记录后重新提交'
   })
 
-  ElMessage.success('已驳回并退回重检')
+  ElMessage.success('已驳回并退回重检。')
   query.pageNum = 1
   await loadData()
 }
@@ -133,6 +169,22 @@ onMounted(loadData)
   margin: 0;
   font-size: 18px;
   line-height: 1.4;
+}
+
+.metric-card--action {
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.metric-card--action:hover,
+.metric-card--action:focus-visible,
+.metric-card--action.is-active {
+  border-color: color-mix(in srgb, var(--brand) 48%, #ffffff 52%);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+  outline: none;
 }
 
 .metric-card p {

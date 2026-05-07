@@ -3,7 +3,9 @@
     <section class="glass-panel section-block overview-hero">
       <div class="hero-copy">
         <h2 class="section-title">运行总览</h2>
-        <p class="page-subtitle">统一查看样品、检测、审核与报告发布状态，便于快速识别当前业务处理进度。</p>
+        <p class="page-subtitle">
+          统一查看样品、检测、审核与报告发布状态，便于快速识别当前业务处理进度。
+        </p>
       </div>
       <div class="hero-status">
         <span class="status-chip success">正常 {{ normalCount }}</span>
@@ -12,7 +14,13 @@
     </section>
 
     <section class="stats-grid">
-      <article class="metric-card metric-strong" v-for="item in cards" :key="item.label">
+      <button
+        v-for="item in cards"
+        :key="item.label"
+        type="button"
+        class="metric-card metric-strong metric-card--link"
+        @click="goRoute(item.path)"
+      >
         <div class="metric-head">
           <span>{{ item.label }}</span>
           <el-icon :class="['metric-icon', item.tone]">
@@ -21,14 +29,14 @@
         </div>
         <strong>{{ item.value }}</strong>
         <p>{{ item.desc }}</p>
-      </article>
+      </button>
     </section>
 
     <section class="dashboard-lower">
-      <div class="glass-panel section-block summary-panel">
+      <button type="button" class="glass-panel section-block summary-panel summary-panel--link" @click="goRoute('/detections')">
         <div class="panel-head">
           <h3 class="section-title">结果分布</h3>
-          <span class="panel-note">按当前检测结果统计</span>
+          <span class="panel-note">按当前检测结果统计，点击进入检测分析</span>
         </div>
         <div class="result-stack">
           <div class="result-row">
@@ -46,15 +54,21 @@
             <el-progress :percentage="abnormalPercent" color="#dc2626" :stroke-width="12" />
           </div>
         </div>
-      </div>
+      </button>
 
       <div class="glass-panel section-block action-panel">
         <div class="panel-head">
           <h3 class="section-title">快捷操作</h3>
-          <span class="panel-note">保留清晰的业务入口指引</span>
+          <span class="panel-note">保留清晰的业务入口指引，点击即可进入对应页面</span>
         </div>
         <div class="action-list">
-          <div class="action-item" v-for="(action, index) in actionItems" :key="action.label">
+          <button
+            v-for="(action, index) in actionItems"
+            :key="action.label"
+            type="button"
+            class="action-item"
+            @click="goRoute(action.path)"
+          >
             <div class="action-index">{{ String(index + 1).padStart(2, '0') }}</div>
             <div class="action-copy">
               <strong>{{ action.label }}</strong>
@@ -63,7 +77,7 @@
             <el-icon class="action-icon">
               <component :is="action.icon" />
             </el-icon>
-          </div>
+          </button>
         </div>
       </div>
     </section>
@@ -72,6 +86,7 @@
 
 <script setup>
 import { computed, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import {
   CircleCheckFilled,
   DocumentChecked,
@@ -81,43 +96,76 @@ import {
 } from '@element-plus/icons-vue'
 import { dashboardApi } from '../api/lab'
 
+const router = useRouter()
 const loading = ref(false)
 const overview = ref({})
 
-const normalCount = computed(() => overview.value.resultSummary?.正常 || 0)
-const abnormalCount = computed(() => overview.value.resultSummary?.异常 || 0)
+const actionRouteMap = {
+  样品采样: '/samples',
+  检测分析: '/detections',
+  结果审核: '/reviews',
+  报告台账: '/reports'
+}
+
+function toSafeNumber(value) {
+  const num = typeof value === 'number' ? value : Number.parseFloat(String(value ?? '').replace(/,/g, '').trim())
+  return Number.isFinite(num) ? num : 0
+}
+
+function calcPercent(part, total) {
+  const safePart = toSafeNumber(part)
+  const safeTotal = toSafeNumber(total)
+  if (!safeTotal) {
+    return 0
+  }
+  return Math.max(0, Math.min(100, Math.round((safePart / safeTotal) * 100)))
+}
+
+function goRoute(path) {
+  if (!path) {
+    return
+  }
+  router.push(path)
+}
+
+const normalCount = computed(() => toSafeNumber(overview.value.resultSummary?.正常))
+const abnormalCount = computed(() => toSafeNumber(overview.value.resultSummary?.异常))
 const resultTotal = computed(() => normalCount.value + abnormalCount.value)
-const normalPercent = computed(() => (resultTotal.value ? Math.round((normalCount.value / resultTotal.value) * 100) : 0))
-const abnormalPercent = computed(() => (resultTotal.value ? Math.round((abnormalCount.value / resultTotal.value) * 100) : 0))
+const normalPercent = computed(() => calcPercent(normalCount.value, resultTotal.value))
+const abnormalPercent = computed(() => calcPercent(abnormalCount.value, resultTotal.value))
 
 const cards = computed(() => [
   {
     label: '样品总数',
-    value: overview.value.sampleTotal || 0,
+    value: toSafeNumber(overview.value.sampleTotal),
     desc: '当前系统已登记样品总量',
     icon: Files,
-    tone: 'brand'
+    tone: 'brand',
+    path: '/samples'
   },
   {
     label: '待审核数',
-    value: overview.value.pendingReviewTotal || 0,
+    value: toSafeNumber(overview.value.pendingReviewTotal),
     desc: '待复核、待流转的检测记录',
     icon: WarningFilled,
-    tone: 'warning'
+    tone: 'warning',
+    path: '/reviews'
   },
   {
     label: '已通过检测',
-    value: overview.value.approvedTotal || 0,
+    value: toSafeNumber(overview.value.approvedTotal),
     desc: '检测流程已完成审批的数据',
     icon: CircleCheckFilled,
-    tone: 'success'
+    tone: 'success',
+    path: '/detections'
   },
   {
     label: '已发布报告',
-    value: overview.value.publishedReportTotal || 0,
+    value: toSafeNumber(overview.value.publishedReportTotal),
     desc: '已输出正式报告数量',
     icon: DocumentChecked,
-    tone: 'brand'
+    tone: 'brand',
+    path: '/reports'
   }
 ])
 
@@ -125,22 +173,26 @@ const defaultActionItems = [
   {
     label: '样品采样',
     desc: '快速进入采样计划、采样任务和样品登录环节',
-    icon: Opportunity
+    icon: Opportunity,
+    path: '/samples'
   },
   {
     label: '检测分析',
     desc: '进入检测数据录入与结果处理流程',
-    icon: Files
+    icon: Files,
+    path: '/detections'
   },
   {
     label: '结果审核',
     desc: '进入审核审批与复核处理流程',
-    icon: DocumentChecked
+    icon: DocumentChecked,
+    path: '/reviews'
   },
   {
     label: '报告台账',
     desc: '进入报告生成与发布环节',
-    icon: CircleCheckFilled
+    icon: CircleCheckFilled,
+    path: '/reports'
   }
 ]
 
@@ -152,7 +204,8 @@ const actionItems = computed(() => {
   return source.map((label, index) => ({
     label,
     icon: defaultActionItems[index]?.icon || Opportunity,
-    desc: defaultActionItems[index]?.desc || '按既定流程完成当前业务操作'
+    desc: defaultActionItems[index]?.desc || '按既定流程完成当前业务操作',
+    path: actionRouteMap[label] || defaultActionItems[index]?.path || '/dashboard'
   }))
 })
 
@@ -196,6 +249,27 @@ onMounted(async () => {
 
 .metric-strong {
   min-height: 138px;
+}
+
+.metric-card--link,
+.summary-panel--link,
+.action-item {
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.metric-card--link:hover,
+.metric-card--link:focus-visible,
+.summary-panel--link:hover,
+.summary-panel--link:focus-visible,
+.action-item:hover,
+.action-item:focus-visible {
+  border-color: color-mix(in srgb, var(--brand) 48%, #ffffff 52%);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+  outline: none;
 }
 
 .metric-head {

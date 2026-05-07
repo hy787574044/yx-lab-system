@@ -11,6 +11,11 @@ import './styles/theme.css'
 
 dayjs.locale('zh-cn')
 
+const savedTheme = localStorage.getItem('yx-lab-theme')
+if (savedTheme) {
+  document.documentElement.setAttribute('data-theme', savedTheme)
+}
+
 createApp(App)
   .use(createPinia())
   .use(router)

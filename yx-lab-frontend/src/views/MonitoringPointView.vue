@@ -1,11 +1,17 @@
 <template>
   <div class="content-grid">
     <section class="stats-grid">
-      <article class="metric-card" v-for="item in stats" :key="item.label">
+      <button
+        v-for="item in stats"
+        :key="item.label"
+        type="button"
+        :class="['metric-card', 'metric-card--action', { 'is-active': activeStatKey === item.key }]"
+        @click="handleStatClick(item.key)"
+      >
         <span>{{ item.label }}</span>
         <strong>{{ item.value }}</strong>
         <p>{{ item.desc }}</p>
-      </article>
+      </button>
     </section>
 
     <section class="glass-panel section-block">
@@ -16,24 +22,37 @@
         </div>
       </div>
 
-      <div class="toolbar">
-        <el-input v-model="query.keyword" placeholder="输入点位名称查询" clearable style="max-width: 280px" />
-        <el-select v-model="query.pointStatus" placeholder="状态" clearable style="width: 180px">
-          <el-option
-            v-for="option in pointStatusOptions"
-            :key="option.value"
-            :label="option.label"
-            :value="option.value"
-          />
-        </el-select>
-        <el-button type="primary" @click="handleSearch">查询</el-button>
-        <el-button @click="resetQuery">重置</el-button>
-        <el-button type="primary" @click="loadData">刷新</el-button>
-        <el-button type="primary" plain @click="openDialog">新增点位</el-button>
+      <div class="toolbar-panel">
+        <div class="toolbar-row">
+          <div class="toolbar-fields">
+            <label class="toolbar-field">
+              <span>点位名称</span>
+              <el-input v-model="query.keyword" placeholder="请输入点位名称查询" clearable />
+            </label>
+            <label class="toolbar-field">
+              <span>点位状态</span>
+              <el-select v-model="query.pointStatus" placeholder="请选择点位状态" clearable>
+                <el-option
+                  v-for="option in pointStatusOptions"
+                  :key="option.value"
+                  :label="option.label"
+                  :value="option.value"
+                />
+              </el-select>
+            </label>
+          </div>
+
+          <div class="toolbar-actions">
+            <el-button type="primary" @click="handleSearch">查询</el-button>
+            <el-button @click="resetQuery">重置</el-button>
+            <el-button @click="loadData">刷新</el-button>
+            <el-button type="primary" plain @click="openDialog">新增点位</el-button>
+          </div>
+        </div>
       </div>
 
       <div class="table-card">
-        <el-table class="list-table" :data="records" stripe max-height="420" empty-text="暂无监测点位数据">
+        <el-table class="list-table" :data="visibleRecords" stripe max-height="420" empty-text="暂无监测点位数据">
           <el-table-column prop="pointName" label="点位名称" min-width="180" />
           <el-table-column prop="regionName" label="所属区域" min-width="160" />
           <el-table-column label="点位类型" width="120">
@@ -148,6 +167,7 @@ const query = reactive({ pageNum: 1, pageSize: DEFAULT_PAGE_SIZE, keyword: '', p
 const records = ref([])
 const total = ref(0)
 const dialogVisible = ref(false)
+const activeStatKey = ref('all')
 
 const defaultForm = () => ({
   pointName: '',
@@ -163,11 +183,35 @@ const defaultForm = () => ({
 const form = reactive(defaultForm())
 
 const stats = computed(() => [
-  { label: '点位总数', value: total.value, desc: '当前监测点位总量' },
-  { label: '本页记录', value: records.value.length, desc: '当前分页加载的点位数量' },
-  { label: '启用点位', value: records.value.filter((item) => item.pointStatus === enabledPointStatus).length, desc: '当前页状态为启用的点位' },
-  { label: '出厂水点位', value: records.value.filter((item) => item.pointType === factoryPointType).length, desc: '当前页出厂水监测点位数量' }
+  { key: 'all', label: '点位总数', value: total.value, desc: '当前监测点位总量' },
+  { key: 'page', label: '本页记录', value: records.value.length, desc: '当前分页加载的点位数量' },
+  {
+    key: 'enabled',
+    label: '启用点位',
+    value: records.value.filter((item) => item.pointStatus === enabledPointStatus).length,
+    desc: '当前页状态为启用的点位'
+  },
+  {
+    key: 'factory',
+    label: '出厂水点位',
+    value: records.value.filter((item) => item.pointType === factoryPointType).length,
+    desc: '当前页出厂水监测点位数量'
+  }
 ])
+
+const visibleRecords = computed(() => {
+  if (activeStatKey.value === 'enabled') {
+    return records.value.filter((item) => item.pointStatus === enabledPointStatus)
+  }
+  if (activeStatKey.value === 'factory') {
+    return records.value.filter((item) => item.pointType === factoryPointType)
+  }
+  return records.value
+})
+
+function handleStatClick(key) {
+  activeStatKey.value = key === activeStatKey.value ? 'all' : key
+}
 
 function openDialog() {
   dialogVisible.value = true
@@ -183,6 +227,7 @@ function resetQuery() {
   query.pageSize = DEFAULT_PAGE_SIZE
   query.keyword = ''
   query.pointStatus = ''
+  activeStatKey.value = 'all'
   loadData()
 }
 
@@ -217,6 +262,22 @@ onMounted(loadData)
   margin: 0;
   font-size: 18px;
   line-height: 1.4;
+}
+
+.metric-card--action {
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.metric-card--action:hover,
+.metric-card--action:focus-visible,
+.metric-card--action.is-active {
+  border-color: color-mix(in srgb, var(--brand) 48%, #ffffff 52%);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+  outline: none;
 }
 
 .metric-card p {

@@ -1,13 +1,12 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { getToken } from '../utils/auth'
 
-// 统一维护 PC 端与移动端入口，方便根据业务场景做登录分流。
 const routes = [
   {
     path: '/login',
     meta: {
       title: '系统登录',
-      subtitle: '登录阳新化验室管理系统'
+      subtitle: '登录阳新县实验室水质管理平台'
     },
     component: () => import('../views/LoginView.vue')
   },
@@ -23,7 +22,7 @@ const routes = [
     path: '/mobile',
     meta: {
       title: '移动工作台',
-      subtitle: '面向手机端的一体化业务闭环工作台'
+      subtitle: '面向移动终端的一体化实验室业务工作台'
     },
     component: () => import('../views/MobileWorkbenchView.vue')
   },
@@ -52,7 +51,7 @@ const routes = [
         path: 'samples',
         meta: {
           title: '样品采样',
-          subtitle: '覆盖采样计划、采样任务与样品登录的全过程'
+          subtitle: '覆盖采样计划、采样任务与样品登录全过程'
         },
         component: () => import('../views/SamplingView.vue')
       },
@@ -68,7 +67,7 @@ const routes = [
         path: 'reviews',
         meta: {
           title: '结果审核',
-          subtitle: '管理审核记录、审核结果与驳回原因'
+          subtitle: '管理审核记录、审核结果与退回重检流程'
         },
         component: () => import('../views/ReviewView.vue')
       },
@@ -76,7 +75,7 @@ const routes = [
         path: 'reports',
         meta: {
           title: '报告台账',
-          subtitle: '查看报告状态、模板维护与发布动作'
+          subtitle: '查看报告状态、模板维护与发布推送动作'
         },
         component: () => import('../views/ReportView.vue')
       },
@@ -84,7 +83,7 @@ const routes = [
         path: 'assets',
         meta: {
           title: '仪器文档',
-          subtitle: '统一维护设备台账、文档台账与共享权限'
+          subtitle: '统一维护设备台账、文档资料与共享权限'
         },
         component: () => import('../views/AssetView.vue')
       },
@@ -105,16 +104,8 @@ const router = createRouter({
   routes
 })
 
-/**
- * 路由前置守卫，同时处理桌面端与移动端的登录门禁。
- *
- * @param {import('vue-router').RouteLocationNormalized} to 目标路由。
- * @param {import('vue-router').RouteLocationNormalized} from 来源路由。
- * @param {import('vue-router').NavigationGuardNext} next 路由放行或重定向回调。
- * @returns {void} 无返回值。
- */
 router.beforeEach((to, from, next) => {
-  document.title = to.meta?.title ? `${to.meta.title} - 阳新化验室管理系统` : '阳新化验室管理系统'
+  document.title = to.meta?.title ? `${to.meta.title} - 阳新县实验室水质管理平台` : '阳新县实验室水质管理平台'
   if (to.path === '/login' || to.path === '/mobile/login') {
     next()
     return

@@ -275,13 +275,14 @@
     <el-dialog
       v-model="completeDialogVisible"
       title="完成采样"
-      width="92%"
+      class="mobile-dialog"
+      width="560px"
       destroy-on-close
       @closed="resetCompleteForm"
     >
       <el-form label-position="top">
         <el-form-item label="现场指标">
-          <el-input v-model="completeForm.onsiteMetrics" type="textarea" :rows="3" placeholder="如余氯、浊度、温度等现场指标" />
+          <el-input v-model="completeForm.onsiteMetrics" type="textarea" :rows="3" placeholder="例如余氯、浊度、温度等现场指标" />
         </el-form-item>
         <el-form-item label="照片地址">
           <el-input v-model="completeForm.photoUrls" placeholder="多张图片可用英文逗号分隔" />
@@ -299,7 +300,8 @@
     <el-dialog
       v-model="loginDialogVisible"
       title="样品登录"
-      width="92%"
+      class="mobile-dialog"
+      width="560px"
       destroy-on-close
       @closed="resetLoginForm"
     >
@@ -328,7 +330,7 @@
           <el-input v-model="loginForm.weather" />
         </el-form-item>
         <el-form-item label="保存条件">
-          <el-input v-model="loginForm.storageCondition" placeholder="如冷藏避光、常温送检" />
+          <el-input v-model="loginForm.storageCondition" placeholder="例如冷藏避光、常温送检" />
         </el-form-item>
         <el-form-item label="备注">
           <el-input v-model="loginForm.remark" type="textarea" :rows="3" />
@@ -343,7 +345,8 @@
     <el-dialog
       v-model="detectionDialogVisible"
       title="提交检测"
-      width="92%"
+      class="mobile-dialog"
+      width="560px"
       destroy-on-close
       @closed="resetDetectionForm"
     >
@@ -375,7 +378,8 @@
     <el-dialog
       v-model="reviewDialogVisible"
       :title="reviewForm.reviewResult === rejectedReviewResult ? '驳回重检' : '审核通过'"
-      width="92%"
+      class="mobile-dialog"
+      width="560px"
       destroy-on-close
       @closed="resetReviewForm"
     >
@@ -396,7 +400,8 @@
     <el-dialog
       v-model="previewDialogVisible"
       :title="previewTitle"
-      width="96%"
+      class="mobile-dialog mobile-preview-dialog"
+      width="980px"
       destroy-on-close
       @closed="closePreviewDialog"
     >
@@ -628,7 +633,7 @@ async function abandonTask(task) {
     const { value } = await ElMessageBox.prompt('请填写废弃原因', '废弃采样任务', {
       confirmButtonText: '确认废弃',
       cancelButtonText: '取消',
-      inputPlaceholder: '例如：现场条件不满足，需改日执行'
+      inputPlaceholder: '例如：现场条件不满足，需要改日执行'
     })
     await abandonSamplingTaskApi(task.id, {
       reason: value,
@@ -637,7 +642,7 @@ async function abandonTask(task) {
     ElMessage.success('采样任务已废弃')
     await refreshAll()
   } catch {
-    // 用户取消废弃操作。
+    // 用户取消废弃操作时不做处理。
   }
 }
 
@@ -1151,14 +1156,22 @@ onBeforeUnmount(revokePreviewUrl)
 
 .mobile-tabs {
   position: sticky;
-  top: 0;
+  top: 8px;
   z-index: 5;
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(78px, 1fr);
   gap: 8px;
   margin-top: 16px;
-  padding: 10px 0;
+  padding: 10px 2px;
+  overflow-x: auto;
+  scroll-padding-inline: 12px;
+  scrollbar-width: none;
   backdrop-filter: blur(10px);
+}
+
+.mobile-tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .mobile-tab {
@@ -1167,6 +1180,7 @@ onBeforeUnmount(revokePreviewUrl)
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.92);
   color: #2f4763;
+  min-width: 78px;
 }
 
 .mobile-tab span,
@@ -1193,6 +1207,7 @@ onBeforeUnmount(revokePreviewUrl)
 .mobile-panel {
   margin-top: 8px;
   padding: 16px;
+  overflow: hidden;
 }
 
 .mobile-section + .mobile-section {
@@ -1272,6 +1287,7 @@ onBeforeUnmount(revokePreviewUrl)
   margin: 8px 0 0;
   color: #546a81;
   line-height: 1.65;
+  word-break: break-word;
 }
 
 .card-actions {
@@ -1318,7 +1334,7 @@ onBeforeUnmount(revokePreviewUrl)
 
 .preview-frame {
   width: 100%;
-  height: 75vh;
+  height: min(75vh, 820px);
   border: none;
   border-radius: 14px;
   background: #f5f7fa;
@@ -1331,6 +1347,25 @@ onBeforeUnmount(revokePreviewUrl)
   color: #70859b;
   text-align: center;
   line-height: 1.8;
+}
+
+:deep(.mobile-dialog) {
+  max-width: calc(100vw - 24px);
+  margin: 24px auto !important;
+}
+
+:deep(.mobile-dialog .el-dialog__body) {
+  max-height: calc(100vh - 220px);
+  overflow: auto;
+}
+
+:deep(.mobile-preview-dialog) {
+  max-width: min(980px, calc(100vw - 24px));
+}
+
+:deep(.mobile-preview-dialog .el-dialog__body) {
+  padding-top: 12px;
+  padding-bottom: 12px;
 }
 
 @media (max-width: 560px) {
@@ -1347,6 +1382,10 @@ onBeforeUnmount(revokePreviewUrl)
     font-size: 24px;
   }
 
+  .mobile-stats {
+    grid-template-columns: 1fr;
+  }
+
   .hero-user,
   .section-headline {
     flex-direction: column;
@@ -1355,6 +1394,18 @@ onBeforeUnmount(revokePreviewUrl)
 
   .section-tip {
     text-align: left;
+  }
+
+  .mobile-tab {
+    min-width: 74px;
+  }
+
+  :deep(.mobile-dialog) {
+    margin: 12px auto !important;
+  }
+
+  :deep(.mobile-dialog .el-dialog__body) {
+    max-height: calc(100vh - 180px);
   }
 }
 </style>

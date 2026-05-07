@@ -69,7 +69,6 @@ const props = defineProps({
 const emit = defineEmits(['update:currentPage', 'update:pageSize', 'change'])
 
 const pageCount = computed(() => Math.max(1, Math.ceil((props.total || 0) / (props.pageSize || 1))))
-
 const showPagination = computed(() => props.total > 0)
 
 const visiblePages = computed(() => {

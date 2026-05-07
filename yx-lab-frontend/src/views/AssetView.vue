@@ -1,55 +1,70 @@
 <template>
   <div class="content-grid asset-page">
-    <div class="stats-grid asset-stats">
-      <article class="metric-card asset-metric" v-for="item in currentStats" :key="item.label">
+    <section class="stats-grid asset-stats">
+      <button
+        v-for="item in currentStats"
+        :key="item.label"
+        type="button"
+        :class="['metric-card', 'asset-metric', 'metric-card--action', { 'is-active': activeStatKey === item.key }]"
+        @click="handleStatClick(item)"
+      >
         <span>{{ item.label }}</span>
         <strong>{{ item.value }}</strong>
         <p>{{ item.desc }}</p>
-      </article>
-    </div>
+      </button>
+    </section>
 
-    <div class="glass-panel section-block">
+    <section class="glass-panel section-block">
       <el-tabs v-model="active">
         <el-tab-pane label="设备台账" name="inst">
           <div class="section-head">
             <div>
               <h3 class="section-title">设备台账</h3>
-              <p class="page-subtitle">用于维护实验室设备基础档案、状态信息，并支持模板下载和批量导入。</p>
+              <p class="page-subtitle">
+                统一维护实验室设备基础档案、状态信息和校准周期，支持模板下载与批量导入。
+              </p>
             </div>
           </div>
 
-          <div class="toolbar">
-            <el-input
-              v-model="instrumentQuery.keyword"
-              placeholder="搜索设备名称、型号、厂家或存放位置"
-              clearable
-              style="max-width: 320px"
-              @keyup.enter="handleInstrumentSearch"
-            />
-            <el-select
-              v-model="instrumentQuery.instrumentStatus"
-              placeholder="设备状态"
-              clearable
-              style="width: 180px"
-            >
-              <el-option
-                v-for="option in instrumentStatusOptions"
-                :key="option.value"
-                :label="option.label"
-                :value="option.value"
-              />
-            </el-select>
-            <el-button type="primary" @click="handleInstrumentSearch">查询</el-button>
-            <el-button @click="resetInstrumentQuery">重置</el-button>
-            <el-button @click="handleDownloadTemplate" :loading="templateDownloading">下载导入模板</el-button>
-            <el-button type="warning" plain @click="openImportDialog">导入设备</el-button>
-            <el-button type="primary" plain @click="openInstrumentDialog()">新增设备</el-button>
+          <div class="toolbar-panel">
+            <div class="toolbar-row">
+              <div class="toolbar-fields">
+                <label class="toolbar-field toolbar-field--wide">
+                  <span>关键字</span>
+                  <el-input
+                    v-model="instrumentQuery.keyword"
+                    placeholder="请输入设备名称、型号、厂家或存放位置"
+                    clearable
+                    @keyup.enter="handleInstrumentSearch"
+                  />
+                </label>
+                <label class="toolbar-field">
+                  <span>设备状态</span>
+                  <el-select v-model="instrumentQuery.instrumentStatus" placeholder="请选择设备状态" clearable>
+                    <el-option
+                      v-for="option in instrumentStatusOptions"
+                      :key="option.value"
+                      :label="option.label"
+                      :value="option.value"
+                    />
+                  </el-select>
+                </label>
+              </div>
+
+              <div class="toolbar-actions">
+                <el-button type="primary" @click="handleInstrumentSearch">查询</el-button>
+                <el-button @click="resetInstrumentQuery">重置</el-button>
+                <el-button @click="handleDownloadTemplate" :loading="templateDownloading">下载导入模板</el-button>
+                <el-button type="warning" plain @click="openImportDialog">导入设备</el-button>
+                <el-button type="primary" plain @click="openInstrumentDialog()">新增设备</el-button>
+              </div>
+            </div>
           </div>
 
           <div class="table-card">
             <el-table
               class="list-table"
-              :data="instruments"
+              :data="visibleInstruments"
               stripe
               max-height="420"
               v-loading="instrumentLoading"
@@ -61,7 +76,7 @@
               <el-table-column prop="ownerName" label="负责人" min-width="110" />
               <el-table-column prop="storageLocation" label="存放位置" min-width="140" />
               <el-table-column prop="purchaseDate" label="购置日期" width="120" />
-              <el-table-column label="状态" width="110">
+              <el-table-column label="状态" width="110" header-cell-class-name="cell-center" class-name="cell-center">
                 <template #default="{ row }">
                   <span class="status-chip" :class="getStatusClass('instrumentStatus', row.instrumentStatus)">
                     {{ getEnumLabel(instrumentStatusLabelMap, row.instrumentStatus) }}
@@ -73,7 +88,7 @@
                   {{ row.remark || '-' }}
                 </template>
               </el-table-column>
-              <el-table-column label="操作" width="170" fixed="right">
+              <el-table-column label="操作" width="170" fixed="right" class-name="cell-center">
                 <template #default="{ row }">
                   <el-button link type="primary" @click="openInstrumentDialog(row.id)">编辑</el-button>
                   <el-button link type="danger" @click="removeInstrument(row)">删除</el-button>
@@ -94,33 +109,42 @@
           <div class="section-head">
             <div>
               <h3 class="section-title">文档台账</h3>
-              <p class="page-subtitle">支持上传制度文件和规范文档，并按指定人员控制查看范围。</p>
+              <p class="page-subtitle">
+                管理制度文件、规范文档和附件资料，支持查看权限控制、上传替换和在线预览。
+              </p>
             </div>
           </div>
 
-          <div class="toolbar">
-            <el-input
-              v-model="documentQuery.keyword"
-              placeholder="搜索文档名称"
-              clearable
-              style="max-width: 320px"
-              @keyup.enter="handleDocumentSearch"
-            />
-            <el-input
-              v-model="documentQuery.documentCategory"
-              placeholder="文档分类"
-              clearable
-              style="width: 180px"
-            />
-            <el-button type="primary" @click="handleDocumentSearch">查询</el-button>
-            <el-button @click="resetDocumentQuery">重置</el-button>
-            <el-button type="primary" plain @click="openDocumentDialog()">新增文档</el-button>
+          <div class="toolbar-panel">
+            <div class="toolbar-row">
+              <div class="toolbar-fields">
+                <label class="toolbar-field toolbar-field--wide">
+                  <span>关键字</span>
+                  <el-input
+                    v-model="documentQuery.keyword"
+                    placeholder="请输入文档名称"
+                    clearable
+                    @keyup.enter="handleDocumentSearch"
+                  />
+                </label>
+                <label class="toolbar-field">
+                  <span>文档分类</span>
+                  <el-input v-model="documentQuery.documentCategory" placeholder="请输入文档分类" clearable />
+                </label>
+              </div>
+
+              <div class="toolbar-actions">
+                <el-button type="primary" @click="handleDocumentSearch">查询</el-button>
+                <el-button @click="resetDocumentQuery">重置</el-button>
+                <el-button type="primary" plain @click="openDocumentDialog()">新增文档</el-button>
+              </div>
+            </div>
           </div>
 
           <div class="table-card">
             <el-table
               class="list-table"
-              :data="documents"
+              :data="visibleDocuments"
               stripe
               max-height="420"
               v-loading="documentLoading"
@@ -128,7 +152,7 @@
             >
               <el-table-column prop="documentName" label="文档名称" min-width="180" />
               <el-table-column prop="documentCategory" label="分类" min-width="120" />
-              <el-table-column prop="fileType" label="文件类型" width="100" />
+              <el-table-column prop="fileType" label="文件类型" width="100" class-name="cell-center" />
               <el-table-column prop="createdName" label="上传人" min-width="120" />
               <el-table-column label="可查看人员" min-width="200" show-overflow-tooltip>
                 <template #default="{ row }">
@@ -141,7 +165,7 @@
                   {{ row.remark || '-' }}
                 </template>
               </el-table-column>
-              <el-table-column label="操作" width="220" fixed="right">
+              <el-table-column label="操作" width="220" fixed="right" class-name="cell-center">
                 <template #default="{ row }">
                   <el-button link type="primary" @click="previewDocument(row)">查看</el-button>
                   <el-button v-if="row.canManage" link type="primary" @click="openDocumentDialog(row.id)">编辑</el-button>
@@ -159,7 +183,7 @@
           </div>
         </el-tab-pane>
       </el-tabs>
-    </div>
+    </section>
 
     <el-dialog
       v-model="instrumentDialogVisible"
@@ -209,7 +233,7 @@
             <el-input-number v-model="instrumentForm.serviceLifeYears" :min="0" :max="100" style="width: 100%" />
           </el-form-item>
           <el-form-item label="校准周期" prop="calibrationCycle">
-            <el-input v-model="instrumentForm.calibrationCycle" placeholder="如：12个月" />
+            <el-input v-model="instrumentForm.calibrationCycle" placeholder="例如：12个月" />
           </el-form-item>
           <el-form-item label="证书地址" prop="certificateUrl">
             <el-input v-model="instrumentForm.certificateUrl" placeholder="请输入证书文件地址" />
@@ -235,16 +259,21 @@
       <div class="import-guide">
         <div class="import-card">
           <strong>导入前请先下载模板</strong>
-          <p>请严格按模板列名填写，系统会校验必填项、状态值、日期格式、使用年限以及重复设备。</p>
+          <p>请严格按照模板列名填写，系统会校验必填项、状态值、日期格式、使用年限以及重复设备。</p>
         </div>
         <div class="import-card warm">
           <strong>校验规则</strong>
-          <p>只要存在一行错误，本次导入不会入库。你可以根据下方错误明细修正后重新导入。</p>
+          <p>只要存在一行错误，本次导入就不会入库。你可以根据下方错误明细修正后重新导入。</p>
         </div>
       </div>
 
-      <div class="toolbar import-toolbar">
-        <el-button @click="handleDownloadTemplate" :loading="templateDownloading">下载模板</el-button>
+      <div class="toolbar-panel import-toolbar">
+        <div class="toolbar-row">
+          <div class="panel-note">支持 Excel 批量导入，仅新增设备，不覆盖已有台账。</div>
+          <div class="toolbar-actions">
+            <el-button @click="handleDownloadTemplate" :loading="templateDownloading">下载模板</el-button>
+          </div>
+        </div>
       </div>
 
       <el-upload
@@ -259,7 +288,7 @@
       >
         <div class="upload-box">
           <div class="upload-title">将填写好的 Excel 文件拖到这里，或点击上传</div>
-          <div class="upload-subtitle">仅支持 `.xlsx` / `.xls`，且仅导入新增设备数据</div>
+          <div class="upload-subtitle">仅支持 `.xlsx` / `.xls`，且仅导入新增设备数据。</div>
         </div>
       </el-upload>
 
@@ -281,7 +310,7 @@
         empty-text="暂无校验错误"
         class="import-error-table"
       >
-        <el-table-column prop="rowNum" label="行号" width="90" />
+        <el-table-column prop="rowNum" label="行号" width="90" class-name="cell-center" />
         <el-table-column prop="deviceName" label="设备名称" min-width="160" />
         <el-table-column prop="message" label="错误原因" min-width="280" show-overflow-tooltip />
       </el-table>
@@ -338,7 +367,7 @@
               </template>
               <template #tip>
                 <div class="upload-tip">
-                  {{ documentForm.fileUrl ? '已存在文档文件；若重新选择文件，将覆盖原文件。' : '请选择本地文档后保存。' }}
+                  {{ documentForm.fileUrl ? '已存在文档文件；如重新选择文件，将覆盖原文件。' : '请选择本地文档后保存。' }}
                 </div>
               </template>
             </el-upload>
@@ -354,7 +383,13 @@
       </template>
     </el-dialog>
 
-    <el-dialog v-model="previewDialogVisible" :title="previewTitle" width="900px" destroy-on-close @closed="closePreviewDialog">
+    <el-dialog
+      v-model="previewDialogVisible"
+      :title="previewTitle"
+      width="900px"
+      destroy-on-close
+      @closed="closePreviewDialog"
+    >
       <div v-if="previewError" class="preview-empty">{{ previewError }}</div>
       <img v-else-if="previewMode === 'image'" :src="previewUrl" alt="文档预览" class="preview-image" />
       <iframe v-else-if="previewUrl" :src="previewUrl" class="preview-frame" />
@@ -367,7 +402,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import TablePagination from '../components/common/TablePagination.vue'
 import {
@@ -393,9 +428,9 @@ import {
   getStatusClass,
   inactiveInstrumentStatuses,
   instrumentCalibratingStatus,
+  instrumentNormalStatus,
   instrumentStatusLabelMap,
-  instrumentStatusOptions,
-  instrumentNormalStatus
+  instrumentStatusOptions
 } from '../utils/labEnums'
 
 const active = ref('inst')
@@ -427,8 +462,38 @@ const previewUrl = ref('')
 const previewMode = ref('frame')
 const previewTitle = ref('')
 const previewError = ref('')
+const activeStatKey = ref('设备总数')
 
 const currentStats = computed(() => (active.value === 'inst' ? instrumentStats.value : documentStats.value))
+
+const visibleInstruments = computed(() => {
+  if (active.value !== 'inst') {
+    return instruments.value
+  }
+  if (activeStatKey.value === '正常设备') {
+    return instruments.value.filter((item) => item.instrumentStatus === instrumentNormalStatus)
+  }
+  if (activeStatKey.value === '停用/维护') {
+    return instruments.value.filter((item) => inactiveInstrumentStatuses.includes(item.instrumentStatus))
+  }
+  if (activeStatKey.value === '待校准') {
+    return instruments.value.filter((item) => item.instrumentStatus === instrumentCalibratingStatus)
+  }
+  return instruments.value
+})
+
+const visibleDocuments = computed(() => {
+  if (active.value !== 'doc') {
+    return documents.value
+  }
+  if (activeStatKey.value === '可管理文档') {
+    return documents.value.filter((item) => item.canManage)
+  }
+  if (activeStatKey.value === '共享文档') {
+    return documents.value.filter((item) => (item.viewerNames || []).length > 0)
+  }
+  return documents.value
+})
 
 const instrumentStats = computed(() => [
   {
@@ -444,12 +509,12 @@ const instrumentStats = computed(() => [
   {
     label: '停用/维护',
     value: countInstrumentByStatuses(inactiveInstrumentStatuses),
-    desc: '停用及维护中的设备'
+    desc: '处于停用或维护状态的设备'
   },
   {
     label: '待校准',
     value: countInstrumentByStatus(instrumentCalibratingStatus),
-    desc: '待校准或需重点关注设备'
+    desc: '待校准或需要重点关注的设备'
   }
 ])
 
@@ -457,7 +522,7 @@ const documentStats = computed(() => [
   {
     label: '文档总数',
     value: documentTotal.value || 0,
-    desc: '当前文档台账已收录文件数'
+    desc: '当前文档台账收录的文件数量'
   },
   {
     label: '可管理文档',
@@ -472,7 +537,7 @@ const documentStats = computed(() => [
   {
     label: '本页记录',
     value: documents.value.length,
-    desc: '当前分页加载的文档记录'
+    desc: '当前分页加载的文档条数'
   }
 ])
 
@@ -543,6 +608,7 @@ function resetInstrumentQuery() {
   instrumentQuery.pageSize = DEFAULT_PAGE_SIZE
   instrumentQuery.keyword = ''
   instrumentQuery.instrumentStatus = ''
+  activeStatKey.value = '设备总数'
   loadInstruments()
 }
 
@@ -551,18 +617,45 @@ function resetDocumentQuery() {
   documentQuery.pageSize = DEFAULT_PAGE_SIZE
   documentQuery.keyword = ''
   documentQuery.documentCategory = ''
+  activeStatKey.value = '文档总数'
   loadDocuments()
 }
 
 function handleInstrumentSearch() {
   instrumentQuery.pageNum = 1
+  activeStatKey.value = '设备总数'
   loadInstruments()
 }
 
 function handleDocumentSearch() {
   documentQuery.pageNum = 1
+  activeStatKey.value = '文档总数'
   loadDocuments()
 }
+
+function handleStatClick(item) {
+  if (!item?.label) {
+    return
+  }
+
+  if (['设备总数', '正常设备', '停用/维护', '待校准'].includes(item.label)) {
+    active.value = 'inst'
+    activeStatKey.value = activeStatKey.value === item.label ? '设备总数' : item.label
+    return
+  }
+
+  active.value = 'doc'
+  activeStatKey.value = activeStatKey.value === item.label ? '文档总数' : item.label
+}
+
+watch(active, (value) => {
+  if (value === 'inst' && !['设备总数', '正常设备', '停用/维护', '待校准'].includes(activeStatKey.value)) {
+    activeStatKey.value = '设备总数'
+  }
+  if (value === 'doc' && !['文档总数', '可管理文档', '共享文档', '本页记录'].includes(activeStatKey.value)) {
+    activeStatKey.value = '文档总数'
+  }
+})
 
 function openImportDialog() {
   importDialogVisible.value = true
@@ -597,10 +690,15 @@ function handleDocumentFileRemove() {
   selectedDocumentFile.value = null
 }
 
-function closePreviewDialog() {
+function revokePreviewUrl() {
   if (previewUrl.value) {
     window.URL.revokeObjectURL(previewUrl.value)
+    previewUrl.value = ''
   }
+}
+
+function closePreviewDialog() {
+  revokePreviewUrl()
   previewDialogVisible.value = false
   previewUrl.value = ''
   previewMode.value = 'frame'
@@ -638,7 +736,7 @@ async function handleDownloadTemplate() {
 
 async function submitImport() {
   if (!selectedImportFile.value) {
-    ElMessage.warning('请先选择导入文件')
+    ElMessage.warning('请先选择导入文件。')
     return
   }
   importSubmitting.value = true
@@ -646,11 +744,11 @@ async function submitImport() {
     const result = await importInstrumentsApi(selectedImportFile.value)
     importResult.value = result
     if (result.allPassed) {
-      ElMessage.success(`导入成功，新增 ${result.successCount} 条设备记录`)
+      ElMessage.success(`导入成功，新增 ${result.successCount} 条设备记录。`)
       closeImportDialog()
       await loadInstruments()
     } else {
-      ElMessage.warning(`导入校验未通过，请处理 ${result.errors.length} 条错误后重试`)
+      ElMessage.warning(`导入校验未通过，请处理 ${result.errors.length} 条错误后重试。`)
     }
   } finally {
     importSubmitting.value = false
@@ -720,10 +818,10 @@ async function submitInstrument() {
     }
     if (payload.id) {
       await updateInstrumentApi(payload.id, payload)
-      ElMessage.success('设备信息已更新')
+      ElMessage.success('设备信息已更新。')
     } else {
       await createInstrumentApi(payload)
-      ElMessage.success('设备已新增')
+      ElMessage.success('设备已新增。')
     }
     instrumentDialogVisible.value = false
     await loadInstruments()
@@ -735,7 +833,7 @@ async function submitInstrument() {
 async function submitDocument() {
   await documentFormRef.value.validate()
   if (!documentForm.id && !selectedDocumentFile.value) {
-    ElMessage.warning('请先选择本地文档文件')
+    ElMessage.warning('请先选择本地文档文件。')
     return
   }
   savingDocument.value = true
@@ -749,10 +847,10 @@ async function submitDocument() {
     }
     if (payload.id) {
       await updateDocumentApi(payload.id, payload)
-      ElMessage.success('文档信息已更新')
+      ElMessage.success('文档信息已更新。')
     } else {
       await createDocumentApi(payload)
-      ElMessage.success('文档已新增')
+      ElMessage.success('文档已新增。')
     }
     documentDialogVisible.value = false
     await loadDocuments()
@@ -762,16 +860,15 @@ async function submitDocument() {
 }
 
 async function previewDocument(row) {
-  if (previewUrl.value) {
-    window.URL.revokeObjectURL(previewUrl.value)
-    previewUrl.value = ''
-  }
+  revokePreviewUrl()
   previewTitle.value = row.documentName
   previewError.value = ''
   previewMode.value = 'frame'
   const fileType = normalizeFileType(row.fileType, row.documentName)
   if (!isInlinePreviewable(fileType)) {
-    previewError.value = `当前格式${fileType ? `（${fileType}）` : ''}不支持浏览器直接在线预览。建议上传 PDF 或图片；如需在线预览 Word、Excel、PPT，需要后续接入文档转换预览服务。`
+    previewError.value = fileType
+      ? `当前格式（${fileType}）暂不支持浏览器在线预览，建议上传 PDF 或图片文件。`
+      : '当前文件暂不支持浏览器在线预览，建议上传 PDF 或图片文件。'
     previewDialogVisible.value = true
     return
   }
@@ -780,7 +877,7 @@ async function previewDocument(row) {
     const contentType = response.headers['content-type'] || 'application/octet-stream'
     if (contentType.includes('application/json')) {
       const message = await parsePreviewError(response.data)
-      previewError.value = message || '文档预览失败'
+      previewError.value = message || '文档预览失败。'
       previewDialogVisible.value = true
       return
     }
@@ -789,7 +886,7 @@ async function previewDocument(row) {
     previewMode.value = contentType.startsWith('image/') ? 'image' : 'frame'
     previewDialogVisible.value = true
   } catch (error) {
-    previewError.value = error?.message || '文档预览失败'
+    previewError.value = error?.message || '文档预览失败。'
     previewDialogVisible.value = true
   }
 }
@@ -802,13 +899,13 @@ async function removeInstrument(row) {
       cancelButtonText: '取消'
     })
     await deleteInstrumentApi(row.id)
-    ElMessage.success('设备已删除')
+    ElMessage.success('设备已删除。')
     if (instruments.value.length === 1 && instrumentQuery.pageNum > 1) {
       instrumentQuery.pageNum -= 1
     }
     await loadInstruments()
   } catch {
-    // User canceled deletion.
+    // 用户取消删除时不做处理。
   }
 }
 
@@ -820,13 +917,13 @@ async function removeDocument(row) {
       cancelButtonText: '取消'
     })
     await deleteDocumentApi(row.id)
-    ElMessage.success('文档已删除')
+    ElMessage.success('文档已删除。')
     if (documents.value.length === 1 && documentQuery.pageNum > 1) {
       documentQuery.pageNum -= 1
     }
     await loadDocuments()
   } catch {
-    // User canceled deletion.
+    // 用户取消删除时不做处理。
   }
 }
 
@@ -861,6 +958,8 @@ onMounted(() => {
   loadDocuments()
   loadDocumentUsers()
 })
+
+onBeforeUnmount(revokePreviewUrl)
 </script>
 
 <style scoped>
@@ -879,18 +978,20 @@ onMounted(() => {
   line-height: 1.6;
 }
 
-.section-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 16px;
+.metric-card--action {
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
-.section-title {
-  margin: 0;
-  font-size: 18px;
-  line-height: 1.4;
+.metric-card--action:hover,
+.metric-card--action:focus-visible,
+.metric-card--action.is-active {
+  border-color: color-mix(in srgb, var(--brand) 48%, #ffffff 52%);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+  outline: none;
 }
 
 .form-grid {
