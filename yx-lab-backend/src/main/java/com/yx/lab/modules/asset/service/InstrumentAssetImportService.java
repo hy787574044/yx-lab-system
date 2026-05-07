@@ -2,6 +2,7 @@ package com.yx.lab.modules.asset.service;
 
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.yx.lab.common.constant.LabWorkflowConstants;
 import com.yx.lab.common.exception.BusinessException;
 import com.yx.lab.modules.asset.entity.Instrument;
 import com.yx.lab.modules.asset.mapper.InstrumentMapper;
@@ -65,7 +66,7 @@ public class InstrumentAssetImportService {
 
     private static final String[] IMPORT_STATUS_OPTIONS = INSTRUMENT_STATUS_LABEL_MAP.values().toArray(new String[0]);
 
-    private static final Set<String> ALLOWED_STATUSES = new HashSet<>(INSTRUMENT_STATUS_LABEL_MAP.keySet());
+    private static final Set<String> ALLOWED_STATUSES = new HashSet<>(LabWorkflowConstants.INSTRUMENT_STATUSES);
 
     private static final Map<String, String> IMPORT_STATUS_ALIAS_MAP = createImportStatusAliasMap();
 
@@ -339,10 +340,10 @@ public class InstrumentAssetImportService {
 
     private static Map<String, String> createInstrumentStatusLabelMap() {
         Map<String, String> statusMap = new LinkedHashMap<>();
-        statusMap.put("NORMAL", "\u6b63\u5e38");
-        statusMap.put("DISABLED", "\u505c\u7528");
-        statusMap.put("MAINTENANCE", "\u7ef4\u62a4\u4e2d");
-        statusMap.put("CALIBRATING", "\u5f85\u6821\u51c6");
+        statusMap.put(LabWorkflowConstants.InstrumentStatus.NORMAL, "\u6b63\u5e38");
+        statusMap.put(LabWorkflowConstants.InstrumentStatus.DISABLED, "\u505c\u7528");
+        statusMap.put(LabWorkflowConstants.InstrumentStatus.MAINTENANCE, "\u7ef4\u62a4\u4e2d");
+        statusMap.put(LabWorkflowConstants.InstrumentStatus.CALIBRATING, "\u5f85\u6821\u51c6");
         return statusMap;
     }
 

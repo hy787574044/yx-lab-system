@@ -3,6 +3,7 @@ package com.yx.lab.modules.asset.service;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.yx.lab.common.constant.LabWorkflowConstants;
 import com.yx.lab.common.exception.BusinessException;
 import com.yx.lab.common.model.PageResult;
 import com.yx.lab.common.util.PageUtils;
@@ -50,7 +51,7 @@ public class InstrumentAssetService {
         Instrument entity = new Instrument();
         applyInstrumentCommand(entity, command);
         if (StrUtil.isBlank(entity.getInstrumentStatus())) {
-            entity.setInstrumentStatus("NORMAL");
+            entity.setInstrumentStatus(LabWorkflowConstants.InstrumentStatus.NORMAL);
         }
         instrumentMapper.insert(entity);
     }

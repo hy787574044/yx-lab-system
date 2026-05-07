@@ -57,7 +57,7 @@ public class ReviewService {
         if (record == null) {
             throw new BusinessException("检测记录不存在");
         }
-        if (!LabWorkflowConstants.DetectionStatus.SUBMITTED.equals(record.getDetectionStatus())) {
+        if (!LabWorkflowConstants.canReviewDetection(record.getDetectionStatus())) {
             throw new BusinessException("当前检测记录不在待审核状态");
         }
 
@@ -84,13 +84,12 @@ public class ReviewService {
         reviewRecord.setReviewRemark(command.getReviewRemark());
         reviewRecordMapper.insert(reviewRecord);
 
-        record.setDetectionStatus(LabWorkflowConstants.ReviewResult.APPROVED.equals(command.getReviewResult())
-                ? LabWorkflowConstants.DetectionStatus.APPROVED
-                : LabWorkflowConstants.DetectionStatus.REJECTED);
+        record.setDetectionStatus(LabWorkflowConstants.detectionStatusForReviewResult(command.getReviewResult()));
         detectionRecordMapper.updateById(record);
 
+        String nextSampleStatus = LabWorkflowConstants.sampleStatusForReviewResult(command.getReviewResult());
         if (LabWorkflowConstants.ReviewResult.APPROVED.equals(command.getReviewResult())) {
-            labSampleService.updateStatus(sample.getId(), LabWorkflowConstants.SampleStatus.COMPLETED, record.getDetectionResult());
+            labSampleService.updateStatus(sample.getId(), nextSampleStatus, record.getDetectionResult());
             reportService.createApprovedReport(sample, record);
         } else {
             labSampleService.updateStatus(sample.getId(), LabWorkflowConstants.SampleStatus.RETEST, "待重检");

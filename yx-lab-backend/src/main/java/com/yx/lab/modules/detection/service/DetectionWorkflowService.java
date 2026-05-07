@@ -75,7 +75,7 @@ public class DetectionWorkflowService {
         if (sample == null) {
             throw new BusinessException("样品不存在");
         }
-        if (!LabWorkflowConstants.DETECTABLE_SAMPLE_STATUSES.contains(sample.getSampleStatus())) {
+        if (!LabWorkflowConstants.canSubmitDetection(sample.getSampleStatus())) {
             throw new BusinessException("当前样品状态不允许提交检测");
         }
 

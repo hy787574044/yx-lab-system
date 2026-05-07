@@ -56,7 +56,7 @@ public class SamplingTaskService {
 
     public void start(Long taskId, SamplingTaskActionCommand command) {
         SamplingTask task = requireTask(taskId);
-        if (!LabWorkflowConstants.SamplingTaskStatus.PENDING.equals(task.getTaskStatus())) {
+        if (!LabWorkflowConstants.canStartTask(task.getTaskStatus())) {
             throw new BusinessException("当前任务状态不允许开始执行");
         }
         task.setTaskStatus(LabWorkflowConstants.SamplingTaskStatus.IN_PROGRESS);
@@ -69,8 +69,7 @@ public class SamplingTaskService {
 
     public void abandon(Long taskId, SamplingTaskActionCommand command) {
         SamplingTask task = requireTask(taskId);
-        if (!LabWorkflowConstants.SamplingTaskStatus.PENDING.equals(task.getTaskStatus())
-                && !LabWorkflowConstants.SamplingTaskStatus.IN_PROGRESS.equals(task.getTaskStatus())) {
+        if (!LabWorkflowConstants.canAbandonTask(task.getTaskStatus())) {
             throw new BusinessException("当前任务状态不允许废弃");
         }
         String reason = command == null ? null : StrUtil.trim(command.getReason());
@@ -87,7 +86,7 @@ public class SamplingTaskService {
 
     public void resume(Long taskId, SamplingTaskActionCommand command) {
         SamplingTask task = requireTask(taskId);
-        if (!LabWorkflowConstants.SamplingTaskStatus.ABANDONED.equals(task.getTaskStatus())) {
+        if (!LabWorkflowConstants.canResumeTask(task.getTaskStatus())) {
             throw new BusinessException("当前任务不处于废弃状态");
         }
         task.setTaskStatus(LabWorkflowConstants.SamplingTaskStatus.PENDING);
@@ -106,6 +105,9 @@ public class SamplingTaskService {
         }
         if (LabWorkflowConstants.SamplingTaskStatus.COMPLETED.equals(task.getTaskStatus())) {
             throw new BusinessException("当前任务已完成");
+        }
+        if (!LabWorkflowConstants.canCompleteTask(task.getTaskStatus())) {
+            throw new BusinessException("当前任务状态不允许完成");
         }
         if (LabWorkflowConstants.SamplingTaskStatus.PENDING.equals(task.getTaskStatus())) {
             task.setStartedTime(LocalDateTime.now());

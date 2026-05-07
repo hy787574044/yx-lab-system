@@ -56,7 +56,7 @@ public class SamplingPlanService {
 
     public void update(Long id, SamplingPlanSaveCommand command) {
         SamplingPlan existing = requirePlan(id);
-        if (isLockedPlan(existing.getPlanStatus())) {
+        if (LabWorkflowConstants.isLockedPlan(existing.getPlanStatus())) {
             throw new BusinessException("当前计划已进入执行阶段，不允许直接编辑");
         }
         String originalPlanStatus = existing.getPlanStatus();
@@ -73,7 +73,7 @@ public class SamplingPlanService {
 
     public void delete(Long id) {
         SamplingPlan existing = requirePlan(id);
-        if (isLockedPlan(existing.getPlanStatus())) {
+        if (LabWorkflowConstants.isLockedPlan(existing.getPlanStatus())) {
             throw new BusinessException("当前计划已执行，不允许删除");
         }
         samplingPlanMapper.deleteById(id);
@@ -81,8 +81,7 @@ public class SamplingPlanService {
 
     public void pause(Long id) {
         SamplingPlan plan = requirePlan(id);
-        if (!LabWorkflowConstants.SamplingPlanStatus.ACTIVE.equals(plan.getPlanStatus())
-                && !LabWorkflowConstants.SamplingPlanStatus.UNPUBLISHED.equals(plan.getPlanStatus())) {
+        if (!LabWorkflowConstants.canPausePlan(plan.getPlanStatus())) {
             throw new BusinessException("当前计划状态不允许暂停");
         }
         plan.setPlanStatus(LabWorkflowConstants.SamplingPlanStatus.PAUSED);
@@ -91,7 +90,7 @@ public class SamplingPlanService {
 
     public void resume(Long id) {
         SamplingPlan plan = requirePlan(id);
-        if (!LabWorkflowConstants.SamplingPlanStatus.PAUSED.equals(plan.getPlanStatus())) {
+        if (!LabWorkflowConstants.canResumePlan(plan.getPlanStatus())) {
             throw new BusinessException("当前计划不处于暂停状态");
         }
         plan.setPlanStatus(LabWorkflowConstants.SamplingPlanStatus.ACTIVE);
@@ -101,7 +100,7 @@ public class SamplingPlanService {
     @Transactional(rollbackFor = Exception.class)
     public void dispatch(SamplingPlanDispatchCommand command) {
         SamplingPlan plan = requirePlan(command.getPlanId());
-        if (!LabWorkflowConstants.DISPATCHABLE_PLAN_STATUSES.contains(plan.getPlanStatus())) {
+        if (!LabWorkflowConstants.canDispatchPlan(plan.getPlanStatus())) {
             throw new BusinessException("当前计划状态不允许派发");
         }
 
@@ -128,11 +127,6 @@ public class SamplingPlanService {
             throw new BusinessException("采样计划不存在");
         }
         return plan;
-    }
-
-    private boolean isLockedPlan(String planStatus) {
-        return LabWorkflowConstants.SamplingPlanStatus.DISPATCHED.equals(planStatus)
-                || LabWorkflowConstants.SamplingPlanStatus.COMPLETED.equals(planStatus);
     }
 
     private void applyPlanCommand(SamplingPlan plan, SamplingPlanSaveCommand command) {
