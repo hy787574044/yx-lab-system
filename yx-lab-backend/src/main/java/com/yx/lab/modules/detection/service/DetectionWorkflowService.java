@@ -19,6 +19,8 @@ import com.yx.lab.modules.detection.mapper.DetectionItemMapper;
 import com.yx.lab.modules.detection.mapper.DetectionRecordMapper;
 import com.yx.lab.modules.detection.mapper.DetectionTypeMapper;
 import com.yx.lab.modules.detection.vo.DetectionRecordDetailVO;
+import com.yx.lab.modules.review.entity.ReviewRecord;
+import com.yx.lab.modules.review.mapper.ReviewRecordMapper;
 import com.yx.lab.modules.sample.entity.LabSample;
 import com.yx.lab.modules.sample.mapper.LabSampleMapper;
 import com.yx.lab.modules.sample.service.LabSampleService;
@@ -40,6 +42,8 @@ public class DetectionWorkflowService {
     private final DetectionTypeMapper detectionTypeMapper;
 
     private final LabSampleMapper labSampleMapper;
+
+    private final ReviewRecordMapper reviewRecordMapper;
 
     private final LabSampleService labSampleService;
 
@@ -77,6 +81,9 @@ public class DetectionWorkflowService {
         }
         if (!LabWorkflowConstants.canSubmitDetection(sample.getSampleStatus())) {
             throw new BusinessException("当前样品状态不允许提交检测");
+        }
+        if (LabWorkflowConstants.SampleStatus.RETEST.equals(sample.getSampleStatus())) {
+            validateRetestSubmission(sample);
         }
 
         Long pendingCount = detectionRecordMapper.selectCount(new LambdaQueryWrapper<DetectionRecord>()
@@ -116,6 +123,20 @@ public class DetectionWorkflowService {
         }
 
         labSampleService.updateStatus(sample.getId(), LabWorkflowConstants.SampleStatus.REVIEWING, record.getDetectionResult());
+    }
+
+    private void validateRetestSubmission(LabSample sample) {
+        ReviewRecord latestReview = reviewRecordMapper.selectOne(new LambdaQueryWrapper<ReviewRecord>()
+                .eq(ReviewRecord::getSampleId, sample.getId())
+                .orderByDesc(ReviewRecord::getReviewTime)
+                .orderByDesc(ReviewRecord::getCreatedTime)
+                .last("limit 1"));
+        if (latestReview == null) {
+            throw new BusinessException("当前样品没有审核驳回记录，不能按重检流程提交");
+        }
+        if (!LabWorkflowConstants.ReviewResult.REJECTED.equals(latestReview.getReviewResult())) {
+            throw new BusinessException("当前样品最近一次审核结果不是驳回，不能进入重检流程");
+        }
     }
 
     private String buildResult(List<DetectionItemCommand> items) {
