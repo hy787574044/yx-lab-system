@@ -3,6 +3,7 @@ package com.yx.lab.modules.sample.controller;
 import com.yx.lab.common.model.ApiResponse;
 import com.yx.lab.common.model.PageResult;
 import com.yx.lab.modules.sample.dto.MonitoringPointQuery;
+import com.yx.lab.modules.sample.dto.MonitoringPointSaveCommand;
 import com.yx.lab.modules.sample.entity.MonitoringPoint;
 import com.yx.lab.modules.sample.service.MonitoringPointService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -16,6 +17,8 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import javax.validation.Valid;
 
 @RestController
 @RequestMapping("/api/monitoring-points")
@@ -36,15 +39,14 @@ public class MonitoringPointController {
     }
 
     @PostMapping
-    public ApiResponse<Void> save(@RequestBody MonitoringPoint point) {
-        monitoringPointService.save(point);
+    public ApiResponse<Void> save(@Valid @RequestBody MonitoringPointSaveCommand command) {
+        monitoringPointService.save(command);
         return ApiResponse.successMessage("新增成功");
     }
 
     @PutMapping("/{id}")
-    public ApiResponse<Void> update(@PathVariable Long id, @RequestBody MonitoringPoint point) {
-        point.setId(id);
-        monitoringPointService.update(point);
+    public ApiResponse<Void> update(@PathVariable Long id, @Valid @RequestBody MonitoringPointSaveCommand command) {
+        monitoringPointService.update(id, command);
         return ApiResponse.successMessage("更新成功");
     }
 

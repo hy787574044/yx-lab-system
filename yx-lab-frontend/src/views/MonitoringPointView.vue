@@ -19,8 +19,12 @@
       <div class="toolbar">
         <el-input v-model="query.keyword" placeholder="输入点位名称查询" clearable style="max-width: 280px" />
         <el-select v-model="query.pointStatus" placeholder="状态" clearable style="width: 180px">
-          <el-option label="启用" value="ENABLED" />
-          <el-option label="禁用" value="DISABLED" />
+          <el-option
+            v-for="option in pointStatusOptions"
+            :key="option.value"
+            :label="option.label"
+            :value="option.value"
+          />
         </el-select>
         <el-button type="primary" @click="handleSearch">查询</el-button>
         <el-button @click="resetQuery">重置</el-button>
@@ -79,22 +83,32 @@
           </el-form-item>
           <el-form-item label="点位类型">
             <el-select v-model="form.pointType" style="width: 100%">
-              <el-option label="出厂水" value="FACTORY" />
-              <el-option label="原水" value="RAW" />
-              <el-option label="管网末梢" value="TERMINAL" />
+              <el-option
+                v-for="option in pointTypeOptions"
+                :key="option.value"
+                :label="option.label"
+                :value="option.value"
+              />
             </el-select>
           </el-form-item>
           <el-form-item label="监测频次">
             <el-select v-model="form.frequencyType" style="width: 100%">
-              <el-option label="每日" value="DAILY" />
-              <el-option label="每周" value="WEEKLY" />
-              <el-option label="每月" value="MONTHLY" />
+              <el-option
+                v-for="option in frequencyTypeOptions"
+                :key="option.value"
+                :label="option.label"
+                :value="option.value"
+              />
             </el-select>
           </el-form-item>
           <el-form-item label="状态">
             <el-select v-model="form.pointStatus" style="width: 100%">
-              <el-option label="启用" value="ENABLED" />
-              <el-option label="禁用" value="DISABLED" />
+              <el-option
+                v-for="option in pointStatusOptions"
+                :key="option.value"
+                :label="option.label"
+                :value="option.value"
+              />
             </el-select>
           </el-form-item>
           <el-form-item label="服务人口">
@@ -116,14 +130,21 @@ import { ElMessage } from 'element-plus'
 import { createMonitoringPointApi, fetchMonitoringPointsApi } from '../api/lab'
 import TablePagination from '../components/common/TablePagination.vue'
 import {
+  DEFAULT_PAGE_SIZE,
+  dailyFrequencyType,
+  enabledPointStatus,
+  factoryPointType,
+  frequencyTypeOptions,
   frequencyTypeLabelMap,
   getEnumLabel,
   getStatusClass,
+  pointStatusOptions,
   pointStatusLabelMap,
+  pointTypeOptions,
   pointTypeLabelMap
 } from '../utils/labEnums'
 
-const query = reactive({ pageNum: 1, pageSize: 30, keyword: '', pointStatus: '' })
+const query = reactive({ pageNum: 1, pageSize: DEFAULT_PAGE_SIZE, keyword: '', pointStatus: '' })
 const records = ref([])
 const total = ref(0)
 const dialogVisible = ref(false)
@@ -133,9 +154,9 @@ const defaultForm = () => ({
   regionName: '',
   ownerName: '',
   contactPhone: '',
-  pointType: 'FACTORY',
-  frequencyType: 'DAILY',
-  pointStatus: 'ENABLED',
+  pointType: factoryPointType,
+  frequencyType: dailyFrequencyType,
+  pointStatus: enabledPointStatus,
   servicePopulation: 0
 })
 
@@ -144,8 +165,8 @@ const form = reactive(defaultForm())
 const stats = computed(() => [
   { label: '点位总数', value: total.value, desc: '当前监测点位总量' },
   { label: '本页记录', value: records.value.length, desc: '当前分页加载的点位数量' },
-  { label: '启用点位', value: records.value.filter((item) => item.pointStatus === 'ENABLED').length, desc: '当前页状态为启用的点位' },
-  { label: '出厂水点位', value: records.value.filter((item) => item.pointType === 'FACTORY').length, desc: '当前页出厂水监测点位数量' }
+  { label: '启用点位', value: records.value.filter((item) => item.pointStatus === enabledPointStatus).length, desc: '当前页状态为启用的点位' },
+  { label: '出厂水点位', value: records.value.filter((item) => item.pointType === factoryPointType).length, desc: '当前页出厂水监测点位数量' }
 ])
 
 function openDialog() {
@@ -159,7 +180,7 @@ function handleSearch() {
 
 function resetQuery() {
   query.pageNum = 1
-  query.pageSize = 30
+  query.pageSize = DEFAULT_PAGE_SIZE
   query.keyword = ''
   query.pointStatus = ''
   loadData()

@@ -11,6 +11,6 @@ public class UnifiedRevokeTokenRequest {
 
     private String clientSecret;
 
-    @NotBlank(message = "accessToken cannot be blank")
+    @NotBlank(message = "访问令牌不能为空")
     private String accessToken;
 }

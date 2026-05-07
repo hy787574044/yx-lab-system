@@ -13,6 +13,6 @@ public class UnifiedAccessTokenRequest {
 
     private String clientSecret;
 
-    @NotBlank(message = "authorization code cannot be blank")
+    @NotBlank(message = "授权码不能为空")
     private String code;
 }

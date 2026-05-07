@@ -1,6 +1,7 @@
 package com.yx.lab.modules.mobile.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.yx.lab.common.constant.LabWorkflowConstants;
 import com.yx.lab.common.exception.BusinessException;
 import com.yx.lab.common.security.CurrentUser;
 import com.yx.lab.common.security.SecurityContext;
@@ -8,11 +9,8 @@ import com.yx.lab.modules.detection.entity.DetectionRecord;
 import com.yx.lab.modules.detection.mapper.DetectionRecordMapper;
 import com.yx.lab.modules.mobile.vo.MobileReviewHistoryVO;
 import com.yx.lab.modules.mobile.vo.MobileReviewTodoVO;
-import com.yx.lab.modules.mobile.vo.MobileSamplingTodoVO;
 import com.yx.lab.modules.review.entity.ReviewRecord;
 import com.yx.lab.modules.review.mapper.ReviewRecordMapper;
-import com.yx.lab.modules.sample.entity.SamplingTask;
-import com.yx.lab.modules.sample.mapper.SamplingTaskMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -21,24 +19,11 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-public class MobileService {
-
-    private final SamplingTaskMapper samplingTaskMapper;
+public class MobileReviewQueryService {
 
     private final DetectionRecordMapper detectionRecordMapper;
 
     private final ReviewRecordMapper reviewRecordMapper;
-
-    public List<MobileSamplingTodoVO> samplingTodo() {
-        CurrentUser currentUser = requireCurrentUser();
-        List<SamplingTask> tasks = samplingTaskMapper.selectList(new LambdaQueryWrapper<SamplingTask>()
-                .eq(SamplingTask::getSamplerId, currentUser.getUserId())
-                .in(SamplingTask::getTaskStatus, "PENDING", "IN_PROGRESS")
-                .orderByAsc(SamplingTask::getSamplingTime));
-        return tasks.stream()
-                .map(this::toSamplingTodoVO)
-                .collect(Collectors.toList());
-    }
 
     public List<MobileReviewHistoryVO> reviewHistory() {
         CurrentUser currentUser = requireCurrentUser();
@@ -52,7 +37,7 @@ public class MobileService {
 
     public List<MobileReviewTodoVO> reviewTodo() {
         List<DetectionRecord> records = detectionRecordMapper.selectList(new LambdaQueryWrapper<DetectionRecord>()
-                .eq(DetectionRecord::getDetectionStatus, "SUBMITTED")
+                .eq(DetectionRecord::getDetectionStatus, LabWorkflowConstants.DetectionStatus.SUBMITTED)
                 .orderByDesc(DetectionRecord::getDetectionTime));
         return records.stream()
                 .map(this::toReviewTodoVO)
@@ -62,26 +47,9 @@ public class MobileService {
     private CurrentUser requireCurrentUser() {
         CurrentUser currentUser = SecurityContext.getCurrentUser();
         if (currentUser == null) {
-            throw new BusinessException("请先登录");
+            throw new BusinessException("Please login first");
         }
         return currentUser;
-    }
-
-    private MobileSamplingTodoVO toSamplingTodoVO(SamplingTask task) {
-        MobileSamplingTodoVO vo = new MobileSamplingTodoVO();
-        vo.setId(task.getId());
-        vo.setPlanId(task.getPlanId());
-        vo.setPointId(task.getPointId());
-        vo.setPointName(task.getPointName());
-        vo.setSamplingTime(task.getSamplingTime());
-        vo.setSamplerId(task.getSamplerId());
-        vo.setSamplerName(task.getSamplerName());
-        vo.setSampleType(task.getSampleType());
-        vo.setDetectionItems(task.getDetectionItems());
-        vo.setTaskStatus(task.getTaskStatus());
-        vo.setFinishedTime(task.getFinishedTime());
-        vo.setRemark(task.getRemark());
-        return vo;
     }
 
     private MobileReviewHistoryVO toReviewHistoryVO(ReviewRecord record) {

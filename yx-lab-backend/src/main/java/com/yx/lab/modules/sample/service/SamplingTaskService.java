@@ -3,6 +3,7 @@ package com.yx.lab.modules.sample.service;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.yx.lab.common.constant.LabWorkflowConstants;
 import com.yx.lab.common.exception.BusinessException;
 import com.yx.lab.common.model.PageResult;
 import com.yx.lab.common.security.CurrentUser;
@@ -49,16 +50,16 @@ public class SamplingTaskService {
         CurrentUser currentUser = SecurityContext.getCurrentUser();
         return samplingTaskMapper.selectList(new LambdaQueryWrapper<SamplingTask>()
                 .eq(SamplingTask::getSamplerId, currentUser.getUserId())
-                .in(SamplingTask::getTaskStatus, "PENDING", "IN_PROGRESS")
+                .in(SamplingTask::getTaskStatus, LabWorkflowConstants.TODO_TASK_STATUSES)
                 .orderByAsc(SamplingTask::getSamplingTime));
     }
 
     public void start(Long taskId, SamplingTaskActionCommand command) {
         SamplingTask task = requireTask(taskId);
-        if (!"PENDING".equals(task.getTaskStatus())) {
+        if (!LabWorkflowConstants.SamplingTaskStatus.PENDING.equals(task.getTaskStatus())) {
             throw new BusinessException("当前任务状态不允许开始执行");
         }
-        task.setTaskStatus("IN_PROGRESS");
+        task.setTaskStatus(LabWorkflowConstants.SamplingTaskStatus.IN_PROGRESS);
         task.setStartedTime(LocalDateTime.now());
         if (command != null && StrUtil.isNotBlank(command.getRemark())) {
             task.setRemark(command.getRemark());
@@ -68,14 +69,15 @@ public class SamplingTaskService {
 
     public void abandon(Long taskId, SamplingTaskActionCommand command) {
         SamplingTask task = requireTask(taskId);
-        if (!"PENDING".equals(task.getTaskStatus()) && !"IN_PROGRESS".equals(task.getTaskStatus())) {
+        if (!LabWorkflowConstants.SamplingTaskStatus.PENDING.equals(task.getTaskStatus())
+                && !LabWorkflowConstants.SamplingTaskStatus.IN_PROGRESS.equals(task.getTaskStatus())) {
             throw new BusinessException("当前任务状态不允许废弃");
         }
         String reason = command == null ? null : StrUtil.trim(command.getReason());
         if (StrUtil.isBlank(reason)) {
             throw new BusinessException("废弃任务时必须填写原因");
         }
-        task.setTaskStatus("ABANDONED");
+        task.setTaskStatus(LabWorkflowConstants.SamplingTaskStatus.ABANDONED);
         task.setAbandonReason(reason);
         if (command != null && StrUtil.isNotBlank(command.getRemark())) {
             task.setRemark(command.getRemark());
@@ -85,10 +87,10 @@ public class SamplingTaskService {
 
     public void resume(Long taskId, SamplingTaskActionCommand command) {
         SamplingTask task = requireTask(taskId);
-        if (!"ABANDONED".equals(task.getTaskStatus())) {
+        if (!LabWorkflowConstants.SamplingTaskStatus.ABANDONED.equals(task.getTaskStatus())) {
             throw new BusinessException("当前任务不处于废弃状态");
         }
-        task.setTaskStatus("PENDING");
+        task.setTaskStatus(LabWorkflowConstants.SamplingTaskStatus.PENDING);
         task.setAbandonReason(null);
         if (command != null && StrUtil.isNotBlank(command.getRemark())) {
             task.setRemark(command.getRemark());
@@ -99,26 +101,26 @@ public class SamplingTaskService {
     @Transactional(rollbackFor = Exception.class)
     public void complete(SamplingTaskCompleteCommand command) {
         SamplingTask task = requireTask(command.getTaskId());
-        if ("ABANDONED".equals(task.getTaskStatus())) {
+        if (LabWorkflowConstants.SamplingTaskStatus.ABANDONED.equals(task.getTaskStatus())) {
             throw new BusinessException("已废弃的任务不能直接完成");
         }
-        if ("COMPLETED".equals(task.getTaskStatus())) {
+        if (LabWorkflowConstants.SamplingTaskStatus.COMPLETED.equals(task.getTaskStatus())) {
             throw new BusinessException("当前任务已完成");
         }
-        if ("PENDING".equals(task.getTaskStatus())) {
+        if (LabWorkflowConstants.SamplingTaskStatus.PENDING.equals(task.getTaskStatus())) {
             task.setStartedTime(LocalDateTime.now());
         }
         task.setOnsiteMetrics(command.getOnsiteMetrics());
         task.setPhotoUrls(command.getPhotoUrls());
         task.setRemark(command.getRemark());
-        task.setTaskStatus("COMPLETED");
+        task.setTaskStatus(LabWorkflowConstants.SamplingTaskStatus.COMPLETED);
         task.setFinishedTime(LocalDateTime.now());
         samplingTaskMapper.updateById(task);
 
         if (task.getPlanId() != null) {
             SamplingPlan plan = samplingPlanMapper.selectById(task.getPlanId());
             if (plan != null) {
-                plan.setPlanStatus("COMPLETED");
+                plan.setPlanStatus(LabWorkflowConstants.SamplingPlanStatus.COMPLETED);
                 samplingPlanMapper.updateById(plan);
             }
         }

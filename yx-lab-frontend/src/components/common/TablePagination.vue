@@ -45,6 +45,7 @@
 
 <script setup>
 import { computed } from 'vue'
+import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from '../../utils/labEnums'
 
 const props = defineProps({
   currentPage: {
@@ -53,11 +54,11 @@ const props = defineProps({
   },
   pageSize: {
     type: Number,
-    default: 30
+    default: DEFAULT_PAGE_SIZE
   },
   pageSizes: {
     type: Array,
-    default: () => [10, 20, 30, 50, 100, 500]
+    default: () => PAGE_SIZE_OPTIONS
   },
   total: {
     type: Number,

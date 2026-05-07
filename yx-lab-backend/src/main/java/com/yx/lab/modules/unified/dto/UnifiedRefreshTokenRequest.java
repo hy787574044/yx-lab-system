@@ -13,6 +13,6 @@ public class UnifiedRefreshTokenRequest {
 
     private String clientSecret;
 
-    @NotBlank(message = "refreshToken cannot be blank")
+    @NotBlank(message = "刷新令牌不能为空")
     private String refreshToken;
 }

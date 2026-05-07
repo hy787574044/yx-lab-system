@@ -237,20 +237,20 @@ public class UnifiedPlatformService {
         try (HttpResponse response = request.execute()) {
             String body = response.body();
             if (response.getStatus() >= 400) {
-                throw new BusinessException("unified platform request failed: HTTP " + response.getStatus() + ", body=" + body);
+                throw new BusinessException("统一平台接口请求失败，HTTP状态码: " + response.getStatus() + "，响应内容: " + body);
             }
             if (StrUtil.isBlank(body)) {
-                throw new BusinessException("unified platform returned empty body");
+                throw new BusinessException("统一平台接口返回内容为空");
             }
             JsonNode root = objectMapper.readTree(body);
             return new RemoteResponse(body, root, unwrapData(root));
         } catch (IOException exception) {
-            throw new BusinessException("failed to parse unified platform response: " + exception.getMessage());
+            throw new BusinessException("解析统一平台响应失败: " + exception.getMessage());
         } catch (Exception exception) {
             if (exception instanceof BusinessException) {
                 throw (BusinessException) exception;
             }
-            throw new BusinessException("failed to call unified platform: " + exception.getMessage());
+            throw new BusinessException("调用统一平台接口失败: " + exception.getMessage());
         }
     }
 
@@ -267,7 +267,7 @@ public class UnifiedPlatformService {
 
     private void validateBaseConfig() {
         if (StrUtil.isBlank(properties.getBaseUrl())) {
-            throw new BusinessException("lab.unified.base-url is not configured");
+            throw new BusinessException("未配置统一平台地址 lab.unified.base-url");
         }
     }
 

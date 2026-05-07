@@ -14,7 +14,7 @@
           <div class="section-head">
             <div>
               <h3 class="section-title">设备台账</h3>
-              <p class="page-subtitle">用于维护实验室设备基础档案、状态信息及台账导入。</p>
+              <p class="page-subtitle">用于维护实验室设备基础档案、状态信息，并支持模板下载和批量导入。</p>
             </div>
           </div>
 
@@ -32,10 +32,12 @@
               clearable
               style="width: 180px"
             >
-              <el-option label="正常" value="NORMAL" />
-              <el-option label="停用" value="DISABLED" />
-              <el-option label="维修中" value="MAINTENANCE" />
-              <el-option label="待校准" value="CALIBRATING" />
+              <el-option
+                v-for="option in instrumentStatusOptions"
+                :key="option.value"
+                :label="option.label"
+                :value="option.value"
+              />
             </el-select>
             <el-button type="primary" @click="handleInstrumentSearch">查询</el-button>
             <el-button @click="resetInstrumentQuery">重置</el-button>
@@ -45,7 +47,14 @@
           </div>
 
           <div class="table-card">
-            <el-table class="list-table" :data="instruments" stripe max-height="420" v-loading="instrumentLoading" empty-text="暂无设备台账数据">
+            <el-table
+              class="list-table"
+              :data="instruments"
+              stripe
+              max-height="420"
+              v-loading="instrumentLoading"
+              empty-text="暂无设备台账数据"
+            >
               <el-table-column prop="instrumentName" label="设备名称" min-width="180" />
               <el-table-column prop="instrumentModel" label="设备型号" min-width="140" />
               <el-table-column prop="manufacturer" label="生产厂家" min-width="180" />
@@ -85,7 +94,7 @@
           <div class="section-head">
             <div>
               <h3 class="section-title">文档台账</h3>
-              <p class="page-subtitle">支持上传制度文件、规范文档，并按人员进行查看范围控制。</p>
+              <p class="page-subtitle">支持上传制度文件和规范文档，并按指定人员控制查看范围。</p>
             </div>
           </div>
 
@@ -109,14 +118,21 @@
           </div>
 
           <div class="table-card">
-            <el-table class="list-table" :data="documents" stripe max-height="420" v-loading="documentLoading" empty-text="暂无文档台账数据">
+            <el-table
+              class="list-table"
+              :data="documents"
+              stripe
+              max-height="420"
+              v-loading="documentLoading"
+              empty-text="暂无文档台账数据"
+            >
               <el-table-column prop="documentName" label="文档名称" min-width="180" />
               <el-table-column prop="documentCategory" label="分类" min-width="120" />
               <el-table-column prop="fileType" label="文件类型" width="100" />
               <el-table-column prop="createdName" label="上传人" min-width="120" />
               <el-table-column label="可查看人员" min-width="200" show-overflow-tooltip>
                 <template #default="{ row }">
-                  {{ row.viewerNames?.length ? row.viewerNames.join('、') : '仅上传人/管理员可见' }}
+                  {{ row.viewerNames?.length ? row.viewerNames.join('、') : '仅上传人和管理员可查看' }}
                 </template>
               </el-table-column>
               <el-table-column prop="createdTime" label="上传时间" width="170" />
@@ -150,6 +166,7 @@
       :title="instrumentForm.id ? '编辑设备' : '新增设备'"
       width="760px"
       destroy-on-close
+      @closed="resetInstrumentForm"
     >
       <el-form ref="instrumentFormRef" :model="instrumentForm" :rules="instrumentRules" label-width="100px">
         <div class="form-grid">
@@ -166,11 +183,13 @@
             <el-input v-model="instrumentForm.ownerName" placeholder="请输入负责人" />
           </el-form-item>
           <el-form-item label="设备状态" prop="instrumentStatus">
-            <el-select v-model="instrumentForm.instrumentStatus" placeholder="请选择状态" style="width: 100%">
-              <el-option label="正常" value="NORMAL" />
-              <el-option label="停用" value="DISABLED" />
-              <el-option label="维修中" value="MAINTENANCE" />
-              <el-option label="待校准" value="CALIBRATING" />
+            <el-select v-model="instrumentForm.instrumentStatus" placeholder="请选择设备状态" style="width: 100%">
+              <el-option
+                v-for="option in instrumentStatusOptions"
+                :key="option.value"
+                :label="option.label"
+                :value="option.value"
+              />
             </el-select>
           </el-form-item>
           <el-form-item label="存放位置" prop="storageLocation">
@@ -206,7 +225,13 @@
       </template>
     </el-dialog>
 
-    <el-dialog v-model="importDialogVisible" title="导入设备台账" width="760px" destroy-on-close>
+    <el-dialog
+      v-model="importDialogVisible"
+      title="导入设备台账"
+      width="760px"
+      destroy-on-close
+      @closed="closeImportDialog"
+    >
       <div class="import-guide">
         <div class="import-card">
           <strong>导入前请先下载模板</strong>
@@ -272,6 +297,7 @@
       :title="documentForm.id ? '编辑文档' : '新增文档'"
       width="820px"
       destroy-on-close
+      @closed="resetDocumentForm"
     >
       <el-form ref="documentFormRef" :model="documentForm" :rules="documentRules" label-width="110px">
         <div class="form-grid">
@@ -328,7 +354,7 @@
       </template>
     </el-dialog>
 
-    <el-dialog v-model="previewDialogVisible" :title="previewTitle" width="900px" destroy-on-close>
+    <el-dialog v-model="previewDialogVisible" :title="previewTitle" width="900px" destroy-on-close @closed="closePreviewDialog">
       <div v-if="previewError" class="preview-empty">{{ previewError }}</div>
       <img v-else-if="previewMode === 'image'" :src="previewUrl" alt="文档预览" class="preview-image" />
       <iframe v-else-if="previewUrl" :src="previewUrl" class="preview-frame" />
@@ -362,9 +388,11 @@ import {
   uploadStorageFileApi
 } from '../api/lab'
 import {
+  DEFAULT_PAGE_SIZE,
   getEnumLabel,
   getStatusClass,
-  instrumentStatusLabelMap
+  instrumentStatusLabelMap,
+  instrumentStatusOptions
 } from '../utils/labEnums'
 
 const active = ref('inst')
@@ -411,9 +439,9 @@ const instrumentStats = computed(() => [
     desc: '当前状态为正常的设备'
   },
   {
-    label: '停用/维修',
+    label: '停用/维护',
     value: countInstrumentByStatuses(['DISABLED', 'MAINTENANCE']),
-    desc: '停用及维修中的设备'
+    desc: '停用及维护中的设备'
   },
   {
     label: '待校准',
@@ -441,20 +469,20 @@ const documentStats = computed(() => [
   {
     label: '本页记录',
     value: documents.value.length,
-    desc: '当前分页已加载的文档记录'
+    desc: '当前分页加载的文档记录'
   }
 ])
 
 const instrumentQuery = reactive({
   pageNum: 1,
-  pageSize: 30,
+  pageSize: DEFAULT_PAGE_SIZE,
   keyword: '',
   instrumentStatus: ''
 })
 
 const documentQuery = reactive({
   pageNum: 1,
-  pageSize: 30,
+  pageSize: DEFAULT_PAGE_SIZE,
   keyword: '',
   documentCategory: ''
 })
@@ -509,7 +537,7 @@ function resetDocumentForm() {
 
 function resetInstrumentQuery() {
   instrumentQuery.pageNum = 1
-  instrumentQuery.pageSize = 30
+  instrumentQuery.pageSize = DEFAULT_PAGE_SIZE
   instrumentQuery.keyword = ''
   instrumentQuery.instrumentStatus = ''
   loadInstruments()
@@ -517,7 +545,7 @@ function resetInstrumentQuery() {
 
 function resetDocumentQuery() {
   documentQuery.pageNum = 1
-  documentQuery.pageSize = 30
+  documentQuery.pageSize = DEFAULT_PAGE_SIZE
   documentQuery.keyword = ''
   documentQuery.documentCategory = ''
   loadDocuments()
@@ -617,7 +645,7 @@ async function submitImport() {
     if (result.allPassed) {
       ElMessage.success(`导入成功，新增 ${result.successCount} 条设备记录`)
       closeImportDialog()
-      loadInstruments()
+      await loadInstruments()
     } else {
       ElMessage.warning(`导入校验未通过，请处理 ${result.errors.length} 条错误后重试`)
     }
@@ -695,7 +723,7 @@ async function submitInstrument() {
       ElMessage.success('设备已新增')
     }
     instrumentDialogVisible.value = false
-    loadInstruments()
+    await loadInstruments()
   } finally {
     savingInstrument.value = false
   }
@@ -724,7 +752,7 @@ async function submitDocument() {
       ElMessage.success('文档已新增')
     }
     documentDialogVisible.value = false
-    loadDocuments()
+    await loadDocuments()
   } finally {
     savingDocument.value = false
   }
@@ -775,7 +803,7 @@ async function removeInstrument(row) {
     if (instruments.value.length === 1 && instrumentQuery.pageNum > 1) {
       instrumentQuery.pageNum -= 1
     }
-    loadInstruments()
+    await loadInstruments()
   } catch {
     // User canceled deletion.
   }
@@ -793,7 +821,7 @@ async function removeDocument(row) {
     if (documents.value.length === 1 && documentQuery.pageNum > 1) {
       documentQuery.pageNum -= 1
     }
-    loadDocuments()
+    await loadDocuments()
   } catch {
     // User canceled deletion.
   }
@@ -872,12 +900,6 @@ onMounted(() => {
   grid-column: 1 / -1;
 }
 
-.pager-wrap {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 18px;
-}
-
 .import-guide {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -953,6 +975,8 @@ onMounted(() => {
   display: grid;
   place-items: center;
   color: var(--text-sub);
+  text-align: center;
+  line-height: 1.8;
 }
 
 @media (max-width: 860px) {
@@ -963,10 +987,6 @@ onMounted(() => {
 
   .form-span-2 {
     grid-column: auto;
-  }
-
-  .pager-wrap {
-    justify-content: flex-start;
   }
 }
 </style>

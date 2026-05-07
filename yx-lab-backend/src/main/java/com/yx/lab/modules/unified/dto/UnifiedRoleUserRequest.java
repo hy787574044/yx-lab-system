@@ -7,6 +7,6 @@ import javax.validation.constraints.NotBlank;
 @Data
 public class UnifiedRoleUserRequest {
 
-    @NotBlank(message = "roleId cannot be blank")
+    @NotBlank(message = "角色ID不能为空")
     private String roleId;
 }

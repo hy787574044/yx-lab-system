@@ -4,6 +4,7 @@ import com.yx.lab.common.model.ApiResponse;
 import com.yx.lab.common.model.PageResult;
 import com.yx.lab.modules.sample.dto.SamplingPlanDispatchCommand;
 import com.yx.lab.modules.sample.dto.SamplingPlanQuery;
+import com.yx.lab.modules.sample.dto.SamplingPlanSaveCommand;
 import com.yx.lab.modules.sample.entity.SamplingPlan;
 import com.yx.lab.modules.sample.service.SamplingPlanService;
 import lombok.RequiredArgsConstructor;
@@ -37,15 +38,14 @@ public class SamplingPlanController {
     }
 
     @PostMapping
-    public ApiResponse<Void> save(@RequestBody SamplingPlan plan) {
-        samplingPlanService.save(plan);
+    public ApiResponse<Void> save(@Valid @RequestBody SamplingPlanSaveCommand command) {
+        samplingPlanService.save(command);
         return ApiResponse.successMessage("新增成功");
     }
 
     @PutMapping("/{id}")
-    public ApiResponse<Void> update(@PathVariable Long id, @RequestBody SamplingPlan plan) {
-        plan.setId(id);
-        samplingPlanService.update(plan);
+    public ApiResponse<Void> update(@PathVariable Long id, @Valid @RequestBody SamplingPlanSaveCommand command) {
+        samplingPlanService.update(id, command);
         return ApiResponse.successMessage("更新成功");
     }
 

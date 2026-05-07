@@ -3,6 +3,7 @@ package com.yx.lab.modules.review.service;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.yx.lab.common.constant.LabWorkflowConstants;
 import com.yx.lab.common.exception.BusinessException;
 import com.yx.lab.common.model.PageResult;
 import com.yx.lab.common.security.CurrentUser;
@@ -56,7 +57,7 @@ public class ReviewService {
         if (record == null) {
             throw new BusinessException("检测记录不存在");
         }
-        if (!"SUBMITTED".equals(record.getDetectionStatus())) {
+        if (!LabWorkflowConstants.DetectionStatus.SUBMITTED.equals(record.getDetectionStatus())) {
             throw new BusinessException("当前检测记录不在待审核状态");
         }
 
@@ -66,7 +67,8 @@ public class ReviewService {
         }
 
         CurrentUser currentUser = SecurityContext.getCurrentUser();
-        if ("REJECTED".equals(command.getReviewResult()) && StrUtil.isBlank(command.getRejectReason())) {
+        if (LabWorkflowConstants.ReviewResult.REJECTED.equals(command.getReviewResult())
+                && StrUtil.isBlank(command.getRejectReason())) {
             throw new BusinessException("驳回时必须填写驳回原因");
         }
 
@@ -82,14 +84,16 @@ public class ReviewService {
         reviewRecord.setReviewRemark(command.getReviewRemark());
         reviewRecordMapper.insert(reviewRecord);
 
-        record.setDetectionStatus("APPROVED".equals(command.getReviewResult()) ? "APPROVED" : "REJECTED");
+        record.setDetectionStatus(LabWorkflowConstants.ReviewResult.APPROVED.equals(command.getReviewResult())
+                ? LabWorkflowConstants.DetectionStatus.APPROVED
+                : LabWorkflowConstants.DetectionStatus.REJECTED);
         detectionRecordMapper.updateById(record);
 
-        if ("APPROVED".equals(command.getReviewResult())) {
-            labSampleService.updateStatus(sample.getId(), "COMPLETED", record.getDetectionResult());
+        if (LabWorkflowConstants.ReviewResult.APPROVED.equals(command.getReviewResult())) {
+            labSampleService.updateStatus(sample.getId(), LabWorkflowConstants.SampleStatus.COMPLETED, record.getDetectionResult());
             reportService.createApprovedReport(sample, record);
         } else {
-            labSampleService.updateStatus(sample.getId(), "RETEST", "待重检");
+            labSampleService.updateStatus(sample.getId(), LabWorkflowConstants.SampleStatus.RETEST, "待重检");
         }
     }
 }
