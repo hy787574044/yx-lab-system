@@ -338,6 +338,25 @@ CREATE TABLE lab_document (
     updated_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
+DROP TABLE IF EXISTS lab_document_share;
+CREATE TABLE lab_document_share (
+    id BIGINT PRIMARY KEY,
+    document_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    username VARCHAR(64),
+    real_name VARCHAR(64),
+    deleted TINYINT DEFAULT 0,
+    created_by BIGINT,
+    created_name VARCHAR(64),
+    created_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_by BIGINT,
+    updated_name VARCHAR(64),
+    updated_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_lab_document_share_doc_user (document_id, user_id),
+    KEY idx_lab_document_share_document_id (document_id),
+    KEY idx_lab_document_share_user_id (user_id)
+);
+
 INSERT INTO lab_user (id, username, password, real_name, role_code, phone, status, deleted, created_name, updated_name)
 VALUES (1001, 'admin', 'e86f78a8a3caf0b60d8e74e5942aa6d86dc150cd3c03338aef25b7d2d7e3acc7', '系统管理员', 'ADMIN', '13800000000', 1, 0, 'system', 'system');
 

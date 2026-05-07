@@ -1,12 +1,27 @@
 <template>
-  <div class="content-grid">
+  <div class="content-grid asset-page">
+    <div class="stats-grid asset-stats">
+      <article class="metric-card asset-metric" v-for="item in currentStats" :key="item.label">
+        <span>{{ item.label }}</span>
+        <strong>{{ item.value }}</strong>
+        <p>{{ item.desc }}</p>
+      </article>
+    </div>
+
     <div class="glass-panel section-block">
       <el-tabs v-model="active">
         <el-tab-pane label="设备台账" name="inst">
+          <div class="section-head">
+            <div>
+              <h3 class="section-title">设备台账</h3>
+              <p class="page-subtitle">用于维护实验室设备基础档案、状态信息及台账导入。</p>
+            </div>
+          </div>
+
           <div class="toolbar">
             <el-input
               v-model="instrumentQuery.keyword"
-              placeholder="搜索设备名称、型号、厂家、存放位置"
+              placeholder="搜索设备名称、型号、厂家或存放位置"
               clearable
               style="max-width: 320px"
               @keyup.enter="handleInstrumentSearch"
@@ -30,17 +45,17 @@
           </div>
 
           <div class="table-card">
-            <el-table :data="instruments" stripe v-loading="instrumentLoading">
+            <el-table :data="instruments" stripe v-loading="instrumentLoading" empty-text="暂无设备台账数据">
               <el-table-column prop="instrumentName" label="设备名称" min-width="180" />
               <el-table-column prop="instrumentModel" label="设备型号" min-width="140" />
               <el-table-column prop="manufacturer" label="生产厂家" min-width="180" />
               <el-table-column prop="ownerName" label="负责人" min-width="110" />
               <el-table-column prop="storageLocation" label="存放位置" min-width="140" />
               <el-table-column prop="purchaseDate" label="购置日期" width="120" />
-              <el-table-column prop="instrumentStatus" label="状态" width="110">
+              <el-table-column label="状态" width="110">
                 <template #default="{ row }">
-                  <span class="status-chip" :class="statusClassMap[row.instrumentStatus] || 'info'">
-                    {{ statusLabelMap[row.instrumentStatus] || row.instrumentStatus || '-' }}
+                  <span class="status-chip" :class="getStatusClass('instrumentStatus', row.instrumentStatus)">
+                    {{ getEnumLabel(instrumentStatusLabelMap, row.instrumentStatus) }}
                   </span>
                 </template>
               </el-table-column>
@@ -72,16 +87,70 @@
         </el-tab-pane>
 
         <el-tab-pane label="文档台账" name="doc">
-          <div class="toolbar">
-            <el-button type="primary" @click="loadDocuments">刷新</el-button>
-            <el-button @click="createDocument">新增文档</el-button>
+          <div class="section-head">
+            <div>
+              <h3 class="section-title">文档台账</h3>
+              <p class="page-subtitle">支持上传制度文件、规范文档，并按人员进行查看范围控制。</p>
+            </div>
           </div>
-          <el-table :data="documents" stripe>
-            <el-table-column prop="documentName" label="文档名称" />
-            <el-table-column prop="documentCategory" label="分类" />
-            <el-table-column prop="fileType" label="文件格式" />
-            <el-table-column prop="fileUrl" label="文件路径" />
-          </el-table>
+
+          <div class="toolbar">
+            <el-input
+              v-model="documentQuery.keyword"
+              placeholder="搜索文档名称"
+              clearable
+              style="max-width: 320px"
+              @keyup.enter="handleDocumentSearch"
+            />
+            <el-input
+              v-model="documentQuery.documentCategory"
+              placeholder="文档分类"
+              clearable
+              style="width: 180px"
+            />
+            <el-button type="primary" @click="handleDocumentSearch">查询</el-button>
+            <el-button @click="resetDocumentQuery">重置</el-button>
+            <el-button type="primary" plain @click="openDocumentDialog()">新增文档</el-button>
+          </div>
+
+          <div class="table-card">
+            <el-table :data="documents" stripe v-loading="documentLoading" empty-text="暂无文档台账数据">
+              <el-table-column prop="documentName" label="文档名称" min-width="180" />
+              <el-table-column prop="documentCategory" label="分类" min-width="120" />
+              <el-table-column prop="fileType" label="文件类型" width="100" />
+              <el-table-column prop="createdName" label="上传人" min-width="120" />
+              <el-table-column label="可查看人员" min-width="200" show-overflow-tooltip>
+                <template #default="{ row }">
+                  {{ row.viewerNames?.length ? row.viewerNames.join('、') : '仅上传人/管理员可见' }}
+                </template>
+              </el-table-column>
+              <el-table-column prop="createdTime" label="上传时间" width="170" />
+              <el-table-column label="备注" min-width="160" show-overflow-tooltip>
+                <template #default="{ row }">
+                  {{ row.remark || '-' }}
+                </template>
+              </el-table-column>
+              <el-table-column label="操作" width="220" fixed="right">
+                <template #default="{ row }">
+                  <el-button link type="primary" @click="previewDocument(row)">查看</el-button>
+                  <el-button v-if="row.canManage" link type="primary" @click="openDocumentDialog(row.id)">编辑</el-button>
+                  <el-button v-if="row.canManage" link type="danger" @click="removeDocument(row)">删除</el-button>
+                </template>
+              </el-table-column>
+            </el-table>
+
+            <div class="pager-wrap">
+              <el-pagination
+                v-model:current-page="documentQuery.pageNum"
+                v-model:page-size="documentQuery.pageSize"
+                :page-sizes="[10, 20, 50]"
+                :total="documentTotal"
+                layout="total, sizes, prev, pager, next"
+                @size-change="loadDocuments"
+                @current-change="loadDocuments"
+              />
+            </div>
+          </div>
         </el-tab-pane>
       </el-tabs>
     </div>
@@ -121,6 +190,7 @@
             <el-date-picker
               v-model="instrumentForm.purchaseDate"
               type="date"
+              format="YYYY-MM-DD"
               value-format="YYYY-MM-DD"
               placeholder="请选择购置日期"
               style="width: 100%"
@@ -193,6 +263,7 @@
         :data="importResult.errors"
         stripe
         max-height="260"
+        empty-text="暂无校验错误"
         class="import-error-table"
       >
         <el-table-column prop="rowNum" label="行号" width="90" />
@@ -205,23 +276,105 @@
         <el-button type="primary" :loading="importSubmitting" @click="submitImport">开始导入</el-button>
       </template>
     </el-dialog>
+
+    <el-dialog
+      v-model="documentDialogVisible"
+      :title="documentForm.id ? '编辑文档' : '新增文档'"
+      width="820px"
+      destroy-on-close
+    >
+      <el-form ref="documentFormRef" :model="documentForm" :rules="documentRules" label-width="110px">
+        <div class="form-grid">
+          <el-form-item label="文档名称" prop="documentName">
+            <el-input v-model="documentForm.documentName" placeholder="请输入文档名称" />
+          </el-form-item>
+          <el-form-item label="文档分类" prop="documentCategory">
+            <el-input v-model="documentForm.documentCategory" placeholder="请输入文档分类" />
+          </el-form-item>
+          <el-form-item class="form-span-2" label="查看人员">
+            <el-select
+              v-model="documentForm.viewerUserIds"
+              multiple
+              collapse-tags
+              collapse-tags-tooltip
+              filterable
+              placeholder="请选择可查看人员"
+              style="width: 100%"
+            >
+              <el-option
+                v-for="user in documentUsers"
+                :key="user.userId"
+                :label="`${user.realName || user.username}（${user.username}）`"
+                :value="String(user.userId)"
+              />
+            </el-select>
+          </el-form-item>
+          <el-form-item class="form-span-2" label="上传文件" prop="fileUrl">
+            <el-upload
+              :auto-upload="false"
+              :limit="1"
+              :file-list="documentFileList"
+              :on-change="handleDocumentFileChange"
+              :on-remove="handleDocumentFileRemove"
+            >
+              <template #trigger>
+                <el-button type="primary" plain>选择本地文档</el-button>
+              </template>
+              <template #tip>
+                <div class="upload-tip">
+                  {{ documentForm.fileUrl ? '已存在文档文件；若重新选择文件，将覆盖原文件。' : '请选择本地文档后保存。' }}
+                </div>
+              </template>
+            </el-upload>
+          </el-form-item>
+          <el-form-item class="form-span-2" label="备注" prop="remark">
+            <el-input v-model="documentForm.remark" type="textarea" :rows="3" placeholder="可填写文档用途或说明" />
+          </el-form-item>
+        </div>
+      </el-form>
+      <template #footer>
+        <el-button @click="documentDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="savingDocument" @click="submitDocument">保存</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog v-model="previewDialogVisible" :title="previewTitle" width="900px" destroy-on-close>
+      <div v-if="previewError" class="preview-empty">{{ previewError }}</div>
+      <img v-else-if="previewMode === 'image'" :src="previewUrl" alt="文档预览" class="preview-image" />
+      <iframe v-else-if="previewUrl" :src="previewUrl" class="preview-frame" />
+      <div v-else class="preview-empty">暂无可预览内容</div>
+      <template #footer>
+        <el-button @click="closePreviewDialog">关闭</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   createDocumentApi,
   createInstrumentApi,
+  deleteDocumentApi,
   deleteInstrumentApi,
   downloadInstrumentTemplateApi,
   fetchDocumentsApi,
+  fetchDocumentUsersApi,
   fetchInstrumentsApi,
+  getDocumentDetailApi,
   getInstrumentDetailApi,
   importInstrumentsApi,
-  updateInstrumentApi
+  previewDocumentApi,
+  updateDocumentApi,
+  updateInstrumentApi,
+  uploadStorageFileApi
 } from '../api/lab'
+import {
+  getEnumLabel,
+  getStatusClass,
+  instrumentStatusLabelMap
+} from '../utils/labEnums'
 
 const active = ref('inst')
 const instrumentLoading = ref(false)
@@ -233,16 +386,86 @@ const importDialogVisible = ref(false)
 const instrumentFormRef = ref()
 const instruments = ref([])
 const instrumentTotal = ref(0)
-const documents = ref([])
 const importFileList = ref([])
 const selectedImportFile = ref(null)
 const importResult = ref(null)
+
+const documentLoading = ref(false)
+const savingDocument = ref(false)
+const documentDialogVisible = ref(false)
+const documentFormRef = ref()
+const documents = ref([])
+const documentTotal = ref(0)
+const documentUsers = ref([])
+const documentFileList = ref([])
+const selectedDocumentFile = ref(null)
+
+const previewDialogVisible = ref(false)
+const previewUrl = ref('')
+const previewMode = ref('frame')
+const previewTitle = ref('')
+const previewError = ref('')
+
+const currentStats = computed(() => (active.value === 'inst' ? instrumentStats.value : documentStats.value))
+
+const instrumentStats = computed(() => [
+  {
+    label: '设备总数',
+    value: instrumentTotal.value || 0,
+    desc: '设备台账内已登记设备数量'
+  },
+  {
+    label: '正常设备',
+    value: countInstrumentByStatus('NORMAL'),
+    desc: '当前状态为正常的设备'
+  },
+  {
+    label: '停用/维修',
+    value: countInstrumentByStatuses(['DISABLED', 'MAINTENANCE']),
+    desc: '停用及维修中的设备'
+  },
+  {
+    label: '待校准',
+    value: countInstrumentByStatus('CALIBRATING'),
+    desc: '待校准或需重点关注设备'
+  }
+])
+
+const documentStats = computed(() => [
+  {
+    label: '文档总数',
+    value: documentTotal.value || 0,
+    desc: '当前文档台账已收录文件数'
+  },
+  {
+    label: '可管理文档',
+    value: documents.value.filter((item) => item.canManage).length,
+    desc: '当前账号可编辑或删除的文档'
+  },
+  {
+    label: '共享文档',
+    value: documents.value.filter((item) => (item.viewerNames || []).length > 0).length,
+    desc: '已配置查看人员的文档'
+  },
+  {
+    label: '本页记录',
+    value: documents.value.length,
+    desc: '当前分页已加载的文档记录'
+  }
+])
 
 const instrumentQuery = reactive({
   pageNum: 1,
   pageSize: 10,
   keyword: '',
   instrumentStatus: ''
+})
+
+const documentQuery = reactive({
+  pageNum: 1,
+  pageSize: 10,
+  keyword: '',
+  documentCategory: ''
 })
 
 const emptyInstrumentForm = () => ({
@@ -260,29 +483,37 @@ const emptyInstrumentForm = () => ({
   remark: ''
 })
 
+const emptyDocumentForm = () => ({
+  id: null,
+  documentName: '',
+  documentCategory: '',
+  fileType: '',
+  fileSize: null,
+  fileUrl: '',
+  remark: '',
+  viewerUserIds: []
+})
+
 const instrumentForm = reactive(emptyInstrumentForm())
+const documentForm = reactive(emptyDocumentForm())
 
 const instrumentRules = {
   instrumentName: [{ required: true, message: '请输入设备名称', trigger: 'blur' }],
   instrumentStatus: [{ required: true, message: '请选择设备状态', trigger: 'change' }]
 }
 
-const statusLabelMap = {
-  NORMAL: '正常',
-  DISABLED: '停用',
-  MAINTENANCE: '维修中',
-  CALIBRATING: '待校准'
-}
-
-const statusClassMap = {
-  NORMAL: 'success',
-  DISABLED: 'danger',
-  MAINTENANCE: 'warning',
-  CALIBRATING: 'info'
+const documentRules = {
+  documentName: [{ required: true, message: '请输入文档名称', trigger: 'blur' }]
 }
 
 function resetInstrumentForm() {
   Object.assign(instrumentForm, emptyInstrumentForm())
+}
+
+function resetDocumentForm() {
+  Object.assign(documentForm, emptyDocumentForm())
+  documentFileList.value = []
+  selectedDocumentFile.value = null
 }
 
 function resetInstrumentQuery() {
@@ -293,9 +524,22 @@ function resetInstrumentQuery() {
   loadInstruments()
 }
 
+function resetDocumentQuery() {
+  documentQuery.pageNum = 1
+  documentQuery.pageSize = 10
+  documentQuery.keyword = ''
+  documentQuery.documentCategory = ''
+  loadDocuments()
+}
+
 function handleInstrumentSearch() {
   instrumentQuery.pageNum = 1
   loadInstruments()
+}
+
+function handleDocumentSearch() {
+  documentQuery.pageNum = 1
+  loadDocuments()
 }
 
 function openImportDialog() {
@@ -319,6 +563,35 @@ function handleImportFileRemove() {
   importFileList.value = []
   selectedImportFile.value = null
   importResult.value = null
+}
+
+function handleDocumentFileChange(file, files) {
+  documentFileList.value = files.slice(-1)
+  selectedDocumentFile.value = file.raw || null
+}
+
+function handleDocumentFileRemove() {
+  documentFileList.value = []
+  selectedDocumentFile.value = null
+}
+
+function closePreviewDialog() {
+  if (previewUrl.value) {
+    window.URL.revokeObjectURL(previewUrl.value)
+  }
+  previewDialogVisible.value = false
+  previewUrl.value = ''
+  previewMode.value = 'frame'
+  previewError.value = ''
+  previewTitle.value = ''
+}
+
+function countInstrumentByStatus(status) {
+  return instruments.value.filter((item) => item.instrumentStatus === status).length
+}
+
+function countInstrumentByStatuses(statuses) {
+  return instruments.value.filter((item) => statuses.includes(item.instrumentStatus)).length
 }
 
 async function handleDownloadTemplate() {
@@ -374,7 +647,18 @@ async function loadInstruments() {
 }
 
 async function loadDocuments() {
-  documents.value = (await fetchDocumentsApi({ pageNum: 1, pageSize: 10 })).records || []
+  documentLoading.value = true
+  try {
+    const result = await fetchDocumentsApi(documentQuery)
+    documents.value = result.records || []
+    documentTotal.value = result.total || 0
+  } finally {
+    documentLoading.value = false
+  }
+}
+
+async function loadDocumentUsers() {
+  documentUsers.value = await fetchDocumentUsersApi()
 }
 
 async function openInstrumentDialog(id) {
@@ -383,6 +667,24 @@ async function openInstrumentDialog(id) {
   if (id) {
     const detail = await getInstrumentDetailApi(id)
     Object.assign(instrumentForm, detail)
+  }
+}
+
+async function openDocumentDialog(id) {
+  resetDocumentForm()
+  documentDialogVisible.value = true
+  if (id) {
+    const detail = await getDocumentDetailApi(id)
+    Object.assign(documentForm, {
+      id: detail.id,
+      documentName: detail.documentName,
+      documentCategory: detail.documentCategory,
+      fileType: detail.fileType,
+      fileSize: detail.fileSize,
+      fileUrl: detail.fileUrl,
+      remark: detail.remark,
+      viewerUserIds: (detail.viewerUserIds || []).map((item) => String(item))
+    })
   }
 }
 
@@ -408,6 +710,68 @@ async function submitInstrument() {
   }
 }
 
+async function submitDocument() {
+  await documentFormRef.value.validate()
+  if (!documentForm.id && !selectedDocumentFile.value) {
+    ElMessage.warning('请先选择本地文档文件')
+    return
+  }
+  savingDocument.value = true
+  try {
+    const payload = { ...documentForm, viewerUserIds: [...documentForm.viewerUserIds] }
+    if (selectedDocumentFile.value) {
+      const uploadResult = await uploadStorageFileApi(selectedDocumentFile.value)
+      payload.fileUrl = uploadResult.filePath
+      payload.fileSize = selectedDocumentFile.value.size
+      payload.fileType = getFileExtension(selectedDocumentFile.value.name)
+    }
+    if (payload.id) {
+      await updateDocumentApi(payload.id, payload)
+      ElMessage.success('文档信息已更新')
+    } else {
+      await createDocumentApi(payload)
+      ElMessage.success('文档已新增')
+    }
+    documentDialogVisible.value = false
+    loadDocuments()
+  } finally {
+    savingDocument.value = false
+  }
+}
+
+async function previewDocument(row) {
+  if (previewUrl.value) {
+    window.URL.revokeObjectURL(previewUrl.value)
+    previewUrl.value = ''
+  }
+  previewTitle.value = row.documentName
+  previewError.value = ''
+  previewMode.value = 'frame'
+  const fileType = normalizeFileType(row.fileType, row.documentName)
+  if (!isInlinePreviewable(fileType)) {
+    previewError.value = `当前格式${fileType ? `（${fileType}）` : ''}不支持浏览器直接在线预览。建议上传 PDF 或图片；如需在线预览 Word、Excel、PPT，需要后续接入文档转换预览服务。`
+    previewDialogVisible.value = true
+    return
+  }
+  try {
+    const response = await previewDocumentApi(row.id)
+    const contentType = response.headers['content-type'] || 'application/octet-stream'
+    if (contentType.includes('application/json')) {
+      const message = await parsePreviewError(response.data)
+      previewError.value = message || '文档预览失败'
+      previewDialogVisible.value = true
+      return
+    }
+    const blob = new Blob([response.data], { type: contentType })
+    previewUrl.value = window.URL.createObjectURL(blob)
+    previewMode.value = contentType.startsWith('image/') ? 'image' : 'frame'
+    previewDialogVisible.value = true
+  } catch (error) {
+    previewError.value = error?.message || '文档预览失败'
+    previewDialogVisible.value = true
+  }
+}
+
 async function removeInstrument(row) {
   try {
     await ElMessageBox.confirm(`确认删除设备“${row.instrumentName}”吗？`, '删除确认', {
@@ -426,25 +790,87 @@ async function removeInstrument(row) {
   }
 }
 
-async function createDocument() {
-  await createDocumentApi({
-    documentName: 'GB5749标准摘要',
-    documentCategory: '标准规范',
-    fileType: 'pdf',
-    fileSize: 102400,
-    fileUrl: '/uploads/gb5749.pdf'
-  })
-  ElMessage.success('文档已新增')
-  loadDocuments()
+async function removeDocument(row) {
+  try {
+    await ElMessageBox.confirm(`确认删除文档“${row.documentName}”吗？`, '删除确认', {
+      type: 'warning',
+      confirmButtonText: '删除',
+      cancelButtonText: '取消'
+    })
+    await deleteDocumentApi(row.id)
+    ElMessage.success('文档已删除')
+    if (documents.value.length === 1 && documentQuery.pageNum > 1) {
+      documentQuery.pageNum -= 1
+    }
+    loadDocuments()
+  } catch {
+    // User canceled deletion.
+  }
+}
+
+function getFileExtension(fileName) {
+  const index = fileName.lastIndexOf('.')
+  return index >= 0 ? fileName.slice(index + 1).toLowerCase() : ''
+}
+
+function normalizeFileType(fileType, fileName) {
+  if (fileType) {
+    return String(fileType).trim().toLowerCase()
+  }
+  return getFileExtension(fileName || '')
+}
+
+function isInlinePreviewable(fileType) {
+  return ['pdf', 'png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp', 'txt', 'html', 'htm'].includes(fileType)
+}
+
+async function parsePreviewError(blob) {
+  try {
+    const text = await blob.text()
+    const payload = JSON.parse(text)
+    return payload.message || ''
+  } catch {
+    return ''
+  }
 }
 
 onMounted(() => {
   loadInstruments()
   loadDocuments()
+  loadDocumentUsers()
 })
 </script>
 
 <style scoped>
+.asset-page {
+  gap: 16px;
+}
+
+.asset-stats {
+  margin-bottom: 0;
+}
+
+.asset-metric p {
+  margin: 10px 0 0;
+  color: var(--text-sub);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.section-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.section-title {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.4;
+}
+
 .form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -504,18 +930,38 @@ onMounted(() => {
   font-weight: 600;
 }
 
-.upload-subtitle {
+.upload-subtitle,
+.upload-tip {
   margin-top: 8px;
   color: var(--text-sub);
   font-size: 13px;
 }
 
-.import-result {
+.import-result,
+.import-error-table {
   margin-top: 18px;
 }
 
-.import-error-table {
-  margin-top: 14px;
+.preview-frame {
+  width: 100%;
+  height: 70vh;
+  border: none;
+  border-radius: 12px;
+  background: #f5f7fa;
+}
+
+.preview-image {
+  display: block;
+  max-width: 100%;
+  max-height: 70vh;
+  margin: 0 auto;
+}
+
+.preview-empty {
+  min-height: 160px;
+  display: grid;
+  place-items: center;
+  color: var(--text-sub);
 }
 
 @media (max-width: 860px) {
