@@ -3,6 +3,7 @@ package com.yx.lab.modules.detection.service;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.yx.lab.common.constant.LabWorkflowConstants;
 import com.yx.lab.common.exception.BusinessException;
 import com.yx.lab.common.model.PageResult;
 import com.yx.lab.common.security.CurrentUser;
@@ -26,17 +27,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.Arrays;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
 public class DetectionWorkflowService {
-
-    private static final Set<String> DETECTABLE_SAMPLE_STATUSES =
-            new HashSet<>(Arrays.asList("LOGGED", "RETEST"));
 
     private final DetectionRecordMapper detectionRecordMapper;
 
@@ -80,13 +75,13 @@ public class DetectionWorkflowService {
         if (sample == null) {
             throw new BusinessException("样品不存在");
         }
-        if (!DETECTABLE_SAMPLE_STATUSES.contains(sample.getSampleStatus())) {
+        if (!LabWorkflowConstants.DETECTABLE_SAMPLE_STATUSES.contains(sample.getSampleStatus())) {
             throw new BusinessException("当前样品状态不允许提交检测");
         }
 
         Long pendingCount = detectionRecordMapper.selectCount(new LambdaQueryWrapper<DetectionRecord>()
                 .eq(DetectionRecord::getSampleId, sample.getId())
-                .eq(DetectionRecord::getDetectionStatus, "SUBMITTED"));
+                .eq(DetectionRecord::getDetectionStatus, LabWorkflowConstants.DetectionStatus.SUBMITTED));
         if (pendingCount != null && pendingCount > 0) {
             throw new BusinessException("当前样品已存在待审核的检测记录");
         }
@@ -103,7 +98,7 @@ public class DetectionWorkflowService {
         record.setDetectorId(currentUser.getUserId());
         record.setDetectorName(currentUser.getRealName());
         record.setAbnormalRemark(command.getAbnormalRemark());
-        record.setDetectionStatus("SUBMITTED");
+        record.setDetectionStatus(LabWorkflowConstants.DetectionStatus.SUBMITTED);
         record.setDetectionResult(buildResult(command.getItems()));
         detectionRecordMapper.insert(record);
 
@@ -120,11 +115,13 @@ public class DetectionWorkflowService {
             detectionItemMapper.insert(item);
         }
 
-        labSampleService.updateStatus(sample.getId(), "REVIEWING", record.getDetectionResult());
+        labSampleService.updateStatus(sample.getId(), LabWorkflowConstants.SampleStatus.REVIEWING, record.getDetectionResult());
     }
 
     private String buildResult(List<DetectionItemCommand> items) {
-        return items.stream().anyMatch(this::isExceeded) ? "ABNORMAL" : "NORMAL";
+        return items.stream().anyMatch(this::isExceeded)
+                ? LabWorkflowConstants.DetectionResult.ABNORMAL
+                : LabWorkflowConstants.DetectionResult.NORMAL;
     }
 
     private boolean isExceeded(DetectionItemCommand itemCommand) {

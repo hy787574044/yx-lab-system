@@ -4,6 +4,7 @@ import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.yx.lab.common.constant.LabWorkflowConstants;
 import com.yx.lab.common.exception.BusinessException;
 import com.yx.lab.common.model.PageResult;
 import com.yx.lab.common.util.PageUtils;
@@ -53,7 +54,7 @@ public class LabSampleService {
             if (task == null) {
                 throw new BusinessException("采样任务不存在");
             }
-            if (!"COMPLETED".equals(task.getTaskStatus())) {
+            if (!LabWorkflowConstants.SamplingTaskStatus.COMPLETED.equals(task.getTaskStatus())) {
                 throw new BusinessException("采样任务未完成，不能进行样品登录");
             }
         }
@@ -70,12 +71,12 @@ public class LabSampleService {
         sample.setSamplerName(command.getSamplerName());
         sample.setWeather(command.getWeather());
         sample.setStorageCondition(command.getStorageCondition());
-        sample.setSampleStatus("LOGGED");
+        sample.setSampleStatus(LabWorkflowConstants.SampleStatus.LOGGED);
         sample.setRemark(command.getRemark());
         labSampleMapper.insert(sample);
 
         if (task != null) {
-            task.setTaskStatus("COMPLETED");
+            task.setTaskStatus(LabWorkflowConstants.SamplingTaskStatus.COMPLETED);
             samplingTaskMapper.updateById(task);
         }
         return sample;

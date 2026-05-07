@@ -18,14 +18,20 @@
 
       <div class="toolbar">
         <el-select v-model="query.reportType" placeholder="报告类型" clearable style="width: 180px">
-          <el-option label="日报" value="DAILY" />
-          <el-option label="周报" value="WEEKLY" />
-          <el-option label="月报" value="MONTHLY" />
+          <el-option
+            v-for="option in reportTypeOptions"
+            :key="option.value"
+            :label="option.label"
+            :value="option.value"
+          />
         </el-select>
         <el-select v-model="query.reportStatus" placeholder="报告状态" clearable style="width: 180px">
-          <el-option label="草稿" value="DRAFT" />
-          <el-option label="已生成" value="GENERATED" />
-          <el-option label="已发布" value="PUBLISHED" />
+          <el-option
+            v-for="option in reportStatusOptions"
+            :key="option.value"
+            :label="option.label"
+            :value="option.value"
+          />
         </el-select>
         <el-button type="primary" @click="handleSearch">查询</el-button>
         <el-button @click="resetQuery">重置</el-button>
@@ -57,14 +63,14 @@
                 <el-button
                   size="small"
                   @click="publish(row.id)"
-                  :disabled="row.reportStatus === 'PUBLISHED'"
+                  :disabled="row.reportStatus === publishedReportStatus"
                 >
                   发布
                 </el-button>
                 <el-button
                   size="small"
                   @click="unpublish(row.id)"
-                  :disabled="row.reportStatus !== 'PUBLISHED'"
+                  :disabled="row.reportStatus !== publishedReportStatus"
                 >
                   取消发布
                 </el-button>
@@ -90,15 +96,21 @@ import { ElMessage } from 'element-plus'
 import { createTemplateApi, fetchReportsApi, publishReportApi, unpublishReportApi } from '../api/lab'
 import TablePagination from '../components/common/TablePagination.vue'
 import {
+  DEFAULT_PAGE_SIZE,
+  generatedReportStatus,
   getEnumLabel,
   getStatusClass,
+  monthlyReportType,
+  publishedReportStatus,
   reportStatusLabelMap,
+  reportStatusOptions,
+  reportTypeOptions,
   reportTypeLabelMap
 } from '../utils/labEnums'
 
 const query = reactive({
   pageNum: 1,
-  pageSize: 30,
+  pageSize: DEFAULT_PAGE_SIZE,
   reportType: '',
   reportStatus: ''
 })
@@ -108,9 +120,9 @@ const total = ref(0)
 const stats = computed(() => [
   { label: '报告总数', value: total.value, desc: '报告记录总量' },
   { label: '本页记录', value: reports.value.length, desc: '当前分页加载的报告记录' },
-  { label: '已生成', value: reports.value.filter((item) => item.reportStatus === 'GENERATED').length, desc: '当前页已生成但未发布的报告' },
-  { label: '已发布', value: reports.value.filter((item) => item.reportStatus === 'PUBLISHED').length, desc: '当前页已发布报告' },
-  { label: '月报数量', value: reports.value.filter((item) => item.reportType === 'MONTHLY').length, desc: '当前页月报类报告数量' }
+  { label: '已生成', value: reports.value.filter((item) => item.reportStatus === generatedReportStatus).length, desc: '当前页已生成但未发布的报告' },
+  { label: '已发布', value: reports.value.filter((item) => item.reportStatus === publishedReportStatus).length, desc: '当前页已发布报告' },
+  { label: '月报数量', value: reports.value.filter((item) => item.reportType === monthlyReportType).length, desc: '当前页月报类报告数量' }
 ])
 
 function handleSearch() {
@@ -120,21 +132,21 @@ function handleSearch() {
 
 function resetQuery() {
   query.pageNum = 1
-  query.pageSize = 30
+  query.pageSize = DEFAULT_PAGE_SIZE
   query.reportType = ''
   query.reportStatus = ''
   loadReports()
 }
 
 async function loadReports() {
-  const result = await fetchReportsApi(query)
+    const result = await fetchReportsApi(query)
   reports.value = result.records || []
   total.value = result.total || 0
 }
 
 async function createTemplate() {
   await createTemplateApi({
-    reportType: 'MONTHLY',
+    reportType: monthlyReportType,
     templateName: '月报模板',
     defaultTemplate: 0,
     templateContent: '月报模板内容：${sampleNo} - ${detectionResult}'

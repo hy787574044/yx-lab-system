@@ -1,3 +1,7 @@
+export const DEFAULT_PAGE_SIZE = 30
+
+export const PAGE_SIZE_OPTIONS = [10, 20, 30, 50, 100, 500]
+
 export const instrumentStatusLabelMap = {
   NORMAL: '正常',
   DISABLED: '停用',
@@ -86,6 +90,98 @@ export const reportStatusLabelMap = {
   GENERATED: '已生成',
   PUBLISHED: '已发布'
 }
+
+function buildOptions(labelMap) {
+  return Object.entries(labelMap).map(([value, label]) => ({ label, value }))
+}
+
+export const instrumentStatusOptions = buildOptions(instrumentStatusLabelMap)
+
+export const pointStatusOptions = buildOptions(pointStatusLabelMap)
+
+export const enabledPointStatus = 'ENABLED'
+
+export const disabledPointStatus = 'DISABLED'
+
+export const pointTypeOptions = buildOptions(pointTypeLabelMap)
+
+export const factoryPointType = 'FACTORY'
+
+export const rawPointType = 'RAW'
+
+export const terminalPointType = 'TERMINAL'
+
+export const frequencyTypeOptions = buildOptions(frequencyTypeLabelMap)
+
+export const dailyFrequencyType = 'DAILY'
+
+export const weeklyFrequencyType = 'WEEKLY'
+
+export const monthlyFrequencyType = 'MONTHLY'
+
+export const cycleTypeOptions = buildOptions(cycleTypeLabelMap)
+
+export const onceCycleType = 'ONCE'
+
+export const sampleTypeOptions = buildOptions(sampleTypeLabelMap)
+
+export const factorySampleType = 'FACTORY'
+
+export const reportTypeOptions = buildOptions(reportTypeLabelMap)
+
+export const dailyReportType = 'DAILY'
+
+export const weeklyReportType = 'WEEKLY'
+
+export const monthlyReportType = 'MONTHLY'
+
+export const reportStatusOptions = buildOptions(reportStatusLabelMap)
+
+export const draftReportStatus = 'DRAFT'
+
+export const generatedReportStatus = 'GENERATED'
+
+export const publishedReportStatus = 'PUBLISHED'
+
+export const actionablePlanStatuses = ['ACTIVE', 'UNPUBLISHED']
+
+export const pausedPlanStatus = 'PAUSED'
+
+export const dispatchedPlanStatuses = ['DISPATCHED', 'PUBLISHED']
+
+export const completedPlanStatus = 'COMPLETED'
+
+export const pendingTaskStatus = 'PENDING'
+
+export const abandonedTaskStatus = 'ABANDONED'
+
+export const inProgressTaskStatus = 'IN_PROGRESS'
+
+export const completedTaskStatus = 'COMPLETED'
+
+export const completableTaskStatuses = [pendingTaskStatus, inProgressTaskStatus]
+
+export const loggedSampleStatus = 'LOGGED'
+
+export const reviewingSampleStatus = 'REVIEWING'
+
+export const retestSampleStatus = 'RETEST'
+
+export const completedSampleStatus = 'COMPLETED'
+
+export const reviewPendingDetectionStatus = 'SUBMITTED'
+
+export const rejectedDetectionStatus = 'REJECTED'
+
+export const approvedReviewResult = 'APPROVED'
+
+export const rejectedReviewResult = 'REJECTED'
+
+export const abnormalDetectionResult = 'ABNORMAL'
+
+export const availableDetectionSampleStatuses = ['LOGGED', 'RETEST']
+
+export const routineSamplingType = 'ROUTINE'
 
 const statusClassMaps = {
   instrumentStatus: {

@@ -54,17 +54,25 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { fetchDetectionsApi, fetchReviewsApi, submitReviewApi } from '../api/lab'
 import TablePagination from '../components/common/TablePagination.vue'
-import { getEnumLabel, getStatusClass, reviewResultLabelMap } from '../utils/labEnums'
+import {
+  approvedReviewResult,
+  DEFAULT_PAGE_SIZE,
+  getEnumLabel,
+  getStatusClass,
+  rejectedReviewResult,
+  reviewPendingDetectionStatus,
+  reviewResultLabelMap
+} from '../utils/labEnums'
 
-const query = reactive({ pageNum: 1, pageSize: 30 })
+const query = reactive({ pageNum: 1, pageSize: DEFAULT_PAGE_SIZE })
 const records = ref([])
 const total = ref(0)
 
 const stats = computed(() => [
   { label: '审核总数', value: total.value, desc: '审核记录总量' },
   { label: '本页记录', value: records.value.length, desc: '当前分页加载的审核记录' },
-  { label: '审核通过', value: records.value.filter((item) => item.reviewResult === 'APPROVED').length, desc: '当前页审核通过记录' },
-  { label: '审核驳回', value: records.value.filter((item) => item.reviewResult === 'REJECTED').length, desc: '当前页审核驳回记录' }
+  { label: '审核通过', value: records.value.filter((item) => item.reviewResult === approvedReviewResult).length, desc: '当前页审核通过记录' },
+  { label: '审核驳回', value: records.value.filter((item) => item.reviewResult === rejectedReviewResult).length, desc: '当前页审核驳回记录' }
 ])
 
 async function loadData() {
@@ -74,8 +82,8 @@ async function loadData() {
 }
 
 async function approveFirst() {
-  const detectionResult = await fetchDetectionsApi({ pageNum: 1, pageSize: 30 })
-  const record = detectionResult.records?.find((item) => item.detectionStatus === 'SUBMITTED')
+  const detectionResult = await fetchDetectionsApi({ pageNum: 1, pageSize: DEFAULT_PAGE_SIZE })
+  const record = detectionResult.records?.find((item) => item.detectionStatus === reviewPendingDetectionStatus)
   if (!record) {
     ElMessage.warning('当前没有待审核的检测记录')
     return
@@ -83,7 +91,7 @@ async function approveFirst() {
 
   await submitReviewApi({
     detectionRecordId: record.id,
-    reviewResult: 'APPROVED',
+    reviewResult: approvedReviewResult,
     reviewRemark: '数据合格，允许出具报告'
   })
 
@@ -93,8 +101,8 @@ async function approveFirst() {
 }
 
 async function rejectFirst() {
-  const detectionResult = await fetchDetectionsApi({ pageNum: 1, pageSize: 30 })
-  const record = detectionResult.records?.find((item) => item.detectionStatus === 'SUBMITTED')
+  const detectionResult = await fetchDetectionsApi({ pageNum: 1, pageSize: DEFAULT_PAGE_SIZE })
+  const record = detectionResult.records?.find((item) => item.detectionStatus === reviewPendingDetectionStatus)
   if (!record) {
     ElMessage.warning('当前没有待审核的检测记录')
     return
@@ -102,7 +110,7 @@ async function rejectFirst() {
 
   await submitReviewApi({
     detectionRecordId: record.id,
-    reviewResult: 'REJECTED',
+    reviewResult: rejectedReviewResult,
     rejectReason: '原始记录不完整，退回重检',
     reviewRemark: '请补充记录后重新提交'
   })

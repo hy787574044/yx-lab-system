@@ -7,9 +7,9 @@ import javax.validation.constraints.NotBlank;
 @Data
 public class UnifiedUserInfoByOpenIdRequest {
 
-    @NotBlank(message = "accessToken cannot be blank")
+    @NotBlank(message = "访问令牌不能为空")
     private String accessToken;
 
-    @NotBlank(message = "openId cannot be blank")
+    @NotBlank(message = "OpenID 不能为空")
     private String openId;
 }

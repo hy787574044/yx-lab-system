@@ -4,6 +4,7 @@ import com.yx.lab.common.model.ApiResponse;
 import com.yx.lab.common.model.PageQuery;
 import com.yx.lab.common.model.PageResult;
 import com.yx.lab.modules.report.dto.ReportQuery;
+import com.yx.lab.modules.report.dto.ReportTemplateSaveCommand;
 import com.yx.lab.modules.report.entity.LabReport;
 import com.yx.lab.modules.report.entity.ReportTemplate;
 import com.yx.lab.modules.report.service.ReportService;
@@ -17,6 +18,8 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import javax.validation.Valid;
 
 @RestController
 @RequestMapping("/api/reports")
@@ -36,15 +39,14 @@ public class ReportController {
     }
 
     @PostMapping("/templates")
-    public ApiResponse<Void> saveTemplate(@RequestBody ReportTemplate template) {
-        reportService.saveTemplate(template);
+    public ApiResponse<Void> saveTemplate(@Valid @RequestBody ReportTemplateSaveCommand command) {
+        reportService.saveTemplate(command);
         return ApiResponse.successMessage("新增成功");
     }
 
     @PutMapping("/templates/{id}")
-    public ApiResponse<Void> updateTemplate(@PathVariable Long id, @RequestBody ReportTemplate template) {
-        template.setId(id);
-        reportService.updateTemplate(template);
+    public ApiResponse<Void> updateTemplate(@PathVariable Long id, @Valid @RequestBody ReportTemplateSaveCommand command) {
+        reportService.updateTemplate(id, command);
         return ApiResponse.successMessage("更新成功");
     }
 

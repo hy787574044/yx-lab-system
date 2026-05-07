@@ -2,8 +2,11 @@ package com.yx.lab.modules.detection.controller;
 
 import com.yx.lab.common.model.ApiResponse;
 import com.yx.lab.common.model.PageResult;
+import com.yx.lab.modules.detection.dto.DetectionParameterSaveCommand;
 import com.yx.lab.modules.detection.dto.DetectionParameterQuery;
+import com.yx.lab.modules.detection.dto.DetectionStepSaveCommand;
 import com.yx.lab.modules.detection.dto.DetectionStepQuery;
+import com.yx.lab.modules.detection.dto.DetectionTypeSaveCommand;
 import com.yx.lab.modules.detection.dto.DetectionTypeQuery;
 import com.yx.lab.modules.detection.entity.DetectionParameter;
 import com.yx.lab.modules.detection.entity.DetectionStep;
@@ -20,6 +23,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import javax.validation.Valid;
+
 @RestController
 @RequestMapping("/api/detection-config")
 @RequiredArgsConstructor
@@ -33,15 +38,14 @@ public class DetectionConfigController {
     }
 
     @PostMapping("/types")
-    public ApiResponse<Void> saveType(@RequestBody DetectionType entity) {
-        detectionConfigService.saveType(entity);
+    public ApiResponse<Void> saveType(@Valid @RequestBody DetectionTypeSaveCommand command) {
+        detectionConfigService.saveType(command);
         return ApiResponse.successMessage("新增成功");
     }
 
     @PutMapping("/types/{id}")
-    public ApiResponse<Void> updateType(@PathVariable Long id, @RequestBody DetectionType entity) {
-        entity.setId(id);
-        detectionConfigService.updateType(entity);
+    public ApiResponse<Void> updateType(@PathVariable Long id, @Valid @RequestBody DetectionTypeSaveCommand command) {
+        detectionConfigService.updateType(id, command);
         return ApiResponse.successMessage("更新成功");
     }
 
@@ -57,15 +61,14 @@ public class DetectionConfigController {
     }
 
     @PostMapping("/parameters")
-    public ApiResponse<Void> saveParameter(@RequestBody DetectionParameter entity) {
-        detectionConfigService.saveParameter(entity);
+    public ApiResponse<Void> saveParameter(@Valid @RequestBody DetectionParameterSaveCommand command) {
+        detectionConfigService.saveParameter(command);
         return ApiResponse.successMessage("新增成功");
     }
 
     @PutMapping("/parameters/{id}")
-    public ApiResponse<Void> updateParameter(@PathVariable Long id, @RequestBody DetectionParameter entity) {
-        entity.setId(id);
-        detectionConfigService.updateParameter(entity);
+    public ApiResponse<Void> updateParameter(@PathVariable Long id, @Valid @RequestBody DetectionParameterSaveCommand command) {
+        detectionConfigService.updateParameter(id, command);
         return ApiResponse.successMessage("更新成功");
     }
 
@@ -81,15 +84,14 @@ public class DetectionConfigController {
     }
 
     @PostMapping("/steps")
-    public ApiResponse<Void> saveStep(@RequestBody DetectionStep entity) {
-        detectionConfigService.saveStep(entity);
+    public ApiResponse<Void> saveStep(@Valid @RequestBody DetectionStepSaveCommand command) {
+        detectionConfigService.saveStep(command);
         return ApiResponse.successMessage("新增成功");
     }
 
     @PutMapping("/steps/{id}")
-    public ApiResponse<Void> updateStep(@PathVariable Long id, @RequestBody DetectionStep entity) {
-        entity.setId(id);
-        detectionConfigService.updateStep(entity);
+    public ApiResponse<Void> updateStep(@PathVariable Long id, @Valid @RequestBody DetectionStepSaveCommand command) {
+        detectionConfigService.updateStep(id, command);
         return ApiResponse.successMessage("更新成功");
     }
 

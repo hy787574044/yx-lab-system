@@ -61,22 +61,27 @@ import { ElMessage } from 'element-plus'
 import { fetchDetectionsApi, fetchSamplesApi, submitDetectionApi } from '../api/lab'
 import TablePagination from '../components/common/TablePagination.vue'
 import {
+  abnormalDetectionResult,
+  availableDetectionSampleStatuses,
+  DEFAULT_PAGE_SIZE,
   detectionResultLabelMap,
   detectionStatusLabelMap,
   getEnumLabel,
-  getStatusClass
+  getStatusClass,
+  rejectedDetectionStatus,
+  reviewPendingDetectionStatus
 } from '../utils/labEnums'
 
-const query = reactive({ pageNum: 1, pageSize: 30 })
+const query = reactive({ pageNum: 1, pageSize: DEFAULT_PAGE_SIZE })
 const records = ref([])
 const total = ref(0)
 
 const stats = computed(() => [
   { label: '检测总数', value: total.value, desc: '检测记录总量' },
   { label: '本页记录', value: records.value.length, desc: '当前分页加载的检测记录' },
-  { label: '待审核', value: records.value.filter((item) => item.detectionStatus === 'SUBMITTED').length, desc: '当前页待审核的检测记录' },
-  { label: '已驳回', value: records.value.filter((item) => item.detectionStatus === 'REJECTED').length, desc: '当前页已驳回的检测记录' },
-  { label: '异常结果', value: records.value.filter((item) => item.detectionResult === 'ABNORMAL').length, desc: '当前页异常检测结果' }
+  { label: '待审核', value: records.value.filter((item) => item.detectionStatus === reviewPendingDetectionStatus).length, desc: '当前页待审核的检测记录' },
+  { label: '已驳回', value: records.value.filter((item) => item.detectionStatus === rejectedDetectionStatus).length, desc: '当前页已驳回的检测记录' },
+  { label: '异常结果', value: records.value.filter((item) => item.detectionResult === abnormalDetectionResult).length, desc: '当前页异常检测结果' }
 ])
 
 async function loadData() {
@@ -86,8 +91,8 @@ async function loadData() {
 }
 
 async function submitDemo() {
-  const sampleResult = await fetchSamplesApi({ pageNum: 1, pageSize: 30 })
-  const sample = sampleResult.records?.find((item) => ['LOGGED', 'RETEST'].includes(item.sampleStatus))
+  const sampleResult = await fetchSamplesApi({ pageNum: 1, pageSize: DEFAULT_PAGE_SIZE })
+  const sample = sampleResult.records?.find((item) => availableDetectionSampleStatuses.includes(item.sampleStatus))
   if (!sample) {
     ElMessage.warning('请先准备一条已登录或待重检的样品')
     return

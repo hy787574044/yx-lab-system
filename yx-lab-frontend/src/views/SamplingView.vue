@@ -48,21 +48,21 @@
                     <el-button
                       size="small"
                       @click="dispatch(row)"
-                      :disabled="!['ACTIVE', 'UNPUBLISHED'].includes(row.planStatus)"
+                      :disabled="!actionablePlanStatuses.includes(row.planStatus)"
                     >
                       派发
                     </el-button>
                     <el-button
                       size="small"
                       @click="pausePlan(row)"
-                      :disabled="!['ACTIVE', 'UNPUBLISHED'].includes(row.planStatus)"
+                      :disabled="!actionablePlanStatuses.includes(row.planStatus)"
                     >
                       暂停
                     </el-button>
                     <el-button
                       size="small"
                       @click="resumePlan(row)"
-                      :disabled="row.planStatus !== 'PAUSED'"
+                      :disabled="row.planStatus !== pausedPlanStatus"
                     >
                       恢复
                     </el-button>
@@ -116,17 +116,17 @@
               <el-table-column label="操作" min-width="290" fixed="right">
                 <template #default="{ row }">
                   <div class="action-row">
-                    <el-button size="small" @click="startTask(row)" :disabled="row.taskStatus !== 'PENDING'">
+                    <el-button size="small" @click="startTask(row)" :disabled="row.taskStatus !== pendingTaskStatus">
                       开始
                     </el-button>
                     <el-button
                       size="small"
                       @click="abandonTask(row)"
-                      :disabled="!['PENDING', 'IN_PROGRESS'].includes(row.taskStatus)"
+                      :disabled="!completableTaskStatuses.includes(row.taskStatus)"
                     >
                       废弃
                     </el-button>
-                    <el-button size="small" @click="resumeTask(row)" :disabled="row.taskStatus !== 'ABANDONED'">
+                    <el-button size="small" @click="resumeTask(row)" :disabled="row.taskStatus !== abandonedTaskStatus">
                       恢复
                     </el-button>
                     <el-button
@@ -134,7 +134,7 @@
                       type="primary"
                       plain
                       @click="completeTask(row)"
-                      :disabled="!['PENDING', 'IN_PROGRESS'].includes(row.taskStatus)"
+                      :disabled="!completableTaskStatuses.includes(row.taskStatus)"
                     >
                       完成
                     </el-button>
@@ -218,19 +218,36 @@ import {
   startSamplingTaskApi
 } from '../api/lab'
 import {
+  abandonedTaskStatus,
+  actionablePlanStatuses,
+  completedPlanStatus,
+  completedSampleStatus,
+  completedTaskStatus,
+  completableTaskStatuses,
   cycleTypeLabelMap,
+  DEFAULT_PAGE_SIZE,
+  dispatchedPlanStatuses,
+  factorySampleType,
   getEnumLabel,
   getStatusClass,
+  inProgressTaskStatus,
+  loggedSampleStatus,
+  onceCycleType,
+  pausedPlanStatus,
+  pendingTaskStatus,
   planStatusLabelMap,
+  retestSampleStatus,
+  routineSamplingType,
+  reviewingSampleStatus,
   sampleStatusLabelMap,
   sampleTypeLabelMap,
   taskStatusLabelMap
 } from '../utils/labEnums'
 
 const active = ref('plans')
-const planQuery = reactive({ pageNum: 1, pageSize: 30 })
-const taskQuery = reactive({ pageNum: 1, pageSize: 30 })
-const sampleQuery = reactive({ pageNum: 1, pageSize: 30 })
+const planQuery = reactive({ pageNum: 1, pageSize: DEFAULT_PAGE_SIZE })
+const taskQuery = reactive({ pageNum: 1, pageSize: DEFAULT_PAGE_SIZE })
+const sampleQuery = reactive({ pageNum: 1, pageSize: DEFAULT_PAGE_SIZE })
 
 const plans = ref([])
 const tasks = ref([])
@@ -239,7 +256,7 @@ const planTotal = ref(0)
 const taskTotal = ref(0)
 const sampleTotal = ref(0)
 
-const firstCompletableTask = computed(() => tasks.value.find((item) => ['PENDING', 'IN_PROGRESS'].includes(item.taskStatus)))
+const firstCompletableTask = computed(() => tasks.value.find((item) => completableTaskStatuses.includes(item.taskStatus)))
 
 const currentStats = computed(() => {
   if (active.value === 'plans') {
@@ -247,9 +264,9 @@ const currentStats = computed(() => {
       { label: '计划总数', value: planTotal.value, desc: '采样计划记录总量' },
       { label: '本页记录', value: plans.value.length, desc: '当前分页加载的计划条数' },
       { label: '启用中', value: plans.value.filter((item) => item.planStatus === 'ACTIVE').length, desc: '当前页启用中的采样计划' },
-      { label: '已暂停', value: plans.value.filter((item) => item.planStatus === 'PAUSED').length, desc: '当前页暂停中的采样计划' },
-      { label: '已派发', value: plans.value.filter((item) => ['DISPATCHED', 'PUBLISHED'].includes(item.planStatus)).length, desc: '当前页已派发的采样计划' },
-      { label: '已完成', value: plans.value.filter((item) => item.planStatus === 'COMPLETED').length, desc: '当前页已完成的采样计划' }
+      { label: '已暂停', value: plans.value.filter((item) => item.planStatus === pausedPlanStatus).length, desc: '当前页暂停中的采样计划' },
+      { label: '已派发', value: plans.value.filter((item) => dispatchedPlanStatuses.includes(item.planStatus)).length, desc: '当前页已派发的采样计划' },
+      { label: '已完成', value: plans.value.filter((item) => item.planStatus === completedPlanStatus).length, desc: '当前页已完成的采样计划' }
     ]
   }
 
@@ -257,20 +274,20 @@ const currentStats = computed(() => {
     return [
       { label: '任务总数', value: taskTotal.value, desc: '采样任务记录总量' },
       { label: '本页记录', value: tasks.value.length, desc: '当前分页加载的任务条数' },
-      { label: '待处理', value: tasks.value.filter((item) => item.taskStatus === 'PENDING').length, desc: '当前页待处理任务' },
-      { label: '进行中', value: tasks.value.filter((item) => item.taskStatus === 'IN_PROGRESS').length, desc: '当前页正在执行的任务' },
-      { label: '已废弃', value: tasks.value.filter((item) => item.taskStatus === 'ABANDONED').length, desc: '当前页已废弃任务' },
-      { label: '已完成', value: tasks.value.filter((item) => item.taskStatus === 'COMPLETED').length, desc: '当前页已完成任务' }
+      { label: '待处理', value: tasks.value.filter((item) => item.taskStatus === pendingTaskStatus).length, desc: '当前页待处理任务' },
+      { label: '进行中', value: tasks.value.filter((item) => item.taskStatus === inProgressTaskStatus).length, desc: '当前页正在执行的任务' },
+      { label: '已废弃', value: tasks.value.filter((item) => item.taskStatus === abandonedTaskStatus).length, desc: '当前页已废弃任务' },
+      { label: '已完成', value: tasks.value.filter((item) => item.taskStatus === completedTaskStatus).length, desc: '当前页已完成任务' }
     ]
   }
 
   return [
     { label: '样品总数', value: sampleTotal.value, desc: '样品台账记录总量' },
     { label: '本页记录', value: samples.value.length, desc: '当前分页加载的样品条数' },
-    { label: '已登录', value: samples.value.filter((item) => item.sampleStatus === 'LOGGED').length, desc: '当前页已登录样品' },
-    { label: '审核中', value: samples.value.filter((item) => item.sampleStatus === 'REVIEWING').length, desc: '当前页审核中的样品' },
-    { label: '待重检', value: samples.value.filter((item) => item.sampleStatus === 'RETEST').length, desc: '当前页待重检样品' },
-    { label: '已完成', value: samples.value.filter((item) => item.sampleStatus === 'COMPLETED').length, desc: '当前页已完成样品' }
+    { label: '已登录', value: samples.value.filter((item) => item.sampleStatus === loggedSampleStatus).length, desc: '当前页已登录样品' },
+    { label: '审核中', value: samples.value.filter((item) => item.sampleStatus === reviewingSampleStatus).length, desc: '当前页审核中的样品' },
+    { label: '待重检', value: samples.value.filter((item) => item.sampleStatus === retestSampleStatus).length, desc: '当前页待重检样品' },
+    { label: '已完成', value: samples.value.filter((item) => item.sampleStatus === completedSampleStatus).length, desc: '当前页已完成样品' }
   ]
 })
 
@@ -301,9 +318,9 @@ async function createPlan() {
     endTime: dayjs().add(2, 'hour').format('YYYY-MM-DD HH:mm:ss'),
     samplerId: 1002,
     samplerName: '采样员',
-    samplingType: 'ROUTINE',
-    sampleType: 'FACTORY',
-    cycleType: 'ONCE'
+    samplingType: routineSamplingType,
+    sampleType: factorySampleType,
+    cycleType: onceCycleType
   })
   ElMessage.success('采样计划已创建')
   planQuery.pageNum = 1
@@ -374,7 +391,7 @@ async function completeFirstPendingTask() {
 }
 
 async function loginSample() {
-  const completedTask = tasks.value.find((item) => item.taskStatus === 'COMPLETED')
+  const completedTask = tasks.value.find((item) => item.taskStatus === completedTaskStatus)
   if (!completedTask) {
     ElMessage.warning('请先完成一条采样任务')
     return
@@ -383,7 +400,7 @@ async function loginSample() {
     taskId: completedTask.id,
     pointId: completedTask.pointId || 2001,
     pointName: completedTask.pointName || '城东水厂出厂水',
-    sampleType: completedTask.sampleType || 'FACTORY',
+    sampleType: completedTask.sampleType || factorySampleType,
     detectionItems: 'pH,浊度,余氯,氨氮',
     samplingTime: dayjs().format('YYYY-MM-DD HH:mm:ss'),
     samplerId: completedTask.samplerId || 1002,

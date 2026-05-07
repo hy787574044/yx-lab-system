@@ -3,11 +3,13 @@ package com.yx.lab.modules.sample.service;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.yx.lab.common.constant.LabWorkflowConstants;
 import com.yx.lab.common.exception.BusinessException;
 import com.yx.lab.common.model.PageResult;
 import com.yx.lab.common.util.PageUtils;
 import com.yx.lab.modules.sample.dto.SamplingPlanDispatchCommand;
 import com.yx.lab.modules.sample.dto.SamplingPlanQuery;
+import com.yx.lab.modules.sample.dto.SamplingPlanSaveCommand;
 import com.yx.lab.modules.sample.entity.SamplingPlan;
 import com.yx.lab.modules.sample.entity.SamplingTask;
 import com.yx.lab.modules.sample.mapper.SamplingPlanMapper;
@@ -17,16 +19,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
 public class SamplingPlanService {
-
-    private static final Set<String> DISPATCHABLE_PLAN_STATUSES =
-            new HashSet<>(Arrays.asList("ACTIVE", "UNPUBLISHED"));
 
     private final SamplingPlanMapper samplingPlanMapper;
 
@@ -46,28 +42,33 @@ public class SamplingPlanService {
         return requirePlan(id);
     }
 
-    public void save(SamplingPlan plan) {
+    public void save(SamplingPlanSaveCommand command) {
+        SamplingPlan plan = new SamplingPlan();
+        applyPlanCommand(plan, command);
         if (StrUtil.isBlank(plan.getPlanStatus())) {
-            plan.setPlanStatus("ACTIVE");
+            plan.setPlanStatus(LabWorkflowConstants.SamplingPlanStatus.ACTIVE);
         }
         if (StrUtil.isBlank(plan.getCycleType())) {
-            plan.setCycleType("ONCE");
+            plan.setCycleType(LabWorkflowConstants.CycleType.ONCE);
         }
         samplingPlanMapper.insert(plan);
     }
 
-    public void update(SamplingPlan plan) {
-        SamplingPlan existing = requirePlan(plan.getId());
+    public void update(Long id, SamplingPlanSaveCommand command) {
+        SamplingPlan existing = requirePlan(id);
         if (isLockedPlan(existing.getPlanStatus())) {
             throw new BusinessException("当前计划已进入执行阶段，不允许直接编辑");
         }
-        if (StrUtil.isBlank(plan.getPlanStatus())) {
-            plan.setPlanStatus(existing.getPlanStatus());
+        String originalPlanStatus = existing.getPlanStatus();
+        String originalCycleType = existing.getCycleType();
+        applyPlanCommand(existing, command);
+        if (StrUtil.isBlank(existing.getPlanStatus())) {
+            existing.setPlanStatus(originalPlanStatus);
         }
-        if (StrUtil.isBlank(plan.getCycleType())) {
-            plan.setCycleType(existing.getCycleType());
+        if (StrUtil.isBlank(existing.getCycleType())) {
+            existing.setCycleType(originalCycleType);
         }
-        samplingPlanMapper.updateById(plan);
+        samplingPlanMapper.updateById(existing);
     }
 
     public void delete(Long id) {
@@ -80,26 +81,27 @@ public class SamplingPlanService {
 
     public void pause(Long id) {
         SamplingPlan plan = requirePlan(id);
-        if (!"ACTIVE".equals(plan.getPlanStatus()) && !"UNPUBLISHED".equals(plan.getPlanStatus())) {
+        if (!LabWorkflowConstants.SamplingPlanStatus.ACTIVE.equals(plan.getPlanStatus())
+                && !LabWorkflowConstants.SamplingPlanStatus.UNPUBLISHED.equals(plan.getPlanStatus())) {
             throw new BusinessException("当前计划状态不允许暂停");
         }
-        plan.setPlanStatus("PAUSED");
+        plan.setPlanStatus(LabWorkflowConstants.SamplingPlanStatus.PAUSED);
         samplingPlanMapper.updateById(plan);
     }
 
     public void resume(Long id) {
         SamplingPlan plan = requirePlan(id);
-        if (!"PAUSED".equals(plan.getPlanStatus())) {
+        if (!LabWorkflowConstants.SamplingPlanStatus.PAUSED.equals(plan.getPlanStatus())) {
             throw new BusinessException("当前计划不处于暂停状态");
         }
-        plan.setPlanStatus("ACTIVE");
+        plan.setPlanStatus(LabWorkflowConstants.SamplingPlanStatus.ACTIVE);
         samplingPlanMapper.updateById(plan);
     }
 
     @Transactional(rollbackFor = Exception.class)
     public void dispatch(SamplingPlanDispatchCommand command) {
         SamplingPlan plan = requirePlan(command.getPlanId());
-        if (!DISPATCHABLE_PLAN_STATUSES.contains(plan.getPlanStatus())) {
+        if (!LabWorkflowConstants.DISPATCHABLE_PLAN_STATUSES.contains(plan.getPlanStatus())) {
             throw new BusinessException("当前计划状态不允许派发");
         }
 
@@ -111,11 +113,11 @@ public class SamplingPlanService {
         task.setSamplerId(plan.getSamplerId());
         task.setSamplerName(plan.getSamplerName());
         task.setSampleType(plan.getSampleType());
-        task.setTaskStatus("PENDING");
+        task.setTaskStatus(LabWorkflowConstants.SamplingTaskStatus.PENDING);
         task.setRemark("由采样计划派发生成");
         samplingTaskMapper.insert(task);
 
-        plan.setPlanStatus("DISPATCHED");
+        plan.setPlanStatus(LabWorkflowConstants.SamplingPlanStatus.DISPATCHED);
         plan.setUpdatedTime(LocalDateTime.now());
         samplingPlanMapper.updateById(plan);
     }
@@ -129,6 +131,22 @@ public class SamplingPlanService {
     }
 
     private boolean isLockedPlan(String planStatus) {
-        return "DISPATCHED".equals(planStatus) || "COMPLETED".equals(planStatus);
+        return LabWorkflowConstants.SamplingPlanStatus.DISPATCHED.equals(planStatus)
+                || LabWorkflowConstants.SamplingPlanStatus.COMPLETED.equals(planStatus);
+    }
+
+    private void applyPlanCommand(SamplingPlan plan, SamplingPlanSaveCommand command) {
+        plan.setPlanName(StrUtil.trim(command.getPlanName()));
+        plan.setPointId(command.getPointId());
+        plan.setPointName(StrUtil.trim(command.getPointName()));
+        plan.setStartTime(command.getStartTime());
+        plan.setEndTime(command.getEndTime());
+        plan.setSamplerId(command.getSamplerId());
+        plan.setSamplerName(StrUtil.trim(command.getSamplerName()));
+        plan.setSamplingType(StrUtil.trim(command.getSamplingType()));
+        plan.setSampleType(StrUtil.trim(command.getSampleType()));
+        plan.setCycleType(StrUtil.trim(command.getCycleType()));
+        plan.setPlanStatus(StrUtil.trim(command.getPlanStatus()));
+        plan.setRemark(StrUtil.trim(command.getRemark()));
     }
 }

@@ -7,6 +7,6 @@ import javax.validation.constraints.NotBlank;
 @Data
 public class UnifiedUserJobNoRequest {
 
-    @NotBlank(message = "jobNo cannot be blank")
+    @NotBlank(message = "用户工号不能为空")
     private String jobNo;
 }

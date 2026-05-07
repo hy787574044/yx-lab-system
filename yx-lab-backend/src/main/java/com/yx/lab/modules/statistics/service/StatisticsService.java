@@ -1,12 +1,5 @@
 package com.yx.lab.modules.statistics.service;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.yx.lab.modules.detection.entity.DetectionRecord;
-import com.yx.lab.modules.detection.mapper.DetectionRecordMapper;
-import com.yx.lab.modules.review.entity.ReviewRecord;
-import com.yx.lab.modules.review.mapper.ReviewRecordMapper;
-import com.yx.lab.modules.sample.entity.LabSample;
-import com.yx.lab.modules.sample.mapper.LabSampleMapper;
 import com.yx.lab.modules.statistics.vo.StatisticsSummaryVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -18,23 +11,15 @@ import java.math.RoundingMode;
 @RequiredArgsConstructor
 public class StatisticsService {
 
-    private final LabSampleMapper labSampleMapper;
-
-    private final DetectionRecordMapper detectionRecordMapper;
-
-    private final ReviewRecordMapper reviewRecordMapper;
+    private final StatisticsQueryService statisticsQueryService;
 
     public StatisticsSummaryVO summary() {
-        long sampleTotal = labSampleMapper.selectCount(new LambdaQueryWrapper<LabSample>());
-        long normalTotal = detectionRecordMapper.selectCount(new LambdaQueryWrapper<DetectionRecord>()
-                .eq(DetectionRecord::getDetectionResult, "NORMAL"));
-        long abnormalTotal = detectionRecordMapper.selectCount(new LambdaQueryWrapper<DetectionRecord>()
-                .eq(DetectionRecord::getDetectionResult, "ABNORMAL"));
-        long reviewTotal = reviewRecordMapper.selectCount(new LambdaQueryWrapper<ReviewRecord>());
-        long approvedTotal = reviewRecordMapper.selectCount(new LambdaQueryWrapper<ReviewRecord>()
-                .eq(ReviewRecord::getReviewResult, "APPROVED"));
-        long rejectedTotal = reviewRecordMapper.selectCount(new LambdaQueryWrapper<ReviewRecord>()
-                .eq(ReviewRecord::getReviewResult, "REJECTED"));
+        long sampleTotal = statisticsQueryService.sampleTotal();
+        long normalTotal = statisticsQueryService.normalTotal();
+        long abnormalTotal = statisticsQueryService.abnormalTotal();
+        long reviewTotal = statisticsQueryService.reviewTotal();
+        long approvedTotal = statisticsQueryService.approvedReviewTotal();
+        long rejectedTotal = statisticsQueryService.rejectedReviewTotal();
 
         StatisticsSummaryVO vo = new StatisticsSummaryVO();
         vo.setSampleTotal(sampleTotal);

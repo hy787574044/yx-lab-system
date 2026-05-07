@@ -3,9 +3,11 @@ package com.yx.lab.modules.sample.service;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.yx.lab.common.exception.BusinessException;
 import com.yx.lab.common.model.PageResult;
 import com.yx.lab.common.util.PageUtils;
 import com.yx.lab.modules.sample.dto.MonitoringPointQuery;
+import com.yx.lab.modules.sample.dto.MonitoringPointSaveCommand;
 import com.yx.lab.modules.sample.entity.MonitoringPoint;
 import com.yx.lab.modules.sample.mapper.MonitoringPointMapper;
 import lombok.RequiredArgsConstructor;
@@ -29,18 +31,44 @@ public class MonitoringPointService {
     }
 
     public MonitoringPoint detail(Long id) {
-        return monitoringPointMapper.selectById(id);
+        return requirePoint(id);
     }
 
-    public void save(MonitoringPoint point) {
+    public void save(MonitoringPointSaveCommand command) {
+        MonitoringPoint point = new MonitoringPoint();
+        applyCommand(point, command);
         monitoringPointMapper.insert(point);
     }
 
-    public void update(MonitoringPoint point) {
+    public void update(Long id, MonitoringPointSaveCommand command) {
+        MonitoringPoint point = requirePoint(id);
+        applyCommand(point, command);
         monitoringPointMapper.updateById(point);
     }
 
     public void delete(Long id) {
-        monitoringPointMapper.deleteById(id);
+        monitoringPointMapper.deleteById(requirePoint(id).getId());
+    }
+
+    private MonitoringPoint requirePoint(Long id) {
+        MonitoringPoint point = monitoringPointMapper.selectById(id);
+        if (point == null) {
+            throw new BusinessException("监测点位不存在");
+        }
+        return point;
+    }
+
+    private void applyCommand(MonitoringPoint point, MonitoringPointSaveCommand command) {
+        point.setPointName(StrUtil.trim(command.getPointName()));
+        point.setLongitude(StrUtil.trim(command.getLongitude()));
+        point.setLatitude(StrUtil.trim(command.getLatitude()));
+        point.setRegionName(StrUtil.trim(command.getRegionName()));
+        point.setServicePopulation(command.getServicePopulation());
+        point.setFrequencyType(StrUtil.trim(command.getFrequencyType()));
+        point.setOwnerId(command.getOwnerId());
+        point.setOwnerName(StrUtil.trim(command.getOwnerName()));
+        point.setContactPhone(StrUtil.trim(command.getContactPhone()));
+        point.setPointType(StrUtil.trim(command.getPointType()));
+        point.setPointStatus(StrUtil.trim(command.getPointStatus()));
     }
 }

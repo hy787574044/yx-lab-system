@@ -3,10 +3,13 @@ package com.yx.lab.modules.report.service;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.yx.lab.common.constant.LabWorkflowConstants;
+import com.yx.lab.common.exception.BusinessException;
 import com.yx.lab.common.model.PageResult;
 import com.yx.lab.common.util.PageUtils;
 import com.yx.lab.modules.detection.entity.DetectionRecord;
 import com.yx.lab.modules.report.dto.ReportQuery;
+import com.yx.lab.modules.report.dto.ReportTemplateSaveCommand;
 import com.yx.lab.modules.report.entity.LabReport;
 import com.yx.lab.modules.report.entity.ReportTemplate;
 import com.yx.lab.modules.report.mapper.LabReportMapper;
@@ -46,29 +49,33 @@ public class ReportService {
         return new PageResult<>(page.getTotal(), page.getRecords());
     }
 
-    public void saveTemplate(ReportTemplate template) {
+    public void saveTemplate(ReportTemplateSaveCommand command) {
+        ReportTemplate template = new ReportTemplate();
+        applyTemplateCommand(template, command);
         reportTemplateMapper.insert(template);
     }
 
-    public void updateTemplate(ReportTemplate template) {
+    public void updateTemplate(Long id, ReportTemplateSaveCommand command) {
+        ReportTemplate template = requireTemplate(id);
+        applyTemplateCommand(template, command);
         reportTemplateMapper.updateById(template);
     }
 
     public void deleteTemplate(Long id) {
-        reportTemplateMapper.deleteById(id);
+        reportTemplateMapper.deleteById(requireTemplate(id).getId());
     }
 
     public void publish(Long id) {
         LabReport report = new LabReport();
         report.setId(id);
-        report.setReportStatus("PUBLISHED");
+        report.setReportStatus(LabWorkflowConstants.ReportStatus.PUBLISHED);
         labReportMapper.updateById(report);
     }
 
     public void unpublish(Long id) {
         LabReport report = new LabReport();
         report.setId(id);
-        report.setReportStatus("DRAFT");
+        report.setReportStatus(LabWorkflowConstants.ReportStatus.DRAFT);
         labReportMapper.updateById(report);
     }
 
@@ -93,13 +100,29 @@ public class ReportService {
 
         LabReport report = new LabReport();
         report.setReportName(sample.getSampleNo() + "-检测报告");
-        report.setReportType("DAILY");
+        report.setReportType(LabWorkflowConstants.ReportType.DAILY);
         report.setGeneratedTime(LocalDateTime.now());
         report.setSampleId(sample.getId());
         report.setSampleNo(sample.getSampleNo());
         report.setDetectionRecordId(record.getId());
-        report.setReportStatus("GENERATED");
+        report.setReportStatus(LabWorkflowConstants.ReportStatus.GENERATED);
         report.setContentSnapshot(content);
         labReportMapper.insert(report);
+    }
+
+    private ReportTemplate requireTemplate(Long id) {
+        ReportTemplate template = reportTemplateMapper.selectById(id);
+        if (template == null) {
+            throw new BusinessException("报告模板不存在");
+        }
+        return template;
+    }
+
+    private void applyTemplateCommand(ReportTemplate template, ReportTemplateSaveCommand command) {
+        template.setReportType(StrUtil.trim(command.getReportType()));
+        template.setTemplateName(StrUtil.trim(command.getTemplateName()));
+        template.setDefaultTemplate(command.getDefaultTemplate());
+        template.setTemplateContent(StrUtil.trim(command.getTemplateContent()));
+        template.setRemark(StrUtil.trim(command.getRemark()));
     }
 }
