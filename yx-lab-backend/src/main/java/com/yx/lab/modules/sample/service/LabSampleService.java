@@ -7,6 +7,8 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.yx.lab.common.constant.LabWorkflowConstants;
 import com.yx.lab.common.exception.BusinessException;
 import com.yx.lab.common.model.PageResult;
+import com.yx.lab.common.security.CurrentUser;
+import com.yx.lab.common.security.SecurityContext;
 import com.yx.lab.common.util.PageUtils;
 import com.yx.lab.modules.sample.dto.LabSampleQuery;
 import com.yx.lab.modules.sample.dto.SampleLoginCommand;
@@ -48,6 +50,7 @@ public class LabSampleService {
 
     @Transactional(rollbackFor = Exception.class)
     public LabSample loginSample(SampleLoginCommand command) {
+        CurrentUser currentUser = requireCurrentUser();
         SamplingTask task = null;
         if (command.getTaskId() != null) {
             task = samplingTaskMapper.selectById(command.getTaskId());
@@ -57,18 +60,27 @@ public class LabSampleService {
             if (!LabWorkflowConstants.SamplingTaskStatus.COMPLETED.equals(task.getTaskStatus())) {
                 throw new BusinessException("采样任务未完成，不能进行样品登录");
             }
+            validateTaskOperator(task, currentUser);
+
+            Long existingCount = labSampleMapper.selectCount(new LambdaQueryWrapper<LabSample>()
+                    .eq(LabSample::getTaskId, task.getId()));
+            if (existingCount != null && existingCount > 0) {
+                throw new BusinessException("该采样任务已完成样品登录，不能重复登录");
+            }
+        } else {
+            validateSamplerOperator(command, currentUser);
         }
 
         LabSample sample = new LabSample();
         sample.setSampleNo(generateSampleNo());
         sample.setTaskId(command.getTaskId());
-        sample.setPointId(command.getPointId());
-        sample.setPointName(command.getPointName());
-        sample.setSampleType(command.getSampleType());
+        sample.setPointId(task == null || task.getPointId() == null ? command.getPointId() : task.getPointId());
+        sample.setPointName(task == null || StrUtil.isBlank(task.getPointName()) ? command.getPointName() : task.getPointName());
+        sample.setSampleType(task == null || StrUtil.isBlank(task.getSampleType()) ? command.getSampleType() : task.getSampleType());
         sample.setDetectionItems(command.getDetectionItems());
         sample.setSamplingTime(command.getSamplingTime());
-        sample.setSamplerId(command.getSamplerId());
-        sample.setSamplerName(command.getSamplerName());
+        sample.setSamplerId(resolveSamplerId(command, task, currentUser));
+        sample.setSamplerName(resolveSamplerName(command, task, currentUser));
         sample.setWeather(command.getWeather());
         sample.setStorageCondition(command.getStorageCondition());
         sample.setSampleStatus(LabWorkflowConstants.SampleStatus.LOGGED);
@@ -96,7 +108,54 @@ public class LabSampleService {
         String prefix = DateUtil.format(new Date(), "yyyyMM");
         Long count = labSampleMapper.selectCount(new LambdaQueryWrapper<LabSample>()
                 .likeRight(LabSample::getSampleNo, prefix));
-        long next = count == null ? 1L : count + 1L;
+        long next = count == null ? 1L : count.longValue() + 1L;
         return prefix + String.format("%04d", next);
+    }
+
+    private CurrentUser requireCurrentUser() {
+        CurrentUser currentUser = SecurityContext.getCurrentUser();
+        if (currentUser == null || currentUser.getUserId() == null) {
+            throw new BusinessException("当前登录信息已失效，请重新登录");
+        }
+        return currentUser;
+    }
+
+    private void validateTaskOperator(SamplingTask task, CurrentUser currentUser) {
+        if (isAdmin(currentUser)) {
+            return;
+        }
+        if (task.getSamplerId() == null || !task.getSamplerId().equals(currentUser.getUserId())) {
+            throw new BusinessException("当前用户不是该采样任务的责任采样员，不能进行样品登录");
+        }
+    }
+
+    private void validateSamplerOperator(SampleLoginCommand command, CurrentUser currentUser) {
+        if (isAdmin(currentUser)) {
+            return;
+        }
+        if (!currentUser.getUserId().equals(command.getSamplerId())) {
+            throw new BusinessException("当前用户只能登记本人采集的样品");
+        }
+    }
+
+    private Long resolveSamplerId(SampleLoginCommand command, SamplingTask task, CurrentUser currentUser) {
+        if (task != null && task.getSamplerId() != null) {
+            return task.getSamplerId();
+        }
+        return isAdmin(currentUser) ? command.getSamplerId() : currentUser.getUserId();
+    }
+
+    private String resolveSamplerName(SampleLoginCommand command, SamplingTask task, CurrentUser currentUser) {
+        if (task != null && StrUtil.isNotBlank(task.getSamplerName())) {
+            return task.getSamplerName();
+        }
+        if (isAdmin(currentUser)) {
+            return command.getSamplerName();
+        }
+        return StrUtil.isNotBlank(currentUser.getRealName()) ? currentUser.getRealName() : command.getSamplerName();
+    }
+
+    private boolean isAdmin(CurrentUser currentUser) {
+        return currentUser != null && "ADMIN".equalsIgnoreCase(currentUser.getRoleCode());
     }
 }

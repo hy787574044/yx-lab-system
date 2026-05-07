@@ -218,6 +218,7 @@ import {
   startSamplingTaskApi
 } from '../api/lab'
 import {
+  activePlanStatus,
   abandonedTaskStatus,
   actionablePlanStatuses,
   completedPlanStatus,
@@ -263,7 +264,7 @@ const currentStats = computed(() => {
     return [
       { label: '计划总数', value: planTotal.value, desc: '采样计划记录总量' },
       { label: '本页记录', value: plans.value.length, desc: '当前分页加载的计划条数' },
-      { label: '启用中', value: plans.value.filter((item) => item.planStatus === 'ACTIVE').length, desc: '当前页启用中的采样计划' },
+      { label: '启用中', value: plans.value.filter((item) => item.planStatus === activePlanStatus).length, desc: '当前页启用中的采样计划' },
       { label: '已暂停', value: plans.value.filter((item) => item.planStatus === pausedPlanStatus).length, desc: '当前页暂停中的采样计划' },
       { label: '已派发', value: plans.value.filter((item) => dispatchedPlanStatuses.includes(item.planStatus)).length, desc: '当前页已派发的采样计划' },
       { label: '已完成', value: plans.value.filter((item) => item.planStatus === completedPlanStatus).length, desc: '当前页已完成的采样计划' }
