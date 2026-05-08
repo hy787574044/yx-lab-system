@@ -28,6 +28,10 @@ public class UserSaveCommand {
     @Schema(description = "姓名", required = true)
     private String realName;
 
+    @NotNull(message = "所属机构不能为空")
+    @Schema(description = "所属机构ID", required = true)
+    private Long orgId;
+
     @NotBlank(message = "角色编码不能为空")
     @Size(max = 64, message = "角色编码长度不能超过64个字符")
     @Schema(description = "角色编码", required = true)

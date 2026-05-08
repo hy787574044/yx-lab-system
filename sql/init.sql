@@ -1,12 +1,73 @@
 CREATE DATABASE IF NOT EXISTS yx_lab DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
 USE yx_lab;
 
+DROP TABLE IF EXISTS lab_role;
+CREATE TABLE lab_role (
+    id BIGINT PRIMARY KEY,
+    role_code VARCHAR(32) NOT NULL,
+    role_name VARCHAR(64) NOT NULL,
+    role_scope VARCHAR(64),
+    status TINYINT DEFAULT 1,
+    remark VARCHAR(500),
+    deleted TINYINT DEFAULT 0,
+    created_by BIGINT,
+    created_name VARCHAR(64),
+    created_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_by BIGINT,
+    updated_name VARCHAR(64),
+    updated_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_lab_role_code (role_code),
+    UNIQUE KEY uk_lab_role_name (role_name)
+);
+
+DROP TABLE IF EXISTS lab_org;
+CREATE TABLE lab_org (
+    id BIGINT PRIMARY KEY,
+    org_code VARCHAR(32) NOT NULL,
+    org_name VARCHAR(64) NOT NULL,
+    parent_id BIGINT,
+    parent_name VARCHAR(64),
+    org_type VARCHAR(64),
+    status TINYINT DEFAULT 1,
+    remark VARCHAR(500),
+    deleted TINYINT DEFAULT 0,
+    created_by BIGINT,
+    created_name VARCHAR(64),
+    created_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_by BIGINT,
+    updated_name VARCHAR(64),
+    updated_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_lab_org_code (org_code),
+    UNIQUE KEY uk_lab_org_name (org_name)
+);
+
+DROP TABLE IF EXISTS lab_dict;
+CREATE TABLE lab_dict (
+    id BIGINT PRIMARY KEY,
+    dict_code VARCHAR(64) NOT NULL,
+    dict_name VARCHAR(64) NOT NULL,
+    module_name VARCHAR(64) NOT NULL,
+    item_text TEXT,
+    status TINYINT DEFAULT 1,
+    remark VARCHAR(500),
+    deleted TINYINT DEFAULT 0,
+    created_by BIGINT,
+    created_name VARCHAR(64),
+    created_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_by BIGINT,
+    updated_name VARCHAR(64),
+    updated_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_lab_dict_code (dict_code)
+);
+
 DROP TABLE IF EXISTS lab_user;
 CREATE TABLE lab_user (
     id BIGINT PRIMARY KEY,
     username VARCHAR(64) NOT NULL,
     password VARCHAR(128) NOT NULL,
     real_name VARCHAR(64) NOT NULL,
+    org_id BIGINT,
+    org_name VARCHAR(64),
     role_code VARCHAR(32) NOT NULL,
     phone VARCHAR(32),
     status TINYINT DEFAULT 1,
@@ -398,6 +459,54 @@ CREATE TABLE lab_document_share (
     KEY idx_lab_document_share_user_id (user_id)
 );
 
+INSERT INTO lab_role (id, role_code, role_name, role_scope, status, remark, deleted, created_name, updated_name)
+VALUES (901, 'ADMIN', '系统管理员', '全系统', 1, '负责系统配置、账号维护与基础资料管理', 0, 'system', 'system');
+
+INSERT INTO lab_role (id, role_code, role_name, role_scope, status, remark, deleted, created_name, updated_name)
+VALUES (902, 'SAMPLER', '采样员', '采样闭环', 1, '负责采样任务执行、样品登录与现场填报', 0, 'system', 'system');
+
+INSERT INTO lab_role (id, role_code, role_name, role_scope, status, remark, deleted, created_name, updated_name)
+VALUES (903, 'DETECTOR', '检测员', '检测闭环', 1, '负责检测分析、结果录入与重检提交', 0, 'system', 'system');
+
+INSERT INTO lab_role (id, role_code, role_name, role_scope, status, remark, deleted, created_name, updated_name)
+VALUES (904, 'REVIEWER', '审核员', '审核闭环', 1, '负责审核通过、驳回与重检门禁控制', 0, 'system', 'system');
+
+INSERT INTO lab_role (id, role_code, role_name, role_scope, status, remark, deleted, created_name, updated_name)
+VALUES (905, 'REPORTER', '报告员', '报告闭环', 1, '负责正式报告生成、发布与推送', 0, 'system', 'system');
+
+INSERT INTO lab_org (id, org_code, org_name, parent_id, parent_name, org_type, status, remark, deleted, created_name, updated_name)
+VALUES (801, 'YX-LAB', '阳新实验室', NULL, NULL, '中心实验室', 1, '系统默认顶级机构', 0, 'system', 'system');
+
+INSERT INTO lab_org (id, org_code, org_name, parent_id, parent_name, org_type, status, remark, deleted, created_name, updated_name)
+VALUES (802, 'YX-SAMPLE', '采样组', 801, '阳新实验室', '业务组', 1, '负责采样任务与样品登录', 0, 'system', 'system');
+
+INSERT INTO lab_org (id, org_code, org_name, parent_id, parent_name, org_type, status, remark, deleted, created_name, updated_name)
+VALUES (803, 'YX-DETECT', '检测审核组', 801, '阳新实验室', '业务组', 1, '负责检测、审核与报告发布', 0, 'system', 'system');
+
+INSERT INTO lab_dict (id, dict_code, dict_name, module_name, item_text, status, remark, deleted, created_name, updated_name)
+VALUES (851, 'instrument_status', '设备状态字典', '仪器管理', '闲置\n使用中\n维保中\n停用', 1, '用于仪器设备状态展示与筛选', 0, 'system', 'system');
+
+INSERT INTO lab_dict (id, dict_code, dict_name, module_name, item_text, status, remark, deleted, created_name, updated_name)
+VALUES (852, 'point_status', '点位状态字典', '监测点位', '启用\n停用\n维护中', 1, '用于监测点位状态管理', 0, 'system', 'system');
+
+INSERT INTO lab_dict (id, dict_code, dict_name, module_name, item_text, status, remark, deleted, created_name, updated_name)
+VALUES (853, 'plan_status', '计划状态字典', '采样计划', '草稿\n待下发\n执行中\n已暂停\n已完成', 1, '用于采样计划生命周期控制', 0, 'system', 'system');
+
+INSERT INTO lab_dict (id, dict_code, dict_name, module_name, item_text, status, remark, deleted, created_name, updated_name)
+VALUES (854, 'task_status', '任务状态字典', '采样任务', '待执行\n执行中\n已完成\n已废弃', 1, '用于采样任务流转控制', 0, 'system', 'system');
+
+INSERT INTO lab_dict (id, dict_code, dict_name, module_name, item_text, status, remark, deleted, created_name, updated_name)
+VALUES (855, 'sample_status', '样品状态字典', '样品管理', '待登录\n已登录\n检测中\n已完成\n已退回', 1, '用于样品流转状态控制', 0, 'system', 'system');
+
+INSERT INTO lab_dict (id, dict_code, dict_name, module_name, item_text, status, remark, deleted, created_name, updated_name)
+VALUES (856, 'detection_status', '检测状态字典', '检测管理', '待检测\n检测中\n待复核\n已退回\n已完成', 1, '用于检测流程状态控制', 0, 'system', 'system');
+
+INSERT INTO lab_dict (id, dict_code, dict_name, module_name, item_text, status, remark, deleted, created_name, updated_name)
+VALUES (857, 'report_status', '报告状态字典', '报告管理', '待生成\n待发布\n已发布\n已撤回', 1, '用于报告正式产物状态管理', 0, 'system', 'system');
+
+INSERT INTO lab_dict (id, dict_code, dict_name, module_name, item_text, status, remark, deleted, created_name, updated_name)
+VALUES (858, 'cycle_type', '周期类型字典', '基础配置', '每日\n每周\n每月\n每季度', 1, '用于周期计划与自动任务配置', 0, 'system', 'system');
+
 INSERT INTO lab_user (id, username, password, real_name, role_code, phone, status, deleted, created_name, updated_name)
 VALUES (1001, 'admin', 'e86f78a8a3caf0b60d8e74e5942aa6d86dc150cd3c03338aef25b7d2d7e3acc7', '系统管理员', 'ADMIN', '13800000000', 1, 0, 'system', 'system');
 
@@ -406,6 +515,10 @@ VALUES (1002, 'sampler', 'e86f78a8a3caf0b60d8e74e5942aa6d86dc150cd3c03338aef25b7
 
 INSERT INTO lab_user (id, username, password, real_name, role_code, phone, status, deleted, created_name, updated_name)
 VALUES (1003, 'reviewer', 'e86f78a8a3caf0b60d8e74e5942aa6d86dc150cd3c03338aef25b7d2d7e3acc7', '审核员', 'REVIEWER', '13800000002', 1, 0, 'system', 'system');
+
+UPDATE lab_user SET real_name = '系统管理员', org_id = 801, org_name = '阳新实验室' WHERE id = 1001;
+UPDATE lab_user SET real_name = '采样员', org_id = 802, org_name = '采样组' WHERE id = 1002;
+UPDATE lab_user SET real_name = '审核员', org_id = 803, org_name = '检测审核组' WHERE id = 1003;
 
 INSERT INTO lab_monitoring_point (id, point_name, longitude, latitude, region_name, service_population, frequency_type, owner_id, owner_name, contact_phone, point_type, point_status, created_name, updated_name)
 VALUES (2001, '城东水厂出厂水', '115.2121', '30.2211', '阳新县城东片区', 36000, 'DAILY', 1002, '采样员', '13800000001', 'FACTORY', 'ENABLED', 'system', 'system');

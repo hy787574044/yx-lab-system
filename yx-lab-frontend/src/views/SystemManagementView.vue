@@ -47,19 +47,14 @@
                 <el-input
                   v-model="userQuery.keyword"
                   clearable
-                  placeholder="请输入用户名、姓名、手机号或角色编码"
+                  placeholder="请输入用户名、姓名、机构、手机号或角色编码"
                   @keyup.enter="handleUserSearch"
                 />
               </label>
               <label class="toolbar-field">
                 <span>状态</span>
                 <el-select v-model="userQuery.status" clearable placeholder="请选择状态">
-                  <el-option
-                    v-for="item in userStatusOptions"
-                    :key="item.value"
-                    :label="item.label"
-                    :value="item.value"
-                  />
+                  <el-option v-for="item in statusOptions" :key="item.value" :label="item.label" :value="item.value" />
                 </el-select>
               </label>
             </div>
@@ -72,20 +67,19 @@
             </div>
           </div>
           <div class="panel-note">
-            当前已接入真实用户管理接口，支持分页查询、新增、编辑、删除；新增密码必填，编辑留空不改密码，且不能删除当前登录用户。
+            用户管理已接入真实接口，新增和编辑时必须绑定有效机构与启用角色，且不允许删除当前登录用户。
           </div>
         </div>
 
         <div class="table-card">
-          <el-table
-            class="list-table"
-            :data="visibleUserRows"
-            stripe
-            max-height="460"
-            empty-text="暂无用户管理数据"
-          >
+          <el-table class="list-table" :data="visibleUserRows" stripe max-height="460" empty-text="暂无用户数据">
             <el-table-column prop="username" label="用户名" min-width="140" />
             <el-table-column prop="realName" label="姓名" min-width="120" />
+            <el-table-column prop="orgName" label="所属机构" min-width="160">
+              <template #default="{ row }">
+                {{ row.orgName || '-' }}
+              </template>
+            </el-table-column>
             <el-table-column prop="roleCode" label="角色编码" min-width="140" />
             <el-table-column prop="phone" label="手机号" min-width="140">
               <template #default="{ row }">
@@ -94,8 +88,8 @@
             </el-table-column>
             <el-table-column label="状态" width="110" header-cell-class-name="cell-center" class-name="cell-center">
               <template #default="{ row }">
-                <span :class="['status-chip', getUserStatusClass(row.status)]">
-                  {{ getUserStatusLabel(row.status) }}
+                <span :class="['status-chip', getStatusClassByValue(row.status)]">
+                  {{ getStatusLabelByValue(row.status) }}
                 </span>
               </template>
             </el-table-column>
@@ -138,17 +132,250 @@
         </div>
       </template>
 
-      <template v-else>
+      <template v-else-if="isOrgScene">
         <div class="toolbar-panel">
           <div class="toolbar-row">
             <div class="toolbar-fields">
               <label class="toolbar-field toolbar-field--medium">
                 <span>关键字</span>
                 <el-input
-                  v-model="sceneKeyword"
+                  v-model="orgQuery.keyword"
                   clearable
-                  :placeholder="currentScene.keywordPlaceholder"
+                  placeholder="请输入机构编码、机构名称、上级机构、机构类型或备注"
+                  @keyup.enter="handleOrgSearch"
                 />
+              </label>
+              <label class="toolbar-field">
+                <span>状态</span>
+                <el-select v-model="orgQuery.status" clearable placeholder="请选择状态">
+                  <el-option v-for="item in statusOptions" :key="item.value" :label="item.label" :value="item.value" />
+                </el-select>
+              </label>
+            </div>
+
+            <div class="toolbar-actions">
+              <el-button type="primary" @click="handleOrgSearch">查询</el-button>
+              <el-button @click="resetOrgQuery">重置</el-button>
+              <el-button @click="reloadData">刷新</el-button>
+              <el-button type="primary" plain @click="openOrgDialog()">新增机构</el-button>
+            </div>
+          </div>
+          <div class="panel-note">
+            机构管理已升级为正式台账。删除机构时会校验下级机构和已绑定用户，用户保存时也会校验机构是否存在且启用。
+          </div>
+        </div>
+
+        <div class="table-card">
+          <el-table class="list-table" :data="visibleOrgRows" stripe max-height="460" empty-text="暂无机构数据">
+            <el-table-column prop="orgCode" label="机构编码" min-width="140" />
+            <el-table-column prop="orgName" label="机构名称" min-width="150" />
+            <el-table-column prop="parentName" label="上级机构" min-width="150">
+              <template #default="{ row }">
+                {{ row.parentName || '-' }}
+              </template>
+            </el-table-column>
+            <el-table-column prop="orgType" label="机构类型" min-width="140">
+              <template #default="{ row }">
+                {{ row.orgType || '-' }}
+              </template>
+            </el-table-column>
+            <el-table-column prop="memberCount" label="成员数" width="110" class-name="cell-center" header-cell-class-name="cell-center" />
+            <el-table-column label="状态" width="110" header-cell-class-name="cell-center" class-name="cell-center">
+              <template #default="{ row }">
+                <span :class="['status-chip', getStatusClassByValue(row.status)]">
+                  {{ getStatusLabelByValue(row.status) }}
+                </span>
+              </template>
+            </el-table-column>
+            <el-table-column prop="remark" label="备注" min-width="220" show-overflow-tooltip>
+              <template #default="{ row }">
+                {{ row.remark || '-' }}
+              </template>
+            </el-table-column>
+            <el-table-column prop="updatedTime" label="更新时间" min-width="170">
+              <template #default="{ row }">
+                {{ row.updatedTime || '-' }}
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="170" fixed="right" class-name="cell-center">
+              <template #default="{ row }">
+                <el-button link type="primary" @click="openOrgDialog(row)">编辑</el-button>
+                <el-button link type="danger" @click="removeOrg(row)">删除</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+
+          <TablePagination
+            v-model:current-page="orgQuery.pageNum"
+            v-model:page-size="orgQuery.pageSize"
+            :total="orgTotal"
+            @change="loadOrgs"
+          />
+        </div>
+      </template>
+
+      <template v-else-if="isDictScene">
+        <div class="toolbar-panel">
+          <div class="toolbar-row">
+            <div class="toolbar-fields">
+              <label class="toolbar-field toolbar-field--medium">
+                <span>关键字</span>
+                <el-input
+                  v-model="dictQuery.keyword"
+                  clearable
+                  placeholder="请输入字典编码、字典名称、所属模块、字典项或备注"
+                  @keyup.enter="handleDictSearch"
+                />
+              </label>
+              <label class="toolbar-field">
+                <span>状态</span>
+                <el-select v-model="dictQuery.status" clearable placeholder="请选择状态">
+                  <el-option v-for="item in statusOptions" :key="item.value" :label="item.label" :value="item.value" />
+                </el-select>
+              </label>
+            </div>
+
+            <div class="toolbar-actions">
+              <el-button type="primary" @click="handleDictSearch">查询</el-button>
+              <el-button @click="resetDictQuery">重置</el-button>
+              <el-button @click="reloadData">刷新</el-button>
+              <el-button type="primary" plain @click="openDictDialog()">新增字典</el-button>
+            </div>
+          </div>
+          <div class="panel-note">
+            数据字典管理已接入真实接口，支持正式维护字典编码、所属模块、字典项文本与启停状态，可作为统一状态口径基础台账。
+          </div>
+        </div>
+
+        <div class="table-card">
+          <el-table class="list-table" :data="visibleDictRows" stripe max-height="460" empty-text="暂无数据字典">
+            <el-table-column prop="dictCode" label="字典编码" min-width="160" />
+            <el-table-column prop="dictName" label="字典名称" min-width="160" />
+            <el-table-column prop="moduleName" label="所属模块" min-width="140" />
+            <el-table-column prop="itemCount" label="字典项数" width="100" class-name="cell-center" header-cell-class-name="cell-center" />
+            <el-table-column prop="itemText" label="字典项内容" min-width="240" show-overflow-tooltip>
+              <template #default="{ row }">
+                {{ formatDictPreview(row.itemText) }}
+              </template>
+            </el-table-column>
+            <el-table-column label="状态" width="110" header-cell-class-name="cell-center" class-name="cell-center">
+              <template #default="{ row }">
+                <span :class="['status-chip', getStatusClassByValue(row.status)]">
+                  {{ getStatusLabelByValue(row.status) }}
+                </span>
+              </template>
+            </el-table-column>
+            <el-table-column prop="remark" label="备注" min-width="220" show-overflow-tooltip>
+              <template #default="{ row }">
+                {{ row.remark || '-' }}
+              </template>
+            </el-table-column>
+            <el-table-column prop="updatedTime" label="更新时间" min-width="170">
+              <template #default="{ row }">
+                {{ row.updatedTime || '-' }}
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="170" fixed="right" class-name="cell-center">
+              <template #default="{ row }">
+                <el-button link type="primary" @click="openDictDialog(row)">编辑</el-button>
+                <el-button link type="danger" @click="removeDict(row)">删除</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+
+          <TablePagination
+            v-model:current-page="dictQuery.pageNum"
+            v-model:page-size="dictQuery.pageSize"
+            :total="dictTotal"
+            @change="loadDicts"
+          />
+        </div>
+      </template>
+
+      <template v-else-if="isRoleScene">
+        <div class="toolbar-panel">
+          <div class="toolbar-row">
+            <div class="toolbar-fields">
+              <label class="toolbar-field toolbar-field--medium">
+                <span>关键字</span>
+                <el-input
+                  v-model="roleQuery.keyword"
+                  clearable
+                  placeholder="请输入角色编码、角色名称、适用范围或备注"
+                  @keyup.enter="handleRoleSearch"
+                />
+              </label>
+              <label class="toolbar-field">
+                <span>状态</span>
+                <el-select v-model="roleQuery.status" clearable placeholder="请选择状态">
+                  <el-option v-for="item in statusOptions" :key="item.value" :label="item.label" :value="item.value" />
+                </el-select>
+              </label>
+            </div>
+
+            <div class="toolbar-actions">
+              <el-button type="primary" @click="handleRoleSearch">查询</el-button>
+              <el-button @click="resetRoleQuery">重置</el-button>
+              <el-button @click="reloadData">刷新</el-button>
+              <el-button type="primary" plain @click="openRoleDialog()">新增角色</el-button>
+            </div>
+          </div>
+          <div class="panel-note">
+            角色管理已接入真实接口，支持角色编码唯一、角色名称唯一，以及“角色被用户引用时不可删除”的业务约束。
+          </div>
+        </div>
+
+        <div class="table-card">
+          <el-table class="list-table" :data="visibleRoleRows" stripe max-height="460" empty-text="暂无角色数据">
+            <el-table-column prop="roleCode" label="角色编码" min-width="140" />
+            <el-table-column prop="roleName" label="角色名称" min-width="140" />
+            <el-table-column prop="roleScope" label="适用范围" min-width="150">
+              <template #default="{ row }">
+                {{ row.roleScope || '-' }}
+              </template>
+            </el-table-column>
+            <el-table-column prop="userCount" label="关联用户数" width="120" class-name="cell-center" header-cell-class-name="cell-center" />
+            <el-table-column label="状态" width="110" header-cell-class-name="cell-center" class-name="cell-center">
+              <template #default="{ row }">
+                <span :class="['status-chip', getStatusClassByValue(row.status)]">
+                  {{ getStatusLabelByValue(row.status) }}
+                </span>
+              </template>
+            </el-table-column>
+            <el-table-column prop="remark" label="备注" min-width="220" show-overflow-tooltip>
+              <template #default="{ row }">
+                {{ row.remark || '-' }}
+              </template>
+            </el-table-column>
+            <el-table-column prop="updatedTime" label="更新时间" min-width="170">
+              <template #default="{ row }">
+                {{ row.updatedTime || '-' }}
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="170" fixed="right" class-name="cell-center">
+              <template #default="{ row }">
+                <el-button link type="primary" @click="openRoleDialog(row)">编辑</el-button>
+                <el-button link type="danger" @click="removeRole(row)">删除</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+
+          <TablePagination
+            v-model:current-page="roleQuery.pageNum"
+            v-model:page-size="roleQuery.pageSize"
+            :total="roleTotal"
+            @change="loadRoles"
+          />
+        </div>
+      </template>
+
+      <template v-else>
+        <div class="toolbar-panel">
+          <div class="toolbar-row">
+            <div class="toolbar-fields">
+              <label class="toolbar-field toolbar-field--medium">
+                <span>关键字</span>
+                <el-input v-model="sceneKeyword" clearable :placeholder="currentScene.keywordPlaceholder" />
               </label>
             </div>
 
@@ -169,13 +396,7 @@
         </div>
 
         <div class="table-card">
-          <el-table
-            class="list-table"
-            :data="visibleSceneRows"
-            stripe
-            max-height="460"
-            :empty-text="currentScene.emptyText"
-          >
+          <el-table class="list-table" :data="visibleSceneRows" stripe max-height="460" :empty-text="currentScene.emptyText">
             <el-table-column
               v-for="column in currentScene.columns"
               :key="column.key"
@@ -230,13 +451,62 @@
     </section>
 
     <el-dialog
-      v-model="dialogVisible"
+      v-model="dictDialogVisible"
+      :title="dictForm.id ? '编辑字典' : '新增字典'"
+      width="760px"
+      destroy-on-close
+      @closed="resetDictForm"
+    >
+      <el-form ref="dictFormRef" :model="dictForm" :rules="dictRules" label-width="100px">
+        <div class="form-grid">
+          <el-form-item label="字典编码" prop="dictCode">
+            <el-input v-model="dictForm.dictCode" placeholder="请输入字典编码" />
+          </el-form-item>
+          <el-form-item label="字典名称" prop="dictName">
+            <el-input v-model="dictForm.dictName" placeholder="请输入字典名称" />
+          </el-form-item>
+          <el-form-item label="所属模块" prop="moduleName">
+            <el-input v-model="dictForm.moduleName" placeholder="请输入所属模块" />
+          </el-form-item>
+          <el-form-item label="状态" prop="status">
+            <el-radio-group v-model="dictForm.status">
+              <el-radio-button :label="1">启用</el-radio-button>
+              <el-radio-button :label="0">停用</el-radio-button>
+            </el-radio-group>
+          </el-form-item>
+          <el-form-item class="form-span-2" label="字典项" prop="itemText">
+            <el-input
+              v-model="dictForm.itemText"
+              type="textarea"
+              :rows="6"
+              placeholder="请按每行一个字典项填写，例如：&#10;待执行&#10;执行中&#10;已完成"
+            />
+          </el-form-item>
+          <el-form-item class="form-span-2" label="备注" prop="remark">
+            <el-input
+              v-model="dictForm.remark"
+              type="textarea"
+              :rows="3"
+              placeholder="请输入字典用途说明或维护备注"
+            />
+          </el-form-item>
+        </div>
+      </el-form>
+
+      <template #footer>
+        <el-button @click="dictDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="savingDict" @click="submitDictForm">保存</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog
+      v-model="userDialogVisible"
       :title="userForm.id ? '编辑用户' : '新增用户'"
       width="760px"
       destroy-on-close
       @closed="resetUserForm"
     >
-      <el-form ref="formRef" :model="userForm" :rules="userRules" label-width="100px">
+      <el-form ref="userFormRef" :model="userForm" :rules="userRules" label-width="100px">
         <div class="form-grid">
           <el-form-item label="用户名" prop="username">
             <el-input v-model="userForm.username" placeholder="请输入用户名" />
@@ -244,17 +514,20 @@
           <el-form-item label="姓名" prop="realName">
             <el-input v-model="userForm.realName" placeholder="请输入姓名" />
           </el-form-item>
-          <el-form-item label="角色编码" prop="roleCode">
-            <el-select
-              v-model="userForm.roleCode"
-              filterable
-              allow-create
-              default-first-option
-              placeholder="请选择或直接输入角色编码"
-              style="width: 100%"
-            >
+          <el-form-item label="所属机构" prop="orgId">
+            <el-select v-model="userForm.orgId" filterable placeholder="请选择所属机构" style="width: 100%">
               <el-option
-                v-for="item in roleCodeOptions"
+                v-for="item in orgOptionsForUser"
+                :key="item.value"
+                :label="item.label"
+                :value="item.value"
+              />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="角色编码" prop="roleCode">
+            <el-select v-model="userForm.roleCode" filterable placeholder="请选择角色编码" style="width: 100%">
+              <el-option
+                v-for="item in roleOptionsForUser"
                 :key="item.value"
                 :label="item.label"
                 :value="item.value"
@@ -282,8 +555,95 @@
       </el-form>
 
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="saving" @click="submitUserForm">保存</el-button>
+        <el-button @click="userDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="savingUser" @click="submitUserForm">保存</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog
+      v-model="orgDialogVisible"
+      :title="orgForm.id ? '编辑机构' : '新增机构'"
+      width="760px"
+      destroy-on-close
+      @closed="resetOrgForm"
+    >
+      <el-form ref="orgFormRef" :model="orgForm" :rules="orgRules" label-width="100px">
+        <div class="form-grid">
+          <el-form-item label="机构编码" prop="orgCode">
+            <el-input v-model="orgForm.orgCode" placeholder="请输入机构编码" />
+          </el-form-item>
+          <el-form-item label="机构名称" prop="orgName">
+            <el-input v-model="orgForm.orgName" placeholder="请输入机构名称" />
+          </el-form-item>
+          <el-form-item label="上级机构" prop="parentId">
+            <el-select v-model="orgForm.parentId" clearable filterable placeholder="请选择上级机构" style="width: 100%">
+              <el-option
+                v-for="item in parentOrgOptions"
+                :key="item.value"
+                :label="item.label"
+                :value="item.value"
+              />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="机构类型" prop="orgType">
+            <el-input v-model="orgForm.orgType" placeholder="请输入机构类型" />
+          </el-form-item>
+          <el-form-item label="状态" prop="status">
+            <el-radio-group v-model="orgForm.status">
+              <el-radio-button :label="1">启用</el-radio-button>
+              <el-radio-button :label="0">停用</el-radio-button>
+            </el-radio-group>
+          </el-form-item>
+          <el-form-item class="form-span-2" label="备注" prop="remark">
+            <el-input v-model="orgForm.remark" type="textarea" :rows="3" placeholder="请输入机构说明或使用备注" />
+          </el-form-item>
+        </div>
+      </el-form>
+
+      <template #footer>
+        <el-button @click="orgDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="savingOrg" @click="submitOrgForm">保存</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog
+      v-model="roleDialogVisible"
+      :title="roleForm.id ? '编辑角色' : '新增角色'"
+      width="760px"
+      destroy-on-close
+      @closed="resetRoleForm"
+    >
+      <el-form ref="roleFormRef" :model="roleForm" :rules="roleRules" label-width="100px">
+        <div class="form-grid">
+          <el-form-item label="角色编码" prop="roleCode">
+            <el-input v-model="roleForm.roleCode" placeholder="请输入角色编码" />
+          </el-form-item>
+          <el-form-item label="角色名称" prop="roleName">
+            <el-input v-model="roleForm.roleName" placeholder="请输入角色名称" />
+          </el-form-item>
+          <el-form-item label="适用范围" prop="roleScope">
+            <el-input v-model="roleForm.roleScope" placeholder="请输入适用范围" />
+          </el-form-item>
+          <el-form-item label="状态" prop="status">
+            <el-radio-group v-model="roleForm.status">
+              <el-radio-button :label="1">启用</el-radio-button>
+              <el-radio-button :label="0">停用</el-radio-button>
+            </el-radio-group>
+          </el-form-item>
+          <el-form-item class="form-span-2" label="备注" prop="remark">
+            <el-input
+              v-model="roleForm.remark"
+              type="textarea"
+              :rows="3"
+              placeholder="请输入角色说明、职责边界或使用备注"
+            />
+          </el-form-item>
+        </div>
+      </el-form>
+
+      <template #footer>
+        <el-button @click="roleDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="savingRole" @click="submitRoleForm">保存</el-button>
       </template>
     </el-dialog>
   </div>
@@ -295,37 +655,73 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import TablePagination from '../components/common/TablePagination.vue'
 import {
+  createSystemDictApi,
+  createSystemOrgApi,
+  createSystemRoleApi,
   createSystemUserApi,
+  deleteSystemDictApi,
+  deleteSystemOrgApi,
+  deleteSystemRoleApi,
   deleteSystemUserApi,
+  fetchSystemDictsApi,
+  fetchSystemOrgOptionsApi,
+  fetchSystemOrgsApi,
+  fetchSystemRoleOptionsApi,
+  fetchSystemRolesApi,
   fetchSystemUsersApi,
+  updateSystemDictApi,
+  updateSystemOrgApi,
+  updateSystemRoleApi,
   updateSystemUserApi
 } from '../api/lab'
 import { getUser } from '../utils/auth'
 import { labMenuGroups } from '../router/menuConfig'
-import {
-  DEFAULT_PAGE_SIZE,
-  cycleTypeLabelMap,
-  detectionStatusLabelMap,
-  instrumentStatusLabelMap,
-  planStatusLabelMap,
-  pointStatusLabelMap,
-  reportStatusLabelMap,
-  sampleStatusLabelMap,
-  taskStatusLabelMap
-} from '../utils/labEnums'
+import { DEFAULT_PAGE_SIZE } from '../utils/labEnums'
 
 const route = useRoute()
 const router = useRouter()
 
 const loading = ref(false)
-const saving = ref(false)
-const dialogVisible = ref(false)
-const formRef = ref()
+const savingDict = ref(false)
+const savingOrg = ref(false)
+const savingUser = ref(false)
+const savingRole = ref(false)
 const activeStatKey = ref('all')
 const sceneKeyword = ref('')
 const currentLoginUser = reactive(getUser() || {})
 
+const dictDialogVisible = ref(false)
+const orgDialogVisible = ref(false)
+const userDialogVisible = ref(false)
+const roleDialogVisible = ref(false)
+const dictFormRef = ref()
+const orgFormRef = ref()
+const userFormRef = ref()
+const roleFormRef = ref()
+
+const isDictScene = computed(() => route.path === '/system-dicts')
+const isOrgScene = computed(() => route.path === '/system-orgs')
 const isUserScene = computed(() => route.path === '/system-users')
+const isRoleScene = computed(() => route.path === '/system-roles')
+
+const statusOptions = [
+  { label: '启用', value: 1 },
+  { label: '停用', value: 0 }
+]
+
+const dictQuery = reactive({
+  pageNum: 1,
+  pageSize: DEFAULT_PAGE_SIZE,
+  keyword: '',
+  status: ''
+})
+
+const orgQuery = reactive({
+  pageNum: 1,
+  pageSize: DEFAULT_PAGE_SIZE,
+  keyword: '',
+  status: ''
+})
 
 const userQuery = reactive({
   pageNum: 1,
@@ -334,30 +730,49 @@ const userQuery = reactive({
   status: ''
 })
 
+const roleQuery = reactive({
+  pageNum: 1,
+  pageSize: DEFAULT_PAGE_SIZE,
+  keyword: '',
+  status: ''
+})
+
+const dictRows = ref([])
+const dictTotal = ref(0)
+const orgRows = ref([])
+const orgTotal = ref(0)
 const userRows = ref([])
 const userTotal = ref(0)
+const roleRows = ref([])
+const roleTotal = ref(0)
 const userSummaryRows = ref([])
 const userSummaryTotal = ref(0)
+const orgOptions = ref([])
+const roleOptions = ref([])
 
-const userStatusOptions = [
-  { label: '启用', value: 1 },
-  { label: '停用', value: 0 }
-]
-
-const roleCodeOptions = [
-  { label: '系统管理员 ADMIN', value: 'ADMIN' },
-  { label: '采样员 SAMPLER', value: 'SAMPLER' },
-  { label: '检测员 DETECTOR', value: 'DETECTOR' },
-  { label: '审核员 REVIEWER', value: 'REVIEWER' },
-  { label: '报告员 REPORTER', value: 'REPORTER' }
-]
-
+const dictForm = reactive(createDefaultDictForm())
+const orgForm = reactive(createDefaultOrgForm())
 const userForm = reactive(createDefaultUserForm())
+const roleForm = reactive(createDefaultRoleForm())
+
+const dictRules = {
+  dictCode: [{ required: true, message: '请输入字典编码', trigger: 'blur' }],
+  dictName: [{ required: true, message: '请输入字典名称', trigger: 'blur' }],
+  moduleName: [{ required: true, message: '请输入所属模块', trigger: 'blur' }],
+  status: [{ required: true, message: '请选择状态', trigger: 'change' }]
+}
+
+const orgRules = {
+  orgCode: [{ required: true, message: '请输入机构编码', trigger: 'blur' }],
+  orgName: [{ required: true, message: '请输入机构名称', trigger: 'blur' }],
+  status: [{ required: true, message: '请选择状态', trigger: 'change' }]
+}
 
 const userRules = {
   username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
   realName: [{ required: true, message: '请输入姓名', trigger: 'blur' }],
-  roleCode: [{ required: true, message: '请输入角色编码', trigger: 'change' }],
+  orgId: [{ required: true, message: '请选择所属机构', trigger: 'change' }],
+  roleCode: [{ required: true, message: '请选择角色编码', trigger: 'change' }],
   status: [{ required: true, message: '请选择状态', trigger: 'change' }],
   password: [{
     validator: (_, value, callback) => {
@@ -370,6 +785,41 @@ const userRules = {
     trigger: 'blur'
   }]
 }
+
+const roleRules = {
+  roleCode: [{ required: true, message: '请输入角色编码', trigger: 'blur' }],
+  roleName: [{ required: true, message: '请输入角色名称', trigger: 'blur' }],
+  status: [{ required: true, message: '请选择状态', trigger: 'change' }]
+}
+
+const orgOptionsForUser = computed(() => {
+  const options = [...orgOptions.value]
+  const currentValue = Number(userForm.orgId || 0)
+  if (currentValue && !options.some((item) => Number(item.value) === currentValue)) {
+    options.unshift({
+      label: `当前机构 ${currentValue}`,
+      value: currentValue
+    })
+  }
+  return options
+})
+
+const parentOrgOptions = computed(() => {
+  const currentId = Number(orgForm.id || 0)
+  return orgOptions.value.filter((item) => Number(item.value) !== currentId)
+})
+
+const roleOptionsForUser = computed(() => {
+  const options = [...roleOptions.value]
+  const currentValue = String(userForm.roleCode || '').trim()
+  if (currentValue && !options.some((item) => item.value === currentValue)) {
+    options.unshift({
+      label: `${currentValue}（当前值）`,
+      value: currentValue
+    })
+  }
+  return options
+})
 
 const menuRows = computed(() => {
   const rows = []
@@ -384,7 +834,6 @@ const menuRows = computed(() => {
       status: '已启用',
       remark: `包含 ${group.children.length} 个业务入口`
     })
-
     for (const item of group.children) {
       rows.push({
         id: item.path,
@@ -401,258 +850,163 @@ const menuRows = computed(() => {
   return rows
 })
 
-const dictRows = computed(() => [
-  ['instrument_status', '设备状态字典', '仪器管理', instrumentStatusLabelMap],
-  ['point_status', '点位状态字典', '监测点位', pointStatusLabelMap],
-  ['plan_status', '计划状态字典', '采样计划', planStatusLabelMap],
-  ['task_status', '任务状态字典', '采样任务', taskStatusLabelMap],
-  ['sample_status', '样品状态字典', '样品管理', sampleStatusLabelMap],
-  ['detection_status', '检测状态字典', '检测管理', detectionStatusLabelMap],
-  ['report_status', '报告状态字典', '报告管理', reportStatusLabelMap],
-  ['cycle_type', '周期类型字典', '基础配置', cycleTypeLabelMap]
-].map(([dictCode, dictName, moduleName, labelMap]) => ({
-  id: dictCode,
-  dictCode,
-  dictName,
-  moduleName,
-  itemCount: Object.keys(labelMap || {}).length,
-  sampleText: Object.values(labelMap || {}).slice(0, 4).join('、'),
-  status: '已生效'
-})))
+const logRows = [
+  {
+    id: 'auth',
+    sourceName: '登录认证日志',
+    eventCount: 2,
+    retentionRule: '登录有效期内可追溯',
+    status: '已生效',
+    remark: '已记录登录态与用户上下文'
+  },
+  {
+    id: 'workflow',
+    sourceName: '业务流程日志',
+    eventCount: 8,
+    retentionRule: '按业务表长期保留',
+    status: '已生效',
+    remark: '采样、检测、审核、报告均已形成业务留痕'
+  },
+  {
+    id: 'sample-seal',
+    sourceName: '样品封签留痕',
+    eventCount: 4,
+    retentionRule: '随样品生命周期保留',
+    status: '已生效',
+    remark: '封签编号、确认人、确认时间均已留痕'
+  },
+  {
+    id: 'push',
+    sourceName: '报告推送日志',
+    eventCount: 3,
+    retentionRule: '按报告生命周期保留',
+    status: '已生效',
+    remark: '正式报告与推送结果均已记录'
+  },
+  {
+    id: 'audit-center',
+    sourceName: '统一审计中心',
+    eventCount: 0,
+    retentionRule: '待规划',
+    status: '待接入',
+    remark: '如后续确需统一审计中心，可再集中升级'
+  }
+]
 
-const sceneRowsMap = computed(() => ({
-  '/system-orgs': [
-    {
-      id: 'local-domain',
-      orgName: '本地实验室账户域',
-      orgType: '本地账号体系',
-      memberCount: userSummaryTotal.value || userSummaryRows.value.length,
-      source: 'lab_user',
-      status: '已接入',
-      remark: '当前登录、认证与用户管理均已接入本地用户表'
-    },
-    {
-      id: 'business-domain',
-      orgName: '业务共享对象域',
-      orgType: '业务复用',
-      memberCount: 7,
-      source: '现有业务菜单',
-      status: '已复用',
-      remark: '文档、报告、移动闭环等业务已复用当前用户域'
-    },
-    {
-      id: 'unified-domain',
-      orgName: '统一平台组织域',
-      orgType: '平台集成',
-      memberCount: 0,
-      source: '/api/unified',
-      status: '待接入',
-      remark: '如需正式组织树，可在后续统一平台集成后升级'
-    }
-  ],
-  '/system-roles': [
-    buildRoleRow('ADMIN', '系统管理员', '全系统', '负责系统配置、账号维护与基础资料管理'),
-    buildRoleRow('SAMPLER', '采样员', '采样闭环', '负责采样任务执行、样品登录与现场填报'),
-    buildRoleRow('DETECTOR', '检测员', '检测闭环', '负责检测分析、结果录入与重检提交'),
-    buildRoleRow('REVIEWER', '审核员', '审核闭环', '负责审核通过、驳回与重检门禁控制'),
-    buildRoleRow('REPORTER', '报告员', '报告闭环', '负责正式报告生成、发布与推送')
-  ],
-  '/system-menus': menuRows.value,
-  '/system-logs': [
-    {
-      id: 'auth',
-      sourceName: '登录认证日志',
-      eventCount: 2,
-      retentionRule: '登录有效期内可追溯',
-      status: '已生效',
-      remark: '已记录登录态与用户上下文'
-    },
-    {
-      id: 'workflow',
-      sourceName: '业务流程日志',
-      eventCount: 8,
-      retentionRule: '按业务表长期保留',
-      status: '已生效',
-      remark: '采样、检测、审核、报告均已形成业务留痕'
-    },
-    {
-      id: 'sample-seal',
-      sourceName: '样品封签留痕',
-      eventCount: 4,
-      retentionRule: '随样品生命周期保留',
-      status: '已生效',
-      remark: '封签编号、确认人、确认时间均已留痕'
-    },
-    {
-      id: 'push',
-      sourceName: '报告推送日志',
-      eventCount: 3,
-      retentionRule: '按报告生命周期保留',
-      status: '已生效',
-      remark: '报告正式产物与推送结果已记录'
-    },
-    {
-      id: 'audit-center',
-      sourceName: '统一审计中心',
-      eventCount: 0,
-      retentionRule: '待规划',
-      status: '待接入',
-      remark: '如果后续确实需要，再做统一日志中心即可'
-    }
-  ],
-  '/system-dicts': dictRows.value,
-  '/system-forms': [
-    {
-      id: 'login-form',
-      formName: '登录表单',
-      moduleName: '系统认证',
-      pagePath: '/login',
-      fieldCount: 2,
-      formType: '页面表单',
-      status: '已配置',
-      remark: '用户名与密码统一风格'
-    },
-    {
-      id: 'mobile-login-form',
-      formName: '移动登录表单',
-      moduleName: '移动闭环',
-      pagePath: '/mobile/login',
-      fieldCount: 2,
-      formType: '页面表单',
-      status: '已配置',
-      remark: '移动端统一登录入口'
-    },
-    {
-      id: 'user-form',
-      formName: '用户管理表单',
-      moduleName: '系统管理',
-      pagePath: '/system-users',
-      fieldCount: 6,
-      formType: '弹窗表单',
-      status: '已配置',
-      remark: '已接入真实新增、编辑能力'
-    },
-    {
-      id: 'instrument-form',
-      formName: '设备台账表单',
-      moduleName: '仪器管理',
-      pagePath: '/instrument-ledger',
-      fieldCount: 11,
-      formType: '弹窗表单',
-      status: '已配置',
-      remark: '设备台账正式表单'
-    },
-    {
-      id: 'maintenance-form',
-      formName: '设备维修表单',
-      moduleName: '设备维修',
-      pagePath: '/instrument-maintenance',
-      fieldCount: 8,
-      formType: '弹窗表单',
-      status: '已配置',
-      remark: '维修原因、结果、费用与留痕已落地'
-    },
-    {
-      id: 'mobile-review-form',
-      formName: '移动审核表单',
-      moduleName: '移动闭环',
-      pagePath: '/mobile',
-      fieldCount: 3,
-      formType: '移动弹窗',
-      status: '已配置',
-      remark: '支持移动审核通过与驳回'
-    }
-  ]
-}))
+const formRows = [
+  {
+    id: 'user-form',
+    formName: '用户管理表单',
+    moduleName: '系统管理',
+    pagePath: '/system-users',
+    fieldCount: 7,
+    formType: '弹窗表单',
+    status: '已配置',
+    remark: '支持机构、角色、状态和密码维护'
+  },
+  {
+    id: 'org-form',
+    formName: '机构管理表单',
+    moduleName: '系统管理',
+    pagePath: '/system-orgs',
+    fieldCount: 6,
+    formType: '弹窗表单',
+    status: '已配置',
+    remark: '支持机构树基础维护与状态控制'
+  },
+  {
+    id: 'dict-form',
+    formName: '数据字典表单',
+    moduleName: '系统管理',
+    pagePath: '/system-dicts',
+    fieldCount: 6,
+    formType: '弹窗表单',
+    status: '已配置',
+    remark: '支持字典编码、模块、字典项文本和状态维护'
+  },
+  {
+    id: 'role-form',
+    formName: '角色管理表单',
+    moduleName: '系统管理',
+    pagePath: '/system-roles',
+    fieldCount: 5,
+    formType: '弹窗表单',
+    status: '已配置',
+    remark: '支持角色编码、名称、范围和状态维护'
+  }
+]
 
 const sceneConfigMap = {
   '/system-users': {
     title: '用户管理',
-    subtitle: '对系统使用用户进行集中维护，统一管理登录账号、角色编码、手机号与启停状态。',
+    subtitle: '对系统使用账号进行集中维护，统一管理登录账号、所属机构、角色编码、手机号与启停状态。',
     tableTitle: '用户台账',
     tableSubtitle: '当前页面已接入真实用户管理接口，可直接完成正式业务维护。',
-    guide: '用户管理已经从演示型静态页面升级为真实业务页，支持分页、查询、新增、编辑、删除，并保留统一样式。',
-    constraint: '后端已限制新增时密码必填、编辑时留空不改密码、用户名唯一、不能删除当前登录用户。',
+    guide: '用户管理已从演示页升级为正式业务页，支持分页、查询、新增、编辑、删除，并与机构、角色形成联动。',
+    constraint: '新增用户时密码必填，编辑时留空不改密码；用户必须绑定有效机构与启用角色；不允许删除当前登录用户。',
     quickLinks: [
-      { label: '机构管理', path: '/system-orgs', desc: '查看当前用户域承接方案与后续组织扩展建议' },
-      { label: '角色管理', path: '/system-roles', desc: '查看现有角色编码与职责划分' },
-      { label: '日志管理', path: '/system-logs', desc: '查看当前留痕来源与后续统一审计建议' }
+      { label: '机构管理', path: '/system-orgs', desc: '维护机构树并查看用户所属机构分布' },
+      { label: '数据字典', path: '/system-dicts', desc: '维护状态口径与业务字典基础台账' },
+      { label: '角色管理', path: '/system-roles', desc: '维护角色编码、角色名称与适用范围' }
     ]
   },
   '/system-orgs': {
     title: '机构管理',
-    subtitle: '查看当前系统用户域、业务复用域与后续统一平台组织树接入策略。',
-    tableTitle: '组织承接清单',
-    tableSubtitle: '当前阶段先保证业务可用，再逐步升级为正式组织树模型。',
-    keywordPlaceholder: '请输入组织名称、组织类型、数据来源或说明',
-    note: '当前系统已能支撑正式业务使用，但真正的组织树、部门层级和岗位模型仍可在后续系统治理阶段补齐。',
-    emptyText: '暂无机构管理清单',
-    guide: '本页用于说明当前账号体系如何承接正式业务流程，避免后续扩展时再次拆改用户域。',
-    constraint: '如果未来需要按部门、厂站、班组做强权限控制，建议新增正式组织表，而不是继续复用静态承接信息。',
-    actions: [
-      { label: '查看用户管理', path: '/system-users', type: 'primary', plain: false },
-      { label: '查看角色管理', path: '/system-roles' }
-    ],
+    subtitle: '对系统中的组织机构进行正式维护，支撑用户归属、角色配置与后续权限治理。',
+    tableTitle: '机构台账',
+    tableSubtitle: '当前页面已接入真实机构管理接口，支持分页、编辑、删除校验与用户联动。',
+    guide: '机构管理已从静态承接说明升级为正式业务页，支持上级机构、机构类型、状态与备注维护。',
+    constraint: '删除机构时会校验是否存在下级机构与已绑定用户；用户绑定机构时也会校验机构是否启用。',
     quickLinks: [
-      { label: '用户管理', path: '/system-users', desc: '维护账号信息并同步查看启停状态' },
-      { label: '角色管理', path: '/system-roles', desc: '查看角色编码与业务职责分工' },
-      { label: '系统首页', path: '/dashboard', desc: '回到统一业务工作台继续流转业务' }
-    ],
-    columns: [
-      { key: 'orgName', label: '组织名称', minWidth: 180 },
-      { key: 'orgType', label: '组织类型', minWidth: 140 },
-      { key: 'memberCount', label: '成员数', width: 110, align: 'center' },
-      { key: 'source', label: '数据来源', minWidth: 140 },
-      { key: 'status', label: '接入状态', width: 110, align: 'center', type: 'status', tone: (row) => row.status === '待接入' ? 'warning' : 'success' },
-      { key: 'remark', label: '说明', minWidth: 260 }
+      { label: '用户管理', path: '/system-users', desc: '直接查看机构与用户绑定关系' },
+      { label: '数据字典', path: '/system-dicts', desc: '维护机构相关状态和业务口径' },
+      { label: '角色管理', path: '/system-roles', desc: '联动完善系统组织与权限基础' }
+    ]
+  },
+  '/system-dicts': {
+    title: '数据字典管理',
+    subtitle: '对系统中的状态字典与业务字典进行正式维护，沉淀统一业务口径。',
+    tableTitle: '数据字典台账',
+    tableSubtitle: '当前页面已接入真实字典管理接口，支持分页、新增、编辑、删除和状态维护。',
+    guide: '数据字典页已从静态展示升级为正式业务页，可作为状态机统一和后续配置治理的基础。',
+    constraint: '当前先按字典级别维护字典项文本；若后续需要更细粒度管控，可继续拆为字典明细项管理。',
+    quickLinks: [
+      { label: '用户管理', path: '/system-users', desc: '查看用户与系统基础配置的联动场景' },
+      { label: '机构管理', path: '/system-orgs', desc: '查看机构台账与组织治理承接情况' },
+      { label: '角色管理', path: '/system-roles', desc: '查看角色与权限基础配置' }
     ]
   },
   '/system-roles': {
     title: '角色管理',
-    subtitle: '梳理当前系统角色编码、职责边界与实际账号分配情况。',
+    subtitle: '对系统角色编码、角色名称、适用范围与启停状态进行正式维护。',
     tableTitle: '角色台账',
-    tableSubtitle: '角色编码可直接用于登录后权限识别和业务职责展示。',
-    keywordPlaceholder: '请输入角色编码、角色名称、适用范围或说明',
-    note: '当前先采用角色编码直连业务场景的方式，已经足以承接实验室正式流程；后续如需按钮级权限，可继续细分权限点。',
-    emptyText: '暂无角色管理清单',
-    guide: '本页用于对齐系统中真实在用的角色集合，避免用户管理、流程门禁和移动闭环中的角色编码不一致。',
-    constraint: '如果后续增加角色授权矩阵，建议继续复用当前角色编码，避免前后端枚举与数据表再次改名。',
-    actions: [
-      { label: '查看用户管理', path: '/system-users', type: 'primary', plain: false },
-      { label: '查看菜单管理', path: '/system-menus' }
-    ],
+    tableSubtitle: '当前页面已接入真实角色管理接口，并与用户管理形成联动。',
+    guide: '角色管理已从静态说明页升级为正式业务页，角色编码与角色名称均支持统一维护。',
+    constraint: '角色编码唯一、角色名称唯一；被用户绑定的角色不可删除；用户绑定角色时也会校验角色是否启用。',
     quickLinks: [
-      { label: '用户管理', path: '/system-users', desc: '直接维护角色编码对应的账号' },
-      { label: '菜单管理', path: '/system-menus', desc: '查看角色能力承接到哪些业务页面' },
-      { label: '移动工作台', path: '/mobile', desc: '核对移动端角色看到的业务闭环' }
-    ],
-    columns: [
-      { key: 'roleCode', label: '角色编码', minWidth: 140 },
-      { key: 'roleName', label: '角色名称', minWidth: 140 },
-      { key: 'userCount', label: '分配人数', width: 110, align: 'center' },
-      { key: 'scope', label: '适用范围', minWidth: 130 },
-      { key: 'status', label: '分配状态', width: 110, align: 'center', type: 'status', tone: (row) => row.status === '已分配' ? 'success' : 'warning' },
-      { key: 'remark', label: '说明', minWidth: 240 }
+      { label: '用户管理', path: '/system-users', desc: '查看用户与角色绑定关系' },
+      { label: '机构管理', path: '/system-orgs', desc: '联动完善组织与权限基础' },
+      { label: '数据字典', path: '/system-dicts', desc: '查看系统基础配置口径是否统一' }
     ]
   },
   '/system-menus': {
     title: '菜单管理',
-    subtitle: '展示当前“顶部一级固定 + 左侧二级三级展开”的正式菜单结构承接结果。',
+    subtitle: '展示当前“顶部固定一级菜单 + 左侧二级三级菜单”的正式菜单结构。',
     tableTitle: '菜单结构清单',
-    tableSubtitle: '一级固定为“水质管理”，原有菜单已整体下沉到左侧。',
+    tableSubtitle: '一级固定为“水质管理”，原有业务菜单已整体下沉到左侧。',
     keywordPlaceholder: '请输入菜单名称、层级、路由或组件名',
-    note: '菜单结构已经完成重构，这里主要作为台账页展示当前实际启用的菜单节点，便于后续与功能清单逐项对照。',
-    emptyText: '暂无菜单结构清单',
-    guide: '本页沉淀菜单结构现状，方便继续补空白页、对齐工单清单，并确认一级二级三级菜单布局是否完整。',
-    constraint: '菜单配置已稳定，后续只需继续补齐菜单对应的真实业务页，不需要再折返改层级。',
+    note: '菜单树重构已完成，这里主要用于台账化展示当前启用菜单结构，便于继续核对功能清单。',
+    emptyText: '暂无菜单结构数据',
+    guide: '本页用于沉淀菜单树重构结果，便于继续补齐空白页面并对照工单清单逐项核验。',
+    constraint: '菜单层级结构已经稳定，后续重点是补齐对应页面能力，而不是继续调整菜单布局。',
     actions: [
       { label: '查看系统首页', path: '/dashboard', type: 'primary', plain: false },
       { label: '查看表单管理', path: '/system-forms' }
     ],
     quickLinks: [
-      { label: '历史任务', path: '/task-history', desc: '验证任务菜单已落到正式业务页' },
-      { label: '历史检测', path: '/detection-history', desc: '验证检测菜单已落到正式业务页' },
-      { label: '历史审查', path: '/review-history', desc: '验证审查菜单已落到正式业务页' }
+      { label: '历史任务', path: '/task-history', desc: '核对任务类菜单已落到真实页面' },
+      { label: '历史检测', path: '/detection-history', desc: '核对检测类菜单已落到真实页面' },
+      { label: '历史审查', path: '/review-history', desc: '核对审查类菜单已落到真实页面' }
     ],
     columns: [
       { key: 'menuName', label: '菜单名称', minWidth: 180 },
@@ -666,77 +1020,49 @@ const sceneConfigMap = {
   },
   '/system-logs': {
     title: '日志管理',
-    subtitle: '汇总当前正式业务流中的留痕来源，核对哪些日志已落地、哪些仍待补齐。',
-    tableTitle: '日志留痕清单',
-    tableSubtitle: '业务留痕已经形成闭环，后续如需统一审计中心可再升级。',
-    keywordPlaceholder: '请输入日志来源、状态、保留规则或说明',
-    note: '当前业务日志主要沉淀在业务表与推送记录中，已经能支撑追踪；如果后续要做统一审计台账，再补独立日志中心即可。',
-    emptyText: '暂无日志留痕清单',
-    guide: '本页用于确认样品封签留痕、报告推送留痕、流程状态留痕等关键节点是否已经有正式数据承接。',
-    constraint: '统一日志中心不是当前最紧急项，现阶段优先保证业务表留痕可追溯即可。',
+    subtitle: '梳理当前系统的关键留痕来源，便于后续统一审计与追溯治理。',
+    tableTitle: '留痕来源清单',
+    tableSubtitle: '当前以业务留痕可追溯为优先，统一审计中心可后续再建设。',
+    keywordPlaceholder: '请输入日志来源、状态或说明',
+    note: '样品封签、流程流转、报告推送等关键留痕已落地，统一审计中心暂按后续规划处理。',
+    emptyText: '暂无日志来源数据',
+    guide: '本页帮助快速确认哪些留痕已经具备生产可追溯能力，哪些能力仍在规划。',
+    constraint: '如后续确需统一日志平台，可以在现有业务留痕基础上再追加集中审计能力。',
     actions: [
-      { label: '查看报告台账', path: '/report-ledger', type: 'primary', plain: false },
-      { label: '查看设备维修', path: '/instrument-maintenance' }
+      { label: '查看样品登录', path: '/sample-login', type: 'primary', plain: false },
+      { label: '查看报告台账', path: '/report-ledger' }
     ],
     quickLinks: [
-      { label: '报告台账', path: '/report-ledger', desc: '查看正式报告产物与推送状态' },
-      { label: '设备维修', path: '/instrument-maintenance', desc: '查看维修记录与留痕说明' },
-      { label: '移动工作台', path: '/mobile', desc: '查看移动闭环中的业务留痕节点' }
+      { label: '样品管理', path: '/sample-ledger', desc: '查看封签与样品留痕承接情况' },
+      { label: '检测管理', path: '/detection-ledger', desc: '查看检测记录与重检留痕' },
+      { label: '报告管理', path: '/report-ledger', desc: '查看正式报告与推送留痕' }
     ],
     columns: [
       { key: 'sourceName', label: '日志来源', minWidth: 180 },
       { key: 'eventCount', label: '事件数', width: 100, align: 'center' },
-      { key: 'retentionRule', label: '保留规则', minWidth: 160 },
+      { key: 'retentionRule', label: '留存规则', minWidth: 180 },
       { key: 'status', label: '状态', width: 100, align: 'center', type: 'status', tone: (row) => row.status === '待接入' ? 'warning' : 'success' },
       { key: 'remark', label: '说明', minWidth: 260 }
     ]
   },
-  '/system-dicts': {
-    title: '数据字典管理',
-    subtitle: '集中展示当前系统已经正式落地的业务状态字典、周期字典与配置字典。',
-    tableTitle: '字典清单',
-    tableSubtitle: '当前枚举已支撑采样、检测、审核、报告、设备等主流程。',
-    keywordPlaceholder: '请输入字典编码、字典名称、所属模块或字典项',
-    note: '字典当前以前端枚举与后端常量协同承接；如后续需要在线维护，可再升级为正式字典表。',
-    emptyText: '暂无数据字典清单',
-    guide: '本页用于确认关键状态字典是否已经完整覆盖正式业务流程，避免前后端出现状态含义不一致。',
-    constraint: '如果后续需要让业务人员自行配置字典值，必须补齐后端字典表和管理接口，不能只改前端枚举。',
-    actions: [
-      { label: '查看检测配置', path: '/detection-analysis', type: 'primary', plain: false },
-      { label: '查看表单管理', path: '/system-forms' }
-    ],
-    quickLinks: [
-      { label: '样品台账', path: '/sample-ledger', desc: '核对样品状态字典是否与业务展示一致' },
-      { label: '检测台账', path: '/detection-ledger', desc: '核对检测状态字典是否与业务展示一致' },
-      { label: '报告台账', path: '/report-ledger', desc: '核对报告状态字典是否与业务展示一致' }
-    ],
-    columns: [
-      { key: 'dictCode', label: '字典编码', minWidth: 180 },
-      { key: 'dictName', label: '字典名称', minWidth: 180 },
-      { key: 'moduleName', label: '所属模块', minWidth: 130 },
-      { key: 'itemCount', label: '字典项数', width: 110, align: 'center' },
-      { key: 'sampleText', label: '示例字典项', minWidth: 220 },
-      { key: 'status', label: '状态', width: 100, align: 'center', type: 'status', tone: () => 'success' }
-    ]
-  },
   '/system-forms': {
     title: '表单管理',
-    subtitle: '汇总当前系统已经正式落地的页面表单、弹窗表单与移动端表单。',
+    subtitle: '台账化梳理系统关键表单，确认哪些页面已具备正式新增、编辑和流转能力。',
     tableTitle: '表单清单',
-    tableSubtitle: '用于跟踪哪些表单已经从演示升级为正式业务输入入口。',
-    keywordPlaceholder: '请输入表单名称、所属模块、页面路径或说明',
-    note: '采样、检测、审核、设备、维修、用户等关键表单已经转为正式业务承接；其余仍可按优先级继续补强。',
-    emptyText: '暂无表单清单',
-    guide: '本页帮助我们按表单粒度核查哪些页面只是能看，哪些页面已经真正能录入、编辑、流转。',
-    constraint: '后续继续推进系统管理其余能力时，建议优先改有真实写入动作的表单页，收益最高。',
+    tableSubtitle: '系统管理核心四页现已进入真实 CRUD 阶段。',
+    keywordPlaceholder: '请输入表单名称、模块、页面路径或说明',
+    note: '用户、机构、数据字典、角色等系统管理核心表单已完成正式接入，其余业务表单可按优先级继续推进。',
+    emptyText: '暂无表单数据',
+    guide: '本页用于从表单粒度核查哪些页面只是能看，哪些页面已经真正可以录入、编辑和流转。',
+    constraint: '后续继续推进系统管理其他能力时，建议优先做真实写入动作的表单页，改造收益更高。',
     actions: [
       { label: '查看用户管理', path: '/system-users', type: 'primary', plain: false },
-      { label: '查看设备台账', path: '/instrument-ledger' }
+      { label: '查看数据字典', path: '/system-dicts' }
     ],
     quickLinks: [
-      { label: '用户管理', path: '/system-users', desc: '查看真实 CRUD 表单页效果' },
-      { label: '设备维修', path: '/instrument-maintenance', desc: '查看维修记录表单与留痕' },
-      { label: '移动工作台', path: '/mobile', desc: '查看移动端表单闭环效果' }
+      { label: '用户管理', path: '/system-users', desc: '查看真实用户 CRUD 表单效果' },
+      { label: '机构管理', path: '/system-orgs', desc: '查看真实机构 CRUD 表单效果' },
+      { label: '数据字典', path: '/system-dicts', desc: '查看真实数据字典 CRUD 表单效果' }
     ],
     columns: [
       { key: 'formName', label: '表单名称', minWidth: 180 },
@@ -750,6 +1076,12 @@ const sceneConfigMap = {
   }
 }
 
+const sceneRowsMap = computed(() => ({
+  '/system-menus': menuRows.value,
+  '/system-logs': logRows,
+  '/system-forms': formRows
+}))
+
 const currentScene = computed(() => sceneConfigMap[route.path] || sceneConfigMap['/system-users'])
 const currentSceneRows = computed(() => sceneRowsMap.value[route.path] || [])
 
@@ -760,6 +1092,30 @@ const visibleUserRows = computed(() => {
   return userRows.value
 })
 
+const visibleOrgRows = computed(() => {
+  if (activeStatKey.value === 'inuse') {
+    return orgRows.value.filter((item) => Number(item.memberCount || 0) > 0)
+  }
+  return orgRows.value
+})
+
+const visibleDictRows = computed(() => {
+  if (activeStatKey.value === 'status') {
+    return dictRows.value.filter((item) => String(item.dictCode || '').includes('status'))
+  }
+  if (activeStatKey.value === 'business') {
+    return dictRows.value.filter((item) => String(item.moduleName || '') !== '基础配置')
+  }
+  return dictRows.value
+})
+
+const visibleRoleRows = computed(() => {
+  if (activeStatKey.value === 'inuse') {
+    return roleRows.value.filter((item) => Number(item.userCount || 0) > 0)
+  }
+  return roleRows.value
+})
+
 const visibleSceneRows = computed(() => {
   let rows = currentSceneRows.value
   const keyword = normalizeKeyword(sceneKeyword.value)
@@ -768,22 +1124,6 @@ const visibleSceneRows = computed(() => {
   }
 
   switch (route.path) {
-    case '/system-orgs':
-      if (activeStatKey.value === 'connected') {
-        return rows.filter((item) => item.status !== '待接入')
-      }
-      if (activeStatKey.value === 'pending') {
-        return rows.filter((item) => item.status === '待接入')
-      }
-      return rows
-    case '/system-roles':
-      if (activeStatKey.value === 'assigned') {
-        return rows.filter((item) => item.status === '已分配')
-      }
-      if (activeStatKey.value === 'unassigned') {
-        return rows.filter((item) => item.status === '未分配')
-      }
-      return rows
     case '/system-menus':
       if (activeStatKey.value === 'group') {
         return rows.filter((item) => item.level === '二级目录')
@@ -800,20 +1140,12 @@ const visibleSceneRows = computed(() => {
         return rows.filter((item) => item.status === '待接入')
       }
       return rows
-    case '/system-dicts':
-      if (activeStatKey.value === 'status') {
-        return rows.filter((item) => String(item.dictCode).includes('status'))
-      }
-      if (activeStatKey.value === 'business') {
-        return rows.filter((item) => item.moduleName !== '基础配置')
-      }
-      return rows
     case '/system-forms':
       if (activeStatKey.value === 'dialog') {
         return rows.filter((item) => String(item.formType).includes('弹窗'))
       }
-      if (activeStatKey.value === 'mobile') {
-        return rows.filter((item) => String(item.formType).includes('移动'))
+      if (activeStatKey.value === 'page') {
+        return rows.filter((item) => String(item.formType).includes('页面'))
       }
       return rows
     default:
@@ -830,21 +1162,31 @@ const currentTags = computed(() => {
     ]
   }
 
+  if (isOrgScene.value) {
+    return [
+      { label: '当前页', value: orgRows.value.length, type: 'info' },
+      { label: '分页总数', value: orgTotal.value, type: 'success' },
+      { label: '已绑定用户机构', value: orgRows.value.filter((item) => Number(item.memberCount || 0) > 0).length, type: 'warning' }
+    ]
+  }
+
+  if (isDictScene.value) {
+    return [
+      { label: '当前页', value: dictRows.value.length, type: 'info' },
+      { label: '分页总数', value: dictTotal.value, type: 'success' },
+      { label: '状态类字典', value: dictRows.value.filter((item) => String(item.dictCode || '').includes('status')).length, type: 'warning' }
+    ]
+  }
+
+  if (isRoleScene.value) {
+    return [
+      { label: '当前页', value: roleRows.value.length, type: 'info' },
+      { label: '分页总数', value: roleTotal.value, type: 'success' },
+      { label: '已被使用角色', value: roleRows.value.filter((item) => Number(item.userCount || 0) > 0).length, type: 'warning' }
+    ]
+  }
+
   const rows = currentSceneRows.value
-  if (route.path === '/system-orgs') {
-    return [
-      { label: '组织域', value: rows.length, type: 'info' },
-      { label: '已接入', value: rows.filter((item) => item.status !== '待接入').length, type: 'success' },
-      { label: '待接入', value: rows.filter((item) => item.status === '待接入').length, type: 'warning' }
-    ]
-  }
-  if (route.path === '/system-roles') {
-    return [
-      { label: '角色数', value: rows.length, type: 'info' },
-      { label: '已分配', value: rows.filter((item) => item.status === '已分配').length, type: 'success' },
-      { label: '未分配', value: rows.filter((item) => item.status === '未分配').length, type: 'warning' }
-    ]
-  }
   if (route.path === '/system-menus') {
     return [
       { label: '菜单节点', value: rows.length, type: 'info' },
@@ -852,15 +1194,8 @@ const currentTags = computed(() => {
       { label: '页面', value: rows.filter((item) => item.level === '三级页面').length, type: 'warning' }
     ]
   }
-  if (route.path === '/system-dicts') {
-    return [
-      { label: '字典数', value: rows.length, type: 'info' },
-      { label: '状态类', value: rows.filter((item) => String(item.dictCode).includes('status')).length, type: 'success' },
-      { label: '业务类', value: rows.filter((item) => item.moduleName !== '基础配置').length, type: 'warning' }
-    ]
-  }
   return [
-    { label: '当前项', value: rows.length, type: 'info' },
+    { label: '当前页', value: rows.length, type: 'info' },
     { label: '已生效', value: rows.filter((item) => String(item.status || '').includes('已')).length, type: 'success' },
     { label: '待接入', value: rows.filter((item) => String(item.status || '').includes('待')).length, type: 'warning' }
   ]
@@ -872,47 +1207,56 @@ const currentStats = computed(() => {
       { key: 'all', label: '全部用户', value: userTotal.value, desc: '当前用户分页总记录数' },
       { key: 'enabled', label: '启用用户', value: userRows.value.filter((item) => Number(item.status) === 1).length, desc: '当前页启用状态账号数' },
       { key: 'disabled', label: '停用用户', value: userRows.value.filter((item) => Number(item.status) === 0).length, desc: '当前页停用状态账号数' },
-      { key: 'role', label: '已配角色', value: userRows.value.filter((item) => normalizeText(item.roleCode) !== '-').length, desc: '当前页已填写角色编码的账号数' }
+      { key: 'role', label: '已配角色', value: userRows.value.filter((item) => normalizeText(item.roleCode) !== '-').length, desc: '当前页已绑定角色编码的账号数' }
+    ]
+  }
+
+  if (isOrgScene.value) {
+    return [
+      { key: 'all', label: '全部机构', value: orgTotal.value, desc: '当前机构分页总记录数' },
+      { key: 'enabled', label: '启用机构', value: orgRows.value.filter((item) => Number(item.status) === 1).length, desc: '当前页启用状态机构数' },
+      { key: 'disabled', label: '停用机构', value: orgRows.value.filter((item) => Number(item.status) === 0).length, desc: '当前页停用状态机构数' },
+      { key: 'inuse', label: '已绑定用户', value: orgRows.value.filter((item) => Number(item.memberCount || 0) > 0).length, desc: '当前页已被用户绑定的机构数' }
+    ]
+  }
+
+  if (isDictScene.value) {
+    return [
+      { key: 'all', label: '全部字典', value: dictTotal.value, desc: '当前数据字典分页总记录数' },
+      { key: 'enabled', label: '启用字典', value: dictRows.value.filter((item) => Number(item.status) === 1).length, desc: '当前页启用状态字典数' },
+      { key: 'status', label: '状态字典', value: dictRows.value.filter((item) => String(item.dictCode || '').includes('status')).length, desc: '当前页用于流程状态控制的字典数' },
+      { key: 'business', label: '业务字典', value: dictRows.value.filter((item) => String(item.moduleName || '') !== '基础配置').length, desc: '当前页直接服务业务流程的字典数' }
+    ]
+  }
+
+  if (isRoleScene.value) {
+    return [
+      { key: 'all', label: '全部角色', value: roleTotal.value, desc: '当前角色分页总记录数' },
+      { key: 'enabled', label: '启用角色', value: roleRows.value.filter((item) => Number(item.status) === 1).length, desc: '当前页启用状态角色数' },
+      { key: 'disabled', label: '停用角色', value: roleRows.value.filter((item) => Number(item.status) === 0).length, desc: '当前页停用状态角色数' },
+      { key: 'inuse', label: '已被使用', value: roleRows.value.filter((item) => Number(item.userCount || 0) > 0).length, desc: '当前页已绑定用户的角色数' }
     ]
   }
 
   const rows = currentSceneRows.value
   switch (route.path) {
-    case '/system-orgs':
-      return [
-        { key: 'all', label: '全部组织域', value: rows.length, desc: '当前组织承接方案总项数' },
-        { key: 'connected', label: '已接入', value: rows.filter((item) => item.status !== '待接入').length, desc: '已承接真实业务的组织域' },
-        { key: 'pending', label: '待接入', value: rows.filter((item) => item.status === '待接入').length, desc: '后续可升级的正式组织域' }
-      ]
-    case '/system-roles':
-      return [
-        { key: 'all', label: '全部角色', value: rows.length, desc: '当前角色编码总数' },
-        { key: 'assigned', label: '已分配', value: rows.filter((item) => item.status === '已分配').length, desc: '已有真实账号分配的角色' },
-        { key: 'unassigned', label: '未分配', value: rows.filter((item) => item.status === '未分配').length, desc: '仍待后续账号启用的角色' }
-      ]
     case '/system-menus':
       return [
         { key: 'all', label: '全部节点', value: rows.length, desc: '当前正式菜单结构总节点数' },
-        { key: 'group', label: '目录节点', value: rows.filter((item) => item.level === '二级目录').length, desc: '左侧菜单目录节点' },
-        { key: 'page', label: '页面节点', value: rows.filter((item) => item.level === '三级页面').length, desc: '落到业务页面的菜单节点' }
+        { key: 'group', label: '目录节点', value: rows.filter((item) => item.level === '二级目录').length, desc: '左侧目录节点数' },
+        { key: 'page', label: '页面节点', value: rows.filter((item) => item.level === '三级页面').length, desc: '业务落地页面数' }
       ]
     case '/system-logs':
       return [
-        { key: 'all', label: '全部来源', value: rows.length, desc: '当前已梳理的留痕来源数' },
-        { key: 'effective', label: '已生效', value: rows.filter((item) => item.status === '已生效').length, desc: '当前已可追溯的留痕来源' },
-        { key: 'pending', label: '待接入', value: rows.filter((item) => item.status === '待接入').length, desc: '后续可补统一审计的来源' }
-      ]
-    case '/system-dicts':
-      return [
-        { key: 'all', label: '全部字典', value: rows.length, desc: '当前在用字典总数' },
-        { key: 'status', label: '状态字典', value: rows.filter((item) => String(item.dictCode).includes('status')).length, desc: '覆盖业务状态流转的字典' },
-        { key: 'business', label: '业务字典', value: rows.filter((item) => item.moduleName !== '基础配置').length, desc: '直接服务业务流程的字典' }
+        { key: 'all', label: '全部来源', value: rows.length, desc: '当前已梳理留痕来源数' },
+        { key: 'effective', label: '已生效', value: rows.filter((item) => item.status === '已生效').length, desc: '当前可追溯的留痕来源数' },
+        { key: 'pending', label: '待接入', value: rows.filter((item) => item.status === '待接入').length, desc: '后续可再追加的审计来源数' }
       ]
     case '/system-forms':
       return [
         { key: 'all', label: '全部表单', value: rows.length, desc: '当前已梳理表单总数' },
-        { key: 'dialog', label: '弹窗表单', value: rows.filter((item) => String(item.formType).includes('弹窗')).length, desc: '桌面端弹窗编辑表单数' },
-        { key: 'mobile', label: '移动表单', value: rows.filter((item) => String(item.formType).includes('移动')).length, desc: '移动端闭环相关表单数' }
+        { key: 'dialog', label: '弹窗表单', value: rows.filter((item) => String(item.formType).includes('弹窗')).length, desc: '桌面端弹窗表单数' },
+        { key: 'page', label: '页面表单', value: rows.filter((item) => String(item.formType).includes('页面')).length, desc: '页面型表单数' }
       ]
     default:
       return [{ key: 'all', label: '全部', value: rows.length, desc: '当前页面数据总数' }]
@@ -924,16 +1268,41 @@ watch(
   async () => {
     activeStatKey.value = 'all'
     sceneKeyword.value = ''
+    resetDictQueryState()
+    resetOrgQueryState()
     resetUserQueryState()
-    await loadUserSummary()
-    await loadUsers()
+    resetRoleQueryState()
+    await loadPageData()
   }
 )
 
 onMounted(async () => {
-  await loadUserSummary()
-  await loadUsers()
+  await loadPageData()
 })
+
+function createDefaultDictForm() {
+  return {
+    id: '',
+    dictCode: '',
+    dictName: '',
+    moduleName: '',
+    itemText: '',
+    status: 1,
+    remark: ''
+  }
+}
+
+function createDefaultOrgForm() {
+  return {
+    id: '',
+    orgCode: '',
+    orgName: '',
+    parentId: '',
+    orgType: '',
+    status: 1,
+    remark: ''
+  }
+}
 
 function createDefaultUserForm() {
   return {
@@ -941,22 +1310,21 @@ function createDefaultUserForm() {
     username: '',
     password: '',
     realName: '',
+    orgId: '',
     roleCode: '',
     phone: '',
     status: 1
   }
 }
 
-function buildRoleRow(roleCode, roleName, scope, remark) {
-  const userCount = countUsersByRole(roleCode)
+function createDefaultRoleForm() {
   return {
-    id: roleCode,
-    roleCode,
-    roleName,
-    userCount,
-    scope,
-    status: userCount > 0 ? '已分配' : '未分配',
-    remark
+    id: '',
+    roleCode: '',
+    roleName: '',
+    roleScope: '',
+    status: 1,
+    remark: ''
   }
 }
 
@@ -973,15 +1341,19 @@ function matchesKeyword(row, keyword) {
   return Object.values(row || {}).some((value) => String(value ?? '').toLowerCase().includes(keyword))
 }
 
-function countUsersByRole(roleCode) {
-  return userSummaryRows.value.filter((item) => item.roleCode === roleCode).length
+function formatDictPreview(value) {
+  return String(value || '')
+    .split(/\r?\n/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .join('、') || '-'
 }
 
-function getUserStatusLabel(status) {
+function getStatusLabelByValue(status) {
   return Number(status) === 1 ? '启用' : '停用'
 }
 
-function getUserStatusClass(status) {
+function getStatusClassByValue(status) {
   return Number(status) === 1 ? 'success' : 'warning'
 }
 
@@ -999,6 +1371,20 @@ function resolveSceneTone(column, row) {
   return column.tone || 'info'
 }
 
+function resetDictQueryState() {
+  dictQuery.pageNum = 1
+  dictQuery.pageSize = DEFAULT_PAGE_SIZE
+  dictQuery.keyword = ''
+  dictQuery.status = ''
+}
+
+function resetOrgQueryState() {
+  orgQuery.pageNum = 1
+  orgQuery.pageSize = DEFAULT_PAGE_SIZE
+  orgQuery.keyword = ''
+  orgQuery.status = ''
+}
+
 function resetUserQueryState() {
   userQuery.pageNum = 1
   userQuery.pageSize = DEFAULT_PAGE_SIZE
@@ -1006,28 +1392,63 @@ function resetUserQueryState() {
   userQuery.status = ''
 }
 
+function resetRoleQueryState() {
+  roleQuery.pageNum = 1
+  roleQuery.pageSize = DEFAULT_PAGE_SIZE
+  roleQuery.keyword = ''
+  roleQuery.status = ''
+}
+
 function handleStatClick(key) {
   activeStatKey.value = key
-  if (!isUserScene.value) {
+
+  if (isUserScene.value) {
+    if (key === 'enabled') {
+      userQuery.status = 1
+    } else if (key === 'disabled') {
+      userQuery.status = 0
+    } else {
+      userQuery.status = ''
+    }
+    userQuery.pageNum = 1
+    loadUsers()
     return
   }
 
-  if (key === 'enabled') {
-    userQuery.status = 1
-    userQuery.pageNum = 1
-    loadUsers()
+  if (isOrgScene.value) {
+    if (key === 'enabled') {
+      orgQuery.status = 1
+    } else if (key === 'disabled') {
+      orgQuery.status = 0
+    } else {
+      orgQuery.status = ''
+    }
+    orgQuery.pageNum = 1
+    loadOrgs()
     return
   }
-  if (key === 'disabled') {
-    userQuery.status = 0
-    userQuery.pageNum = 1
-    loadUsers()
+
+  if (isDictScene.value) {
+    if (key === 'enabled') {
+      dictQuery.status = 1
+    } else {
+      dictQuery.status = ''
+    }
+    dictQuery.pageNum = 1
+    loadDicts()
     return
   }
-  if (key === 'all' || key === 'role') {
-    userQuery.status = ''
-    userQuery.pageNum = 1
-    loadUsers()
+
+  if (isRoleScene.value) {
+    if (key === 'enabled') {
+      roleQuery.status = 1
+    } else if (key === 'disabled') {
+      roleQuery.status = 0
+    } else {
+      roleQuery.status = ''
+    }
+    roleQuery.pageNum = 1
+    loadRoles()
   }
 }
 
@@ -1036,6 +1457,62 @@ function goRoute(path) {
     return
   }
   router.push(path)
+}
+
+async function loadPageData() {
+  await Promise.all([
+    loadUserSummary(),
+    loadOrgOptions(),
+    loadRoleOptions(),
+    loadDicts(),
+    loadOrgs(),
+    loadUsers(),
+    loadRoles()
+  ])
+}
+
+async function loadDicts() {
+  if (!isDictScene.value) {
+    dictRows.value = []
+    dictTotal.value = 0
+    return
+  }
+
+  loading.value = true
+  try {
+    const result = await fetchSystemDictsApi({
+      pageNum: dictQuery.pageNum,
+      pageSize: dictQuery.pageSize,
+      keyword: String(dictQuery.keyword || '').trim() || undefined,
+      status: dictQuery.status === '' ? undefined : dictQuery.status
+    })
+    dictRows.value = Array.isArray(result.records) ? result.records : []
+    dictTotal.value = Number(result.total || 0)
+  } finally {
+    loading.value = false
+  }
+}
+
+async function loadOrgs() {
+  if (!isOrgScene.value) {
+    orgRows.value = []
+    orgTotal.value = 0
+    return
+  }
+
+  loading.value = true
+  try {
+    const result = await fetchSystemOrgsApi({
+      pageNum: orgQuery.pageNum,
+      pageSize: orgQuery.pageSize,
+      keyword: String(orgQuery.keyword || '').trim() || undefined,
+      status: orgQuery.status === '' ? undefined : orgQuery.status
+    })
+    orgRows.value = Array.isArray(result.records) ? result.records : []
+    orgTotal.value = Number(result.total || 0)
+  } finally {
+    loading.value = false
+  }
 }
 
 async function loadUsers() {
@@ -1060,6 +1537,28 @@ async function loadUsers() {
   }
 }
 
+async function loadRoles() {
+  if (!isRoleScene.value) {
+    roleRows.value = []
+    roleTotal.value = 0
+    return
+  }
+
+  loading.value = true
+  try {
+    const result = await fetchSystemRolesApi({
+      pageNum: roleQuery.pageNum,
+      pageSize: roleQuery.pageSize,
+      keyword: String(roleQuery.keyword || '').trim() || undefined,
+      status: roleQuery.status === '' ? undefined : roleQuery.status
+    })
+    roleRows.value = Array.isArray(result.records) ? result.records : []
+    roleTotal.value = Number(result.total || 0)
+  } finally {
+    loading.value = false
+  }
+}
+
 async function loadUserSummary() {
   try {
     const result = await fetchSystemUsersApi({
@@ -1074,9 +1573,64 @@ async function loadUserSummary() {
   }
 }
 
+async function loadOrgOptions() {
+  try {
+    const result = await fetchSystemOrgOptionsApi()
+    orgOptions.value = Array.isArray(result)
+      ? result.map((item) => ({
+          label: `${item.orgName} ${item.orgCode}`,
+          value: Number(item.id)
+        }))
+      : []
+  } catch (error) {
+    orgOptions.value = []
+  }
+}
+
+async function loadRoleOptions() {
+  try {
+    const result = await fetchSystemRoleOptionsApi()
+    roleOptions.value = Array.isArray(result)
+      ? result.map((item) => ({
+          label: `${item.roleName} ${item.roleCode}`,
+          value: item.roleCode
+        }))
+      : []
+  } catch (error) {
+    roleOptions.value = []
+  }
+}
+
+function handleDictSearch() {
+  dictQuery.pageNum = 1
+  loadDicts()
+}
+
+function handleOrgSearch() {
+  orgQuery.pageNum = 1
+  loadOrgs()
+}
+
 function handleUserSearch() {
   userQuery.pageNum = 1
   loadUsers()
+}
+
+function handleRoleSearch() {
+  roleQuery.pageNum = 1
+  loadRoles()
+}
+
+function resetDictQuery() {
+  activeStatKey.value = 'all'
+  resetDictQueryState()
+  loadDicts()
+}
+
+function resetOrgQuery() {
+  activeStatKey.value = 'all'
+  resetOrgQueryState()
+  loadOrgs()
 }
 
 function resetUserQuery() {
@@ -1085,32 +1639,153 @@ function resetUserQuery() {
   loadUsers()
 }
 
+function resetRoleQuery() {
+  activeStatKey.value = 'all'
+  resetRoleQueryState()
+  loadRoles()
+}
+
+function openDictDialog(row) {
+  resetDictForm()
+  if (row) {
+    dictForm.id = row.id
+    dictForm.dictCode = row.dictCode || ''
+    dictForm.dictName = row.dictName || ''
+    dictForm.moduleName = row.moduleName || ''
+    dictForm.itemText = row.itemText || ''
+    dictForm.status = Number(row.status) === 0 ? 0 : 1
+    dictForm.remark = row.remark || ''
+  }
+  dictDialogVisible.value = true
+}
+
+function openOrgDialog(row) {
+  resetOrgForm()
+  if (row) {
+    orgForm.id = row.id
+    orgForm.orgCode = row.orgCode || ''
+    orgForm.orgName = row.orgName || ''
+    orgForm.parentId = row.parentId || ''
+    orgForm.orgType = row.orgType || ''
+    orgForm.status = Number(row.status) === 0 ? 0 : 1
+    orgForm.remark = row.remark || ''
+  }
+  orgDialogVisible.value = true
+}
+
 function openUserDialog(row) {
   resetUserForm()
   if (row) {
     userForm.id = row.id
     userForm.username = row.username || ''
     userForm.realName = row.realName || ''
+    userForm.orgId = row.orgId || ''
     userForm.roleCode = row.roleCode || ''
     userForm.phone = row.phone || ''
     userForm.status = Number(row.status) === 0 ? 0 : 1
   }
-  dialogVisible.value = true
+  userDialogVisible.value = true
+}
+
+function openRoleDialog(row) {
+  resetRoleForm()
+  if (row) {
+    roleForm.id = row.id
+    roleForm.roleCode = row.roleCode || ''
+    roleForm.roleName = row.roleName || ''
+    roleForm.roleScope = row.roleScope || ''
+    roleForm.status = Number(row.status) === 0 ? 0 : 1
+    roleForm.remark = row.remark || ''
+  }
+  roleDialogVisible.value = true
+}
+
+function resetDictForm() {
+  Object.assign(dictForm, createDefaultDictForm())
+  dictFormRef.value?.clearValidate?.()
+}
+
+function resetOrgForm() {
+  Object.assign(orgForm, createDefaultOrgForm())
+  orgFormRef.value?.clearValidate?.()
 }
 
 function resetUserForm() {
   Object.assign(userForm, createDefaultUserForm())
-  formRef.value?.clearValidate?.()
+  userFormRef.value?.clearValidate?.()
+}
+
+function resetRoleForm() {
+  Object.assign(roleForm, createDefaultRoleForm())
+  roleFormRef.value?.clearValidate?.()
+}
+
+async function submitDictForm() {
+  await dictFormRef.value.validate()
+  savingDict.value = true
+  try {
+    const payload = {
+      dictCode: String(dictForm.dictCode || '').trim(),
+      dictName: String(dictForm.dictName || '').trim(),
+      moduleName: String(dictForm.moduleName || '').trim(),
+      itemText: String(dictForm.itemText || '').trim(),
+      status: Number(dictForm.status) === 0 ? 0 : 1,
+      remark: String(dictForm.remark || '').trim()
+    }
+
+    if (dictForm.id) {
+      await updateSystemDictApi(dictForm.id, payload)
+      ElMessage.success('数据字典更新成功')
+    } else {
+      await createSystemDictApi(payload)
+      ElMessage.success('数据字典新增成功')
+    }
+
+    dictDialogVisible.value = false
+    await loadDicts()
+  } finally {
+    savingDict.value = false
+  }
+}
+
+async function submitOrgForm() {
+  await orgFormRef.value.validate()
+  savingOrg.value = true
+  try {
+    const payload = {
+      orgCode: String(orgForm.orgCode || '').trim(),
+      orgName: String(orgForm.orgName || '').trim(),
+      parentId: orgForm.parentId ? Number(orgForm.parentId) : null,
+      orgType: String(orgForm.orgType || '').trim(),
+      status: Number(orgForm.status) === 0 ? 0 : 1,
+      remark: String(orgForm.remark || '').trim()
+    }
+
+    if (orgForm.id) {
+      await updateSystemOrgApi(orgForm.id, payload)
+      ElMessage.success('机构更新成功')
+    } else {
+      await createSystemOrgApi(payload)
+      ElMessage.success('机构新增成功')
+    }
+
+    orgDialogVisible.value = false
+    await loadOrgOptions()
+    await loadOrgs()
+  } finally {
+    savingOrg.value = false
+  }
 }
 
 async function submitUserForm() {
-  await formRef.value.validate()
-  saving.value = true
+  await userFormRef.value.validate()
+  savingUser.value = true
   try {
     const payload = {
       username: String(userForm.username || '').trim(),
       password: String(userForm.password || '').trim(),
       realName: String(userForm.realName || '').trim(),
+      orgId: Number(userForm.orgId),
       roleCode: String(userForm.roleCode || '').trim(),
       phone: String(userForm.phone || '').trim(),
       status: Number(userForm.status) === 0 ? 0 : 1
@@ -1124,12 +1799,65 @@ async function submitUserForm() {
       ElMessage.success('用户新增成功')
     }
 
-    dialogVisible.value = false
+    userDialogVisible.value = false
     await loadUsers()
     await loadUserSummary()
   } finally {
-    saving.value = false
+    savingUser.value = false
   }
+}
+
+async function submitRoleForm() {
+  await roleFormRef.value.validate()
+  savingRole.value = true
+  try {
+    const payload = {
+      roleCode: String(roleForm.roleCode || '').trim(),
+      roleName: String(roleForm.roleName || '').trim(),
+      roleScope: String(roleForm.roleScope || '').trim(),
+      status: Number(roleForm.status) === 0 ? 0 : 1,
+      remark: String(roleForm.remark || '').trim()
+    }
+
+    if (roleForm.id) {
+      await updateSystemRoleApi(roleForm.id, payload)
+      ElMessage.success('角色更新成功')
+    } else {
+      await createSystemRoleApi(payload)
+      ElMessage.success('角色新增成功')
+    }
+
+    roleDialogVisible.value = false
+    await loadRoles()
+    await loadRoleOptions()
+  } finally {
+    savingRole.value = false
+  }
+}
+
+async function removeDict(row) {
+  await ElMessageBox.confirm(`确定删除数据字典“${row.dictName || row.dictCode}”吗？`, '删除确认', {
+    type: 'warning'
+  })
+  await deleteSystemDictApi(row.id)
+  ElMessage.success('数据字典删除成功')
+  if (dictRows.value.length === 1 && dictQuery.pageNum > 1) {
+    dictQuery.pageNum -= 1
+  }
+  await loadDicts()
+}
+
+async function removeOrg(row) {
+  await ElMessageBox.confirm(`确定删除机构“${row.orgName || row.orgCode}”吗？`, '删除确认', {
+    type: 'warning'
+  })
+  await deleteSystemOrgApi(row.id)
+  ElMessage.success('机构删除成功')
+  if (orgRows.value.length === 1 && orgQuery.pageNum > 1) {
+    orgQuery.pageNum -= 1
+  }
+  await loadOrgOptions()
+  await loadOrgs()
 }
 
 async function removeUser(row) {
@@ -1145,13 +1873,43 @@ async function removeUser(row) {
   await loadUserSummary()
 }
 
+async function removeRole(row) {
+  await ElMessageBox.confirm(`确定删除角色“${row.roleName || row.roleCode}”吗？`, '删除确认', {
+    type: 'warning'
+  })
+  await deleteSystemRoleApi(row.id)
+  ElMessage.success('角色删除成功')
+  if (roleRows.value.length === 1 && roleQuery.pageNum > 1) {
+    roleQuery.pageNum -= 1
+  }
+  await loadRoles()
+  await loadRoleOptions()
+}
+
 function reloadData() {
+  activeStatKey.value = 'all'
+  if (isDictScene.value) {
+    dictQuery.status = ''
+    loadDicts()
+    return
+  }
+  if (isOrgScene.value) {
+    orgQuery.status = ''
+    loadOrgOptions()
+    loadOrgs()
+    return
+  }
   if (isUserScene.value) {
+    userQuery.status = ''
     loadUsers()
     loadUserSummary()
     return
   }
-  activeStatKey.value = 'all'
+  if (isRoleScene.value) {
+    roleQuery.status = ''
+    loadRoles()
+    loadRoleOptions()
+  }
 }
 </script>
 
@@ -1257,6 +2015,10 @@ function reloadData() {
   gap: 8px 18px;
 }
 
+.form-span-2 {
+  grid-column: span 2;
+}
+
 .system-page :deep(.el-form-item) {
   margin-bottom: 18px;
 }
@@ -1268,8 +2030,7 @@ function reloadData() {
 }
 
 .system-page :deep(.el-select),
-.system-page :deep(.el-input),
-.system-page :deep(.el-input-number) {
+.system-page :deep(.el-input) {
   width: 100%;
 }
 
@@ -1299,6 +2060,10 @@ function reloadData() {
 
   .form-grid {
     grid-template-columns: 1fr;
+  }
+
+  .form-span-2 {
+    grid-column: span 1;
   }
 }
 </style>

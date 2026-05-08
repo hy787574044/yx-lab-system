@@ -11,6 +11,7 @@ import com.yx.lab.common.security.SecurityContext;
 import com.yx.lab.common.util.PageUtils;
 import com.yx.lab.modules.system.dto.UserQuery;
 import com.yx.lab.modules.system.dto.UserSaveCommand;
+import com.yx.lab.modules.system.entity.LabOrg;
 import com.yx.lab.modules.system.entity.LabUser;
 import com.yx.lab.modules.system.mapper.LabUserMapper;
 import com.yx.lab.modules.system.vo.LabUserVO;
@@ -29,6 +30,10 @@ public class UserManagementService {
 
     private final LabUserMapper labUserMapper;
 
+    private final RoleManagementService roleManagementService;
+
+    private final OrgManagementService orgManagementService;
+
     /**
      * 分页查询用户列表。
      *
@@ -36,17 +41,20 @@ public class UserManagementService {
      * @return 用户分页结果
      */
     public PageResult<LabUserVO> page(UserQuery query) {
+        String keyword = StrUtil.trim(query.getKeyword());
         Page<LabUser> page = labUserMapper.selectPage(
                 PageUtils.buildPage(query),
                 new LambdaQueryWrapper<LabUser>()
-                        .and(StrUtil.isNotBlank(query.getKeyword()), wrapper -> wrapper
-                                .like(LabUser::getUsername, StrUtil.trim(query.getKeyword()))
+                        .and(StrUtil.isNotBlank(keyword), wrapper -> wrapper
+                                .like(LabUser::getUsername, keyword)
                                 .or()
-                                .like(LabUser::getRealName, StrUtil.trim(query.getKeyword()))
+                                .like(LabUser::getRealName, keyword)
                                 .or()
-                                .like(LabUser::getPhone, StrUtil.trim(query.getKeyword()))
+                                .like(LabUser::getOrgName, keyword)
                                 .or()
-                                .like(LabUser::getRoleCode, StrUtil.trim(query.getKeyword())))
+                                .like(LabUser::getPhone, keyword)
+                                .or()
+                                .like(LabUser::getRoleCode, keyword))
                         .eq(query.getStatus() != null, LabUser::getStatus, query.getStatus())
                         .orderByDesc(LabUser::getCreatedTime));
         List<LabUserVO> records = page.getRecords().stream()
@@ -132,8 +140,12 @@ public class UserManagementService {
     }
 
     private void applyCommand(LabUser entity, UserSaveCommand command) {
+        roleManagementService.validateRoleUsable(command.getRoleCode());
+        LabOrg org = orgManagementService.validateOrgUsable(command.getOrgId());
         entity.setUsername(StrUtil.trim(command.getUsername()));
         entity.setRealName(StrUtil.trim(command.getRealName()));
+        entity.setOrgId(org.getId());
+        entity.setOrgName(org.getOrgName());
         entity.setRoleCode(StrUtil.trim(command.getRoleCode()));
         entity.setPhone(StrUtil.trim(command.getPhone()));
         entity.setStatus(command.getStatus());
@@ -144,6 +156,8 @@ public class UserManagementService {
         vo.setId(entity.getId());
         vo.setUsername(entity.getUsername());
         vo.setRealName(entity.getRealName());
+        vo.setOrgId(entity.getOrgId());
+        vo.setOrgName(entity.getOrgName());
         vo.setRoleCode(entity.getRoleCode());
         vo.setPhone(entity.getPhone());
         vo.setStatus(entity.getStatus());

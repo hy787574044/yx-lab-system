@@ -376,6 +376,59 @@ export const updateSystemUserApi = (id, data) => request.put(`/api/system/users/
  */
 export const deleteSystemUserApi = (id) => request.delete(`/api/system/users/${id}`)
 /**
+ * 获取系统角色分页。
+ *
+ * @param {Object} params 查询条件。
+ * @returns {Promise<any>} 角色分页结果。
+ */
+export const fetchSystemRolesApi = (params) => request.get('/api/system/roles', { params })
+/**
+ * 获取系统角色详情。
+ *
+ * @param {number} id 角色主键。
+ * @returns {Promise<any>} 角色详情。
+ */
+export const getSystemRoleDetailApi = (id) => request.get(`/api/system/roles/${id}`)
+/**
+ * 获取启用角色选项。
+ *
+ * @returns {Promise<any>} 角色选项列表。
+ */
+export const fetchSystemRoleOptionsApi = () => request.get('/api/system/roles/options')
+export const fetchSystemOrgsApi = (params) => request.get('/api/system/orgs', { params })
+export const getSystemOrgDetailApi = (id) => request.get(`/api/system/orgs/${id}`)
+export const fetchSystemOrgOptionsApi = () => request.get('/api/system/orgs/options')
+/**
+ * 新增系统角色。
+ *
+ * @param {Object} data 角色表单。
+ * @returns {Promise<any>} 保存结果。
+ */
+export const createSystemRoleApi = (data) => request.post('/api/system/roles', data)
+/**
+ * 更新系统角色。
+ *
+ * @param {number} id 角色主键。
+ * @param {Object} data 角色表单。
+ * @returns {Promise<any>} 更新结果。
+ */
+export const updateSystemRoleApi = (id, data) => request.put(`/api/system/roles/${id}`, data)
+/**
+ * 删除系统角色。
+ *
+ * @param {number} id 角色主键。
+ * @returns {Promise<any>} 删除结果。
+ */
+export const deleteSystemRoleApi = (id) => request.delete(`/api/system/roles/${id}`)
+export const createSystemOrgApi = (data) => request.post('/api/system/orgs', data)
+export const updateSystemOrgApi = (id, data) => request.put(`/api/system/orgs/${id}`, data)
+export const deleteSystemOrgApi = (id) => request.delete(`/api/system/orgs/${id}`)
+export const fetchSystemDictsApi = (params) => request.get('/api/system/dicts', { params })
+export const getSystemDictDetailApi = (id) => request.get(`/api/system/dicts/${id}`)
+export const createSystemDictApi = (data) => request.post('/api/system/dicts', data)
+export const updateSystemDictApi = (id, data) => request.put(`/api/system/dicts/${id}`, data)
+export const deleteSystemDictApi = (id) => request.delete(`/api/system/dicts/${id}`)
+/**
  * 上传附件到统一存储。
  *
  * @param {File} file 上传文件。

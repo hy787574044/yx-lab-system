@@ -6,26 +6,24 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /**
- * 系统用户实体。
+ * 机构实体。
  */
 @Data
-@TableName("lab_user")
+@TableName("lab_org")
 @EqualsAndHashCode(callSuper = true)
-public class LabUser extends BaseEntity {
+public class LabOrg extends BaseEntity {
 
-    private String username;
-
-    private String password;
-
-    private String realName;
-
-    private Long orgId;
+    private String orgCode;
 
     private String orgName;
 
-    private String roleCode;
+    private Long parentId;
 
-    private String phone;
+    private String parentName;
+
+    private String orgType;
 
     private Integer status;
+
+    private String remark;
 }
