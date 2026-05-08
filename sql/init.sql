@@ -81,6 +81,28 @@ CREATE TABLE lab_user (
     UNIQUE KEY uk_lab_user_username (username)
 );
 
+DROP TABLE IF EXISTS lab_login_log;
+CREATE TABLE lab_login_log (
+    id BIGINT PRIMARY KEY,
+    user_id BIGINT,
+    username VARCHAR(64) NOT NULL,
+    real_name VARCHAR(64),
+    role_code VARCHAR(32),
+    login_channel VARCHAR(32),
+    login_status VARCHAR(32),
+    login_time DATETIME,
+    remark VARCHAR(500),
+    deleted TINYINT DEFAULT 0,
+    created_by BIGINT,
+    created_name VARCHAR(64),
+    created_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_by BIGINT,
+    updated_name VARCHAR(64),
+    updated_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    KEY idx_lab_login_log_user_id (user_id),
+    KEY idx_lab_login_log_login_time (login_time)
+);
+
 DROP TABLE IF EXISTS lab_monitoring_point;
 CREATE TABLE lab_monitoring_point (
     id BIGINT PRIMARY KEY,

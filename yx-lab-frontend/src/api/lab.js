@@ -428,6 +428,7 @@ export const getSystemDictDetailApi = (id) => request.get(`/api/system/dicts/${i
 export const createSystemDictApi = (data) => request.post('/api/system/dicts', data)
 export const updateSystemDictApi = (id, data) => request.put(`/api/system/dicts/${id}`, data)
 export const deleteSystemDictApi = (id) => request.delete(`/api/system/dicts/${id}`)
+export const fetchSystemLogsApi = (params) => request.get('/api/system/logs', { params })
 /**
  * 上传附件到统一存储。
  *
