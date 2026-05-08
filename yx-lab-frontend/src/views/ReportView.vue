@@ -294,19 +294,19 @@ async function createTemplate() {
     defaultTemplate: 0,
     templateContent: '月报模板内容：${sampleNo} / ${sealNo} - ${detectionResult}'
   })
-  ElMessage.success('模板已创建')
+  ElMessage.success('模板已创建。')
 }
 
 async function publish(id) {
   await publishReportApi(id)
-  ElMessage.success('报告已发布')
+  ElMessage.success('报告已发布。')
   query.pageNum = 1
   await loadReports()
 }
 
 async function unpublish(id) {
   await unpublishReportApi(id)
-  ElMessage.success('报告已取消发布')
+  ElMessage.success('报告已取消发布。')
   query.pageNum = 1
   await loadReports()
 }

@@ -4,7 +4,7 @@
       <div class="hero-copy">
         <h2 class="section-title">运行总览</h2>
         <p class="page-subtitle">
-          统一查看样品、检测、审核与报告发布状态，便于快速识别当前业务处理进度。
+          统一查看样品、检测、审查与报告发布状态，便于快速识别当前业务处理进度。
         </p>
       </div>
       <div class="hero-status">
@@ -33,10 +33,14 @@
     </section>
 
     <section class="dashboard-lower">
-      <button type="button" class="glass-panel section-block summary-panel summary-panel--link" @click="goRoute('/detections')">
+      <button
+        type="button"
+        class="glass-panel section-block summary-panel summary-panel--link"
+        @click="goRoute('/detection-ledger')"
+      >
         <div class="panel-head">
           <h3 class="section-title">结果分布</h3>
-          <span class="panel-note">按当前检测结果统计，点击进入检测分析</span>
+          <span class="panel-note">按当前检测结果统计，点击进入检测台账</span>
         </div>
         <div class="result-stack">
           <div class="result-row">
@@ -101,10 +105,10 @@ const loading = ref(false)
 const overview = ref({})
 
 const actionRouteMap = {
-  样品采样: '/samples',
-  检测分析: '/detections',
-  结果审核: '/reviews',
-  报告台账: '/reports'
+  样品采样: '/sample-login',
+  检测分析: '/detection-analysis',
+  结果审核: '/review-result',
+  报告台账: '/report-ledger'
 }
 
 function toSafeNumber(value) {
@@ -141,7 +145,7 @@ const cards = computed(() => [
     desc: '当前系统已登记样品总量',
     icon: Files,
     tone: 'brand',
-    path: '/samples'
+    path: '/sample-ledger'
   },
   {
     label: '待审核数',
@@ -149,7 +153,7 @@ const cards = computed(() => [
     desc: '待复核、待流转的检测记录',
     icon: WarningFilled,
     tone: 'warning',
-    path: '/reviews'
+    path: '/review-result'
   },
   {
     label: '已通过检测',
@@ -157,7 +161,7 @@ const cards = computed(() => [
     desc: '检测流程已完成审批的数据',
     icon: CircleCheckFilled,
     tone: 'success',
-    path: '/detections'
+    path: '/detection-ledger'
   },
   {
     label: '已发布报告',
@@ -165,34 +169,34 @@ const cards = computed(() => [
     desc: '已输出正式报告数量',
     icon: DocumentChecked,
     tone: 'brand',
-    path: '/reports'
+    path: '/report-ledger'
   }
 ])
 
 const defaultActionItems = [
   {
     label: '样品采样',
-    desc: '快速进入采样计划、采样任务和样品登录环节',
+    desc: '快速进入采样任务与样品登录环节',
     icon: Opportunity,
-    path: '/samples'
+    path: '/sample-login'
   },
   {
     label: '检测分析',
     desc: '进入检测数据录入与结果处理流程',
     icon: Files,
-    path: '/detections'
+    path: '/detection-analysis'
   },
   {
     label: '结果审核',
     desc: '进入审核审批与复核处理流程',
     icon: DocumentChecked,
-    path: '/reviews'
+    path: '/review-result'
   },
   {
     label: '报告台账',
     desc: '进入报告生成与发布环节',
     icon: CircleCheckFilled,
-    path: '/reports'
+    path: '/report-ledger'
   }
 ]
 
@@ -204,7 +208,7 @@ const actionItems = computed(() => {
   return source.map((label, index) => ({
     label,
     icon: defaultActionItems[index]?.icon || Opportunity,
-    desc: defaultActionItems[index]?.desc || '按既定流程完成当前业务操作',
+    desc: defaultActionItems[index]?.desc || '按既定流程完成当前业务操作。',
     path: actionRouteMap[label] || defaultActionItems[index]?.path || '/dashboard'
   }))
 })

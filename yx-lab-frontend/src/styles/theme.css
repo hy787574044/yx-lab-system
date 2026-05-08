@@ -173,10 +173,13 @@ textarea {
 }
 
 .toolbar-fields {
-  flex: 1;
-  min-width: min(100%, 520px);
+  flex: 0 1 auto;
+  width: fit-content;
+  max-width: 100%;
+  min-width: min(100%, 392px);
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(180px, 240px));
+  justify-content: flex-start;
   gap: 12px;
 }
 
@@ -671,6 +674,7 @@ textarea {
   }
 
   .toolbar-fields {
+    width: 100%;
     min-width: 100%;
     grid-template-columns: 1fr;
   }

@@ -5,34 +5,23 @@
         <button type="button" class="brand-panel" @click="goRoute('/dashboard')">
           <div class="brand-mark">YX</div>
           <div class="brand-copy">
-            <strong>阳新县实验室水质管理平台</strong>
+            <strong>阳新实验室水质管理平台</strong>
             <p>Yangxin Laboratory Water Quality Platform</p>
           </div>
         </button>
 
-        <nav class="primary-nav">
-          <button
-            v-for="item in menuItems"
-            :key="item.path"
-            type="button"
-            :class="['primary-nav__item', { 'is-active': currentMenu.path === item.path }]"
-            @click="goRoute(item.path)"
-          >
-            <span class="primary-nav__icon">
-              <el-icon>
-                <component :is="item.icon" />
-              </el-icon>
-            </span>
-            <span class="primary-nav__text">{{ item.shortTitle }}</span>
-          </button>
-        </nav>
+        <button type="button" class="top-level-entry" @click="goRoute('/dashboard')">
+          <span class="top-level-entry__label">一级菜单</span>
+          <strong>水质管理</strong>
+        </button>
       </div>
 
       <div class="topbar-right">
         <el-input
           v-model="menuKeyword"
           class="topbar-search"
-          placeholder="请输入菜单名称"
+          placeholder="请输入菜单名称或关键字"
+          clearable
           @keyup.enter="handleGlobalSearch"
         >
           <template #prefix>
@@ -89,9 +78,7 @@
         </button>
 
         <div class="user-box">
-          <div class="user-avatar">
-            {{ (user.realName || user.username || '管').slice(0, 1) }}
-          </div>
+          <div class="user-avatar">{{ userInitial }}</div>
           <div class="user-copy">
             <strong>{{ user.realName || user.username || '管理员' }}</strong>
             <p>{{ user.roleCode || 'ADMIN' }}</p>
@@ -103,18 +90,47 @@
 
     <div class="layout-main">
       <aside class="sidebar">
-        <div class="sidebar-title">功能导航</div>
+        <div class="sidebar-head">
+          <span class="sidebar-head__caption">功能导航</span>
+          <strong>水质管理</strong>
+          <p>左侧按业务模块展开原一级菜单与二级菜单。</p>
+        </div>
 
-        <el-menu :default-active="$route.path" router class="menu-panel">
-          <el-menu-item v-for="item in menuItems" :key="item.path" :index="item.path">
-            <el-icon><component :is="item.icon" /></el-icon>
-            <span>{{ item.title }}</span>
-          </el-menu-item>
-        </el-menu>
+        <div class="sidebar-body">
+          <el-menu
+            :default-active="currentRoutePath"
+            :default-openeds="defaultOpenMenuIds"
+            router
+            unique-opened
+            class="menu-panel"
+          >
+            <el-sub-menu
+              v-for="group in primaryMenus"
+              :key="group.id"
+              :index="group.id"
+            >
+              <template #title>
+                <el-icon>
+                  <component :is="iconMap[group.iconKey]" />
+                </el-icon>
+                <span>{{ group.title }}</span>
+              </template>
+
+              <el-menu-item
+                v-for="item in group.children"
+                :key="item.path"
+                :index="item.path"
+              >
+                <span>{{ item.title }}</span>
+              </el-menu-item>
+            </el-sub-menu>
+          </el-menu>
+        </div>
 
         <div class="sidebar-footer">
           <span>当前模块</span>
-          <strong>{{ currentTitle }}</strong>
+          <strong>{{ currentPrimaryMenu.title }}</strong>
+          <p>{{ currentSecondaryMenu.title }}</p>
         </div>
       </aside>
 
@@ -127,7 +143,11 @@
               </button>
               <span>首页</span>
               <el-icon class="breadcrumb-separator"><ArrowRight /></el-icon>
-              <span class="is-current">{{ currentTitle }}</span>
+              <span>水质管理</span>
+              <el-icon class="breadcrumb-separator"><ArrowRight /></el-icon>
+              <span>{{ currentPrimaryMenu.title }}</span>
+              <el-icon class="breadcrumb-separator"><ArrowRight /></el-icon>
+              <span class="is-current">{{ currentSecondaryMenu.title }}</span>
             </div>
 
             <div class="workspace-meta">
@@ -139,13 +159,13 @@
 
           <div class="route-tabs">
             <button
-              v-for="item in menuItems"
+              v-for="item in currentSecondaryMenus"
               :key="`tab-${item.path}`"
               type="button"
-              :class="['route-tab', { 'is-active': currentMenu.path === item.path }]"
+              :class="['route-tab', { 'is-active': currentRoutePath === item.path }]"
               @click="goRoute(item.path)"
             >
-              {{ item.title }}
+              {{ item.shortTitle || item.title }}
             </button>
           </div>
         </section>
@@ -166,7 +186,9 @@ import { ElMessage } from 'element-plus'
 import {
   ArrowRight,
   Bell,
+  Cpu,
   DataAnalysis,
+  DataLine,
   Document,
   DocumentChecked,
   Files,
@@ -176,17 +198,28 @@ import {
   LocationFilled,
   PieChart,
   Search,
+  Setting,
   SetUp,
   Tickets
 } from '@element-plus/icons-vue'
 import { clearToken, getUser } from '../../utils/auth'
+import { labMenuGroups } from '../../router/menuConfig'
 
 const THEME_STORAGE_KEY = 'yx-lab-theme'
 
-const router = useRouter()
-const route = useRoute()
-const menuKeyword = ref('')
-const currentThemeId = ref('科技蓝')
+const iconMap = {
+  DataAnalysis,
+  LocationFilled,
+  Tickets,
+  List,
+  DataLine,
+  DocumentChecked,
+  Document,
+  Cpu,
+  Files,
+  PieChart,
+  Setting
+}
 
 const themeOptions = [
   { id: '科技蓝', name: '科技蓝', primary: '#1677FF', secondary: '#20BEF5', accent: '#8CC8FF' },
@@ -196,80 +229,50 @@ const themeOptions = [
   { id: '星夜紫', name: '星夜紫', primary: '#6F62FF', secondary: '#B37FEB', accent: '#D3ADF7' }
 ]
 
-const menuItems = [
+const router = useRouter()
+const route = useRoute()
+const menuKeyword = ref('')
+const currentThemeId = ref(themeOptions[0].id)
+
+const primaryMenus = labMenuGroups
+const defaultOpenMenuIds = primaryMenus.map((item) => item.id)
+const allSearchItems = labMenuGroups.flatMap((group) => ([
   {
-    path: '/dashboard',
-    title: '运行总览',
-    shortTitle: '总览',
-    subtitle: '统一查看实验室整体运行情况与核心业务指标',
-    icon: DataAnalysis
+    keywordText: [group.title, group.shortTitle].join('|'),
+    path: group.defaultPath
   },
-  {
-    path: '/monitoring',
-    title: '监测点位',
-    shortTitle: '点位',
-    subtitle: '维护监测点位与基础信息档案',
-    icon: LocationFilled
-  },
-  {
-    path: '/samples',
-    title: '样品采样',
-    shortTitle: '采样',
-    subtitle: '覆盖采样计划、采样任务和样品登录流程',
-    icon: Tickets
-  },
-  {
-    path: '/detections',
-    title: '检测分析',
-    shortTitle: '检测',
-    subtitle: '处理检测记录、检测结果和异常事项',
-    icon: List
-  },
-  {
-    path: '/reviews',
-    title: '结果审核',
-    shortTitle: '审核',
-    subtitle: '处理审核流转、退回重检和结果确认',
-    icon: DocumentChecked
-  },
-  {
-    path: '/reports',
-    title: '报告台账',
-    shortTitle: '报告',
-    subtitle: '管理报告生成、发布和推送留痕',
-    icon: Document
-  },
-  {
-    path: '/assets',
-    title: '仪器文档',
-    shortTitle: '资产',
-    subtitle: '统一管理仪器资产、附件与共享文档',
-    icon: Files
-  },
-  {
-    path: '/statistics',
-    title: '分析统计',
-    shortTitle: '统计',
-    subtitle: '按样品、审核和报告维度汇总统计结果',
-    icon: PieChart
-  }
-]
+  ...group.children.map((item) => ({
+    keywordText: [group.title, group.shortTitle, item.title, item.shortTitle, item.subtitle].filter(Boolean).join('|'),
+    path: item.path
+  }))
+]))
 
 const user = computed(() => getUser() || {})
-const currentMenu = computed(() => (
-  menuItems.find((item) => route.path === item.path)
-  || menuItems.find((item) => route.path.startsWith(item.path))
-  || menuItems[0]
+const userInitial = computed(() => (user.value.realName || user.value.username || '管').slice(0, 1))
+const currentRoutePath = computed(() => route.path)
+
+const currentPrimaryMenu = computed(() => (
+  primaryMenus.find((item) => item.id === route.meta?.primaryId)
+  || primaryMenus.find((item) => item.children.some((child) => child.path === route.path))
+  || primaryMenus[0]
 ))
-const currentTitle = computed(() => currentMenu.value.title || route.meta?.title || '阳新县实验室水质管理平台')
-const currentSubtitle = computed(() => currentMenu.value.subtitle || route.meta?.subtitle || '实验室业务闭环管理')
-const todayText = computed(() => dayjs().format('YYYY年M月D日 dddd'))
+
+const currentSecondaryMenus = computed(() => currentPrimaryMenu.value?.children || [])
+
+const currentSecondaryMenu = computed(() => (
+  currentSecondaryMenus.value.find((item) => item.path === route.path)
+  || currentSecondaryMenus.value[0]
+  || { title: route.meta?.title || '未命名页面', shortTitle: route.meta?.secondaryShortTitle || route.meta?.title || '页面', subtitle: route.meta?.subtitle || '' }
+))
+
+const currentSubtitle = computed(() => currentSecondaryMenu.value.subtitle || route.meta?.subtitle || '实验室业务闭环管理')
+const todayText = computed(() => dayjs().format('YYYY年MM月DD日 dddd'))
 
 function applyTheme(themeId) {
-  const targetTheme = themeOptions.some((item) => item.id === themeId) ? themeId : themeOptions[0].id
-  currentThemeId.value = targetTheme
-  document.documentElement.setAttribute('data-theme', targetTheme)
-  localStorage.setItem(THEME_STORAGE_KEY, targetTheme)
+  const matchedTheme = themeOptions.find((item) => item.id === themeId) || themeOptions[0]
+  currentThemeId.value = matchedTheme.id
+  document.documentElement.setAttribute('data-theme', matchedTheme.id)
+  localStorage.setItem(THEME_STORAGE_KEY, matchedTheme.id)
 }
 
 function changeTheme(themeId) {
@@ -278,12 +281,11 @@ function changeTheme(themeId) {
 }
 
 function initTheme() {
-  const savedTheme = localStorage.getItem(THEME_STORAGE_KEY)
-  applyTheme(savedTheme || themeOptions[0].id)
+  applyTheme(localStorage.getItem(THEME_STORAGE_KEY) || themeOptions[0].id)
 }
 
 function goRoute(path) {
-  if (route.path !== path) {
+  if (path && route.path !== path) {
     router.push(path)
   }
 }
@@ -293,16 +295,14 @@ function handleGlobalSearch() {
   if (!keyword) {
     return
   }
-  const matchedMenu = menuItems.find((item) => (
-    item.title.includes(keyword)
-    || item.shortTitle.includes(keyword)
-    || item.subtitle.includes(keyword)
-  ))
-  if (!matchedMenu) {
+
+  const matchedItem = allSearchItems.find((item) => item.keywordText.includes(keyword))
+  if (!matchedItem) {
     ElMessage.warning('未找到匹配的菜单，请重新输入关键字。')
     return
   }
-  goRoute(matchedMenu.path)
+
+  goRoute(matchedItem.path)
 }
 
 function showMessageTip() {
@@ -416,56 +416,27 @@ onMounted(() => {
   color: rgba(255, 255, 255, 0.76);
 }
 
-.primary-nav {
-  display: flex;
-  align-items: stretch;
-  min-width: 0;
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-
-.primary-nav::-webkit-scrollbar,
-.route-tabs::-webkit-scrollbar {
-  display: none;
-}
-
-.primary-nav__item {
-  min-width: 78px;
-  height: var(--layout-topbar-height);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 0 10px;
-  border: none;
-  background: transparent;
-  color: rgba(255, 255, 255, 0.82);
-  cursor: pointer;
-  transition: background-color 0.2s ease, color 0.2s ease;
-}
-
-.primary-nav__icon {
-  width: var(--nav-entry-size);
-  height: var(--nav-entry-size);
+.top-level-entry {
+  min-width: 150px;
   display: grid;
-  place-items: center;
-}
-
-.primary-nav__icon .el-icon {
-  font-size: 22px;
-}
-
-.primary-nav__text {
-  font-size: 12px;
-  line-height: 1;
-  white-space: nowrap;
-}
-
-.primary-nav__item:hover,
-.primary-nav__item.is-active {
-  background: rgba(255, 255, 255, 0.14);
+  gap: 4px;
+  padding: 10px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.12);
   color: #ffffff;
+  text-align: left;
+  cursor: pointer;
+}
+
+.top-level-entry__label {
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 12px;
+}
+
+.top-level-entry strong {
+  font-size: 16px;
+  line-height: 1.2;
 }
 
 .topbar-search {
@@ -623,32 +594,54 @@ onMounted(() => {
   color: #d4dbeb;
   display: flex;
   flex-direction: column;
-  padding: 14px 0 12px;
+  padding: 18px 0 12px;
   box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.04);
-  overflow-y: auto;
+  overflow: hidden;
 }
 
-.sidebar-title {
-  padding: 0 18px 12px;
+.sidebar-head {
+  display: grid;
+  gap: 6px;
+  padding: 0 18px 14px;
+}
+
+.sidebar-head__caption,
+.sidebar-footer span {
   color: #8b95af;
   font-size: 12px;
   letter-spacing: 1px;
 }
 
+.sidebar-head strong,
+.sidebar-footer strong {
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.sidebar-head p,
+.sidebar-footer p {
+  margin: 0;
+  color: #8b95af;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
 .sidebar-footer {
   margin-top: auto;
   padding: 16px 18px 6px;
-  color: #8b95af;
-  font-size: 12px;
-  line-height: 1.6;
+  display: grid;
+  gap: 4px;
+  flex-shrink: 0;
 }
 
-.sidebar-footer strong {
-  display: block;
-  margin-top: 4px;
-  color: #ffffff;
-  font-size: 13px;
-  font-weight: 600;
+.sidebar-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
 }
 
 .workspace {
@@ -688,6 +681,7 @@ onMounted(() => {
 .breadcrumb {
   color: var(--text-sub);
   font-size: 13px;
+  flex-wrap: wrap;
 }
 
 .home-trigger {
@@ -783,6 +777,7 @@ onMounted(() => {
 }
 
 :deep(.menu-panel) {
+  width: 100%;
   border-right: none;
   background: transparent;
   --el-menu-bg-color: transparent;
@@ -792,13 +787,24 @@ onMounted(() => {
   --el-menu-active-color: #ffffff;
 }
 
-:deep(.menu-panel .el-menu-item) {
+:deep(.menu-panel .el-sub-menu__title) {
   height: 46px;
   margin: 0 0 6px;
   padding-left: 18px !important;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+:deep(.menu-panel .el-sub-menu__title:hover) {
+  background: var(--bg-sidebar-hover);
+}
+
+:deep(.menu-panel .el-menu-item) {
+  height: 42px;
+  margin: 0 0 4px;
+  padding-left: 46px !important;
   border-left: 3px solid transparent;
   color: #d4dbeb;
-  gap: 10px;
 }
 
 :deep(.menu-panel .el-menu-item:hover) {
@@ -812,8 +818,17 @@ onMounted(() => {
   color: #ffffff;
 }
 
-:deep(.menu-panel .el-menu-item .el-icon) {
-  font-size: 16px;
+.sidebar-body::-webkit-scrollbar {
+  width: 8px;
+}
+
+.sidebar-body::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.24);
+}
+
+.sidebar-body::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 @media (max-width: 1440px) {
@@ -854,6 +869,11 @@ onMounted(() => {
     justify-content: space-between;
   }
 
+  .topbar-left {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
   .topbar-right {
     gap: 10px;
   }
@@ -866,6 +886,11 @@ onMounted(() => {
 
   .sidebar-footer {
     display: none;
+  }
+
+  .sidebar-body {
+    overflow: visible;
+    scrollbar-gutter: auto;
   }
 
   .workspace {
@@ -889,7 +914,6 @@ onMounted(() => {
     flex-direction: column;
   }
 
-  .primary-nav,
   .topbar-search {
     width: 100%;
   }
@@ -900,7 +924,8 @@ onMounted(() => {
   }
 
   .topbar-action,
-  .skin-trigger {
+  .skin-trigger,
+  .top-level-entry {
     min-width: 0;
   }
 

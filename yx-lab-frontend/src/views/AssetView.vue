@@ -5,7 +5,7 @@
         v-for="item in currentStats"
         :key="item.label"
         type="button"
-        :class="['metric-card', 'asset-metric', 'metric-card--action', { 'is-active': activeStatKey === item.key }]"
+        :class="['metric-card', 'asset-metric', 'metric-card--action', { 'is-active': activeStatKey === item.label }]"
         @click="handleStatClick(item)"
       >
         <span>{{ item.label }}</span>
@@ -403,6 +403,7 @@
 
 <script setup>
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import TablePagination from '../components/common/TablePagination.vue'
 import {
@@ -433,6 +434,7 @@ import {
   instrumentStatusOptions
 } from '../utils/labEnums'
 
+const route = useRoute()
 const active = ref('inst')
 const instrumentLoading = ref(false)
 const savingInstrument = ref(false)
@@ -463,6 +465,19 @@ const previewMode = ref('frame')
 const previewTitle = ref('')
 const previewError = ref('')
 const activeStatKey = ref('设备总数')
+
+const instrumentStatLabels = ['设备总数', '正常设备', '停用/维护', '待校准']
+const documentStatLabels = ['文档总数', '可管理文档', '共享文档', '本页记录']
+
+function syncRouteState() {
+  const nextTab = typeof route.meta?.defaultTab === 'string' ? route.meta.defaultTab : 'inst'
+  const nextStatLabel = typeof route.meta?.defaultStatLabel === 'string'
+    ? route.meta.defaultStatLabel
+    : nextTab === 'doc' ? '文档总数' : '设备总数'
+
+  active.value = nextTab
+  activeStatKey.value = nextStatLabel
+}
 
 const currentStats = computed(() => (active.value === 'inst' ? instrumentStats.value : documentStats.value))
 
@@ -638,7 +653,7 @@ function handleStatClick(item) {
     return
   }
 
-  if (['设备总数', '正常设备', '停用/维护', '待校准'].includes(item.label)) {
+  if (instrumentStatLabels.includes(item.label)) {
     active.value = 'inst'
     activeStatKey.value = activeStatKey.value === item.label ? '设备总数' : item.label
     return
@@ -649,10 +664,10 @@ function handleStatClick(item) {
 }
 
 watch(active, (value) => {
-  if (value === 'inst' && !['设备总数', '正常设备', '停用/维护', '待校准'].includes(activeStatKey.value)) {
+  if (value === 'inst' && !instrumentStatLabels.includes(activeStatKey.value)) {
     activeStatKey.value = '设备总数'
   }
-  if (value === 'doc' && !['文档总数', '可管理文档', '共享文档', '本页记录'].includes(activeStatKey.value)) {
+  if (value === 'doc' && !documentStatLabels.includes(activeStatKey.value)) {
     activeStatKey.value = '文档总数'
   }
 })
@@ -954,12 +969,17 @@ async function parsePreviewError(blob) {
 }
 
 onMounted(() => {
+  syncRouteState()
   loadInstruments()
   loadDocuments()
   loadDocumentUsers()
 })
 
 onBeforeUnmount(revokePreviewUrl)
+
+watch(() => route.fullPath, () => {
+  syncRouteState()
+})
 </script>
 
 <style scoped>

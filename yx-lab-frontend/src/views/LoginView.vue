@@ -4,7 +4,7 @@
       <div class="login-brand">
         <div class="login-brand__mark">YX</div>
         <div>
-          <strong>阳新县实验室水质管理平台</strong>
+          <strong>阳新实验室水质管理平台</strong>
           <p>Laboratory Water Quality Management Platform</p>
         </div>
       </div>

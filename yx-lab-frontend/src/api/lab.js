@@ -245,6 +245,35 @@ export const fetchInstrumentsApi = (params) => request.get('/api/assets/instrume
  */
 export const getInstrumentDetailApi = (id) => request.get(`/api/assets/instruments/${id}`)
 /**
+ * 获取设备维修分页。
+ *
+ * @param {Object} params 查询条件。
+ * @returns {Promise<any>} 设备维修分页结果。
+ */
+export const fetchInstrumentMaintenancesApi = (params) => request.get('/api/assets/maintenances', { params })
+/**
+ * 新增设备维修记录。
+ *
+ * @param {Object} data 设备维修表单。
+ * @returns {Promise<any>} 保存结果。
+ */
+export const createInstrumentMaintenanceApi = (data) => request.post('/api/assets/maintenances', data)
+/**
+ * 更新设备维修记录。
+ *
+ * @param {number} id 维修主键。
+ * @param {Object} data 设备维修表单。
+ * @returns {Promise<any>} 更新结果。
+ */
+export const updateInstrumentMaintenanceApi = (id, data) => request.put(`/api/assets/maintenances/${id}`, data)
+/**
+ * 删除设备维修记录。
+ *
+ * @param {number} id 维修主键。
+ * @returns {Promise<any>} 删除结果。
+ */
+export const deleteInstrumentMaintenanceApi = (id) => request.delete(`/api/assets/maintenances/${id}`)
+/**
  * 下载仪器导入模板。
  *
  * @returns {Promise<import('axios').AxiosResponse<Blob>>} 模板文件响应。
@@ -310,6 +339,42 @@ export const getDocumentDetailApi = (id) => request.get(`/api/assets/documents/$
  * @returns {Promise<any>} 用户选项列表。
  */
 export const fetchDocumentUsersApi = () => request.get('/api/assets/document-users')
+/**
+ * 获取系统用户分页。
+ *
+ * @param {Object} params 查询条件。
+ * @returns {Promise<any>} 用户分页结果。
+ */
+export const fetchSystemUsersApi = (params) => request.get('/api/system/users', { params })
+/**
+ * 获取系统用户详情。
+ *
+ * @param {number} id 用户主键。
+ * @returns {Promise<any>} 用户详情。
+ */
+export const getSystemUserDetailApi = (id) => request.get(`/api/system/users/${id}`)
+/**
+ * 新增系统用户。
+ *
+ * @param {Object} data 用户表单。
+ * @returns {Promise<any>} 保存结果。
+ */
+export const createSystemUserApi = (data) => request.post('/api/system/users', data)
+/**
+ * 更新系统用户。
+ *
+ * @param {number} id 用户主键。
+ * @param {Object} data 用户表单。
+ * @returns {Promise<any>} 更新结果。
+ */
+export const updateSystemUserApi = (id, data) => request.put(`/api/system/users/${id}`, data)
+/**
+ * 删除系统用户。
+ *
+ * @param {number} id 用户主键。
+ * @returns {Promise<any>} 删除结果。
+ */
+export const deleteSystemUserApi = (id) => request.delete(`/api/system/users/${id}`)
 /**
  * 上传附件到统一存储。
  *
