@@ -159,7 +159,12 @@
 
 <script setup>
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElButton } from 'element-plus/es/components/button/index.mjs'
+import { ElDialog } from 'element-plus/es/components/dialog/index.mjs'
+import { ElLoadingDirective } from 'element-plus/es/components/loading/index.mjs'
+import { ElMessage } from 'element-plus/es/components/message/index.mjs'
+import { ElOption, ElSelect } from 'element-plus/es/components/select/index.mjs'
+import { ElTable, ElTableColumn } from 'element-plus/es/components/table/index.mjs'
 import {
   createTemplateApi,
   fetchReportsApi,
@@ -198,6 +203,7 @@ const loading = ref(false)
 const reports = ref([])
 const total = ref(0)
 const activeStatKey = ref('all')
+const vLoading = ElLoadingDirective
 
 const previewDialogVisible = ref(false)
 const previewUrl = ref('')

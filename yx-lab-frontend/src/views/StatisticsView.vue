@@ -84,6 +84,8 @@
 <script setup>
 import { computed, onMounted, ref, unref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { ElLoadingDirective } from 'element-plus/es/components/loading/index.mjs'
+import { ElProgress } from 'element-plus/es/components/progress/index.mjs'
 import { dashboardApi, statisticsApi } from '../api/lab'
 
 const route = useRoute()
@@ -91,6 +93,7 @@ const router = useRouter()
 const loading = ref(false)
 const summary = ref({})
 const overview = ref({})
+const vLoading = ElLoadingDirective
 
 function toSafeNumber(value) {
   const num = typeof value === 'number' ? value : Number.parseFloat(String(value ?? '').replace(/,/g, '').trim())

@@ -132,7 +132,9 @@
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElButton } from 'element-plus/es/components/button/index.mjs'
+import { ElMessage } from 'element-plus/es/components/message/index.mjs'
+import { ElTable, ElTableColumn } from 'element-plus/es/components/table/index.mjs'
 import TablePagination from '../components/common/TablePagination.vue'
 import {
   fetchDetectionParametersApi,

@@ -15,8 +15,8 @@
     </section>
 
     <section class="glass-panel section-block">
-      <el-tabs v-model="active">
-        <el-tab-pane label="设备台账" name="inst">
+      <el-tabs v-model="active" :class="{ 'asset-tabs--single': showSingleAssetView }">
+        <el-tab-pane v-if="showInstrumentTab" label="设备台账" name="inst">
           <div class="section-head">
             <div>
               <h3 class="section-title">设备台账</h3>
@@ -105,7 +105,7 @@
           </div>
         </el-tab-pane>
 
-        <el-tab-pane label="文档台账" name="doc">
+        <el-tab-pane v-if="showDocumentTab" label="文档台账" name="doc">
           <div class="section-head">
             <div>
               <h3 class="section-title">文档台账</h3>
@@ -404,7 +404,20 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElAlert } from 'element-plus/es/components/alert/index.mjs'
+import { ElButton } from 'element-plus/es/components/button/index.mjs'
+import { ElDatePicker } from 'element-plus/es/components/date-picker/index.mjs'
+import { ElDialog } from 'element-plus/es/components/dialog/index.mjs'
+import { ElForm, ElFormItem } from 'element-plus/es/components/form/index.mjs'
+import { ElInput } from 'element-plus/es/components/input/index.mjs'
+import { ElInputNumber } from 'element-plus/es/components/input-number/index.mjs'
+import { ElLoadingDirective } from 'element-plus/es/components/loading/index.mjs'
+import { ElMessage } from 'element-plus/es/components/message/index.mjs'
+import { ElMessageBox } from 'element-plus/es/components/message-box/index.mjs'
+import { ElOption, ElSelect } from 'element-plus/es/components/select/index.mjs'
+import { ElTable, ElTableColumn } from 'element-plus/es/components/table/index.mjs'
+import { ElTabs, ElTabPane } from 'element-plus/es/components/tabs/index.mjs'
+import { ElUpload } from 'element-plus/es/components/upload/index.mjs'
 import TablePagination from '../components/common/TablePagination.vue'
 import {
   createDocumentApi,
@@ -436,6 +449,10 @@ import {
 
 const route = useRoute()
 const active = ref('inst')
+const vLoading = ElLoadingDirective
+const showSingleAssetView = computed(() => route.path === '/instrument-ledger' || route.path === '/document-ledger')
+const showInstrumentTab = computed(() => route.path !== '/document-ledger')
+const showDocumentTab = computed(() => route.path !== '/instrument-ledger')
 const instrumentLoading = ref(false)
 const savingInstrument = ref(false)
 const templateDownloading = ref(false)
@@ -796,6 +813,16 @@ async function loadDocumentUsers() {
   documentUsers.value = await fetchDocumentUsersApi()
 }
 
+async function loadCurrentAssetData() {
+  if (showInstrumentTab.value) {
+    await loadInstruments()
+  }
+  if (showDocumentTab.value) {
+    await loadDocuments()
+    await loadDocumentUsers()
+  }
+}
+
 async function openInstrumentDialog(id) {
   resetInstrumentForm()
   instrumentDialogVisible.value = true
@@ -970,15 +997,14 @@ async function parsePreviewError(blob) {
 
 onMounted(() => {
   syncRouteState()
-  loadInstruments()
-  loadDocuments()
-  loadDocumentUsers()
+  loadCurrentAssetData()
 })
 
 onBeforeUnmount(revokePreviewUrl)
 
 watch(() => route.fullPath, () => {
   syncRouteState()
+  loadCurrentAssetData()
 })
 </script>
 
@@ -1101,6 +1127,14 @@ watch(() => route.fullPath, () => {
   color: var(--text-sub);
   text-align: center;
   line-height: 1.8;
+}
+
+.asset-tabs--single :deep(.el-tabs__header) {
+  display: none;
+}
+
+.asset-tabs--single :deep(.el-tabs__content) {
+  padding-top: 0;
 }
 
 @media (max-width: 860px) {

@@ -71,6 +71,7 @@ public class MobileSamplingQueryService {
     private MobileSamplingTodoVO toSamplingTodoVO(SamplingTask task, LabSample sample) {
         MobileSamplingTodoVO vo = new MobileSamplingTodoVO();
         vo.setId(task.getId());
+        vo.setTaskNo(task.getTaskNo());
         vo.setPlanId(task.getPlanId());
         vo.setPointId(task.getPointId());
         vo.setPointName(task.getPointName());
@@ -80,6 +81,8 @@ public class MobileSamplingQueryService {
         vo.setSampleType(task.getSampleType());
         vo.setDetectionItems(task.getDetectionItems());
         vo.setTaskStatus(task.getTaskStatus());
+        vo.setTaskSealNo(task.getSealNo());
+        vo.setSampleRegisterStatus(task.getSampleRegisterStatus());
         vo.setFinishedTime(task.getFinishedTime());
         vo.setRemark(task.getRemark());
         if (sample != null) {

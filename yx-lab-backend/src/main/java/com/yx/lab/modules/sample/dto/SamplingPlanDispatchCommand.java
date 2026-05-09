@@ -14,4 +14,8 @@ public class SamplingPlanDispatchCommand {
 
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime samplingTime;
+
+    private Long samplerId;
+
+    private String samplerName;
 }

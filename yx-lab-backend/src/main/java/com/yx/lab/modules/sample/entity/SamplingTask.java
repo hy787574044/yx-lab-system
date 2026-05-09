@@ -13,6 +13,8 @@ import java.time.LocalDateTime;
 @EqualsAndHashCode(callSuper = true)
 public class SamplingTask extends BaseEntity {
 
+    private String taskNo;
+
     private Long planId;
 
     private Long pointId;
@@ -27,6 +29,12 @@ public class SamplingTask extends BaseEntity {
     private String samplerName;
 
     private String sampleType;
+
+    private String sealNo;
+
+    private String sampleRegisterStatus;
+
+    private Long sampleId;
 
     private String detectionItems;
 

@@ -33,6 +33,8 @@ export const pendingTaskStatus = 'PENDING'
 export const inProgressTaskStatus = 'IN_PROGRESS'
 export const abandonedTaskStatus = 'ABANDONED'
 export const completedTaskStatus = 'COMPLETED'
+export const unregisteredSampleRegisterStatus = 'UNREGISTERED'
+export const registeredSampleRegisterStatus = 'REGISTERED'
 
 export const factorySampleType = 'FACTORY'
 export const rawSampleType = 'RAW'
@@ -67,7 +69,7 @@ export const instrumentStatusLabelMap = {
   [instrumentNormalStatus]: '正常',
   [instrumentDisabledStatus]: '停用',
   [instrumentMaintenanceStatus]: '维护中',
-  [instrumentCalibratingStatus]: '待校准'
+  [instrumentCalibratingStatus]: '校准中'
 }
 
 export const pointStatusLabelMap = {
@@ -107,6 +109,11 @@ export const taskStatusLabelMap = {
   [inProgressTaskStatus]: '进行中',
   [abandonedTaskStatus]: '已废弃',
   [completedTaskStatus]: '已完成'
+}
+
+export const sampleRegisterStatusLabelMap = {
+  [unregisteredSampleRegisterStatus]: '未登记',
+  [registeredSampleRegisterStatus]: '已登记'
 }
 
 export const sampleTypeLabelMap = {
@@ -165,7 +172,8 @@ export const reportStatusOptions = buildOptions(reportStatusLabelMap)
 
 export const actionablePlanStatuses = [activePlanStatus, unpublishedPlanStatus]
 export const dispatchedPlanStatuses = [dispatchedPlanStatus]
-export const completableTaskStatuses = [pendingTaskStatus, inProgressTaskStatus]
+export const abandonableTaskStatuses = [pendingTaskStatus, inProgressTaskStatus]
+export const completableTaskStatuses = [inProgressTaskStatus]
 export const availableDetectionSampleStatuses = [loggedSampleStatus, retestSampleStatus]
 export const inactiveInstrumentStatuses = [instrumentDisabledStatus, instrumentMaintenanceStatus]
 

@@ -12,6 +12,12 @@ public class SampleLoginCommand {
 
     private Long taskId;
 
+    /**
+     * 现场封签 OCR 识别号，或人工输入的封签号。
+     * 有值时优先按封签号回溯采样任务。
+     */
+    private String sealNo;
+
     @NotNull(message = "采样点位不能为空")
     private Long pointId;
 

@@ -153,6 +153,7 @@ CREATE TABLE lab_sampling_plan (
 DROP TABLE IF EXISTS lab_sampling_task;
 CREATE TABLE lab_sampling_task (
     id BIGINT PRIMARY KEY,
+    task_no VARCHAR(64) NOT NULL,
     plan_id BIGINT,
     point_id BIGINT NOT NULL,
     point_name VARCHAR(128) NOT NULL,
@@ -160,6 +161,9 @@ CREATE TABLE lab_sampling_task (
     sampler_id BIGINT,
     sampler_name VARCHAR(64),
     sample_type VARCHAR(32),
+    seal_no VARCHAR(64),
+    sample_register_status VARCHAR(32),
+    sample_id BIGINT,
     detection_items VARCHAR(1000),
     task_status VARCHAR(32),
     started_time DATETIME,
@@ -174,7 +178,9 @@ CREATE TABLE lab_sampling_task (
     created_time DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_by BIGINT,
     updated_name VARCHAR(64),
-    updated_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    updated_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    KEY idx_lab_sampling_task_no (task_no),
+    KEY idx_lab_sampling_task_seal_no (seal_no)
 );
 
 DROP TABLE IF EXISTS lab_sample;

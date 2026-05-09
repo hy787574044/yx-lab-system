@@ -236,7 +236,17 @@
 import dayjs from 'dayjs'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElButton } from 'element-plus/es/components/button/index.mjs'
+import { ElDatePicker } from 'element-plus/es/components/date-picker/index.mjs'
+import { ElDialog } from 'element-plus/es/components/dialog/index.mjs'
+import { ElForm, ElFormItem } from 'element-plus/es/components/form/index.mjs'
+import { ElInput } from 'element-plus/es/components/input/index.mjs'
+import { ElInputNumber } from 'element-plus/es/components/input-number/index.mjs'
+import { ElLoadingDirective } from 'element-plus/es/components/loading/index.mjs'
+import { ElMessage } from 'element-plus/es/components/message/index.mjs'
+import { ElMessageBox } from 'element-plus/es/components/message-box/index.mjs'
+import { ElOption, ElSelect } from 'element-plus/es/components/select/index.mjs'
+import { ElTable, ElTableColumn } from 'element-plus/es/components/table/index.mjs'
 import TablePagination from '../components/common/TablePagination.vue'
 import {
   createInstrumentMaintenanceApi,
@@ -252,6 +262,7 @@ const loading = ref(false)
 const saving = ref(false)
 const dialogVisible = ref(false)
 const formRef = ref()
+const vLoading = ElLoadingDirective
 
 const query = reactive({
   pageNum: 1,

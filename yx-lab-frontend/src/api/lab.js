@@ -71,10 +71,12 @@ export const fetchMobileReportsApi = () => request.get('/api/mobile/reports/mine
 // 监测点位
 export const fetchMonitoringPointsApi = (params) => request.get('/api/monitoring-points', { params })
 export const createMonitoringPointApi = (data) => request.post('/api/monitoring-points', data)
+export const updateMonitoringPointApi = (id, data) => request.put(`/api/monitoring-points/${id}`, data)
 
 // 采样计划
 export const fetchSamplingPlansApi = (params) => request.get('/api/sampling-plans', { params })
 export const createSamplingPlanApi = (data) => request.post('/api/sampling-plans', data)
+export const updateSamplingPlanApi = (id, data) => request.put(`/api/sampling-plans/${id}`, data)
 export const dispatchSamplingPlanApi = (data) => request.post('/api/sampling-plans/dispatch', data)
 export const pauseSamplingPlanApi = (id) => request.post(`/api/sampling-plans/${id}/pause`)
 export const resumeSamplingPlanApi = (id) => request.post(`/api/sampling-plans/${id}/resume`)
@@ -87,6 +89,7 @@ export const resumeSamplingPlanApi = (id) => request.post(`/api/sampling-plans/$
  * @returns {Promise<any>} 采样任务分页结果。
  */
 export const fetchSamplingTasksApi = (params) => request.get('/api/sampling-tasks', { params })
+export const updateSamplingTaskSealNoApi = (id, data) => request.post(`/api/sampling-tasks/${id}/seal-no`, data)
 /**
  * 开始采样任务。
  *

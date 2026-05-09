@@ -18,7 +18,7 @@
       <div class="section-head">
         <div>
           <h3 class="section-title">监测点位</h3>
-          <p class="page-subtitle">统一维护监测点位基础信息，便于采样计划和样品流转时快速选择。</p>
+          <p class="page-subtitle">统一维护监测点位基础信息，支持状态切换和点位资料调整。</p>
         </div>
       </div>
 
@@ -46,7 +46,7 @@
             <el-button type="primary" @click="handleSearch">查询</el-button>
             <el-button @click="resetQuery">重置</el-button>
             <el-button @click="loadData">刷新</el-button>
-            <el-button type="primary" plain @click="openDialog">新增点位</el-button>
+            <el-button type="primary" plain @click="openCreateDialog">新增点位</el-button>
           </div>
         </div>
       </div>
@@ -74,6 +74,21 @@
               </span>
             </template>
           </el-table-column>
+          <el-table-column label="操作" min-width="220" fixed="right">
+            <template #default="{ row }">
+              <div class="table-actions">
+                <el-button link type="primary" @click="openEditDialog(row)">编辑资料</el-button>
+                <el-button
+                  link
+                  :type="row.pointStatus === enabledPointStatus ? 'warning' : 'success'"
+                  :loading="statusUpdatingId === row.id"
+                  @click="togglePointStatus(row)"
+                >
+                  {{ row.pointStatus === enabledPointStatus ? '禁用' : '启用' }}
+                </el-button>
+              </div>
+            </template>
+          </el-table-column>
         </el-table>
 
         <TablePagination
@@ -85,20 +100,26 @@
       </div>
     </section>
 
-    <el-dialog v-model="dialogVisible" title="新增监测点位" width="640px" @closed="resetForm">
+    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="720px" @closed="resetForm">
       <el-form :model="form" label-width="100px">
         <div class="form-grid">
           <el-form-item label="点位名称">
-            <el-input v-model="form.pointName" />
+            <el-input v-model="form.pointName" placeholder="请输入点位名称" />
           </el-form-item>
           <el-form-item label="所属区域">
-            <el-input v-model="form.regionName" />
+            <el-input v-model="form.regionName" placeholder="请输入所属区域" />
+          </el-form-item>
+          <el-form-item label="经度">
+            <el-input v-model="form.longitude" placeholder="请输入经度" />
+          </el-form-item>
+          <el-form-item label="纬度">
+            <el-input v-model="form.latitude" placeholder="请输入纬度" />
           </el-form-item>
           <el-form-item label="负责人">
-            <el-input v-model="form.ownerName" />
+            <el-input v-model="form.ownerName" placeholder="请输入负责人" />
           </el-form-item>
           <el-form-item label="联系电话">
-            <el-input v-model="form.contactPhone" />
+            <el-input v-model="form.contactPhone" placeholder="请输入联系电话" />
           </el-form-item>
           <el-form-item label="点位类型">
             <el-select v-model="form.pointType" style="width: 100%">
@@ -120,7 +141,7 @@
               />
             </el-select>
           </el-form-item>
-          <el-form-item label="状态">
+          <el-form-item label="点位状态">
             <el-select v-model="form.pointStatus" style="width: 100%">
               <el-option
                 v-for="option in pointStatusOptions"
@@ -137,7 +158,7 @@
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="submit">保存</el-button>
+        <el-button type="primary" :loading="submitting" @click="submit">保存</el-button>
       </template>
     </el-dialog>
   </div>
@@ -145,12 +166,21 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
-import { ElMessage } from 'element-plus'
-import { createMonitoringPointApi, fetchMonitoringPointsApi } from '../api/lab'
+import { ElButton } from 'element-plus/es/components/button/index.mjs'
+import { ElDialog } from 'element-plus/es/components/dialog/index.mjs'
+import { ElForm, ElFormItem } from 'element-plus/es/components/form/index.mjs'
+import { ElInput } from 'element-plus/es/components/input/index.mjs'
+import { ElInputNumber } from 'element-plus/es/components/input-number/index.mjs'
+import { ElMessage } from 'element-plus/es/components/message/index.mjs'
+import { ElMessageBox } from 'element-plus/es/components/message-box/index.mjs'
+import { ElOption, ElSelect } from 'element-plus/es/components/select/index.mjs'
+import { ElTable, ElTableColumn } from 'element-plus/es/components/table/index.mjs'
+import { createMonitoringPointApi, fetchMonitoringPointsApi, updateMonitoringPointApi } from '../api/lab'
 import TablePagination from '../components/common/TablePagination.vue'
 import {
   DEFAULT_PAGE_SIZE,
   dailyFrequencyType,
+  disabledPointStatus,
   enabledPointStatus,
   factoryPointType,
   frequencyTypeOptions,
@@ -168,9 +198,14 @@ const records = ref([])
 const total = ref(0)
 const dialogVisible = ref(false)
 const activeStatKey = ref('all')
+const editingId = ref(null)
+const statusUpdatingId = ref(null)
+const submitting = ref(false)
 
 const defaultForm = () => ({
   pointName: '',
+  longitude: '',
+  latitude: '',
   regionName: '',
   ownerName: '',
   contactPhone: '',
@@ -181,6 +216,8 @@ const defaultForm = () => ({
 })
 
 const form = reactive(defaultForm())
+
+const dialogTitle = computed(() => (editingId.value ? '编辑监测点位' : '新增监测点位'))
 
 const stats = computed(() => [
   { key: 'all', label: '点位总数', value: total.value, desc: '当前监测点位总量' },
@@ -213,7 +250,26 @@ function handleStatClick(key) {
   activeStatKey.value = key === activeStatKey.value ? 'all' : key
 }
 
-function openDialog() {
+function openCreateDialog() {
+  editingId.value = null
+  resetForm()
+  dialogVisible.value = true
+}
+
+function openEditDialog(row) {
+  editingId.value = row.id
+  Object.assign(form, {
+    pointName: row.pointName || '',
+    longitude: row.longitude || '',
+    latitude: row.latitude || '',
+    regionName: row.regionName || '',
+    ownerName: row.ownerName || '',
+    contactPhone: row.contactPhone || '',
+    pointType: row.pointType || factoryPointType,
+    frequencyType: row.frequencyType || dailyFrequencyType,
+    pointStatus: row.pointStatus || enabledPointStatus,
+    servicePopulation: Number(row.servicePopulation) || 0
+  })
   dialogVisible.value = true
 }
 
@@ -232,7 +288,23 @@ function resetQuery() {
 }
 
 function resetForm() {
+  editingId.value = null
   Object.assign(form, defaultForm())
+}
+
+function buildPayload(source) {
+  return {
+    pointName: source.pointName?.trim() || '',
+    longitude: source.longitude?.trim() || '',
+    latitude: source.latitude?.trim() || '',
+    regionName: source.regionName?.trim() || '',
+    ownerName: source.ownerName?.trim() || '',
+    contactPhone: source.contactPhone?.trim() || '',
+    pointType: source.pointType || factoryPointType,
+    frequencyType: source.frequencyType || dailyFrequencyType,
+    pointStatus: source.pointStatus || enabledPointStatus,
+    servicePopulation: Number(source.servicePopulation) || 0
+  }
 }
 
 async function loadData() {
@@ -242,12 +314,48 @@ async function loadData() {
 }
 
 async function submit() {
-  await createMonitoringPointApi(form)
-  ElMessage.success('保存成功')
-  dialogVisible.value = false
-  resetForm()
-  query.pageNum = 1
-  await loadData()
+  const payload = buildPayload(form)
+  if (!payload.pointName) {
+    ElMessage.warning('请先填写点位名称')
+    return
+  }
+
+  submitting.value = true
+  try {
+    if (editingId.value) {
+      await updateMonitoringPointApi(editingId.value, payload)
+      ElMessage.success('点位资料已更新')
+    } else {
+      await createMonitoringPointApi(payload)
+      ElMessage.success('监测点位新增成功')
+      query.pageNum = 1
+    }
+    dialogVisible.value = false
+    resetForm()
+    await loadData()
+  } finally {
+    submitting.value = false
+  }
+}
+
+async function togglePointStatus(row) {
+  const nextStatus = row.pointStatus === enabledPointStatus ? disabledPointStatus : enabledPointStatus
+  const actionText = nextStatus === enabledPointStatus ? '启用' : '禁用'
+
+  await ElMessageBox.confirm(`确认${actionText}点位“${row.pointName || '-'}”吗？`, `${actionText}确认`, {
+    type: 'warning',
+    confirmButtonText: '确认',
+    cancelButtonText: '取消'
+  })
+
+  statusUpdatingId.value = row.id
+  try {
+    await updateMonitoringPointApi(row.id, buildPayload({ ...row, pointStatus: nextStatus }))
+    ElMessage.success(`点位已${actionText}`)
+    await loadData()
+  } finally {
+    statusUpdatingId.value = null
+  }
 }
 
 onMounted(loadData)
@@ -291,6 +399,12 @@ onMounted(loadData)
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0 16px;
+}
+
+.table-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 @media (max-width: 860px) {

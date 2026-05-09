@@ -5,6 +5,7 @@ import com.yx.lab.common.model.PageResult;
 import com.yx.lab.modules.sample.dto.SamplingTaskActionCommand;
 import com.yx.lab.modules.sample.dto.SamplingTaskCompleteCommand;
 import com.yx.lab.modules.sample.dto.SamplingTaskQuery;
+import com.yx.lab.modules.sample.dto.SamplingTaskSealNoCommand;
 import com.yx.lab.modules.sample.entity.SamplingTask;
 import com.yx.lab.modules.sample.service.SamplingTaskService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -23,7 +24,7 @@ import java.util.List;
 
 /**
  * 采样任务控制器。
- * 负责采样任务查询、开始、废弃、恢复和完成。
+ * 负责采样任务查询、封签号录入、开始、废弃、恢复和完成。
  */
 @RestController
 @RequestMapping("/api/sampling-tasks")
@@ -69,9 +70,24 @@ public class SamplingTaskController {
     }
 
     /**
+     * 录入或更新采样任务封签号。
+     *
+     * @param id      采样任务主键。
+     * @param command 封签号录入命令。
+     * @return 保存结果。
+     */
+    @PostMapping("/{id}/seal-no")
+    @Operation(summary = "录入采样任务封签号")
+    public ApiResponse<Void> updateSealNo(@PathVariable Long id,
+                                          @Valid @RequestBody SamplingTaskSealNoCommand command) {
+        samplingTaskService.updateSealNo(id, command);
+        return ApiResponse.successMessage("封签号已保存");
+    }
+
+    /**
      * 开始采样任务。
      *
-     * @param id 采样任务主键。
+     * @param id      采样任务主键。
      * @param command 任务操作命令。
      * @return 开始结果。
      */
@@ -86,7 +102,7 @@ public class SamplingTaskController {
     /**
      * 废弃采样任务。
      *
-     * @param id 采样任务主键。
+     * @param id      采样任务主键。
      * @param command 任务操作命令。
      * @return 废弃结果。
      */
@@ -101,7 +117,7 @@ public class SamplingTaskController {
     /**
      * 恢复采样任务。
      *
-     * @param id 采样任务主键。
+     * @param id      采样任务主键。
      * @param command 任务操作命令。
      * @return 恢复结果。
      */

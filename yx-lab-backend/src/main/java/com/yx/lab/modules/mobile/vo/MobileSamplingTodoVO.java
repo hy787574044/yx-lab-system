@@ -10,6 +10,8 @@ public class MobileSamplingTodoVO {
 
     private Long id;
 
+    private String taskNo;
+
     private Long planId;
 
     private Long pointId;
@@ -28,6 +30,10 @@ public class MobileSamplingTodoVO {
     private String detectionItems;
 
     private String taskStatus;
+
+    private String taskSealNo;
+
+    private String sampleRegisterStatus;
 
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime finishedTime;

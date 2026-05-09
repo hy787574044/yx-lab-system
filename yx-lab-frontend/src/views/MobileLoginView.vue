@@ -27,7 +27,10 @@
 
 <script setup>
 import { reactive } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElButton } from 'element-plus/es/components/button/index.mjs'
+import { ElForm, ElFormItem } from 'element-plus/es/components/form/index.mjs'
+import { ElInput } from 'element-plus/es/components/input/index.mjs'
+import { ElMessage } from 'element-plus/es/components/message/index.mjs'
 import { useRouter } from 'vue-router'
 import { getMeApi, mobileLoginApi } from '../api/lab'
 import { setToken, setUser } from '../utils/auth'

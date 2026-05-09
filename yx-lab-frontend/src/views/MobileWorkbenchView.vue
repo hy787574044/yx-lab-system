@@ -111,7 +111,7 @@
               <el-button
                 v-if="task.taskStatus === pendingTaskStatus"
                 size="small"
-                @click="startTask(task)"
+                @click="handleStartTask(task)"
               >
                 开始采样
               </el-button>
@@ -417,7 +417,16 @@
 
 <script setup>
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElButton } from 'element-plus/es/components/button/index.mjs'
+import { ElDatePicker } from 'element-plus/es/components/date-picker/index.mjs'
+import { ElDialog } from 'element-plus/es/components/dialog/index.mjs'
+import { ElEmpty } from 'element-plus/es/components/empty/index.mjs'
+import { ElForm, ElFormItem } from 'element-plus/es/components/form/index.mjs'
+import { ElInput } from 'element-plus/es/components/input/index.mjs'
+import { ElInputNumber } from 'element-plus/es/components/input-number/index.mjs'
+import { ElMessage } from 'element-plus/es/components/message/index.mjs'
+import { ElMessageBox } from 'element-plus/es/components/message-box/index.mjs'
+import { ElOption, ElSelect } from 'element-plus/es/components/select/index.mjs'
 import { useRouter } from 'vue-router'
 import {
   abandonSamplingTaskApi,
@@ -586,6 +595,30 @@ async function refreshAll() {
   } finally {
     refreshing.value = false
   }
+}
+
+async function handleStartTask(task) {
+  let sealNo = String(task?.sealNo || '').trim()
+  if (!sealNo) {
+    try {
+      const { value } = await ElMessageBox.prompt(
+        '请输入采样封签号，支持手工录入或粘贴 OCR 识别结果。',
+        '开始任务前请先录入封签号',
+        {
+          confirmButtonText: '录入并开始',
+          cancelButtonText: '取消',
+          inputPlaceholder: '请输入采样封签号',
+          inputValidator: (inputValue) => String(inputValue || '').trim() ? true : '封签号不能为空'
+        }
+      )
+      sealNo = String(value || '').trim()
+    } catch {
+      return
+    }
+  }
+  await startSamplingTaskApi(task.id, { sealNo, remark: '移动端开始采样' })
+  ElMessage.success('采样任务已开始。')
+  await refreshAll()
 }
 
 async function startTask(task) {

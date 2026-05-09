@@ -88,6 +88,16 @@ public final class LabWorkflowConstants {
         }
     }
 
+    public static final class SampleRegisterStatus {
+
+        public static final String UNREGISTERED = "UNREGISTERED";
+
+        public static final String REGISTERED = "REGISTERED";
+
+        private SampleRegisterStatus() {
+        }
+    }
+
     public static final class SampleType {
 
         public static final String FACTORY = "FACTORY";
@@ -285,7 +295,7 @@ public final class LabWorkflowConstants {
     }
 
     public static boolean canCompleteTask(String taskStatus) {
-        return COMPLETABLE_TASK_STATUSES.contains(taskStatus);
+        return SamplingTaskStatus.IN_PROGRESS.equals(taskStatus);
     }
 
     public static boolean canSubmitDetection(String sampleStatus) {

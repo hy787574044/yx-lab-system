@@ -45,6 +45,8 @@
 
 <script setup>
 import { computed } from 'vue'
+import { ElButton } from 'element-plus/es/components/button/index.mjs'
+import { ElOption, ElSelect } from 'element-plus/es/components/select/index.mjs'
 import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from '../../utils/labEnums'
 
 const props = defineProps({

@@ -98,6 +98,7 @@
 
         <div class="sidebar-body">
           <el-menu
+            ref="menuRef"
             :default-active="currentRoutePath"
             :default-openeds="defaultOpenMenuIds"
             router
@@ -179,10 +180,15 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import dayjs from 'dayjs'
-import { ElMessage } from 'element-plus'
+import { ElButton } from 'element-plus/es/components/button/index.mjs'
+import { ElIcon } from 'element-plus/es/components/icon/index.mjs'
+import { ElInput } from 'element-plus/es/components/input/index.mjs'
+import { ElMenu, ElMenuItem, ElSubMenu } from 'element-plus/es/components/menu/index.mjs'
+import { ElMessage } from 'element-plus/es/components/message/index.mjs'
+import { ElPopover } from 'element-plus/es/components/popover/index.mjs'
 import {
   ArrowRight,
   Bell,
@@ -231,11 +237,11 @@ const themeOptions = [
 
 const router = useRouter()
 const route = useRoute()
+const menuRef = ref()
 const menuKeyword = ref('')
 const currentThemeId = ref(themeOptions[0].id)
 
 const primaryMenus = labMenuGroups
-const defaultOpenMenuIds = primaryMenus.map((item) => item.id)
 const allSearchItems = labMenuGroups.flatMap((group) => ([
   {
     keywordText: [group.title, group.shortTitle].join('|'),
@@ -258,6 +264,9 @@ const currentPrimaryMenu = computed(() => (
 ))
 
 const currentSecondaryMenus = computed(() => currentPrimaryMenu.value?.children || [])
+const defaultOpenMenuIds = computed(() => (
+  currentPrimaryMenu.value?.id ? [currentPrimaryMenu.value.id] : []
+))
 
 const currentSecondaryMenu = computed(() => (
   currentSecondaryMenus.value.find((item) => item.path === route.path)
@@ -321,6 +330,18 @@ function logout() {
   clearToken()
   router.push('/login')
 }
+
+watch(
+  () => currentPrimaryMenu.value?.id,
+  async (menuId) => {
+    if (!menuId) {
+      return
+    }
+    await nextTick()
+    menuRef.value?.open(menuId)
+  },
+  { immediate: true }
+)
 
 onMounted(() => {
   initTheme()

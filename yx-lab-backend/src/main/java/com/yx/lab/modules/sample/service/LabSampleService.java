@@ -20,8 +20,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Date;
 import java.time.LocalDateTime;
+import java.util.Date;
 
 @Service
 @RequiredArgsConstructor
@@ -54,33 +54,24 @@ public class LabSampleService {
     @Transactional(rollbackFor = Exception.class)
     public LabSample loginSample(SampleLoginCommand command) {
         CurrentUser currentUser = requireCurrentUser();
-        SamplingTask task = null;
-        if (command.getTaskId() != null) {
-            task = samplingTaskMapper.selectById(command.getTaskId());
-            if (task == null) {
-                throw new BusinessException("采样任务不存在");
-            }
-            if (!LabWorkflowConstants.SamplingTaskStatus.COMPLETED.equals(task.getTaskStatus())) {
-                throw new BusinessException("采样任务未完成，不能进行样品登录");
-            }
-            validateTaskOperator(task, currentUser);
-
-            Long existingCount = labSampleMapper.selectCount(new LambdaQueryWrapper<LabSample>()
-                    .eq(LabSample::getTaskId, task.getId()));
-            if (existingCount != null && existingCount > 0) {
-                throw new BusinessException("该采样任务已完成样品登录，不能重复登录");
-            }
+        String commandSealNo = normalizeSealNo(command.getSealNo());
+        SamplingTask task = resolveTaskForLogin(command);
+        if (task != null) {
+            validateTaskForSampleLogin(task, currentUser, commandSealNo);
         } else {
             validateSamplerOperator(command, currentUser);
         }
 
+        String sealNo = resolveSealNo(commandSealNo, task);
+        validateSealNoUniqueness(sealNo);
+
         LabSample sample = new LabSample();
         sample.setSampleNo(generateSampleNo());
-        sample.setSealNo(generateSealNo());
-        sample.setTaskId(command.getTaskId());
-        sample.setPointId(task == null || task.getPointId() == null ? command.getPointId() : task.getPointId());
-        sample.setPointName(task == null || StrUtil.isBlank(task.getPointName()) ? command.getPointName() : task.getPointName());
-        sample.setSampleType(task == null || StrUtil.isBlank(task.getSampleType()) ? command.getSampleType() : task.getSampleType());
+        sample.setSealNo(sealNo);
+        sample.setTaskId(task == null ? command.getTaskId() : task.getId());
+        sample.setPointId(command.getPointId() != null ? command.getPointId() : (task == null ? null : task.getPointId()));
+        sample.setPointName(StrUtil.isNotBlank(command.getPointName()) ? command.getPointName() : (task == null ? null : task.getPointName()));
+        sample.setSampleType(StrUtil.isNotBlank(command.getSampleType()) ? command.getSampleType() : (task == null ? null : task.getSampleType()));
         sample.setDetectionItems(command.getDetectionItems());
         sample.setSamplingTime(command.getSamplingTime());
         sample.setSealTime(LocalDateTime.now());
@@ -94,7 +85,9 @@ public class LabSampleService {
         labSampleMapper.insert(sample);
 
         if (task != null) {
-            task.setTaskStatus(LabWorkflowConstants.SamplingTaskStatus.COMPLETED);
+            task.setSampleRegisterStatus(LabWorkflowConstants.SampleRegisterStatus.REGISTERED);
+            task.setSampleId(sample.getId());
+            task.setSealNo(sample.getSealNo());
             samplingTaskMapper.updateById(task);
         }
         return sample;
@@ -107,7 +100,7 @@ public class LabSampleService {
     public void updateStatus(Long sampleId, String status, String resultSummary, String traceMessage) {
         LabSample sample = labSampleMapper.selectById(sampleId);
         if (sample == null) {
-            throw new BusinessException("样品不存在");
+            throw new BusinessException("样品不存在。");
         }
         sample.setSampleStatus(status);
         sample.setResultSummary(resultSummary);
@@ -121,10 +114,76 @@ public class LabSampleService {
         }
         LabSample sample = labSampleMapper.selectById(sampleId);
         if (sample == null) {
-            throw new BusinessException("样品不存在");
+            throw new BusinessException("样品不存在。");
         }
         appendTraceLog(sample, traceMessage);
         labSampleMapper.updateById(sample);
+    }
+
+    private SamplingTask resolveTaskForLogin(SampleLoginCommand command) {
+        if (command.getTaskId() != null) {
+            SamplingTask task = samplingTaskMapper.selectById(command.getTaskId());
+            if (task == null) {
+                throw new BusinessException("采样任务不存在。");
+            }
+            return task;
+        }
+        String sealNo = normalizeSealNo(command.getSealNo());
+        if (StrUtil.isBlank(sealNo)) {
+            return null;
+        }
+        return samplingTaskMapper.selectOne(new LambdaQueryWrapper<SamplingTask>()
+                .eq(SamplingTask::getSealNo, sealNo)
+                .last("limit 1"));
+    }
+
+    private void validateTaskForSampleLogin(SamplingTask task, CurrentUser currentUser, String sealNo) {
+        if (!LabWorkflowConstants.SamplingTaskStatus.COMPLETED.equals(task.getTaskStatus())) {
+            throw new BusinessException("采样任务未完成，不能进行样品登录。");
+        }
+        validateTaskOperator(task, currentUser);
+        if (StrUtil.isBlank(task.getSealNo()) && StrUtil.isBlank(sealNo)) {
+            throw new BusinessException("采样任务尚未录入封签号，请先录入或粘贴 OCR 识别结果。");
+        }
+        if (StrUtil.isNotBlank(sealNo) && StrUtil.isNotBlank(task.getSealNo()) && !sealNo.equals(task.getSealNo())) {
+            throw new BusinessException("识别到的封签号与采样任务封签号不一致。");
+        }
+        Long existingCount = labSampleMapper.selectCount(new LambdaQueryWrapper<LabSample>()
+                .eq(LabSample::getTaskId, task.getId()));
+        if (existingCount != null && existingCount > 0) {
+            throw new BusinessException("该采样任务已完成样品登录，不能重复登录。");
+        }
+    }
+
+    private void validateSealNoUniqueness(String sealNo) {
+        if (StrUtil.isBlank(sealNo)) {
+            return;
+        }
+        Long existingCount = labSampleMapper.selectCount(new LambdaQueryWrapper<LabSample>()
+                .eq(LabSample::getSealNo, sealNo));
+        if (existingCount != null && existingCount > 0) {
+            throw new BusinessException("封签号已被占用，请核对后重试。");
+        }
+    }
+
+    private String resolveSealNo(String commandSealNo, SamplingTask task) {
+        if (task != null) {
+            if (StrUtil.isNotBlank(task.getSealNo())) {
+                return task.getSealNo();
+            }
+            if (StrUtil.isNotBlank(commandSealNo)) {
+                return commandSealNo;
+            }
+            throw new BusinessException("采样任务尚未录入封签号。");
+        }
+        if (StrUtil.isBlank(commandSealNo)) {
+            throw new BusinessException("无任务直登样品时必须填写封签号。");
+        }
+        return commandSealNo;
+    }
+
+    private String normalizeSealNo(String sealNo) {
+        return StrUtil.blankToDefault(StrUtil.trim(sealNo), null);
     }
 
     private String generateSampleNo() {
@@ -135,18 +194,10 @@ public class LabSampleService {
         return prefix + String.format("%04d", next);
     }
 
-    private String generateSealNo() {
-        String prefix = "SEAL" + DateUtil.format(new Date(), "yyyyMM");
-        Long count = labSampleMapper.selectCount(new LambdaQueryWrapper<LabSample>()
-                .likeRight(LabSample::getSealNo, prefix));
-        long next = count == null ? 1L : count + 1L;
-        return prefix + String.format("%04d", next);
-    }
-
     private CurrentUser requireCurrentUser() {
         CurrentUser currentUser = SecurityContext.getCurrentUser();
         if (currentUser == null || currentUser.getUserId() == null) {
-            throw new BusinessException("当前登录信息已失效，请重新登录");
+            throw new BusinessException("当前登录信息已失效，请重新登录。");
         }
         return currentUser;
     }
@@ -156,7 +207,7 @@ public class LabSampleService {
             return;
         }
         if (task.getSamplerId() == null || !task.getSamplerId().equals(currentUser.getUserId())) {
-            throw new BusinessException("当前用户不是该采样任务的责任采样员，不能进行样品登录");
+            throw new BusinessException("当前用户不是该采样任务的责任采样员，不能进行样品登录。");
         }
     }
 
@@ -165,7 +216,7 @@ public class LabSampleService {
             return;
         }
         if (!currentUser.getUserId().equals(command.getSamplerId())) {
-            throw new BusinessException("当前用户只能登记本人采集的样品");
+            throw new BusinessException("当前用户只能登录本人采集的样品。");
         }
     }
 
@@ -205,7 +256,10 @@ public class LabSampleService {
             builder.append("\n").append(formatTraceEntry("采样环境", "天气=" + sample.getWeather()));
         }
         if (task != null) {
-            builder.append("\n").append(formatTraceEntry("来源任务", "采样任务ID=" + task.getId()));
+            builder.append("\n").append(formatTraceEntry("来源任务",
+                    "采样任务ID=" + task.getId()
+                            + "，任务编号=" + StrUtil.blankToDefault(task.getTaskNo(), "-")
+                            + "，封签号=" + StrUtil.blankToDefault(task.getSealNo(), "-")));
         }
         return builder.toString();
     }

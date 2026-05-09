@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="content-grid sampling-page">
     <section class="glass-panel section-block page-hero">
       <div>
@@ -56,8 +56,8 @@
               v-if="baseScene.key === 'sample-login'"
               type="primary"
               plain
-              :disabled="!firstLoggableTask"
-              @click="loginSample"
+              :disabled="!pendingLoggableTasks.length"
+              @click="openLoginDialog()"
             >
               样品登录
             </el-button>
@@ -89,6 +89,10 @@
         </div>
       </div>
 
+      <div v-if="baseScene.showPlanSection && activeMissingSamplerPlans.length" class="panel-note plan-panel-warning">
+        {{ planDispatchNotice }}
+      </div>
+
       <div class="table-card">
         <el-table
           v-if="isTaskScene"
@@ -98,8 +102,25 @@
           max-height="460"
           :empty-text="baseScene.emptyText"
         >
+          <el-table-column prop="taskNo" label="任务编号" min-width="150" />
+          <el-table-column label="采样封签号" min-width="150">
+            <template #default="{ row }">
+              <span class="plan-sampler" :class="{ 'is-empty': !row.sealNo }">
+                {{ row.sealNo || '待录入' }}
+              </span>
+            </template>
+          </el-table-column>
           <el-table-column prop="pointName" label="点位名称" min-width="180" />
-          <el-table-column prop="samplerName" label="采样人员" width="120" />
+          <el-table-column label="采样人员" width="140">
+            <template #default="{ row }">
+              <span
+                class="plan-sampler"
+                :class="{ 'is-empty': !row.samplerId || !row.samplerName }"
+              >
+                {{ row.samplerName || '未指定采样员' }}
+              </span>
+            </template>
+          </el-table-column>
           <el-table-column label="样品类型" width="120" header-cell-class-name="cell-center" class-name="cell-center">
             <template #default="{ row }">
               {{ getEnumLabel(sampleTypeLabelMap, row.sampleType) }}
@@ -115,7 +136,7 @@
           <el-table-column label="样品登记" width="120" header-cell-class-name="cell-center" class-name="cell-center">
             <template #default="{ row }">
               <span :class="['status-chip', isTaskLogged(row.id) ? 'success' : 'warning']">
-                {{ isTaskLogged(row.id) ? '已登记' : '待登记' }}
+                {{ isTaskLogged(row.id) ? '已登记' : '未登记' }}
               </span>
             </template>
           </el-table-column>
@@ -126,19 +147,22 @@
           <el-table-column
             v-if="baseScene.allowTaskActions"
             label="操作"
-            min-width="290"
+            min-width="380"
             fixed="right"
             class-name="cell-center"
           >
             <template #default="{ row }">
               <div class="action-row">
+                <el-button size="small" @click="editTaskSealNo(row)">
+                  {{ row.sealNo ? '修改封签' : '录入封签' }}
+                </el-button>
                 <el-button size="small" @click="startTask(row)" :disabled="row.taskStatus !== pendingTaskStatus">
                   开始
                 </el-button>
                 <el-button
                   size="small"
                   @click="abandonTask(row)"
-                  :disabled="!completableTaskStatuses.includes(row.taskStatus)"
+                  :disabled="!abandonableTaskStatuses.includes(row.taskStatus)"
                 >
                   废弃
                 </el-button>
@@ -250,12 +274,19 @@
               </span>
             </template>
           </el-table-column>
-          <el-table-column label="操作" min-width="240" fixed="right" class-name="cell-center">
+          <el-table-column label="操作" min-width="300" fixed="right" class-name="cell-center">
             <template #default="{ row }">
               <div class="action-row">
                 <el-button
                   size="small"
-                  @click="dispatch(row)"
+                  @click="openPlanEditDialog(row)"
+                  :disabled="!actionablePlanStatuses.includes(row.planStatus)"
+                >
+                  编辑
+                </el-button>
+                <el-button
+                  size="small"
+                  @click="openDispatchDialog(row)"
                   :disabled="!actionablePlanStatuses.includes(row.planStatus)"
                 >
                   派发
@@ -288,6 +319,159 @@
       </div>
     </section>
 
+    <el-dialog
+      v-model="planDialogVisible"
+      :title="editingPlanId ? '编辑采样计划' : '新增采样计划'"
+      width="760px"
+      destroy-on-close
+      @closed="resetPlanForm"
+    >
+      <el-form label-width="96px">
+        <div class="plan-form-grid">
+          <el-form-item label="计划名称">
+            <el-input v-model="planForm.planName" placeholder="请输入采样计划名称" />
+          </el-form-item>
+          <el-form-item label="点位来源">
+            <el-select v-model="planForm.pointSource" style="width: 100%" @change="handlePlanPointSourceChange">
+              <el-option label="监测点位选择" value="EXISTING" />
+              <el-option label="手工填写点位" value="CUSTOM" />
+            </el-select>
+          </el-form-item>
+          <el-form-item v-if="planForm.pointSource === 'EXISTING'" label="监测点位">
+            <el-select
+              v-model="planForm.pointId"
+              style="width: 100%"
+              placeholder="请选择已创建的监测点位"
+              :loading="monitoringPointLoading"
+              @change="handlePlanPointChange"
+            >
+              <el-option
+                v-for="point in monitoringPointOptions"
+                :key="point.id"
+                :label="point.pointName"
+                :value="point.id"
+              />
+            </el-select>
+          </el-form-item>
+          <el-form-item v-if="false" label="自填点位">
+            <el-input v-model="planForm.pointName" placeholder="请输入采样点位名称" />
+          </el-form-item>
+          <el-form-item label="点位名称">
+            <el-input
+              v-model="planForm.pointName"
+              :readonly="planForm.pointSource === 'EXISTING'"
+              placeholder="请输入采样点位名称"
+            />
+          </el-form-item>
+          <el-form-item label="样品类型">
+            <el-select v-model="planForm.sampleType" style="width: 100%">
+              <el-option
+                v-for="option in sampleTypeOptions"
+                :key="option.value"
+                :label="option.label"
+                :value="option.value"
+              />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="周期类型">
+            <el-select v-model="planForm.cycleType" style="width: 100%">
+              <el-option
+                v-for="option in cycleTypeOptions"
+                :key="option.value"
+                :label="option.label"
+                :value="option.value"
+              />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="采样人员">
+            <el-select
+              v-model="planForm.samplerId"
+              clearable
+              filterable
+              style="width: 100%"
+              placeholder="请选择采样员，可不填"
+              :loading="samplerLoading"
+              @change="handlePlanSamplerChange"
+            >
+              <el-option
+                v-for="item in samplerOptions"
+                :key="item.id"
+                :label="item.realName || item.username"
+                :value="item.id"
+              />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="开始时间">
+            <el-date-picker
+              v-model="planForm.startTime"
+              type="datetime"
+              format="YYYY-MM-DD HH:mm:ss"
+              value-format="YYYY-MM-DD HH:mm:ss"
+              style="width: 100%"
+            />
+          </el-form-item>
+          <el-form-item label="截止时间">
+            <el-date-picker
+              v-model="planForm.endTime"
+              type="datetime"
+              format="YYYY-MM-DD HH:mm:ss"
+              value-format="YYYY-MM-DD HH:mm:ss"
+              style="width: 100%"
+              placeholder="单次计划可不填，周期计划建议填写"
+            />
+          </el-form-item>
+          <el-form-item class="plan-form-span-2" label="备注">
+            <el-input v-model="planForm.remark" type="textarea" :rows="3" placeholder="可补充客户要求、执行说明等信息" />
+          </el-form-item>
+        </div>
+      </el-form>
+      <template #footer>
+        <el-button @click="planDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="submitting" @click="submitPlanForm">{{ editingPlanId ? '确认保存' : '确认创建' }}</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog
+      v-model="dispatchDialogVisible"
+      title="派发采样计划"
+      width="560px"
+      destroy-on-close
+      @closed="resetDispatchForm"
+    >
+      <el-form label-width="96px">
+        <el-form-item label="采样人员">
+          <el-select
+            v-model="dispatchForm.samplerId"
+            filterable
+            style="width: 100%"
+            placeholder="请选择采样员"
+            :loading="samplerLoading"
+            @change="handleDispatchSamplerChange"
+          >
+            <el-option
+              v-for="item in samplerOptions"
+              :key="item.id"
+              :label="item.realName || item.username"
+              :value="item.id"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="执行时间">
+          <el-date-picker
+            v-model="dispatchForm.samplingTime"
+            type="datetime"
+            format="YYYY-MM-DD HH:mm:ss"
+            value-format="YYYY-MM-DD HH:mm:ss"
+            style="width: 100%"
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="dispatchDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="submitting" @click="submitDispatchForm">确认派发</el-button>
+      </template>
+    </el-dialog>
+
     <section class="scene-grid">
       <div class="glass-panel section-block">
         <div class="section-head">
@@ -295,7 +479,7 @@
         </div>
         <div class="scene-copy">
           <p>{{ baseScene.guide }}</p>
-          <p>当前页已按菜单语义拆分，避免“同一页面换标题”的空转体验。</p>
+          <p>当前页面已按菜单语义拆分，避免“同一页面换标题”的空转体验。</p>
         </div>
       </div>
 
@@ -317,6 +501,87 @@
         </div>
       </div>
     </section>
+
+    <el-dialog
+      v-model="loginDialogVisible"
+      title="样品登录"
+      width="680px"
+      destroy-on-close
+      @closed="resetLoginForm"
+    >
+      <el-form label-width="96px">
+        <div class="login-form-grid">
+          <el-form-item label="待登录任务">
+            <el-select
+              v-model="loginForm.taskId"
+              placeholder="请选择已完成采样且未登录的任务"
+              style="width: 100%"
+              @change="handleLoginTaskChange"
+            >
+              <el-option
+                v-for="task in pendingLoggableTasks"
+                :key="task.id"
+                :label="formatPendingTaskLabel(task)"
+                :value="task.id"
+              />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="OCR封签号">
+            <el-input
+              v-model="loginForm.sealNo"
+              placeholder="可粘贴 OCR 识别结果，自动匹配采样任务"
+              @change="handleLoginSealNoChange"
+            />
+          </el-form-item>
+          <el-form-item label="点位名称">
+            <el-input v-model="loginForm.pointName" placeholder="请输入点位名称" />
+          </el-form-item>
+          <el-form-item label="样品类型">
+            <el-select v-model="loginForm.sampleType" style="width: 100%">
+              <el-option
+                v-for="option in sampleTypeOptions"
+                :key="option.value"
+                :label="option.label"
+                :value="option.value"
+              />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="采样人员">
+            <el-input v-model="loginForm.samplerName" readonly />
+          </el-form-item>
+          <el-form-item class="login-form-span-2" label="检测项目">
+            <el-input
+              v-model="loginForm.detectionItems"
+              type="textarea"
+              :rows="3"
+              placeholder="请填写本次样品对应的检测项目"
+            />
+          </el-form-item>
+          <el-form-item label="采样时间">
+            <el-date-picker
+              v-model="loginForm.samplingTime"
+              type="datetime"
+              format="YYYY-MM-DD HH:mm:ss"
+              value-format="YYYY-MM-DD HH:mm:ss"
+              style="width: 100%"
+            />
+          </el-form-item>
+          <el-form-item label="天气">
+            <el-input v-model="loginForm.weather" placeholder="请输入采样时天气情况" />
+          </el-form-item>
+          <el-form-item label="保存条件">
+            <el-input v-model="loginForm.storageCondition" placeholder="例如冷藏避光、常温送检" />
+          </el-form-item>
+          <el-form-item label="备注">
+            <el-input v-model="loginForm.remark" placeholder="可补充样品来源、容器信息等说明" />
+          </el-form-item>
+        </div>
+      </el-form>
+      <template #footer>
+        <el-button @click="loginDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="submitting" @click="submitSampleLogin">确认登录</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -324,34 +589,49 @@
 import dayjs from 'dayjs'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElButton } from 'element-plus/es/components/button/index.mjs'
+import { ElDatePicker } from 'element-plus/es/components/date-picker/index.mjs'
+import { ElDialog } from 'element-plus/es/components/dialog/index.mjs'
+import { ElForm, ElFormItem } from 'element-plus/es/components/form/index.mjs'
+import { ElInput } from 'element-plus/es/components/input/index.mjs'
+import { ElMessage } from 'element-plus/es/components/message/index.mjs'
+import { ElMessageBox } from 'element-plus/es/components/message-box/index.mjs'
+import { ElOption, ElSelect } from 'element-plus/es/components/select/index.mjs'
+import { ElTable, ElTableColumn } from 'element-plus/es/components/table/index.mjs'
 import TablePagination from '../components/common/TablePagination.vue'
 import {
   abandonSamplingTaskApi,
   completeSamplingTaskApi,
   createSamplingPlanApi,
   dispatchSamplingPlanApi,
+  fetchMonitoringPointsApi,
   fetchSamplesApi,
   fetchSamplingPlansApi,
   fetchSamplingTasksApi,
+  fetchSystemUsersApi,
   loginSampleApi,
   pauseSamplingPlanApi,
   resumeSamplingPlanApi,
   resumeSamplingTaskApi,
-  startSamplingTaskApi
+  startSamplingTaskApi,
+  updateSamplingTaskSealNoApi,
+  updateSamplingPlanApi
 } from '../api/lab'
 import {
   activePlanStatus,
   abandonedTaskStatus,
+  abandonableTaskStatuses,
   actionablePlanStatuses,
   completedPlanStatus,
   completedSampleStatus,
   completedTaskStatus,
   completableTaskStatuses,
+  cycleTypeOptions,
   cycleTypeLabelMap,
   dailyCycleType,
   DEFAULT_PAGE_SIZE,
   dispatchedPlanStatuses,
+  enabledPointStatus,
   factorySampleType,
   getEnumLabel,
   getStatusClass,
@@ -363,7 +643,9 @@ import {
   retestSampleStatus,
   reviewingSampleStatus,
   routineSamplingType,
+  sampleRegisterStatusLabelMap,
   sampleStatusLabelMap,
+  sampleTypeOptions,
   sampleTypeLabelMap,
   taskStatusLabelMap
 } from '../utils/labEnums'
@@ -382,6 +664,52 @@ const planTotal = ref(0)
 const taskTotal = ref(0)
 const sampleTotal = ref(0)
 const activeStatKey = ref('tasks:pending')
+const loginDialogVisible = ref(false)
+const planDialogVisible = ref(false)
+const dispatchDialogVisible = ref(false)
+const editingPlanId = ref(null)
+const submitting = ref(false)
+const monitoringPointOptions = ref([])
+const monitoringPointLoading = ref(false)
+const samplerOptions = ref([])
+const samplerLoading = ref(false)
+
+const loginForm = reactive({
+  taskId: null,
+  sealNo: '',
+  pointId: null,
+  pointName: '',
+  sampleType: '',
+  detectionItems: '',
+  samplingTime: '',
+  samplerId: null,
+  samplerName: '',
+  weather: '',
+  storageCondition: '',
+  remark: ''
+})
+
+const planForm = reactive({
+  planName: '',
+  pointSource: 'EXISTING',
+  pointId: null,
+  pointName: '',
+  startTime: '',
+  endTime: '',
+  samplerId: null,
+  samplerName: '',
+  samplingType: routineSamplingType,
+  sampleType: '',
+  cycleType: dailyCycleType,
+  remark: ''
+})
+
+const dispatchForm = reactive({
+  planId: null,
+  samplingTime: '',
+  samplerId: null,
+  samplerName: ''
+})
 
 function toSafeNumber(value) {
   const num = typeof value === 'number' ? value : Number.parseFloat(String(value ?? '').replace(/,/g, '').trim())
@@ -395,8 +723,8 @@ const sceneMap = {
     subtitle: '聚焦待处理采样任务与周期计划派发，适合班组长或调度人员快速推进采样执行。',
     tableTitle: '待办采样任务',
     tableSubtitle: '默认聚焦待处理任务，并保留开始、废弃、恢复、完成等现场执行动作。',
-    note: '任务分配页强调“今天要做什么”，上方统计卡可切换到进行中、已完成、已废弃视角。',
-    guide: '如果需要安排周期计划，可直接在本页下方创建并派发；任务完成后再进入样品登录。',
+    note: '任务分配页强调今天要做什么，开始采样前必须先录入封签号，上方统计卡可切换到进行中、已完成、已废弃视角。',
+    guide: '如需安排周期计划，可直接在本页下方创建并派发；任务完成后再进入样品登录。',
     mode: 'task',
     defaultStatKey: 'tasks:pending',
     allowTaskActions: true,
@@ -415,9 +743,9 @@ const sceneMap = {
     title: '历史任务',
     subtitle: '回看已经完成或已废弃的采样任务，方便核对现场执行情况与补录链路。',
     tableTitle: '历史采样任务',
-    tableSubtitle: '本页自动聚焦已完成、已废弃任务，操作区切换为只读查询视角。',
-    note: '历史任务页强调追溯与复盘，不再承载现场执行按钮，避免误操作。',
-    guide: '如果历史任务已经形成样品，可通过关联入口直接跳到样品台账继续核验封签与留痕。',
+    tableSubtitle: '本页聚焦已完成、已废弃任务，操作区切换为只读查询视角。',
+    note: '历史任务页用于追溯与复盘，不再承载现场执行按钮，避免误操作。',
+    guide: '如历史任务已形成样品，可直接跳转到样品台账继续核验封签与留痕。',
     mode: 'task',
     defaultStatKey: 'tasks:completed',
     allowTaskActions: false,
@@ -455,11 +783,11 @@ const sceneMap = {
   '/sample-login': {
     key: 'sample-login',
     title: '样品登录',
-    subtitle: '将已完成采样任务转成正式样品，生成封签编号并留存后续检测、审核、报告链路。',
+    subtitle: '将已完成采样任务转成正式样品，生成样品编号并承接后续检测、审核、报告链路。',
     tableTitle: '已登记样品',
-    tableSubtitle: '默认展示已登记样品，并通过统计卡切换待审核、退回重检、闭环完成等状态。',
-    note: '样品登录页优先解决“哪些任务还没登记样品”，点击登录后即可生成封签并进入后续闭环。',
-    guide: '如果本页没有可登记样品，请先返回任务分配完成采样任务；若样品已登记，可继续前往检测分析。',
+    tableSubtitle: '默认展示已登记样品，并通过统计卡切换到待审核、退回重检、闭环完成等状态。',
+    note: '样品登录页优先解决未登记任务，支持封签号识别后自动带出任务，且不再自动生成封签号。',
+    guide: '如本页没有可登录样品，请先回到任务分配完成采样任务；若样品已登记，可继续前往检测分析。',
     mode: 'sample',
     defaultStatKey: 'samples:logged',
     allowTaskActions: false,
@@ -469,7 +797,7 @@ const sceneMap = {
     sampleFilter: () => true,
     quickLinks: [
       { path: '/task-assign', label: '任务分配', desc: '先完成现场采样任务，再进行样品登录' },
-      { path: '/detection-analysis', label: '检测分析', desc: '样品登记完成后进入实验室检测流程' },
+      { path: '/detection-analysis', label: '检测分析', desc: '样品登录完成后进入实验室检测流程' },
       { path: '/sample-ledger', label: '样品台账', desc: '查看全量样品、封签与流程留痕' }
     ]
   },
@@ -480,7 +808,7 @@ const sceneMap = {
     tableTitle: '样品全量台账',
     tableSubtitle: '本页不再强调登录动作，转为全量追踪样品状态与闭环结果。',
     note: '样品台账页适合盘点封签与状态流转，可通过统计卡快速定位待审核、退回重检、已完成样品。',
-    guide: '如需新增样品，请返回样品登录；如需继续推进流程，可跳转到检测分析或结果审查。',
+    guide: '如需新增样品，请回到样品登录；如需继续推进流程，可跳转到检测分析或结果审查。',
     mode: 'sample',
     defaultStatKey: 'samples:all',
     allowTaskActions: false,
@@ -501,9 +829,19 @@ const isTaskScene = computed(() => baseScene.value.mode === 'task')
 const taskSceneRecords = computed(() => tasks.value.filter((item) => baseScene.value.taskFilter(item)))
 const sampleSceneRecords = computed(() => samples.value.filter((item) => baseScene.value.sampleFilter(item)))
 
+function isTaskRegistered(task) {
+  if (!task) {
+    return false
+  }
+  if (task.sampleRegisterStatus === 'REGISTERED' || task.sampleId) {
+    return true
+  }
+  return samples.value.some((sample) => sample.taskId === task.id)
+}
+
 const pendingLoggableCount = computed(() =>
   tasks.value.filter((item) =>
-    item.taskStatus === completedTaskStatus && !samples.value.some((sample) => sample.taskId === item.id)
+    item.taskStatus === completedTaskStatus && !isTaskRegistered(item)
   ).length
 )
 
@@ -513,9 +851,28 @@ const firstCompletableTask = computed(() =>
 
 const firstLoggableTask = computed(() =>
   tasks.value.find((item) =>
-    item.taskStatus === completedTaskStatus && !samples.value.some((sample) => sample.taskId === item.id)
+    item.taskStatus === completedTaskStatus && !isTaskRegistered(item)
   )
 )
+
+const pendingLoggableTasks = computed(() =>
+  tasks.value.filter((item) =>
+    item.taskStatus === completedTaskStatus && !isTaskRegistered(item)
+  )
+)
+
+const activeMissingSamplerPlans = computed(() =>
+  plans.value.filter((item) =>
+    item.planStatus === activePlanStatus && (!item.samplerId || !item.samplerName)
+  )
+)
+
+const planDispatchNotice = computed(() => {
+  if (!activeMissingSamplerPlans.value.length) {
+    return '当前启用计划均已指定采样员，满足自动派发前提。'
+  }
+  return `当前有 ${activeMissingSamplerPlans.value.length} 个启用计划未指定采样员，自动派发会跳过这些计划，请先补充人员。`
+})
 
 const currentScene = computed(() => ({
   ...baseScene.value,
@@ -621,13 +978,13 @@ const currentStats = computed(() => {
       key: 'samples:retest',
       label: '退回重检',
       value: sampleSceneRecords.value.filter((item) => item.sampleStatus === retestSampleStatus).length,
-      desc: '被审核退回，等待重新检测处理的样品'
+      desc: '被审核退回，等待重新检测的样品'
     },
     {
       key: 'samples:completed',
       label: '闭环完成',
       value: sampleSceneRecords.value.filter((item) => item.sampleStatus === completedSampleStatus).length,
-      desc: '检测、审核已经完成闭环的样品'
+      desc: '检测、审核已完成闭环的样品'
     },
     {
       key: 'samples:todo-login',
@@ -654,7 +1011,7 @@ const visibleTasks = computed(() => {
   }
   if (activeStatKey.value === 'tasks:unlogged') {
     return records.filter((item) =>
-      item.taskStatus === completedTaskStatus && !samples.value.some((sample) => sample.taskId === item.id)
+      item.taskStatus === completedTaskStatus && !isTaskRegistered(item)
     )
   }
   return records
@@ -689,6 +1046,11 @@ const planStats = computed(() => [
     desc: '当前处于启用状态的采样计划'
   },
   {
+    label: '待补采样员',
+    value: activeMissingSamplerPlans.value.length,
+    desc: '已启用但未指定采样员，自动派发会跳过'
+  },
+  {
     label: '已暂停',
     value: plans.value.filter((item) => item.planStatus === pausedPlanStatus).length,
     desc: '临时暂停执行的采样计划'
@@ -714,7 +1076,7 @@ function handleStatClick(key) {
 }
 
 function isTaskLogged(taskId) {
-  return samples.value.some((item) => item.taskId === taskId)
+  return isTaskRegistered(tasks.value.find((item) => item.id === taskId))
 }
 
 function goRoute(path) {
@@ -750,33 +1112,219 @@ async function refreshCurrentScene() {
   await Promise.all(requests)
 }
 
-async function createPlan() {
-  await createSamplingPlanApi({
-    planName: `常规采样计划-${dayjs().format('MMDD-HHmm')}`,
-    pointId: 2001,
-    pointName: '城东水厂出厂水',
-    startTime: dayjs().format('YYYY-MM-DD HH:mm:ss'),
-    endTime: dayjs().add(7, 'day').format('YYYY-MM-DD HH:mm:ss'),
-    samplerId: 1002,
-    samplerName: '采样员',
-    samplingType: routineSamplingType,
-    sampleType: factorySampleType,
-    cycleType: dailyCycleType
-  })
-  ElMessage.success('周期采样计划已创建，系统将按计划时间自动生成采样任务。')
-  planQuery.pageNum = 1
-  await loadPlans()
+async function loadMonitoringPoints() {
+  if (monitoringPointOptions.value.length) {
+    return
+  }
+  monitoringPointLoading.value = true
+  try {
+    const result = await fetchMonitoringPointsApi({
+      pageNum: 1,
+      pageSize: 500,
+      pointStatus: enabledPointStatus
+    })
+    monitoringPointOptions.value = result.records || []
+  } finally {
+    monitoringPointLoading.value = false
+  }
 }
 
-async function dispatch(row) {
-  await dispatchSamplingPlanApi({
-    planId: row.id,
-    samplingTime: row.startTime || dayjs().format('YYYY-MM-DD HH:mm:ss')
-  })
-  ElMessage.success('采样计划已派发，并已同步生成采样任务。')
-  planQuery.pageNum = 1
-  taskQuery.pageNum = 1
-  await Promise.all([loadPlans(), loadTasks()])
+async function loadSamplers() {
+  if (samplerOptions.value.length) {
+    return
+  }
+  samplerLoading.value = true
+  try {
+    const result = await fetchSystemUsersApi({
+      pageNum: 1,
+      pageSize: 500,
+      status: 1
+    })
+    const records = result.records || []
+    samplerOptions.value = records.filter((item) => String(item.roleCode || '').trim().toUpperCase() === 'SAMPLER')
+  } finally {
+    samplerLoading.value = false
+  }
+}
+
+function handlePlanSamplerChange(userId) {
+  const user = samplerOptions.value.find((item) => item.id === userId)
+  planForm.samplerId = user?.id || null
+  planForm.samplerName = user?.realName || user?.username || ''
+}
+
+function resetDispatchForm() {
+  dispatchForm.planId = null
+  dispatchForm.samplingTime = ''
+  dispatchForm.samplerId = null
+  dispatchForm.samplerName = ''
+}
+
+function handleDispatchSamplerChange(userId) {
+  const user = samplerOptions.value.find((item) => item.id === userId)
+  dispatchForm.samplerId = user?.id || null
+  dispatchForm.samplerName = user?.realName || user?.username || ''
+}
+
+function resetPlanForm() {
+  editingPlanId.value = null
+  planForm.planName = ''
+  planForm.pointSource = 'EXISTING'
+  planForm.pointId = null
+  planForm.pointName = ''
+  planForm.startTime = ''
+  planForm.endTime = ''
+  planForm.samplerId = null
+  planForm.samplerName = ''
+  planForm.samplingType = routineSamplingType
+  planForm.sampleType = ''
+  planForm.cycleType = dailyCycleType
+  planForm.remark = ''
+}
+
+async function openPlanDialog() {
+  resetPlanForm()
+  planForm.planName = `采样计划-${dayjs().format('MMDD-HHmm')}`
+  planForm.startTime = dayjs().format('YYYY-MM-DD HH:mm:ss')
+  planForm.endTime = dayjs().add(7, 'day').format('YYYY-MM-DD HH:mm:ss')
+  await Promise.all([loadMonitoringPoints(), loadSamplers()])
+  if (monitoringPointOptions.value.length) {
+    handlePlanPointChange(monitoringPointOptions.value[0].id)
+  } else {
+    planForm.pointSource = 'CUSTOM'
+  }
+  planDialogVisible.value = true
+}
+
+async function openPlanEditDialog(row) {
+  await Promise.all([loadMonitoringPoints(), loadSamplers()])
+  editingPlanId.value = row.id
+  planForm.planName = row.planName || ''
+  planForm.pointSource = row.pointId ? 'EXISTING' : 'CUSTOM'
+  planForm.pointId = row.pointId || null
+  planForm.pointName = row.pointName || ''
+  planForm.startTime = row.startTime || ''
+  planForm.endTime = row.endTime || ''
+  planForm.samplerId = row.samplerId || null
+  planForm.samplerName = row.samplerName || ''
+  planForm.samplingType = row.samplingType || routineSamplingType
+  planForm.sampleType = row.sampleType || ''
+  planForm.cycleType = row.cycleType || dailyCycleType
+  planForm.remark = row.remark || ''
+  if (planForm.pointSource === 'EXISTING' && planForm.pointId) {
+    handlePlanPointChange(planForm.pointId)
+  }
+  planDialogVisible.value = true
+}
+
+function handlePlanPointSourceChange(value) {
+  if (value === 'CUSTOM') {
+    planForm.pointId = null
+    planForm.pointName = ''
+    return
+  }
+  if (monitoringPointOptions.value.length) {
+    handlePlanPointChange(planForm.pointId || monitoringPointOptions.value[0].id)
+  }
+}
+
+function handlePlanPointChange(pointId) {
+  const point = monitoringPointOptions.value.find((item) => item.id === pointId)
+  planForm.pointId = point?.id || null
+  planForm.pointName = point?.pointName || ''
+}
+
+function buildPlanPayload() {
+  return {
+    planName: planForm.planName?.trim() || '',
+    pointId: planForm.pointSource === 'EXISTING' ? planForm.pointId : null,
+    pointName: planForm.pointName?.trim() || '',
+    startTime: planForm.startTime || '',
+    endTime: planForm.endTime || '',
+    samplerId: planForm.samplerId,
+    samplerName: planForm.samplerName?.trim() || '',
+    samplingType: planForm.samplingType || routineSamplingType,
+    sampleType: planForm.sampleType || '',
+    cycleType: planForm.cycleType || dailyCycleType,
+    remark: planForm.remark?.trim() || ''
+  }
+}
+
+async function createPlan() {
+  await openPlanDialog()
+}
+
+async function submitPlanForm() {
+  const payload = buildPlanPayload()
+  if (!payload.planName || !payload.pointName || !payload.startTime || !payload.sampleType || !payload.cycleType) {
+    ElMessage.warning('请完整填写采样计划信息')
+    return
+  }
+  if (planForm.pointSource === 'EXISTING' && !payload.pointId) {
+    ElMessage.warning('请选择监测点位')
+    return
+  }
+  if (payload.cycleType !== 'ONCE' && !payload.endTime) {
+    ElMessage.warning('周期计划请填写截止时间')
+    return
+  }
+
+  submitting.value = true
+  try {
+    if (editingPlanId.value) {
+      await updateSamplingPlanApi(editingPlanId.value, payload)
+    } else {
+      await createSamplingPlanApi(payload)
+    }
+    planDialogVisible.value = false
+    ElMessage.success(editingPlanId.value ? '采样计划已更新' : '采样计划已创建')
+    planQuery.pageNum = 1
+    await loadPlans()
+  } finally {
+    submitting.value = false
+  }
+}
+
+async function legacyCreatePlanDoNotUse() {
+  return null
+}
+
+async function openDispatchDialog(row) {
+  await loadSamplers()
+  resetDispatchForm()
+  dispatchForm.planId = row.id
+  dispatchForm.samplingTime = row.startTime || dayjs().format('YYYY-MM-DD HH:mm:ss')
+  if (row.samplerId) {
+    handleDispatchSamplerChange(row.samplerId)
+  }
+  dispatchDialogVisible.value = true
+}
+
+async function submitDispatchForm() {
+  if (!dispatchForm.planId || !dispatchForm.samplerId || !dispatchForm.samplerName) {
+    ElMessage.warning('派发任务前必须指定采样员')
+    return
+  }
+  submitting.value = true
+  try {
+    await dispatchSamplingPlanApi({
+      planId: dispatchForm.planId,
+      samplingTime: dispatchForm.samplingTime || dayjs().format('YYYY-MM-DD HH:mm:ss'),
+      samplerId: dispatchForm.samplerId,
+      samplerName: dispatchForm.samplerName
+    })
+    dispatchDialogVisible.value = false
+    ElMessage.success('采样计划已派发，并已同步生成采样任务。')
+    planQuery.pageNum = 1
+    taskQuery.pageNum = 1
+    await Promise.all([loadPlans(), loadTasks()])
+  } finally {
+    submitting.value = false
+  }
+}
+
+async function legacyDispatchDoNotUse(row) {
+  return row || null
 }
 
 async function pausePlan(row) {
@@ -791,10 +1339,53 @@ async function resumePlan(row) {
   await loadPlans()
 }
 
-async function startTask(row) {
-  await startSamplingTaskApi(row.id, { remark: '采样任务开始执行' })
-  ElMessage.success('采样任务已开始执行。')
+async function promptTaskSealNo(row, options = {}) {
+  const {
+    title = row?.sealNo ? '修改采样封签号' : '录入采样封签号',
+    confirmButtonText = '确认保存'
+  } = options
+  try {
+    const { value } = await ElMessageBox.prompt(
+      '请输入采样封签号，支持手工录入或粘贴 OCR 识别结果。',
+      title,
+      {
+        confirmButtonText,
+        cancelButtonText: '取消',
+        inputValue: row?.sealNo || '',
+        inputPlaceholder: '请输入采样封签号',
+        inputValidator: (inputValue) => String(inputValue || '').trim() ? true : '封签号不能为空'
+      }
+    )
+    return String(value || '').trim()
+  } catch {
+    return null
+  }
+}
+
+async function editTaskSealNo(row) {
+  const sealNo = await promptTaskSealNo(row)
+  if (!sealNo) {
+    return
+  }
+  await updateSamplingTaskSealNoApi(row.id, { sealNo })
+  ElMessage.success('采样封签号已保存。')
   await loadTasks()
+}
+
+async function startTask(row) {
+  const sealNo = row?.sealNo?.trim() || await promptTaskSealNo(row, {
+    title: '开始任务前请先录入封签号',
+    confirmButtonText: '录入并开始'
+  })
+  if (!sealNo) {
+    return
+  }
+  await startSamplingTaskApi(row.id, {
+    sealNo,
+    remark: '采样任务开始执行'
+  })
+  ElMessage.success('采样任务已开始执行。')
+  await Promise.all([loadTasks(), loadPlans()])
 }
 
 async function abandonTask(row) {
@@ -803,13 +1394,13 @@ async function abandonTask(row) {
     remark: '请确认现场情况后重新安排采样任务'
   })
   ElMessage.success('采样任务已废弃。')
-  await loadTasks()
+  await Promise.all([loadTasks(), loadPlans()])
 }
 
 async function resumeTask(row) {
   await resumeSamplingTaskApi(row.id, { remark: '采样任务恢复为待处理状态' })
   ElMessage.success('采样任务已恢复。')
-  await loadTasks()
+  await Promise.all([loadTasks(), loadPlans()])
 }
 
 async function completeTask(row) {
@@ -831,28 +1422,96 @@ async function completeFirstPendingTask() {
   await completeTask(firstCompletableTask.value)
 }
 
-async function loginSample() {
-  const completedTask = firstLoggableTask.value
-  if (!completedTask) {
-    ElMessage.warning('当前没有待登记的已完成采样任务。')
+async function legacyLoginSampleDoNotUse() {
+  return null
+}
+
+function applyTaskToLoginForm(task) {
+  if (!task) {
+    return
+  }
+  loginForm.taskId = task.id
+  loginForm.sealNo = task.sealNo || ''
+  loginForm.pointId = task.pointId || null
+  loginForm.pointName = task.pointName || ''
+  loginForm.sampleType = task.sampleType || ''
+  loginForm.detectionItems = task.detectionItems || ''
+  loginForm.samplingTime = task.samplingTime || dayjs().format('YYYY-MM-DD HH:mm:ss')
+  loginForm.samplerId = task.samplerId || null
+  loginForm.samplerName = task.samplerName || ''
+  loginForm.weather = ''
+  loginForm.storageCondition = ''
+  loginForm.remark = task.remark || ''
+}
+
+function resetLoginForm() {
+  loginForm.taskId = null
+  loginForm.sealNo = ''
+  loginForm.pointId = null
+  loginForm.pointName = ''
+  loginForm.sampleType = ''
+  loginForm.detectionItems = ''
+  loginForm.samplingTime = ''
+  loginForm.samplerId = null
+  loginForm.samplerName = ''
+  loginForm.weather = ''
+  loginForm.storageCondition = ''
+  loginForm.remark = ''
+}
+
+function openLoginDialog(task = firstLoggableTask.value) {
+  if (!pendingLoggableTasks.value.length) {
+    ElMessage.warning('当前没有待登录的已完成采样任务')
+    return
+  }
+  resetLoginForm()
+  applyTaskToLoginForm(task || pendingLoggableTasks.value[0])
+  loginDialogVisible.value = true
+}
+
+function handleLoginTaskChange(taskId) {
+  const task = pendingLoggableTasks.value.find((item) => item.id === taskId)
+  applyTaskToLoginForm(task)
+}
+
+function handleLoginSealNoChange(value) {
+  const sealNo = String(value || loginForm.sealNo || '').trim()
+  loginForm.sealNo = sealNo
+  if (!sealNo) {
+    return
+  }
+  const task = pendingLoggableTasks.value.find((item) => item.sealNo === sealNo)
+  if (!task) {
+    ElMessage.warning('未找到与该封签号匹配的待登录采样任务')
+    return
+  }
+  applyTaskToLoginForm(task)
+}
+
+function formatPendingTaskLabel(task) {
+  const pointName = task?.pointName || '未命名点位'
+  const samplerName = task?.samplerName || '未指定采样员'
+  const taskNo = task?.taskNo || '未生成任务编号'
+  const sealNo = task?.sealNo || '未录入封签号'
+  return `${taskNo} / ${sealNo} / ${pointName} / ${samplerName}`
+}
+
+async function submitSampleLogin() {
+  if (!loginForm.taskId || !loginForm.sealNo || !loginForm.pointId || !loginForm.pointName || !loginForm.sampleType || !loginForm.detectionItems || !loginForm.samplingTime) {
+    ElMessage.warning('请完整填写样品登录信息')
     return
   }
 
-  const sample = await loginSampleApi({
-    taskId: completedTask.id,
-    pointId: completedTask.pointId || 2001,
-    pointName: completedTask.pointName || '城东水厂出厂水',
-    sampleType: completedTask.sampleType || factorySampleType,
-    detectionItems: 'pH、浊度、余氯、氨氮',
-    samplingTime: dayjs().format('YYYY-MM-DD HH:mm:ss'),
-    samplerId: completedTask.samplerId || 1002,
-    samplerName: completedTask.samplerName || '采样员',
-    weather: '晴',
-    storageCondition: '冷藏'
-  })
-  ElMessage.success(`样品登录完成，封签编号：${sample?.sealNo || '待系统生成'}`)
-  sampleQuery.pageNum = 1
-  await loadSamples()
+  submitting.value = true
+  try {
+    const sample = await loginSampleApi({ ...loginForm })
+    loginDialogVisible.value = false
+    ElMessage.success(`样品登录完成，封签编号：${sample?.sealNo || '-'}`)
+    sampleQuery.pageNum = 1
+    await Promise.all([loadTasks(), loadSamples()])
+  } finally {
+    submitting.value = false
+  }
 }
 
 onMounted(async () => {
@@ -922,8 +1581,22 @@ watch(() => route.fullPath, () => {
   justify-content: center;
 }
 
+.plan-sampler {
+  color: var(--text-main);
+}
+
+.plan-sampler.is-empty {
+  color: #d14343;
+  font-weight: 600;
+}
+
 .plan-stats {
   margin-bottom: 12px;
+}
+
+.plan-panel-warning {
+  margin-bottom: 12px;
+  color: #9a6700;
 }
 
 .scene-grid {
@@ -936,6 +1609,26 @@ watch(() => route.fullPath, () => {
   color: var(--text-sub);
   font-size: 14px;
   line-height: 1.7;
+}
+
+.login-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 16px;
+}
+
+.login-form-span-2 {
+  grid-column: 1 / -1;
+}
+
+.plan-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 16px;
+}
+
+.plan-form-span-2 {
+  grid-column: 1 / -1;
 }
 
 .scene-copy p {
@@ -977,5 +1670,21 @@ watch(() => route.fullPath, () => {
   .hero-tags {
     justify-content: flex-start;
   }
+
+  .login-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .plan-form-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>
+
+
+
+
+
+
+
+

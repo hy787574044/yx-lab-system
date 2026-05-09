@@ -15,6 +15,7 @@ import com.yx.lab.modules.sample.entity.SamplingTask;
 import com.yx.lab.modules.sample.mapper.SamplingPlanMapper;
 import com.yx.lab.modules.sample.mapper.SamplingTaskMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,8 +23,10 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.List;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class SamplingPlanService {
 
@@ -108,6 +111,11 @@ public class SamplingPlanService {
         if (!LabWorkflowConstants.canDispatchPlan(plan.getPlanStatus())) {
             throw new BusinessException("当前计划状态不允许派发");
         }
+        if (command.getSamplerId() != null) {
+            plan.setSamplerId(command.getSamplerId());
+            plan.setSamplerName(StrUtil.trim(command.getSamplerName()));
+            samplingPlanMapper.updateById(plan);
+        }
         dispatchPlanTask(plan, command.getSamplingTime(), true);
     }
 
@@ -135,6 +143,10 @@ public class SamplingPlanService {
     }
 
     public void refreshPlanStatusAfterTaskCompletion(Long planId) {
+        refreshPlanStatusAfterTaskChange(planId);
+    }
+
+    public void refreshPlanStatusAfterTaskChange(Long planId) {
         if (planId == null) {
             return;
         }
@@ -142,19 +154,34 @@ public class SamplingPlanService {
         if (plan == null || LabWorkflowConstants.SamplingPlanStatus.PAUSED.equals(plan.getPlanStatus())) {
             return;
         }
+        List<SamplingTask> planTasks = samplingTaskMapper.selectList(new LambdaQueryWrapper<SamplingTask>()
+                .eq(SamplingTask::getPlanId, planId)
+                .orderByDesc(SamplingTask::getCreatedTime));
+        LocalDateTime now = LocalDateTime.now();
+        boolean hasTodoTask = planTasks.stream().anyMatch(task ->
+                LabWorkflowConstants.TODO_TASK_STATUSES.contains(task.getTaskStatus()));
+        boolean hasCompletedTask = planTasks.stream().anyMatch(task ->
+                LabWorkflowConstants.SamplingTaskStatus.COMPLETED.equals(task.getTaskStatus()));
+        boolean expired = plan.getEndTime() != null && !plan.getEndTime().isAfter(now);
+
         if (LabWorkflowConstants.isOnceCycle(plan.getCycleType())) {
-            updatePlanStatus(plan, LabWorkflowConstants.SamplingPlanStatus.COMPLETED);
-            return;
-        }
-        if (LabWorkflowConstants.isRecurringCycle(plan.getCycleType())
-                && plan.getEndTime() != null
-                && !plan.getEndTime().isAfter(LocalDateTime.now())) {
-            updatePlanStatus(plan, LabWorkflowConstants.SamplingPlanStatus.COMPLETED);
-            return;
-        }
-        if (!LabWorkflowConstants.SamplingPlanStatus.ACTIVE.equals(plan.getPlanStatus())) {
+            if (hasCompletedTask || expired) {
+                updatePlanStatus(plan, LabWorkflowConstants.SamplingPlanStatus.COMPLETED);
+                return;
+            }
+            if (hasTodoTask) {
+                updatePlanStatus(plan, LabWorkflowConstants.SamplingPlanStatus.DISPATCHED);
+                return;
+            }
             updatePlanStatus(plan, LabWorkflowConstants.SamplingPlanStatus.ACTIVE);
+            return;
         }
+
+        if (expired && !hasTodoTask) {
+            updatePlanStatus(plan, LabWorkflowConstants.SamplingPlanStatus.COMPLETED);
+            return;
+        }
+        updatePlanStatus(plan, LabWorkflowConstants.SamplingPlanStatus.ACTIVE);
     }
 
     public SamplingPlan requirePlan(Long id) {
@@ -166,6 +193,13 @@ public class SamplingPlanService {
     }
 
     private boolean dispatchPlanTask(SamplingPlan plan, LocalDateTime samplingTime, boolean manualDispatch) {
+        if (plan.getSamplerId() == null || StrUtil.isBlank(plan.getSamplerName())) {
+            if (manualDispatch) {
+                throw new BusinessException("派发采样任务前必须指定采样员");
+            }
+            log.warn("auto dispatch skipped plan without sampler, planId={}, planName={}", plan.getId(), plan.getPlanName());
+            return false;
+        }
         LocalDateTime taskTime = samplingTime == null ? plan.getStartTime() : samplingTime;
         if (taskTime == null) {
             throw new BusinessException("采样计划未设置开始时间，不能派发任务");
@@ -177,9 +211,13 @@ public class SamplingPlanService {
             markPlanCompletedIfExpired(plan, taskTime);
             return false;
         }
-        Long existingCount = samplingTaskMapper.selectCount(new LambdaQueryWrapper<SamplingTask>()
+        LambdaQueryWrapper<SamplingTask> existingTaskQuery = new LambdaQueryWrapper<SamplingTask>()
                 .eq(SamplingTask::getPlanId, plan.getId())
-                .eq(SamplingTask::getSamplingTime, taskTime));
+                .eq(SamplingTask::getSamplingTime, taskTime);
+        if (manualDispatch) {
+            existingTaskQuery.ne(SamplingTask::getTaskStatus, LabWorkflowConstants.SamplingTaskStatus.ABANDONED);
+        }
+        Long existingCount = samplingTaskMapper.selectCount(existingTaskQuery);
         if (existingCount != null && existingCount > 0) {
             if (manualDispatch) {
                 throw new BusinessException("当前计划在该执行时间已生成采样任务，不能重复派发");
@@ -187,6 +225,7 @@ public class SamplingPlanService {
             return false;
         }
         SamplingTask task = new SamplingTask();
+        task.setTaskNo(generateTaskNo());
         task.setPlanId(plan.getId());
         task.setPointId(plan.getPointId());
         task.setPointName(plan.getPointName());
@@ -194,6 +233,9 @@ public class SamplingPlanService {
         task.setSamplerId(plan.getSamplerId());
         task.setSamplerName(plan.getSamplerName());
         task.setSampleType(plan.getSampleType());
+        task.setSealNo(null);
+        task.setSampleRegisterStatus(LabWorkflowConstants.SampleRegisterStatus.UNREGISTERED);
+        task.setSampleId(null);
         task.setTaskStatus(LabWorkflowConstants.SamplingTaskStatus.PENDING);
         task.setRemark(buildTaskRemark(plan, manualDispatch));
         samplingTaskMapper.insert(task);
@@ -217,6 +259,9 @@ public class SamplingPlanService {
     }
 
     private void validatePlan(SamplingPlan plan) {
+        if (StrUtil.isBlank(plan.getPointName())) {
+            throw new BusinessException("采样点位名称不能为空");
+        }
         if (plan.getStartTime() == null) {
             throw new BusinessException("采样计划开始时间不能为空");
         }
@@ -317,5 +362,13 @@ public class SamplingPlanService {
         plan.setPlanStatus(planStatus);
         plan.setUpdatedTime(LocalDateTime.now());
         samplingPlanMapper.updateById(plan);
+    }
+
+    private String generateTaskNo() {
+        String prefix = "TASK" + LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMM"));
+        Long count = samplingTaskMapper.selectCount(new LambdaQueryWrapper<SamplingTask>()
+                .likeRight(SamplingTask::getTaskNo, prefix));
+        long next = count == null ? 1L : count + 1L;
+        return prefix + String.format("%04d", next);
     }
 }

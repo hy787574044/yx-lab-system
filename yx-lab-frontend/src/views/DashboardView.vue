@@ -91,6 +91,9 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { ElIcon } from 'element-plus/es/components/icon/index.mjs'
+import { ElLoadingDirective } from 'element-plus/es/components/loading/index.mjs'
+import { ElProgress } from 'element-plus/es/components/progress/index.mjs'
 import {
   CircleCheckFilled,
   DocumentChecked,
@@ -103,6 +106,7 @@ import { dashboardApi } from '../api/lab'
 const router = useRouter()
 const loading = ref(false)
 const overview = ref({})
+const vLoading = ElLoadingDirective
 
 const actionRouteMap = {
   样品采样: '/sample-login',
