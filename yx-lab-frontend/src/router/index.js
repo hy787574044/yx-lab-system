@@ -9,7 +9,6 @@ const componentMap = {
   DetectionView: () => import('../views/DetectionView.vue'),
   DetectionConfigView: () => import('../views/DetectionConfigView.vue'),
   DetectionMethodView: () => import('../views/DetectionMethodView.vue'),
-  DetectionParameterMethodBindingView: () => import('../views/DetectionParameterMethodBindingView.vue'),
   ReviewView: () => import('../views/ReviewView.vue'),
   ReportView: () => import('../views/ReportView.vue'),
   AssetView: () => import('../views/AssetView.vue'),

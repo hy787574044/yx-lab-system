@@ -5,6 +5,7 @@ import lombok.Data;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import java.math.BigDecimal;
+import java.util.List;
 
 @Data
 public class DetectionParameterSaveCommand {
@@ -26,4 +27,9 @@ public class DetectionParameterSaveCommand {
     private Integer enabled;
 
     private String remark;
+
+    /**
+     * 当前检测参数绑定的检测方法主键集合。
+     */
+    private List<Long> methodIds;
 }

@@ -314,35 +314,60 @@ export const labMenuGroups = [
         componentKey: 'DetectionConfigView'
       },
       {
-        path: '/detection-project-groups',
+        path: '/detection-methods',
         title: '检测套餐',
         shortTitle: '检测套餐',
         subtitle: '将多个检测参数组合为可供样品登录选择的检测套餐。',
-        componentKey: 'DetectionConfigView'
-      },
-      {
-        path: '/detection-methods',
-        title: '检测方法',
-        shortTitle: '检测方法',
-        subtitle: '维护化验室检测方法基础台账，支持增删改查。',
         componentKey: 'DetectionMethodView'
       },
       {
-        path: '/detection-parameter-method-bindings',
-        title: '参数方法绑定',
-        shortTitle: '参数方法绑定',
-        subtitle: '按检测参数统一配置可选检测方法，一个检测方法同一时间只能绑定到一个检测参数。',
-        componentKey: 'DetectionParameterMethodBindingView'
+        path: '/detection-project-groups',
+        title: '检测方法',
+        shortTitle: '检测方法',
+        subtitle: '维护化验室检测方法基础台账，支持增删改查。',
+        componentKey: 'DetectionConfigView'
       }
     ]
   }
 ]
+
+const systemMenuGroup = labMenuGroups.find((item) => item.id === 'system')
+if (systemMenuGroup?.children) {
+  const detectionMethodMenu = systemMenuGroup.children.find((item) => item.path === '/detection-methods')
+  const detectionPackageMenu = systemMenuGroup.children.find((item) => item.path === '/detection-project-groups')
+
+  if (detectionMethodMenu) {
+    detectionMethodMenu.title = '检测方法'
+    detectionMethodMenu.shortTitle = '检测方法'
+    detectionMethodMenu.subtitle = '维护化验室检测方法基础台账，支持增删改查。'
+  }
+
+  if (detectionPackageMenu) {
+    detectionPackageMenu.title = '检测套餐'
+    detectionPackageMenu.shortTitle = '检测套餐'
+    detectionPackageMenu.subtitle = '将多个检测参数组合为可供样品登录选择的检测套餐。'
+  }
+
+  if (detectionMethodMenu && detectionPackageMenu) {
+    const filteredChildren = systemMenuGroup.children.filter(
+      (item) => item.path !== '/detection-methods' && item.path !== '/detection-project-groups'
+    )
+    const insertIndex = filteredChildren.findIndex((item) => item.path === '/detection-projects')
+    if (insertIndex >= 0) {
+      filteredChildren.splice(insertIndex + 1, 0, detectionMethodMenu, detectionPackageMenu)
+    } else {
+      filteredChildren.push(detectionMethodMenu, detectionPackageMenu)
+    }
+    systemMenuGroup.children = filteredChildren
+  }
+}
 
 export const legacyRedirects = [
   { path: '/monitoring', redirect: '/monitoring-ledger' },
   { path: '/samples', redirect: '/sample-login' },
   { path: '/detections', redirect: '/detection-analysis' },
   { path: '/detection-project', redirect: '/detection-projects' },
+  { path: '/detection-parameter-method-bindings', redirect: '/detection-projects' },
   { path: '/detection-method', redirect: '/detection-methods' },
   { path: '/reviews', redirect: '/review-result' },
   { path: '/reports', redirect: '/report-ledger' },

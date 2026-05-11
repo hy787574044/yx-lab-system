@@ -263,13 +263,16 @@ public class DetectionConfigService {
         detectionProjectGroupMapper.deleteById(entity.getId());
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public void saveParameter(DetectionParameterSaveCommand command) {
         DetectionParameter entity = new DetectionParameter();
         applyParameterCommand(entity, command);
         validateParameter(entity, null);
         detectionParameterMapper.insert(entity);
+        bindParameterMethods(entity.getId(), buildParameterMethodBindCommand(command.getMethodIds()));
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public void updateParameter(Long id, DetectionParameterSaveCommand command) {
         DetectionParameter entity = requireParameter(id);
         applyParameterCommand(entity, command);
@@ -277,6 +280,7 @@ public class DetectionConfigService {
         detectionParameterMapper.updateById(entity);
         syncTypeParameterSnapshots(id);
         syncMethodParameterSnapshots(id, entity.getParameterName());
+        bindParameterMethods(id, buildParameterMethodBindCommand(command.getMethodIds()));
     }
 
     public void deleteParameter(Long id) {
@@ -301,7 +305,11 @@ public class DetectionConfigService {
     public void bindParameterMethods(Long parameterId, DetectionParameterMethodBindCommand command) {
         DetectionParameter parameter = requireParameter(parameterId);
         List<Long> methodIds = normalizeMethodIds(command == null ? null : command.getMethodIds());
-        ensureRemovedMethodsNotReferenced(parameterId, methodIds);
+        List<Long> currentMethodIds = listBoundMethodIdsByParameter(parameterId);
+        List<Long> removedMethodIds = currentMethodIds.stream()
+                .filter(methodId -> !methodIds.contains(methodId))
+                .collect(Collectors.toList());
+        ensureRemovedMethodsCanBeRebound(removedMethodIds, methodIds);
         Map<Long, DetectionMethod> selectedMethodMap = resolveSelectedMethods(methodIds);
 
         for (Long methodId : methodIds) {
@@ -320,6 +328,7 @@ public class DetectionConfigService {
             method.setParameterName(parameter.getParameterName());
             detectionMethodMapper.updateById(method);
         }
+        syncReferencedTypesAfterMethodUnbind(parameterId, currentMethodIds, removedMethodIds, methodIds, selectedMethodMap);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -684,6 +693,12 @@ public class DetectionConfigService {
         );
     }
 
+    private DetectionParameterMethodBindCommand buildParameterMethodBindCommand(List<Long> methodIds) {
+        DetectionParameterMethodBindCommand command = new DetectionParameterMethodBindCommand();
+        command.setMethodIds(methodIds);
+        return command;
+    }
+
     private void validateAndPopulateTypeParameters(DetectionType entity) {
         List<DetectionTypeParameterMethodBindingItem> bindingItems = parseTypeParameterMethodBindings(entity.getParameterMethodBindings());
         if (!bindingItems.isEmpty()) {
@@ -985,6 +1000,70 @@ public class DetectionConfigService {
                 throw new BusinessException("检测方法“" + methodName + "”已被检测套餐引用，请先调整检测套餐后再解除绑定");
             }
         }
+    }
+
+    private List<Long> listBoundMethodIdsByParameter(Long parameterId) {
+        return detectionMethodMapper.selectList(new LambdaQueryWrapper<DetectionMethod>()
+                        .eq(DetectionMethod::getParameterId, parameterId))
+                .stream()
+                .map(DetectionMethod::getId)
+                .collect(Collectors.toList());
+    }
+
+    private void ensureRemovedMethodsCanBeRebound(List<Long> removedMethodIds, List<Long> nextMethodIds) {
+        for (Long removedMethodId : removedMethodIds) {
+            if (isMethodReferencedByType(removedMethodId) && nextMethodIds.isEmpty()) {
+                DetectionMethod method = detectionMethodMapper.selectById(removedMethodId);
+                String methodName = method == null ? String.valueOf(removedMethodId) : method.getMethodName();
+                throw new BusinessException("检测方法“" + methodName + "”已被检测套餐引用，请先调整检测套餐后再解除绑定");
+            }
+        }
+    }
+
+    private void syncReferencedTypesAfterMethodUnbind(Long parameterId,
+                                                      List<Long> currentMethodIds,
+                                                      List<Long> removedMethodIds,
+                                                      List<Long> nextMethodIds,
+                                                      Map<Long, DetectionMethod> selectedMethodMap) {
+        if (parameterId == null || removedMethodIds.isEmpty() || nextMethodIds.isEmpty()) {
+            return;
+        }
+
+        Long replacementMethodId = currentMethodIds.stream()
+                .filter(nextMethodIds::contains)
+                .findFirst()
+                .orElse(nextMethodIds.get(0));
+        DetectionMethod replacementMethod = selectedMethodMap.get(replacementMethodId);
+        if (replacementMethod == null) {
+            return;
+        }
+
+        LinkedHashSet<Long> removedMethodIdSet = new LinkedHashSet<>(removedMethodIds);
+        detectionTypeMapper.selectList(new LambdaQueryWrapper<DetectionType>()
+                        .like(DetectionType::getParameterIds, String.valueOf(parameterId)))
+                .forEach(type -> {
+                    List<DetectionTypeParameterMethodBindingItem> items =
+                            parseTypeParameterMethodBindings(type.getParameterMethodBindings());
+                    boolean changed = false;
+                    for (DetectionTypeParameterMethodBindingItem item : items) {
+                        if (item == null || !parameterId.equals(item.getParameterId())) {
+                            continue;
+                        }
+                        List<Long> methodIds = normalizeMethodIds(item.getMethodIds());
+                        boolean containsRemovedMethod = methodIds.stream().anyMatch(removedMethodIdSet::contains);
+                        if (!containsRemovedMethod) {
+                            continue;
+                        }
+                        item.setMethodIds(new ArrayList<>(Collections.singletonList(replacementMethodId)));
+                        item.setMethodNames(new ArrayList<>(Collections.singletonList(replacementMethod.getMethodName())));
+                        changed = true;
+                    }
+                    if (changed) {
+                        type.setParameterMethodBindings(serializeTypeParameterMethodBindings(items));
+                        validateAndPopulateTypeParameters(type);
+                        detectionTypeMapper.updateById(type);
+                    }
+                });
     }
 
     private boolean hasProcessingDetections(Long typeId) {

@@ -3,6 +3,9 @@ package com.yx.lab.modules.detection.service;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yx.lab.common.constant.LabWorkflowConstants;
 import com.yx.lab.common.exception.BusinessException;
 import com.yx.lab.common.model.PageResult;
@@ -25,6 +28,7 @@ import com.yx.lab.modules.detection.mapper.DetectionTypeMapper;
 import com.yx.lab.modules.detection.vo.DetectionRecordDetailVO;
 import com.yx.lab.modules.review.entity.ReviewRecord;
 import com.yx.lab.modules.review.mapper.ReviewRecordMapper;
+import com.yx.lab.modules.sample.dto.SampleDetectionConfigItem;
 import com.yx.lab.modules.sample.entity.LabSample;
 import com.yx.lab.modules.sample.mapper.LabSampleMapper;
 import com.yx.lab.modules.sample.service.LabSampleService;
@@ -58,6 +62,8 @@ public class DetectionWorkflowService {
     private final ReviewRecordMapper reviewRecordMapper;
 
     private final LabSampleService labSampleService;
+
+    private final ObjectMapper objectMapper;
 
     public PageResult<DetectionRecord> page(DetectionRecordQuery query) {
         CurrentUser currentUser = SecurityContext.getCurrentUser();
@@ -111,7 +117,7 @@ public class DetectionWorkflowService {
         DetectionType detectionType = detectionTypeMapper.selectById(command.getDetectionTypeId());
         DetectionType usableType = requireUsableType(command, detectionType);
         validateDetectorBinding(usableType, currentUser);
-        List<DetectionParameter> configuredParameters = resolveConfiguredParameters(usableType);
+        List<DetectionParameter> configuredParameters = resolveConfiguredParameters(usableType, sample);
         ensureTypeHasSteps(usableType.getId());
         Map<Long, DetectionItemCommand> itemMap = validateSubmittedItems(command.getItems(), configuredParameters);
 
@@ -196,8 +202,8 @@ public class DetectionWorkflowService {
         }
     }
 
-    private List<DetectionParameter> resolveConfiguredParameters(DetectionType detectionType) {
-        List<Long> parameterIds = parseParameterIds(detectionType.getParameterIds());
+    private List<DetectionParameter> resolveConfiguredParameters(DetectionType detectionType, LabSample sample) {
+        List<Long> parameterIds = resolveSampleParameterIds(sample, detectionType);
         if (parameterIds.isEmpty()) {
             throw new BusinessException("当前检测类型未配置检测参数，不能提交检测");
         }
@@ -224,6 +230,37 @@ public class DetectionWorkflowService {
                 .eq(DetectionStep::getTypeId, typeId));
         if (stepCount == null || stepCount == 0) {
             throw new BusinessException("当前检测类型未配置检测步骤，不能提交检测");
+        }
+    }
+
+    private List<Long> resolveSampleParameterIds(LabSample sample, DetectionType detectionType) {
+        List<Long> parameterIds = parseSampleDetectionConfigParameterIds(sample == null ? null : sample.getDetectionConfigSnapshot());
+        if (!parameterIds.isEmpty()) {
+            return parameterIds;
+        }
+        return parseParameterIds(detectionType.getParameterIds());
+    }
+
+    private List<Long> parseSampleDetectionConfigParameterIds(String snapshotText) {
+        if (StrUtil.isBlank(snapshotText)) {
+            return new ArrayList<>();
+        }
+        try {
+            List<SampleDetectionConfigItem> items = objectMapper.readValue(
+                    snapshotText,
+                    new TypeReference<List<SampleDetectionConfigItem>>() {
+                    }
+            );
+            if (items == null || items.isEmpty()) {
+                return new ArrayList<>();
+            }
+            return items.stream()
+                    .map(SampleDetectionConfigItem::getParameterId)
+                    .filter(id -> id != null)
+                    .distinct()
+                    .collect(Collectors.toList());
+        } catch (JsonProcessingException ex) {
+            throw new BusinessException("样品检测参数快照格式不正确，请重新登录样品");
         }
     }
 

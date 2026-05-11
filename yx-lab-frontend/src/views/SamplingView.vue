@@ -505,7 +505,7 @@
     <el-dialog
       v-model="loginDialogVisible"
       title="样品登录"
-      width="680px"
+      width="1040px"
       destroy-on-close
       @closed="resetLoginForm"
     >
@@ -549,21 +549,97 @@
           <el-form-item label="采样人员">
             <el-input v-model="loginForm.samplerName" readonly />
           </el-form-item>
-          <el-form-item class="login-form-span-2" label="检测项目组">
+          <el-form-item class="login-form-span-2" label="检测套餐">
             <el-select
-              v-model="loginForm.detectionItems"
+              v-model="loginForm.detectionTypeId"
               clearable
               filterable
-              placeholder="请选择本次样品对应的检测项目组"
+              placeholder="请选择本次样品对应的检测套餐"
               style="width: 100%"
+              @change="handleLoginDetectionTypeChange"
             >
               <el-option
                 v-for="item in detectionProjectOptions"
                 :key="item.id"
                 :label="item.typeName"
-                :value="item.typeName"
+                :value="item.id"
               />
             </el-select>
+          </el-form-item>
+          <el-form-item v-if="loginForm.detectionTypeId" class="login-form-span-2" label="套餐参数">
+            <div class="login-config-panel">
+              <div class="login-config-panel__summary">
+                <span class="binding-editor__chip">
+                  已选参数<strong>{{ loginDetectionConfigRows.length }}</strong>
+                </span>
+                <span class="login-config-panel__note">
+                  选择检测套餐后，系统会带出对应检测参数；你可以临时增删参数并调整方法，仅对本次样品登录生效，不会改动原检测套餐。
+                </span>
+                <el-button type="primary" plain size="small" @click="appendLoginConfigRow">新增参数</el-button>
+              </div>
+              <el-table
+                class="login-config-table"
+                :data="loginDetectionConfigRows"
+                size="small"
+                max-height="280"
+                border
+              >
+                <el-table-column label="检测参数名称" min-width="180">
+                  <template #default="{ row, $index }">
+                    <el-select
+                      v-model="row.parameterId"
+                      placeholder="请选择检测参数"
+                      style="width: 100%"
+                      @change="(value) => handleLoginConfigParameterChange(row, value)"
+                    >
+                      <el-option
+                        v-for="option in getLoginConfigParameterOptions($index)"
+                        :key="option.id"
+                        :label="option.parameterName"
+                        :value="option.id"
+                      />
+                    </el-select>
+                  </template>
+                </el-table-column>
+                <el-table-column prop="unit" label="单位" width="100">
+                  <template #default="{ row }">{{ row.unit || '-' }}</template>
+                </el-table-column>
+                <el-table-column label="标准范围" min-width="140">
+                  <template #default="{ row }">
+                    {{ formatStandardRange(row.standardMin, row.standardMax, row.unit) }}
+                  </template>
+                </el-table-column>
+                <el-table-column prop="referenceStandard" label="参考标准" min-width="160" show-overflow-tooltip>
+                  <template #default="{ row }">{{ row.referenceStandard || '-' }}</template>
+                </el-table-column>
+                <el-table-column label="检测方法" min-width="220">
+                  <template #default="{ row }">
+                    <el-select
+                      v-model="row.methodId"
+                      placeholder="请选择检测方法"
+                      style="width: 100%"
+                      :disabled="!row.parameterId || !row.methodOptions.length"
+                      @change="(value) => handleLoginConfigMethodChange(row, value)"
+                    >
+                      <el-option
+                        v-for="method in row.methodOptions"
+                        :key="method.id"
+                        :label="method.methodName"
+                        :value="method.id"
+                      />
+                    </el-select>
+                  </template>
+                </el-table-column>
+                <el-table-column label="操作" width="90" class-name="cell-center" header-cell-class-name="cell-center">
+                  <template #default="{ $index }">
+                    <el-button link type="danger" @click="removeLoginConfigRow($index)">删除</el-button>
+                  </template>
+                </el-table-column>
+              </el-table>
+              <div v-if="!loginDetectionConfigRows.length" class="empty-block">
+                当前套餐参数已被临时清空，可点击“新增参数”按需补充本次样品的检测参数与检测方法。
+              </div>
+            </div>
           </el-form-item>
           <el-form-item label="采样时间">
             <el-date-picker
@@ -612,6 +688,8 @@ import {
   completeSamplingTaskApi,
   createSamplingPlanApi,
   dispatchSamplingPlanApi,
+  fetchDetectionMethodOptionsApi,
+  fetchDetectionParametersApi,
   fetchMonitoringPointsApi,
   fetchDetectionTypesApi,
   fetchSamplesApi,
@@ -683,6 +761,8 @@ const monitoringPointLoading = ref(false)
 const samplerOptions = ref([])
 const samplerLoading = ref(false)
 const detectionProjectOptions = ref([])
+const detectionParameterOptions = ref([])
+const detectionMethodOptions = ref([])
 
 const loginForm = reactive({
   taskId: null,
@@ -691,6 +771,9 @@ const loginForm = reactive({
   pointName: '',
   sampleType: '',
   detectionItems: '',
+  detectionTypeId: null,
+  detectionTypeName: '',
+  detectionConfigItems: [],
   samplingTime: '',
   samplerId: null,
   samplerName: '',
@@ -1373,19 +1456,177 @@ async function promptTaskSealNo(row, options = {}) {
 }
 
 async function loadDetectionProjects() {
-  if (detectionProjectOptions.value.length) {
+  if (detectionProjectOptions.value.length && detectionParameterOptions.value.length && detectionMethodOptions.value.length) {
     return
   }
-  const result = await fetchDetectionTypesApi({
-    pageNum: 1,
-    pageSize: 500,
-    enabled: 1
-  })
-  detectionProjectOptions.value = result.records || []
+  const [typeResult, parameterResult, methodResult] = await Promise.all([
+    fetchDetectionTypesApi({
+      pageNum: 1,
+      pageSize: 500,
+      enabled: 1
+    }),
+    fetchDetectionParametersApi({
+      pageNum: 1,
+      pageSize: 500
+    }),
+    fetchDetectionMethodOptionsApi()
+  ])
+  detectionProjectOptions.value = typeResult.records || []
+  detectionParameterOptions.value = parameterResult.records || []
+  detectionMethodOptions.value = Array.isArray(methodResult) ? methodResult : []
 }
 
 function parseDetectionItemsText(value) {
   return String(value || '').trim()
+}
+
+function parseIdList(value) {
+  return String(value || '')
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)
+}
+
+function parseBindingJson(value) {
+  const text = String(value || '').trim()
+  if (!text) {
+    return []
+  }
+  try {
+    const list = JSON.parse(text)
+    return Array.isArray(list) ? list : []
+  } catch {
+    return []
+  }
+}
+
+function formatStandardRange(min, max, unit) {
+  const suffix = unit ? ` ${unit}` : ''
+  if (min != null && max != null) {
+    return `${min} ~ ${max}${suffix}`
+  }
+  if (min != null) {
+    return `>= ${min}${suffix}`
+  }
+  if (max != null) {
+    return `<= ${max}${suffix}`
+  }
+  return '-'
+}
+
+function getDetectionTypeById(typeId) {
+  return detectionProjectOptions.value.find((item) => String(item.id) === String(typeId || '')) || null
+}
+
+function buildLoginDetectionConfigItems(detectionType) {
+  if (!detectionType) {
+    return []
+  }
+  const parameterIds = parseIdList(detectionType.parameterIds)
+  const parameterMap = new Map(detectionParameterOptions.value.map((item) => [String(item.id), item]))
+  const bindingMap = new Map()
+  parseBindingJson(detectionType.parameterMethodBindings).forEach((item) => {
+    const parameterId = String(item?.parameterId || '').trim()
+    if (!parameterId) {
+      return
+    }
+    const methodId = Array.isArray(item?.methodIds) ? item.methodIds[0] : null
+    bindingMap.set(parameterId, methodId == null ? '' : String(methodId))
+  })
+
+  return parameterIds
+    .map((parameterId) => {
+      const parameter = parameterMap.get(String(parameterId))
+      if (!parameter) {
+        return null
+      }
+      const methodOptions = detectionMethodOptions.value
+        .filter((item) => String(item.parameterId) === String(parameterId) && item.enabled === 1)
+        .map((item) => ({
+          id: String(item.id),
+          methodName: item.methodName || `检测方法-${item.id}`
+        }))
+      const defaultMethodId = bindingMap.get(parameterId) && methodOptions.some((item) => item.id === bindingMap.get(parameterId))
+        ? bindingMap.get(parameterId)
+        : (methodOptions[0]?.id || '')
+      const currentMethod = methodOptions.find((item) => item.id === defaultMethodId) || methodOptions[0] || null
+      return {
+        parameterId: String(parameter.id),
+        parameterName: parameter.parameterName || '',
+        unit: parameter.unit || '',
+        standardMin: parameter.standardMin,
+        standardMax: parameter.standardMax,
+        referenceStandard: parameter.referenceStandard || '',
+        methodId: currentMethod?.id || '',
+        methodName: currentMethod?.methodName || '',
+        methodOptions
+      }
+    })
+    .filter(Boolean)
+}
+
+const loginDetectionConfigRows = computed(() => loginForm.detectionConfigItems)
+const enabledLoginParameterOptions = computed(() => (
+  detectionParameterOptions.value
+    .filter((item) => item.enabled === 1)
+    .sort((left, right) => String(left.parameterName || '').localeCompare(String(right.parameterName || ''), 'zh-CN'))
+))
+
+function createEmptyLoginConfigRow() {
+  return {
+    parameterId: '',
+    parameterName: '',
+    unit: '',
+    standardMin: null,
+    standardMax: null,
+    referenceStandard: '',
+    methodId: '',
+    methodName: '',
+    methodOptions: []
+  }
+}
+
+function getLoginMethodOptionsByParameter(parameterId) {
+  if (!parameterId) {
+    return []
+  }
+  return detectionMethodOptions.value
+    .filter((item) => String(item.parameterId) === String(parameterId) && item.enabled === 1)
+    .map((item) => ({
+      id: String(item.id),
+      methodName: item.methodName || `检测方法-${item.id}`
+    }))
+}
+
+function getLoginConfigParameterOptions(currentIndex) {
+  const selectedParameterIds = new Set(
+    loginDetectionConfigRows.value
+      .map((item, index) => index === currentIndex ? '' : String(item.parameterId || '').trim())
+      .filter(Boolean)
+  )
+  return enabledLoginParameterOptions.value.filter((item) => !selectedParameterIds.has(String(item.id)))
+}
+
+function appendLoginConfigRow() {
+  loginForm.detectionConfigItems.push(createEmptyLoginConfigRow())
+}
+
+function removeLoginConfigRow(index) {
+  loginForm.detectionConfigItems.splice(index, 1)
+}
+
+function handleLoginConfigParameterChange(row, parameterId) {
+  const parameter = detectionParameterOptions.value.find((item) => String(item.id) === String(parameterId || ''))
+  row.parameterId = String(parameterId || '')
+  row.parameterName = parameter?.parameterName || ''
+  row.unit = parameter?.unit || ''
+  row.standardMin = parameter?.standardMin ?? null
+  row.standardMax = parameter?.standardMax ?? null
+  row.referenceStandard = parameter?.referenceStandard || ''
+  row.methodOptions = getLoginMethodOptionsByParameter(parameterId)
+  const nextMethod = row.methodOptions.find((item) => item.id === row.methodId) || row.methodOptions[0] || null
+  row.methodId = nextMethod?.id || ''
+  row.methodName = nextMethod?.methodName || ''
 }
 
 async function editTaskSealNo(row) {
@@ -1462,12 +1703,21 @@ function applyTaskToLoginForm(task) {
   loginForm.pointName = task.pointName || ''
   loginForm.sampleType = task.sampleType || ''
   loginForm.detectionItems = parseDetectionItemsText(task.detectionItems)
+  loginForm.detectionTypeId = null
+  loginForm.detectionTypeName = ''
+  loginForm.detectionConfigItems = []
   loginForm.samplingTime = task.samplingTime || dayjs().format('YYYY-MM-DD HH:mm:ss')
   loginForm.samplerId = task.samplerId || null
   loginForm.samplerName = task.samplerName || ''
   loginForm.weather = ''
   loginForm.storageCondition = ''
   loginForm.remark = task.remark || ''
+
+  const preferredType = detectionProjectOptions.value.find((item) => item.typeName === loginForm.detectionItems)
+    || detectionProjectOptions.value[0]
+  if (preferredType) {
+    handleLoginDetectionTypeChange(preferredType.id)
+  }
 }
 
 function resetLoginForm() {
@@ -1477,6 +1727,9 @@ function resetLoginForm() {
   loginForm.pointName = ''
   loginForm.sampleType = ''
   loginForm.detectionItems = ''
+  loginForm.detectionTypeId = null
+  loginForm.detectionTypeName = ''
+  loginForm.detectionConfigItems = []
   loginForm.samplingTime = ''
   loginForm.samplerId = null
   loginForm.samplerName = ''
@@ -1499,6 +1752,20 @@ async function openLoginDialog(task = firstLoggableTask.value) {
 function handleLoginTaskChange(taskId) {
   const task = pendingLoggableTasks.value.find((item) => item.id === taskId)
   applyTaskToLoginForm(task)
+}
+
+function handleLoginDetectionTypeChange(typeId) {
+  const detectionType = getDetectionTypeById(typeId)
+  loginForm.detectionTypeId = detectionType?.id || null
+  loginForm.detectionTypeName = detectionType?.typeName || ''
+  loginForm.detectionItems = detectionType?.typeName || ''
+  loginForm.detectionConfigItems = buildLoginDetectionConfigItems(detectionType)
+}
+
+function handleLoginConfigMethodChange(row, methodId) {
+  const method = (row.methodOptions || []).find((item) => item.id === String(methodId || ''))
+  row.methodId = String(methodId || '')
+  row.methodName = method?.methodName || ''
 }
 
 function handleLoginSealNoChange(value) {
@@ -1524,8 +1791,12 @@ function formatPendingTaskLabel(task) {
 }
 
 async function submitSampleLogin() {
-  if (!loginForm.taskId || !loginForm.sealNo || !loginForm.pointId || !loginForm.pointName || !loginForm.sampleType || !loginForm.detectionItems || !loginForm.samplingTime) {
+  if (!loginForm.taskId || !loginForm.sealNo || !loginForm.pointId || !loginForm.pointName || !loginForm.sampleType || !loginForm.detectionTypeId || !loginForm.detectionItems || !loginForm.samplingTime) {
     ElMessage.warning('请完整填写样品登录信息')
+    return
+  }
+  if (!loginDetectionConfigRows.value.length || loginDetectionConfigRows.value.some((item) => !item.methodId)) {
+    ElMessage.warning('请选择检测套餐对应的检测参数与检测方法')
     return
   }
 
@@ -1533,7 +1804,19 @@ async function submitSampleLogin() {
   try {
     const sample = await loginSampleApi({
       ...loginForm,
-      detectionItems: parseDetectionItemsText(loginForm.detectionItems)
+      detectionItems: parseDetectionItemsText(loginForm.detectionItems),
+      detectionTypeId: loginForm.detectionTypeId,
+      detectionTypeName: loginForm.detectionTypeName,
+      detectionConfigItems: loginDetectionConfigRows.value.map((item) => ({
+        parameterId: item.parameterId,
+        parameterName: item.parameterName,
+        unit: item.unit,
+        standardMin: item.standardMin,
+        standardMax: item.standardMax,
+        referenceStandard: item.referenceStandard,
+        methodId: item.methodId,
+        methodName: item.methodName
+      }))
     })
     loginDialogVisible.value = false
     ElMessage.success(`样品登录完成，封签编号：${sample?.sealNo || '-'}`)
@@ -1649,6 +1932,61 @@ watch(() => route.fullPath, () => {
 
 .login-form-span-2 {
   grid-column: 1 / -1;
+}
+
+.login-config-panel {
+  display: grid;
+  gap: 12px;
+  width: 100%;
+  padding: 16px;
+  border: 1px solid var(--line-soft);
+  border-radius: 18px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--brand) 4%, #ffffff 96%) 0%, #ffffff 100%);
+}
+
+.login-config-panel__summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.login-config-panel__note {
+  color: var(--text-light);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.binding-editor__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--brand) 16%, #ffffff 84%);
+  background: color-mix(in srgb, var(--brand) 7%, #ffffff 93%);
+  color: var(--text-sub);
+  font-size: 13px;
+}
+
+.binding-editor__chip strong {
+  color: var(--brand);
+  font-size: 15px;
+}
+
+.login-config-table {
+  width: 100%;
+}
+
+.empty-block {
+  padding: 18px 16px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--brand) 3%, #ffffff 97%);
+  color: var(--text-light);
+  font-size: 13px;
+  text-align: center;
 }
 
 .plan-form-grid {

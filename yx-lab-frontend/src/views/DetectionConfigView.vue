@@ -73,7 +73,40 @@
             max-height="480"
             empty-text="暂无检测参数数据"
           >
-            <el-table-column prop="parameterName" label="检测参数" min-width="160" />
+            <el-table-column label="参数方法关系" min-width="360">
+              <template #default="{ row }">
+                <div class="binding-tree">
+                  <div class="binding-tree__parameter">
+                    <span class="binding-tree__dash">-</span>
+                    <span class="binding-tree__parameter-name">{{ row.parameterName || '-' }}</span>
+                  </div>
+                  <div v-if="getParameterBoundMethods(row).length" class="binding-tree__children">
+                    <div
+                      v-for="method in getParameterBoundMethods(row)"
+                      :key="`${row.id}-${method.id || method.methodName}`"
+                      class="binding-tree__method"
+                    >
+                      <span class="binding-tree__dash binding-tree__dash--child">-</span>
+                      <span class="binding-tree__method-name">{{ method.methodName }}</span>
+                      <el-button
+                        v-if="method.id"
+                        link
+                        type="danger"
+                        class="binding-tree__action"
+                        :loading="unbindingParameterMethodId === String(method.id)"
+                        @click="removeSingleParameterBinding(row, method)"
+                      >
+                        解除绑定
+                      </el-button>
+                    </div>
+                    <div v-if="!getParameterBoundMethods(row).length" class="binding-tree__method binding-tree__method--empty">
+                      <span class="binding-tree__dash">-</span>
+                      <span>当前未绑定检测方法</span>
+                    </div>
+                  </div>
+                </div>
+              </template>
+            </el-table-column>
             <el-table-column prop="unit" label="单位" min-width="100">
               <template #default="{ row }">{{ row.unit || '-' }}</template>
             </el-table-column>
@@ -88,6 +121,9 @@
             <el-table-column prop="exceedRule" label="判定规则" min-width="220" show-overflow-tooltip>
               <template #default="{ row }">{{ row.exceedRule || '-' }}</template>
             </el-table-column>
+            <el-table-column label="绑定数量" width="110" class-name="cell-center" header-cell-class-name="cell-center">
+              <template #default="{ row }">{{ Number(row.methodCount || 0) }}</template>
+            </el-table-column>
             <el-table-column label="状态" width="110" class-name="cell-center" header-cell-class-name="cell-center">
               <template #default="{ row }">
                 <span :class="['status-chip', row.enabled === 1 ? 'success' : 'warning']">
@@ -101,9 +137,17 @@
             <el-table-column prop="updatedTime" label="更新时间" min-width="170">
               <template #default="{ row }">{{ row.updatedTime || '-' }}</template>
             </el-table-column>
-            <el-table-column label="操作" width="170" fixed="right" class-name="cell-center">
+            <el-table-column label="操作" width="260" fixed="right" class-name="cell-center">
               <template #default="{ row }">
                 <el-button link type="primary" @click="openParameterDialog(row)">编辑</el-button>
+                <el-button link type="primary" @click="openParameterBindingDialog(row)">配置绑定</el-button>
+                <el-button
+                  link
+                  :disabled="Number(row.methodCount || 0) === 0"
+                  @click="clearParameterBindings(row)"
+                >
+                  清空绑定
+                </el-button>
                 <el-button link type="danger" @click="removeParameter(row)">删除</el-button>
               </template>
             </el-table-column>
@@ -260,6 +304,70 @@
               <el-radio-button :label="0">停用</el-radio-button>
             </el-radio-group>
           </el-form-item>
+          <el-form-item class="form-span-2" label="可选检测方法">
+            <div class="parameter-method-editor">
+              <div class="parameter-method-editor__summary">
+                <span class="binding-editor__chip">
+                  已选方法 <strong>{{ parameterForm.methodIds.length }}</strong>
+                </span>
+                <span class="parameter-method-editor__note">
+                  新增或编辑检测参数时，可直接为该参数绑定多个检测方法。
+                </span>
+              </div>
+              <div class="method-option-grid">
+                <div
+                  v-for="item in parameterFormMethodOptions"
+                  :key="item.id"
+                  :class="[
+                    'method-option-card',
+                    {
+                      'is-disabled': isParameterFormMethodDisabled(item),
+                      'is-selected': isParameterFormMethodSelected(item.id),
+                      'is-locked': isParameterFormMethodLocked(item)
+                    }
+                  ]"
+                >
+                  <div class="method-option-head">
+                    <el-checkbox
+                      :model-value="isParameterFormMethodSelected(item.id)"
+                      :disabled="isParameterFormMethodDisabled(item)"
+                      @change="(checked) => handleParameterFormMethodToggle(item, checked)"
+                    >
+                      {{ item.methodName || '未命名方法' }}
+                    </el-checkbox>
+                    <span :class="['status-chip', item.enabled === 1 ? 'success' : 'warning']">
+                      {{ item.enabled === 1 ? '启用' : '停用' }}
+                    </span>
+                  </div>
+                  <div class="method-option-meta">
+                    <span>编码：{{ item.methodCode || '-' }}</span>
+                    <span>标准：{{ item.standardCode || '-' }}</span>
+                  </div>
+                  <div class="method-option-meta">
+                    <span>依据：{{ item.methodBasis || '-' }}</span>
+                  </div>
+                  <div class="method-option-footer">
+                    <span
+                      v-if="item.parameterId && String(item.parameterId) !== String(parameterForm.id || '')"
+                      class="binding-tip binding-tip--locked"
+                    >
+                      已绑定到参数：{{ item.parameterName || item.parameterId }}
+                    </span>
+                    <span
+                      v-else-if="item.parameterId && String(item.parameterId) === String(parameterForm.id || '')"
+                      class="binding-tip binding-tip--self"
+                    >
+                      当前已绑定
+                    </span>
+                    <span v-else class="binding-tip">当前未绑定，可直接选用</span>
+                  </div>
+                </div>
+              </div>
+              <div v-if="!parameterFormMethodOptions.length" class="empty-block">
+                暂无可选检测方法
+              </div>
+            </div>
+          </el-form-item>
           <el-form-item class="form-span-2" label="判定规则">
             <el-input
               v-model="parameterForm.exceedRule"
@@ -407,6 +515,119 @@
         <el-button type="primary" :loading="savingGroup" @click="submitGroupForm">保存</el-button>
       </template>
     </el-dialog>
+
+    <el-dialog
+      v-model="parameterBindingDialogVisible"
+      :title="parameterBindingDialogTitle"
+      width="920px"
+      destroy-on-close
+      @closed="resetParameterBindingState"
+    >
+      <div class="dialog-summary">
+        <div class="summary-chip">
+          <span>当前参数</span>
+          <strong>{{ currentParameterBinding?.parameterName || '-' }}</strong>
+        </div>
+        <button
+          type="button"
+          :class="['summary-chip', 'summary-chip--action', { 'is-active': parameterBindingFilter === 'selected' }]"
+          @click="switchParameterBindingFilter('selected')"
+        >
+          <span>已选方法</span>
+          <strong>{{ selectedParameterBindingMethodCount }}</strong>
+        </button>
+        <button
+          type="button"
+          :class="['summary-chip', 'summary-chip--action', { 'is-active': parameterBindingFilter === 'pending' }]"
+          @click="switchParameterBindingFilter('pending')"
+        >
+          <span>待绑定方法</span>
+          <strong>{{ pendingParameterBindingMethodCount }}</strong>
+        </button>
+      </div>
+
+      <div class="toolbar-panel binding-dialog-toolbar">
+        <div class="toolbar-row">
+          <div class="toolbar-fields">
+            <label class="toolbar-field toolbar-field--medium">
+              <span>方法检索</span>
+              <el-input
+                v-model="parameterBindingKeyword"
+                clearable
+                placeholder="请输入方法名称、编码、标准编号或已绑定参数"
+              />
+            </label>
+          </div>
+          <div class="toolbar-actions">
+            <el-button
+              :type="parameterBindingFilter === 'all' ? 'primary' : 'default'"
+              @click="switchParameterBindingFilter('all')"
+            >
+              全部方法
+            </el-button>
+          </div>
+        </div>
+      </div>
+
+      <div class="method-option-grid">
+        <div
+          v-for="item in filteredParameterBindingMethodOptions"
+          :key="item.id"
+          :class="[
+            'method-option-card',
+            {
+              'is-disabled': isParameterBindingMethodDisabled(item),
+              'is-selected': isParameterBindingMethodSelected(item.id),
+              'is-locked': isParameterBindingCurrentBoundMethod(item)
+            }
+          ]"
+        >
+          <div class="method-option-head">
+            <el-checkbox
+              :model-value="isParameterBindingMethodSelected(item.id)"
+              :disabled="isParameterBindingMethodDisabled(item) || isParameterBindingCurrentBoundMethod(item)"
+              @change="(checked) => handleParameterBindingMethodToggle(item, checked)"
+            >
+              {{ item.methodName || '未命名方法' }}
+            </el-checkbox>
+            <span :class="['status-chip', item.enabled === 1 ? 'success' : 'warning']">
+              {{ item.enabled === 1 ? '启用' : '停用' }}
+            </span>
+          </div>
+          <div class="method-option-meta">
+            <span>编码：{{ item.methodCode || '-' }}</span>
+            <span>标准：{{ item.standardCode || '-' }}</span>
+          </div>
+          <div class="method-option-meta">
+            <span>依据：{{ item.methodBasis || '-' }}</span>
+          </div>
+          <div class="method-option-footer">
+            <span
+              v-if="item.parameterId && item.parameterId !== currentParameterBinding?.id"
+              class="binding-tip binding-tip--locked"
+            >
+              已绑定到参数：{{ item.parameterName || item.parameterId }}
+            </span>
+            <span
+              v-else-if="item.parameterId === currentParameterBinding?.id"
+              class="binding-tip binding-tip--self"
+            >
+              当前已绑定
+            </span>
+            <span v-else class="binding-tip">当前未绑定，可直接选用</span>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="!filteredParameterBindingMethodOptions.length" class="empty-block">
+        暂无符合条件的检测方法
+      </div>
+
+      <template #footer>
+        <el-button @click="parameterBindingDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="savingParameterBinding" @click="submitParameterBindings">保存绑定</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -429,8 +650,10 @@ import {
   deleteDetectionParameterApi,
   deleteDetectionTypeApi,
   fetchDetectionMethodOptionsApi,
+  fetchDetectionParameterMethodBindingsApi,
   fetchDetectionParametersApi,
   fetchDetectionTypesApi,
+  saveDetectionParameterMethodBindingsApi,
   updateDetectionParameterApi,
   updateDetectionTypeApi
 } from '../api/lab'
@@ -452,6 +675,12 @@ const groupDialogVisible = ref(false)
 const savingParameter = ref(false)
 const savingGroup = ref(false)
 const currentBindingParameterId = ref('')
+const parameterBindingDialogVisible = ref(false)
+const savingParameterBinding = ref(false)
+const unbindingParameterMethodId = ref('')
+const currentParameterBinding = ref(null)
+const parameterBindingKeyword = ref('')
+const parameterBindingFilter = ref('all')
 
 const parameterQuery = reactive({
   keyword: '',
@@ -473,8 +702,13 @@ const parameterForm = reactive({
   unit: '',
   exceedRule: '',
   referenceStandard: '',
+  methodIds: [],
   enabled: 1,
   remark: ''
+})
+
+const parameterBindingForm = reactive({
+  methodIds: []
 })
 
 const groupForm = reactive({
@@ -489,11 +723,11 @@ const groupForm = reactive({
 const sceneMap = {
   '/detection-projects': {
     title: '检测参数',
-    subtitle: '先维护单个检测参数，再为项目组提供参数来源。',
+    subtitle: '维护检测参数基础台账，并直接配置每个参数的检测方法绑定。',
     tableTitle: '检测参数列表',
-    tableSubtitle: '这里维护的是 pH、浊度、余氯、氨氮等单个检测参数。',
-    guide: '检测参数是最底层配置，样品检测实际录入的也是这些参数结果。',
-    constraint: '检测套餐只能选择这里已经维护好的参数，建议停用参数不要再加入新的套餐。',
+    tableSubtitle: '这里维护的是 pH、浊度、余氯、氨氮等单个检测参数，并可直接完成参数方法绑定。',
+    guide: '检测参数是最底层配置，样品检测实际录入的也是这些参数结果；检测方法用于定义该参数的执行标准。',
+    constraint: '检测套餐只能选择这里已经维护好的参数，建议先完成参数方法绑定后再加入检测套餐；停用参数不要再加入新的套餐。',
     quickLinks: [
       { path: '/detection-project-groups', label: '检测套餐', desc: '把多个检测参数组合成一个正式检测套餐' },
       { path: '/sample-login', label: '样品登录', desc: '登录样品时单选一个检测套餐' },
@@ -575,6 +809,52 @@ const currentBindingMethods = computed(() => {
     methodCode: item.methodCode
   }))
 })
+const parameterFormMethodOptions = computed(() => [...detectionMethodOptions.value].sort((left, right) => {
+  const leftSelected = isParameterFormMethodSelected(left.id) ? 1 : 0
+  const rightSelected = isParameterFormMethodSelected(right.id) ? 1 : 0
+  if (leftSelected !== rightSelected) {
+    return rightSelected - leftSelected
+  }
+  const leftLocked = isParameterFormMethodLocked(left) ? 1 : 0
+  const rightLocked = isParameterFormMethodLocked(right) ? 1 : 0
+  if (leftLocked !== rightLocked) {
+    return leftLocked - rightLocked
+  }
+  return String(left.methodName || '').localeCompare(String(right.methodName || ''), 'zh-CN')
+}))
+const selectedParameterBindingMethodIds = computed(() => new Set(
+  parameterBindingForm.methodIds.map((item) => String(item))
+))
+const selectedParameterBindingMethodCount = computed(() => parameterBindingForm.methodIds.length)
+const pendingParameterBindingMethodCount = computed(() => detectionMethodOptions.value.filter((item) => isParameterBindingPendingMethod(item)).length)
+const parameterBindingDialogTitle = computed(() => {
+  const name = currentParameterBinding.value?.parameterName || ''
+  return name ? `配置检测方法 - ${name}` : '配置检测方法'
+})
+const filteredParameterBindingMethodOptions = computed(() => {
+  const keyword = parameterBindingKeyword.value.trim().toLowerCase()
+  let list = detectionMethodOptions.value.filter((item) => {
+    const text = [
+      item.methodName,
+      item.methodCode,
+      item.standardCode,
+      item.methodBasis,
+      item.parameterName
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase()
+    return !keyword || text.includes(keyword)
+  })
+
+  if (parameterBindingFilter.value === 'selected') {
+    list = list.filter((item) => isParameterBindingMethodSelected(item.id))
+  } else if (parameterBindingFilter.value === 'pending') {
+    list = list.filter((item) => isParameterBindingPendingMethod(item))
+  }
+
+  return [...list].sort(compareParameterBindingMethodOption)
+})
 
 const visibleParameterRows = computed(() => {
   if (activeStatKey.value === 'enabled') {
@@ -582,6 +862,12 @@ const visibleParameterRows = computed(() => {
   }
   if (activeStatKey.value === 'disabled') {
     return parameterRows.value.filter((item) => item.enabled === 0)
+  }
+  if (activeStatKey.value === 'bound') {
+    return parameterRows.value.filter((item) => Number(item.methodCount || 0) > 0)
+  }
+  if (activeStatKey.value === 'unbound') {
+    return parameterRows.value.filter((item) => Number(item.methodCount || 0) === 0)
   }
   return parameterRows.value
 })
@@ -604,7 +890,7 @@ const currentTags = computed(() => (
     ? [
       { label: '参数总数', value: parameterTotal.value, type: 'info' },
       { label: '启用参数', value: allParameters.value.filter((item) => item.enabled === 1).length, type: 'success' },
-      { label: '已建项目组', value: groupRows.value.length, type: 'warning' }
+      { label: '已绑定参数', value: parameterRows.value.filter((item) => Number(item.methodCount || 0) > 0).length, type: 'warning' }
     ]
     : [
       { label: '项目组总数', value: groupTotal.value, type: 'info' },
@@ -618,6 +904,8 @@ const currentStats = computed(() => (
     ? [
       { key: 'all', label: '全部参数', value: parameterTotal.value, desc: '检测参数全量台账' },
       { key: 'enabled', label: '启用参数', value: allParameters.value.filter((item) => item.enabled === 1).length, desc: '可用于新建项目组的参数' },
+      { key: 'bound', label: '已绑定参数', value: parameterRows.value.filter((item) => Number(item.methodCount || 0) > 0).length, desc: '已配置检测方法的参数' },
+      { key: 'unbound', label: '未绑定参数', value: parameterRows.value.filter((item) => Number(item.methodCount || 0) === 0).length, desc: '尚未配置检测方法的参数' },
       { key: 'disabled', label: '停用参数', value: allParameters.value.filter((item) => item.enabled === 0).length, desc: '暂不建议继续使用的参数' }
     ]
     : [
@@ -822,6 +1110,160 @@ function resolveGroupMethodSelection(row) {
     }))
 }
 
+function getParameterBoundMethods(row) {
+  const methods = detectionMethodOptions.value
+    .filter((item) => String(item.parameterId) === String(row?.id))
+    .map((item) => ({
+      id: String(item.id || '').trim(),
+      methodName: item.methodName || '未命名方法'
+    }))
+
+  if (methods.length) {
+    return methods.sort((left, right) => left.methodName.localeCompare(right.methodName, 'zh-CN'))
+  }
+
+  return String(row?.methodNames || '')
+    .split(/[、,，]/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .map((methodName) => ({
+      id: '',
+      methodName
+    }))
+}
+
+function isParameterFormMethodSelected(methodId) {
+  return parameterForm.methodIds.includes(String(methodId || '').trim())
+}
+
+function isParameterFormMethodLocked(item) {
+  if (!item?.parameterId) {
+    return false
+  }
+  if (!parameterForm.id) {
+    return true
+  }
+  return String(item.parameterId) !== String(parameterForm.id)
+}
+
+function isParameterFormMethodDisabled(item) {
+  if (!item) {
+    return true
+  }
+  if (isParameterFormMethodLocked(item)) {
+    return true
+  }
+  return item.enabled !== 1 && !isParameterFormMethodSelected(item.id)
+}
+
+function handleParameterFormMethodToggle(item, checked) {
+  const methodId = String(item?.id || '').trim()
+  if (!methodId || isParameterFormMethodDisabled(item)) {
+    return
+  }
+
+  const nextIds = new Set(
+    parameterForm.methodIds
+      .map((id) => String(id || '').trim())
+      .filter(Boolean)
+  )
+
+  if (checked) {
+    nextIds.add(methodId)
+  } else {
+    nextIds.delete(methodId)
+  }
+
+  parameterForm.methodIds = Array.from(nextIds)
+}
+
+function switchParameterBindingFilter(key) {
+  parameterBindingFilter.value = parameterBindingFilter.value === key ? 'all' : key
+}
+
+function isParameterBindingMethodSelected(methodId) {
+  return selectedParameterBindingMethodIds.value.has(String(methodId))
+}
+
+function isParameterBindingCurrentBoundMethod(item) {
+  return currentParameterBinding.value != null && String(item.parameterId) === String(currentParameterBinding.value.id)
+}
+
+function isParameterBindingMethodDisabled(item) {
+  if (!currentParameterBinding.value) {
+    return true
+  }
+  return item.parameterId != null && String(item.parameterId) !== String(currentParameterBinding.value.id)
+}
+
+function isParameterBindingPendingMethod(item) {
+  return !isParameterBindingMethodDisabled(item) && !isParameterBindingMethodSelected(item.id)
+}
+
+function compareParameterBindingMethodOption(left, right) {
+  const leftRank = parameterBindingMethodOptionRank(left)
+  const rightRank = parameterBindingMethodOptionRank(right)
+  if (leftRank !== rightRank) {
+    return leftRank - rightRank
+  }
+  return String(left.methodName || '').localeCompare(String(right.methodName || ''), 'zh-CN')
+}
+
+function parameterBindingMethodOptionRank(item) {
+  if (isParameterBindingMethodSelected(item.id)) {
+    return 0
+  }
+  if (!isParameterBindingMethodDisabled(item)) {
+    return 1
+  }
+  return 2
+}
+
+function handleParameterBindingMethodToggle(item, checked) {
+  const methodId = String(item?.id || '').trim()
+  if (!methodId) {
+    return
+  }
+  if (isParameterBindingMethodDisabled(item) || isParameterBindingCurrentBoundMethod(item)) {
+    return
+  }
+
+  const nextIds = new Set(parameterBindingForm.methodIds.map((id) => String(id)).filter(Boolean))
+  if (checked) {
+    nextIds.add(methodId)
+  } else {
+    nextIds.delete(methodId)
+  }
+  parameterBindingForm.methodIds = Array.from(nextIds)
+}
+
+async function openParameterBindingDialog(row) {
+  currentParameterBinding.value = row
+  parameterBindingFilter.value = 'all'
+  parameterBindingKeyword.value = ''
+  await loadMethodOptions()
+
+  const boundIdsFromOptions = detectionMethodOptions.value
+    .filter((item) => String(item.parameterId) === String(row.id))
+    .map((item) => String(item.id || '').trim())
+    .filter(Boolean)
+
+  parameterBindingForm.methodIds = boundIdsFromOptions.length
+    ? boundIdsFromOptions
+    : String(row.methodIds || '')
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean)
+  parameterBindingDialogVisible.value = true
+}
+
+function resetParameterBindingState() {
+  currentParameterBinding.value = null
+  parameterBindingForm.methodIds = []
+  parameterBindingKeyword.value = ''
+  parameterBindingFilter.value = 'all'
+}
+
 function resetParameterForm() {
   parameterForm.id = null
   parameterForm.parameterName = ''
@@ -830,6 +1272,7 @@ function resetParameterForm() {
   parameterForm.unit = ''
   parameterForm.exceedRule = ''
   parameterForm.referenceStandard = ''
+  parameterForm.methodIds = []
   parameterForm.enabled = 1
   parameterForm.remark = ''
 }
@@ -844,8 +1287,11 @@ function resetGroupForm() {
   currentBindingParameterId.value = ''
 }
 
-function openParameterDialog(row) {
+async function openParameterDialog(row) {
   resetParameterForm()
+  if (!detectionMethodOptions.value.length) {
+    await loadMethodOptions()
+  }
   if (row) {
     parameterForm.id = row.id
     parameterForm.parameterName = row.parameterName || ''
@@ -854,6 +1300,10 @@ function openParameterDialog(row) {
     parameterForm.unit = row.unit || ''
     parameterForm.exceedRule = row.exceedRule || ''
     parameterForm.referenceStandard = row.referenceStandard || ''
+    parameterForm.methodIds = detectionMethodOptions.value
+      .filter((item) => String(item.parameterId) === String(row.id))
+      .map((item) => String(item.id || '').trim())
+      .filter(Boolean)
     parameterForm.enabled = row.enabled ?? 1
     parameterForm.remark = row.remark || ''
   }
@@ -890,6 +1340,11 @@ async function submitParameterForm() {
     unit: parameterForm.unit.trim(),
     exceedRule: parameterForm.exceedRule.trim(),
     referenceStandard: parameterForm.referenceStandard.trim(),
+    methodIds: Array.from(new Set(
+      parameterForm.methodIds
+        .map((item) => String(item || '').trim())
+        .filter(Boolean)
+    )),
     enabled: parameterForm.enabled,
     remark: parameterForm.remark.trim()
   }
@@ -977,6 +1432,71 @@ async function removeGroup(row) {
   await refreshAll()
 }
 
+async function clearParameterBindings(row) {
+  await ElMessageBox.confirm(`确认清空检测参数“${row.parameterName}”已绑定的检测方法吗？`, '清空确认', {
+    type: 'warning'
+  })
+  await saveDetectionParameterMethodBindingsApi(row.id, { methodIds: [] })
+  ElMessage.success('已清空当前参数的检测方法绑定')
+  await refreshAll()
+}
+
+async function removeSingleParameterBinding(row, method) {
+  const methodId = String(method?.id || '').trim()
+  if (!methodId) {
+    return
+  }
+
+  await ElMessageBox.confirm(
+    `确认解除检测参数“${row.parameterName}”下的检测方法“${method.methodName}”吗？`,
+    '解除绑定确认',
+    { type: 'warning' }
+  )
+
+  const remainingMethodIds = getParameterBoundMethods(row)
+    .map((item) => String(item.id || '').trim())
+    .filter((item) => item && item !== methodId)
+
+  unbindingParameterMethodId.value = methodId
+  try {
+    await saveDetectionParameterMethodBindingsApi(row.id, { methodIds: remainingMethodIds })
+    ElMessage.success('已解除当前检测方法绑定')
+    await refreshAll()
+  } finally {
+    unbindingParameterMethodId.value = ''
+  }
+}
+
+async function submitParameterBindings() {
+  if (!currentParameterBinding.value?.id) {
+    return
+  }
+  savingParameterBinding.value = true
+  try {
+    const validMethodIds = new Set(
+      detectionMethodOptions.value
+        .map((item) => String(item.id || '').trim())
+        .filter(Boolean)
+    )
+    const methodIds = Array.from(
+      new Set(
+        parameterBindingForm.methodIds
+          .map((item) => String(item || '').trim())
+          .filter((item) => item && validMethodIds.has(item))
+      )
+    )
+
+    await saveDetectionParameterMethodBindingsApi(currentParameterBinding.value.id, {
+      methodIds
+    })
+    ElMessage.success('参数方法绑定已保存')
+    parameterBindingDialogVisible.value = false
+    await refreshAll()
+  } finally {
+    savingParameterBinding.value = false
+  }
+}
+
 function handleParameterSearch() {
   parameterQuery.pageNum = 1
   loadParameters()
@@ -1010,7 +1530,7 @@ async function loadMethodOptions() {
 }
 
 async function loadParameters() {
-  const result = await fetchDetectionParametersApi({ ...parameterQuery })
+  const result = await fetchDetectionParameterMethodBindingsApi({ ...parameterQuery })
   parameterRows.value = result.records || []
   parameterTotal.value = Number(result.total || 0)
 }
@@ -1142,6 +1662,180 @@ watch(() => route.fullPath, async () => {
   line-height: 1.6;
 }
 
+.binding-tree {
+  display: grid;
+  gap: 8px;
+  padding: 2px 0;
+}
+
+.binding-tree__parameter,
+.binding-tree__method {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  line-height: 1.7;
+}
+
+.binding-tree__children {
+  display: grid;
+  gap: 6px;
+  margin-left: 10px;
+  padding-left: 24px;
+  border-left: 1px dashed color-mix(in srgb, var(--brand) 12%, #ffffff 88%);
+}
+
+.binding-tree__dash {
+  width: 10px;
+  flex: 0 0 10px;
+  color: color-mix(in srgb, var(--text-sub) 72%, #ffffff 28%);
+}
+
+.binding-tree__dash--child {
+  opacity: 0.45;
+}
+
+.binding-tree__parameter-name {
+  color: var(--text-main);
+  font-weight: 400;
+  font-size: 15px;
+  letter-spacing: 0;
+}
+
+.binding-tree__method {
+  color: var(--text-sub);
+  padding-left: 2px;
+}
+
+.binding-tree__method-name {
+  font-size: 13px;
+  color: var(--text-sub);
+}
+
+.binding-tree__method--empty {
+  display: none;
+}
+
+.binding-tree__action {
+  margin-left: 8px;
+}
+
+.dialog-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.summary-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid var(--line-soft);
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--text-sub);
+  font-size: 13px;
+}
+
+.summary-chip strong {
+  color: var(--text-main);
+  font-size: 15px;
+}
+
+.summary-chip--action {
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.summary-chip--action:hover,
+.summary-chip--action:focus-visible,
+.summary-chip--action.is-active {
+  border-color: color-mix(in srgb, var(--brand) 45%, #ffffff 55%);
+  box-shadow: var(--shadow-sm);
+  color: var(--brand);
+  outline: none;
+}
+
+.binding-dialog-toolbar {
+  margin-bottom: 16px;
+}
+
+.method-option-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.method-option-card {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid var(--line-soft);
+  border-radius: 16px;
+  background: #ffffff;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.method-option-card.is-selected {
+  border-color: color-mix(in srgb, var(--brand) 50%, #ffffff 50%);
+  background: color-mix(in srgb, var(--brand) 6%, #ffffff 94%);
+  box-shadow: var(--shadow-sm);
+}
+
+.method-option-card.is-disabled {
+  background: #f8fbff;
+}
+
+.method-option-card.is-locked {
+  border-color: color-mix(in srgb, var(--warning) 35%, #ffffff 65%);
+}
+
+.method-option-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.method-option-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  color: var(--text-light);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.method-option-footer {
+  min-height: 22px;
+}
+
+.binding-tip {
+  color: var(--text-light);
+  font-size: 12px;
+}
+
+.binding-tip--locked {
+  color: var(--warning);
+}
+
+.binding-tip--self {
+  color: var(--success);
+}
+
+.empty-block {
+  margin-top: 14px;
+  padding: 24px 18px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--brand) 3%, #ffffff 97%);
+  color: var(--text-light);
+  text-align: center;
+  font-size: 13px;
+}
+
 .form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1150,6 +1844,30 @@ watch(() => route.fullPath, async () => {
 
 .form-span-2 {
   grid-column: 1 / -1;
+}
+
+.parameter-method-editor {
+  display: grid;
+  gap: 14px;
+  width: 100%;
+  padding: 16px;
+  border: 1px solid var(--line-soft);
+  border-radius: 18px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--brand) 4%, #ffffff 96%) 0%, #ffffff 100%);
+  box-shadow: var(--shadow-sm);
+}
+
+.parameter-method-editor__summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.parameter-method-editor__note {
+  color: var(--text-light);
+  font-size: 12px;
+  line-height: 1.6;
 }
 
 .binding-editor {
@@ -1430,6 +2148,10 @@ watch(() => route.fullPath, async () => {
   }
 
   .binding-workbench {
+    grid-template-columns: 1fr;
+  }
+
+  .method-option-grid {
     grid-template-columns: 1fr;
   }
 

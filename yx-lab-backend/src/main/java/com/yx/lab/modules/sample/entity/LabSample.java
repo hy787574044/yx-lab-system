@@ -27,6 +27,12 @@ public class LabSample extends BaseEntity {
 
     private String detectionItems;
 
+    private Long detectionTypeId;
+
+    private String detectionTypeName;
+
+    private String detectionConfigSnapshot;
+
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime samplingTime;
 
