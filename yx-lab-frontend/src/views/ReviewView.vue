@@ -307,14 +307,16 @@ import {
   rejectedDetectionStatus,
   rejectedReviewResult,
   reviewPendingDetectionStatus,
-  reviewResultLabelMap
+  reviewResultLabelMap,
+  waitAssignDetectionStatus,
+  waitDetectDetectionStatus
 } from '../utils/labEnums'
 
 const route = useRoute()
 const router = useRouter()
 
-const WAIT_ASSIGN_STATUS = 'WAIT_ASSIGN'
-const WAIT_DETECT_STATUS = 'WAIT_DETECT'
+const WAIT_ASSIGN_STATUS = waitAssignDetectionStatus
+const WAIT_DETECT_STATUS = waitDetectDetectionStatus
 
 const query = reactive({ pageNum: 1, pageSize: DEFAULT_PAGE_SIZE })
 const reviewRecords = ref([])
@@ -554,22 +556,13 @@ function formatStandardRange(min, max, unit) {
 }
 
 function getItemStatusLabel(status) {
-  if (status === WAIT_ASSIGN_STATUS) {
-    return '待分配'
-  }
-  if (status === WAIT_DETECT_STATUS) {
-    return '待检测'
-  }
-  if (status === reviewPendingDetectionStatus) {
-    return '待审核'
-  }
-  if (status === approvedDetectionStatus) {
-    return '审核通过'
-  }
-  if (status === rejectedDetectionStatus) {
-    return '审核驳回'
-  }
-  return status || '-'
+  return getEnumLabel({
+    [WAIT_ASSIGN_STATUS]: '待分配',
+    [WAIT_DETECT_STATUS]: '待检测',
+    [reviewPendingDetectionStatus]: '待审核',
+    [approvedDetectionStatus]: '审核通过',
+    [rejectedDetectionStatus]: '审核驳回'
+  }, status)
 }
 
 function getItemStatusClass(status) {

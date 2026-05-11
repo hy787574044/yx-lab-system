@@ -283,7 +283,7 @@ public class DetectionWorkflowService {
                 "检测提交：封签号=" + sample.getSealNo()
                         + "，检测套餐=" + record.getDetectionTypeName()
                         + "，检测人=" + currentUser.getRealName()
-                        + "，结果=" + record.getDetectionResult());
+                        + "，结果=" + LabWorkflowConstants.getDetectionResultLabel(record.getDetectionResult()));
     }
 
     private void validateRetestSubmission(LabSample sample) {
@@ -515,7 +515,7 @@ public class DetectionWorkflowService {
                     "检测与审查完成：封签号=" + sample.getSealNo()
                             + "，检测套餐=" + record.getDetectionTypeName()
                             + "，检测人=" + StrUtil.blankToDefault(record.getDetectorName(), currentUser.getRealName())
-                            + "，结果=" + record.getDetectionResult());
+                            + "，结果=" + LabWorkflowConstants.getDetectionResultLabel(record.getDetectionResult()));
             return;
         }
 
@@ -532,7 +532,7 @@ public class DetectionWorkflowService {
                     "检测提交：封签号=" + sample.getSealNo()
                             + "，检测套餐=" + record.getDetectionTypeName()
                             + "，检测人=" + StrUtil.blankToDefault(record.getDetectorName(), currentUser.getRealName())
-                            + "，结果=" + record.getDetectionResult());
+                            + "，结果=" + LabWorkflowConstants.getDetectionResultLabel(record.getDetectionResult()));
             return;
         }
 

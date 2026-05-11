@@ -351,6 +351,103 @@ public final class LabWorkflowConstants {
         return CycleType.ONCE.equals(cycleType);
     }
 
+    public static String getSampleTypeLabel(String sampleType) {
+        if (SampleType.FACTORY.equals(sampleType)) {
+            return "出厂水";
+        }
+        if (SampleType.RAW.equals(sampleType)) {
+            return "原水";
+        }
+        if (SampleType.TERMINAL.equals(sampleType)) {
+            return "管网末梢";
+        }
+        return sampleType;
+    }
+
+    public static String getSampleStatusLabel(String sampleStatus) {
+        if (SampleStatus.LOGGED.equals(sampleStatus)) {
+            return "已登录";
+        }
+        if (SampleStatus.REVIEWING.equals(sampleStatus)) {
+            return "审核中";
+        }
+        if (SampleStatus.RETEST.equals(sampleStatus)) {
+            return "待重检";
+        }
+        if (SampleStatus.COMPLETED.equals(sampleStatus)) {
+            return "已完成";
+        }
+        return sampleStatus;
+    }
+
+    public static String getDetectionStatusLabel(String detectionStatus) {
+        if (DetectionStatus.WAIT_ASSIGN.equals(detectionStatus)) {
+            return "待分配";
+        }
+        if (DetectionStatus.WAIT_DETECT.equals(detectionStatus)) {
+            return "待检测";
+        }
+        if (DetectionStatus.SUBMITTED.equals(detectionStatus)) {
+            return "待审核";
+        }
+        if (DetectionStatus.APPROVED.equals(detectionStatus)) {
+            return "审核通过";
+        }
+        if (DetectionStatus.REJECTED.equals(detectionStatus)) {
+            return "审核驳回";
+        }
+        return detectionStatus;
+    }
+
+    public static String getDetectionResultLabel(String detectionResult) {
+        if (DetectionResult.NORMAL.equals(detectionResult)) {
+            return "正常";
+        }
+        if (DetectionResult.ABNORMAL.equals(detectionResult)) {
+            return "异常";
+        }
+        return detectionResult;
+    }
+
+    public static String getReviewResultLabel(String reviewResult) {
+        if (ReviewResult.APPROVED.equals(reviewResult)) {
+            return "审核通过";
+        }
+        if (ReviewResult.REJECTED.equals(reviewResult)) {
+            return "审核驳回";
+        }
+        return reviewResult;
+    }
+
+    public static String getReportStatusLabel(String reportStatus) {
+        if (ReportStatus.DRAFT.equals(reportStatus)) {
+            return "草稿";
+        }
+        if (ReportStatus.GENERATED.equals(reportStatus)) {
+            return "已生成";
+        }
+        if (ReportStatus.PUBLISHED.equals(reportStatus)) {
+            return "已发布";
+        }
+        return reportStatus;
+    }
+
+    public static String getPushStatusLabel(String pushStatus) {
+        if ("PENDING".equals(pushStatus)) {
+            return "待推送";
+        }
+        if ("SUCCESS".equals(pushStatus)) {
+            return "已推送";
+        }
+        if ("FAILED".equals(pushStatus)) {
+            return "推送失败";
+        }
+        if ("CANCELLED".equals(pushStatus)) {
+            return "已撤回";
+        }
+        return pushStatus;
+    }
+
     private static Set<String> unmodifiableSet(String... values) {
         return Collections.unmodifiableSet(new HashSet<>(Arrays.asList(values)));
     }

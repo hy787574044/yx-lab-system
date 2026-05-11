@@ -374,14 +374,17 @@ import {
   getStatusClass,
   rejectedDetectionStatus,
   reviewPendingDetectionStatus,
-  availableDetectionSampleStatuses
+  availableDetectionSampleStatuses,
+  translateWorkflowText,
+  waitAssignDetectionStatus,
+  waitDetectDetectionStatus
 } from '../utils/labEnums'
 
 const route = useRoute()
 const router = useRouter()
 
-const WAIT_ASSIGN_STATUS = 'WAIT_ASSIGN'
-const WAIT_DETECT_STATUS = 'WAIT_DETECT'
+const WAIT_ASSIGN_STATUS = waitAssignDetectionStatus
+const WAIT_DETECT_STATUS = waitDetectDetectionStatus
 const MAX_LOAD_SIZE = 500
 
 const query = reactive({ pageNum: 1, pageSize: DEFAULT_PAGE_SIZE })
@@ -647,22 +650,10 @@ const resultDialogNote = computed(() => (
 ))
 
 function getDetectionStatusLabel(status) {
-  if (status === WAIT_ASSIGN_STATUS) {
-    return '待分配'
-  }
-  if (status === WAIT_DETECT_STATUS) {
-    return '待检测'
-  }
   return getEnumLabel(detectionStatusLabelMap, status)
 }
 
 function getDetectionStatusClass(status) {
-  if (status === WAIT_ASSIGN_STATUS) {
-    return 'warning'
-  }
-  if (status === WAIT_DETECT_STATUS) {
-    return 'info'
-  }
   return getStatusClass('detectionStatus', status)
 }
 
@@ -837,7 +828,7 @@ function getRecordRemark(row) {
   const assigned = Number(row.assignedCount || 0)
   const completed = Number(row.completedCount || 0)
   if (row.abnormalRemark) {
-    return row.abnormalRemark
+    return translateWorkflowText(row.abnormalRemark)
   }
   if (!total) {
     return '当前主流程下暂无参数子流程数据'

@@ -126,7 +126,7 @@ public class LabSampleService {
             throw new BusinessException("样品不存在。");
         }
         sample.setSampleStatus(status);
-        sample.setResultSummary(resultSummary);
+        sample.setResultSummary(LabWorkflowConstants.getDetectionResultLabel(resultSummary));
         appendTraceLog(sample, traceMessage);
         labSampleMapper.updateById(sample);
     }

@@ -167,7 +167,7 @@
             <p>点位名称：{{ sample.pointName || '-' }}</p>
             <p>采样人员：{{ sample.samplerName || '-' }}</p>
             <p>检测项目组：{{ sample.detectionItems || '-' }}</p>
-            <p v-if="sample.resultSummary">当前摘要：{{ sample.resultSummary }}</p>
+            <p v-if="sample.resultSummary">当前摘要：{{ translateWorkflowText(sample.resultSummary) }}</p>
             <div class="card-actions">
               <el-button size="small" type="primary" @click="openDetectionDialog(sample)">提交检测</el-button>
             </div>
@@ -493,13 +493,15 @@ import {
   getStatusClass,
   inProgressTaskStatus,
   pendingTaskStatus,
+  pushStatusLabelMap,
   rejectedReviewResult,
   reportStatusLabelMap,
   reviewResultLabelMap,
   sampleStatusLabelMap,
   sampleTypeLabelMap,
   sampleTypeOptions,
-  taskStatusLabelMap
+  taskStatusLabelMap,
+  translateWorkflowText
 } from '../utils/labEnums'
 
 const router = useRouter()
@@ -600,16 +602,7 @@ function matchDetectionTypesForSample(sample) {
 }
 
 function getPushStatusLabel(status) {
-  if (status === 'SUCCESS') {
-    return '已推送'
-  }
-  if (status === 'PENDING') {
-    return '待推送'
-  }
-  if (status === 'CANCELLED') {
-    return '已撤回'
-  }
-  return status || '-'
+  return getEnumLabel(pushStatusLabelMap, status)
 }
 
 async function refreshCurrentUser() {

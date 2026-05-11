@@ -149,7 +149,7 @@ public class ReviewService {
                     record.getDetectionResult(),
                     "审查通过：封签号=" + sample.getSealNo()
                             + "，审查人=" + currentUser.getRealName()
-                            + "，结果=" + record.getDetectionResult());
+                            + "，结果=" + LabWorkflowConstants.getDetectionResultLabel(record.getDetectionResult()));
             reportService.createApprovedReport(sample, record);
             return;
         }

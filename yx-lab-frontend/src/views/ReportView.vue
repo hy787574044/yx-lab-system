@@ -106,7 +106,11 @@
               {{ row.lastPushMessage || '-' }}
             </template>
           </el-table-column>
-          <el-table-column prop="contentSnapshot" label="内容摘要" min-width="220" show-overflow-tooltip />
+          <el-table-column label="内容摘要" min-width="220" show-overflow-tooltip>
+            <template #default="{ row }">
+              {{ translateWorkflowText(row.contentSnapshot) || '-' }}
+            </template>
+          </el-table-column>
           <el-table-column label="操作" min-width="220" fixed="right">
             <template #default="{ row }">
               <div class="action-row">
@@ -179,18 +183,15 @@ import {
   getEnumLabel,
   getStatusClass,
   monthlyReportType,
+  pushStatusLabelMap,
   publishedReportStatus,
   reportStatusLabelMap,
   reportStatusOptions,
   reportTypeLabelMap,
-  reportTypeOptions
+  reportTypeOptions,
+  successPushStatus,
+  translateWorkflowText
 } from '../utils/labEnums'
-
-const pushStatusLabelMap = {
-  PENDING: '待推送',
-  SUCCESS: '已推送',
-  CANCELLED: '已撤回'
-}
 
 const query = reactive({
   pageNum: 1,
@@ -228,7 +229,7 @@ const stats = computed(() => [
   {
     key: 'pushed',
     label: '已推送',
-    value: reports.value.filter((item) => item.pushStatus === 'SUCCESS').length,
+    value: reports.value.filter((item) => item.pushStatus === successPushStatus).length,
     desc: '当前页已完成推送留痕的报告'
   }
 ])
@@ -241,7 +242,7 @@ const visibleReports = computed(() => {
     return reports.value.filter((item) => item.reportStatus === publishedReportStatus)
   }
   if (activeStatKey.value === 'pushed') {
-    return reports.value.filter((item) => item.pushStatus === 'SUCCESS')
+    return reports.value.filter((item) => item.pushStatus === successPushStatus)
   }
   return reports.value
 })
@@ -251,20 +252,11 @@ function handleStatClick(key) {
 }
 
 function getPushStatusLabel(status) {
-  return pushStatusLabelMap[status] || status || '-'
+  return getEnumLabel(pushStatusLabelMap, status)
 }
 
 function getPushStatusClass(status) {
-  if (status === 'SUCCESS') {
-    return 'success'
-  }
-  if (status === 'CANCELLED') {
-    return 'info'
-  }
-  if (status === 'PENDING') {
-    return 'warning'
-  }
-  return 'info'
+  return getStatusClass('pushStatus', status)
 }
 
 function handleSearch() {

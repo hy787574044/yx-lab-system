@@ -47,6 +47,8 @@ export const reviewingSampleStatus = 'REVIEWING'
 export const retestSampleStatus = 'RETEST'
 export const completedSampleStatus = 'COMPLETED'
 
+export const waitAssignDetectionStatus = 'WAIT_ASSIGN'
+export const waitDetectDetectionStatus = 'WAIT_DETECT'
 export const reviewPendingDetectionStatus = 'SUBMITTED'
 export const approvedDetectionStatus = 'APPROVED'
 export const rejectedDetectionStatus = 'REJECTED'
@@ -64,6 +66,11 @@ export const monthlyReportType = 'MONTHLY'
 export const draftReportStatus = 'DRAFT'
 export const generatedReportStatus = 'GENERATED'
 export const publishedReportStatus = 'PUBLISHED'
+
+export const pendingPushStatus = 'PENDING'
+export const successPushStatus = 'SUCCESS'
+export const cancelledPushStatus = 'CANCELLED'
+export const failedPushStatus = 'FAILED'
 
 export const instrumentStatusLabelMap = {
   [instrumentNormalStatus]: '正常',
@@ -130,6 +137,8 @@ export const sampleStatusLabelMap = {
 }
 
 export const detectionStatusLabelMap = {
+  [waitAssignDetectionStatus]: '待分配',
+  [waitDetectDetectionStatus]: '待检测',
   [reviewPendingDetectionStatus]: '待审核',
   [approvedDetectionStatus]: '已通过',
   [rejectedDetectionStatus]: '已驳回'
@@ -155,6 +164,13 @@ export const reportStatusLabelMap = {
   [draftReportStatus]: '草稿',
   [generatedReportStatus]: '已生成',
   [publishedReportStatus]: '已发布'
+}
+
+export const pushStatusLabelMap = {
+  [pendingPushStatus]: '待推送',
+  [successPushStatus]: '已推送',
+  [cancelledPushStatus]: '已撤回',
+  [failedPushStatus]: '推送失败'
 }
 
 function buildOptions(labelMap) {
@@ -208,6 +224,8 @@ const statusClassMaps = {
     [completedSampleStatus]: 'success'
   },
   detectionStatus: {
+    [waitAssignDetectionStatus]: 'warning',
+    [waitDetectDetectionStatus]: 'info',
     [reviewPendingDetectionStatus]: 'warning',
     [approvedDetectionStatus]: 'success',
     [rejectedDetectionStatus]: 'danger'
@@ -224,6 +242,12 @@ const statusClassMaps = {
     [draftReportStatus]: 'info',
     [generatedReportStatus]: 'warning',
     [publishedReportStatus]: 'success'
+  },
+  pushStatus: {
+    [pendingPushStatus]: 'warning',
+    [successPushStatus]: 'success',
+    [cancelledPushStatus]: 'info',
+    [failedPushStatus]: 'danger'
   }
 }
 
@@ -234,4 +258,55 @@ export function getEnumLabel(map, value) {
 export function getStatusClass(type, value) {
   const classMap = statusClassMaps[type] || {}
   return classMap[value] || 'info'
+}
+
+const workflowTextLabelMap = {
+  FACTORY: '出厂水',
+  RAW: '原水',
+  TERMINAL: '管网末梢',
+  ENABLED: '启用',
+  DISABLED: '停用',
+  ACTIVE: '启用中',
+  PAUSED: '已暂停',
+  DISPATCHED: '已派发',
+  UNPUBLISHED: '待派发',
+  PENDING: '待处理',
+  IN_PROGRESS: '进行中',
+  ABANDONED: '已废弃',
+  UNREGISTERED: '未登记',
+  REGISTERED: '已登记',
+  LOGGED: '已登录',
+  REVIEWING: '审核中',
+  RETEST: '待重检',
+  COMPLETED: '已完成',
+  WAIT_ASSIGN: '待分配',
+  WAIT_DETECT: '待检测',
+  SUBMITTED: '待审核',
+  APPROVED: '审核通过',
+  REJECTED: '审核驳回',
+  NORMAL: '正常',
+  ABNORMAL: '异常',
+  DRAFT: '草稿',
+  GENERATED: '已生成',
+  PUBLISHED: '已发布',
+  SUCCESS: '已推送',
+  FAILED: '推送失败',
+  CANCELLED: '已撤回'
+}
+
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+export function translateWorkflowText(value) {
+  const text = String(value ?? '')
+  if (!text.trim()) {
+    return ''
+  }
+  return Object.entries(workflowTextLabelMap)
+    .sort((left, right) => right[0].length - left[0].length)
+    .reduce((result, [code, label]) => {
+      const pattern = new RegExp(`\\b${escapeRegExp(code)}\\b`, 'g')
+      return result.replace(pattern, label)
+    }, text)
 }

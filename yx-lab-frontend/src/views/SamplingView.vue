@@ -208,8 +208,16 @@
           </el-table-column>
           <el-table-column prop="samplingTime" label="采样时间" width="170" />
           <el-table-column prop="storageCondition" label="保存条件" width="140" />
-          <el-table-column prop="resultSummary" label="结果摘要" min-width="180" show-overflow-tooltip />
-          <el-table-column prop="traceLog" label="流程留痕" min-width="260" show-overflow-tooltip />
+          <el-table-column label="结果摘要" min-width="180" show-overflow-tooltip>
+            <template #default="{ row }">
+              {{ translateWorkflowText(row.resultSummary) || '-' }}
+            </template>
+          </el-table-column>
+          <el-table-column label="流程留痕" min-width="260" show-overflow-tooltip>
+            <template #default="{ row }">
+              {{ translateWorkflowText(row.traceLog) || '-' }}
+            </template>
+          </el-table-column>
           <el-table-column label="操作" width="140" fixed="right" class-name="cell-center" header-cell-class-name="cell-center">
             <template #default="{ row }">
               <el-button link type="primary" @click="openSampleDetailDialog(row)">查看登记明细</el-button>
@@ -765,7 +773,8 @@ import {
   sampleStatusLabelMap,
   sampleTypeOptions,
   sampleTypeLabelMap,
-  taskStatusLabelMap
+  taskStatusLabelMap,
+  translateWorkflowText
 } from '../utils/labEnums'
 
 const route = useRoute()

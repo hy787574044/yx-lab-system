@@ -181,7 +181,7 @@
               <el-button type="primary" plain @click="openDictDialog()">新增字典</el-button>
             </div>
           </div>
-          <div class="panel-note">数据字典管理已接入真实接口，支持正式维护字典编码、所属模块、字典项文本与启停状态，可作为统一状态口径基础台账。</div>
+          <div class="panel-note">数据字典管理已接入真实接口，支持正式维护字典编码、所属模块、字典项文本与启停状态；系统内置状态字典会自动补齐，建议按“码值=中文名称”格式维护。</div>
         </div>
 
         <div class="table-card">
@@ -351,7 +351,7 @@
           <el-form-item label="字典名称" prop="dictName"><el-input v-model="dictForm.dictName" placeholder="请输入字典名称" /></el-form-item>
           <el-form-item label="所属模块" prop="moduleName"><el-input v-model="dictForm.moduleName" placeholder="请输入所属模块" /></el-form-item>
           <el-form-item label="状态" prop="status"><el-radio-group v-model="dictForm.status"><el-radio-button :label="1">启用</el-radio-button><el-radio-button :label="0">停用</el-radio-button></el-radio-group></el-form-item>
-          <el-form-item class="form-span-2" label="字典项" prop="itemText"><el-input v-model="dictForm.itemText" type="textarea" :rows="6" placeholder="请按每行一个字典项填写，例如：&#10;待执行&#10;执行中&#10;已完成" /></el-form-item>
+          <el-form-item class="form-span-2" label="字典项" prop="itemText"><el-input v-model="dictForm.itemText" type="textarea" :rows="6" placeholder="请按每行一个字典项填写，建议使用“码值=中文名称”格式，例如：&#10;PENDING=待处理&#10;IN_PROGRESS=进行中&#10;COMPLETED=已完成" /></el-form-item>
           <el-form-item class="form-span-2" label="备注" prop="remark"><el-input v-model="dictForm.remark" type="textarea" :rows="3" placeholder="请输入字典用途说明或维护备注" /></el-form-item>
         </div>
       </el-form>
