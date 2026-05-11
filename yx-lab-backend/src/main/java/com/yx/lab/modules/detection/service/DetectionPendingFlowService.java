@@ -360,7 +360,8 @@ public class DetectionPendingFlowService {
 
     private int countCompletedItems(List<DetectionItem> items) {
         return (int) (items == null ? 0L : items.stream()
-                .filter(item -> LabWorkflowConstants.DetectionStatus.SUBMITTED.equals(item.getItemStatus()))
+                .filter(item -> LabWorkflowConstants.DetectionStatus.SUBMITTED.equals(item.getItemStatus())
+                        || LabWorkflowConstants.DetectionStatus.APPROVED.equals(item.getItemStatus()))
                 .count());
     }
 

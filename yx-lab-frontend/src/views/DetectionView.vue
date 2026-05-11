@@ -194,6 +194,19 @@
               </span>
             </template>
           </el-table-column>
+          <el-table-column label="操作" width="120" header-cell-class-name="cell-center" class-name="cell-center">
+            <template #default="{ row }">
+              <el-button
+                v-if="canViewRecordResults(row)"
+                type="primary"
+                link
+                @click="openRecordResultDialog(row)"
+              >
+                查看结果
+              </el-button>
+              <span v-else>-</span>
+            </template>
+          </el-table-column>
           <el-table-column prop="detectionTime" label="流程时间" width="170" />
           <el-table-column label="说明" min-width="260" show-overflow-tooltip>
             <template #default="{ row }">
@@ -224,7 +237,7 @@
           <span class="binding-editor__chip">样品编号<strong>{{ resultForm.sampleNo || '-' }}</strong></span>
           <span class="binding-editor__chip">封签编号<strong>{{ resultForm.sealNo || '-' }}</strong></span>
           <span class="binding-editor__chip">检测套餐<strong>{{ resultForm.detectionTypeName || '-' }}</strong></span>
-          <span class="binding-editor__chip">当前参数<strong>{{ resultForm.parameterName || '-' }}</strong></span>
+          <span class="binding-editor__chip">{{ resultDialogScopeLabel }}<strong>{{ resultForm.parameterName || '-' }}</strong></span>
           <span class="binding-editor__chip">参数数<strong>{{ resultForm.items.length }}</strong></span>
           <span class="binding-editor__chip">正常<strong>{{ resultNormalCount }}</strong></span>
           <span class="binding-editor__chip">异常<strong>{{ resultAbnormalCount }}</strong></span>
@@ -383,6 +396,7 @@ const resultDialogVisible = ref(false)
 const resultSubmitting = ref(false)
 const resultDialogItemId = ref(null)
 const resultDialogItemStatus = ref('')
+const resultDialogMode = ref('item')
 
 const resultForm = reactive({
   recordId: null,
@@ -604,21 +618,32 @@ const pagedRecords = computed(() => {
   return filteredRecords.value.slice(start, start + query.pageSize)
 })
 
-const resultDialogReadonly = computed(() => resultDialogItemStatus.value !== WAIT_DETECT_STATUS)
+const resultDialogReadonly = computed(() => {
+  if (resultDialogMode.value === 'record') {
+    return true
+  }
+  return ![WAIT_DETECT_STATUS, rejectedDetectionStatus].includes(resultDialogItemStatus.value)
+})
 
 const resultDialogTitle = computed(() => {
-  const action = resultDialogReadonly.value ? '检测结果明细' : '检测结果录入'
+  const action = resultDialogMode.value === 'record'
+    ? '检测结果汇总'
+    : (resultDialogReadonly.value ? '检测结果明细' : '检测结果录入')
   return resultForm.parameterName ? `${action} - ${resultForm.parameterName}` : action
 })
+
+const resultDialogScopeLabel = computed(() => (resultDialogMode.value === 'record' ? '汇总范围' : '当前参数'))
 
 const resultNormalCount = computed(() => resultForm.items.filter((item) => getResultValueStatusLabel(item) === '正常').length)
 
 const resultAbnormalCount = computed(() => resultForm.items.filter((item) => getResultValueStatusLabel(item) === '异常').length)
 
 const resultDialogNote = computed(() => (
-  resultDialogReadonly.value
-    ? '当前窗口用于查看该参数子流程已保存的检测方法、结果值与异常判定。'
-    : '请按当前参数子流程录入化验结果，系统会根据标准范围自动判定正常或异常。'
+  resultDialogMode.value === 'record'
+    ? '当前窗口用于汇总查看该主流程下全部参数的检测方法、结果值与异常判定。'
+    : (resultDialogReadonly.value
+        ? '当前窗口用于查看该参数子流程已保存的检测方法、结果值与异常判定。'
+        : '请按当前参数子流程录入化验结果，系统会根据标准范围自动判定正常或异常。')
 ))
 
 function getDetectionStatusLabel(status) {
@@ -729,13 +754,22 @@ function canAssignRow(row) {
     && [WAIT_ASSIGN_STATUS, WAIT_DETECT_STATUS].includes(row.detectionStatus)
 }
 
+function canViewRecordResults(row) {
+  if (!row || row.__sampleOnly) {
+    return false
+  }
+  const total = Number(row.parameterCount || 0)
+  const completed = Number(row.completedCount || 0)
+  return total > 0 && completed === total
+}
+
 function canOpenResultDialogItem(item) {
   return !!item
     && [WAIT_DETECT_STATUS, reviewPendingDetectionStatus, approvedDetectionStatus, rejectedDetectionStatus].includes(item.itemStatus)
 }
 
 function isResultEditable(item) {
-  return !!item && item.itemStatus === WAIT_DETECT_STATUS
+  return !!item && [WAIT_DETECT_STATUS, rejectedDetectionStatus].includes(item.itemStatus)
 }
 
 function getResultActionLabel(item) {
@@ -767,6 +801,9 @@ function getItemResultLabel(item) {
   if (item.itemStatus === WAIT_DETECT_STATUS) {
     return '待录入结果'
   }
+  if (item.itemStatus === rejectedDetectionStatus) {
+    return '审核驳回，待重检'
+  }
   if (item.itemStatus === reviewPendingDetectionStatus) {
     return getResultValueStatusLabel(item)
   }
@@ -782,6 +819,9 @@ function getItemResultClass(item) {
   }
   if (item.itemStatus === WAIT_DETECT_STATUS) {
     return 'info'
+  }
+  if (item.itemStatus === rejectedDetectionStatus) {
+    return 'danger'
   }
   return getResultValueStatusClass(item)
 }
@@ -847,6 +887,7 @@ function resetResultForm() {
   resultForm.items = []
   resultDialogItemId.value = null
   resultDialogItemStatus.value = ''
+  resultDialogMode.value = 'item'
 }
 
 function isResultValueAbnormal(item) {
@@ -918,6 +959,7 @@ async function openResultDialog(row, item) {
   resultForm.detectionTypeName = row.detectionTypeName || detail?.record?.detectionTypeName || ''
   resultForm.parameterName = currentItem.parameterName || ''
   resultForm.abnormalRemark = detail?.record?.abnormalRemark || ''
+  resultDialogMode.value = 'item'
   resultDialogItemId.value = currentItem.id
   resultDialogItemStatus.value = currentItem.itemStatus || ''
   resultForm.items = [{
@@ -931,6 +973,43 @@ async function openResultDialog(row, item) {
     unit: currentItem.unit || '',
     resultValue: currentItem.resultValue == null ? null : Number(currentItem.resultValue)
   }]
+  resultDialogVisible.value = true
+}
+
+async function openRecordResultDialog(row) {
+  if (!canViewRecordResults(row)) {
+    return
+  }
+  await loadRecordDetail(row.id)
+  const detail = detailMap[row.id]
+  const items = detail?.items || []
+  if (!items.length) {
+    ElMessage.warning('当前主流程下暂无可查看的结果明细')
+    return
+  }
+  resetResultForm()
+  resultForm.recordId = row.id
+  resultForm.sampleId = row.sampleId || detail?.record?.sampleId || null
+  resultForm.sampleNo = row.sampleNo || detail?.record?.sampleNo || ''
+  resultForm.sealNo = row.sealNo || detail?.record?.sealNo || ''
+  resultForm.detectionTypeId = row.detectionTypeId || detail?.record?.detectionTypeId || null
+  resultForm.detectionTypeName = row.detectionTypeName || detail?.record?.detectionTypeName || ''
+  resultForm.parameterName = '全部参数'
+  resultForm.abnormalRemark = detail?.record?.abnormalRemark || ''
+  resultDialogMode.value = 'record'
+  resultDialogItemId.value = null
+  resultDialogItemStatus.value = reviewPendingDetectionStatus
+  resultForm.items = items.map((currentItem) => ({
+    id: currentItem.id,
+    parameterId: currentItem.parameterId,
+    parameterName: currentItem.parameterName || '',
+    methodName: currentItem.methodName || '',
+    standardMin: currentItem.standardMin,
+    standardMax: currentItem.standardMax,
+    referenceStandard: currentItem.referenceStandard || '',
+    unit: currentItem.unit || '',
+    resultValue: currentItem.resultValue == null ? null : Number(currentItem.resultValue)
+  }))
   resultDialogVisible.value = true
 }
 

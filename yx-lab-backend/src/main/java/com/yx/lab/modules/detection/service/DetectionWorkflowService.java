@@ -448,7 +448,8 @@ public class DetectionWorkflowService {
             if (pendingItem.getDetectorId() == null) {
                 throw new BusinessException("检测参数“" + parameter.getParameterName() + "”尚未分配检测员");
             }
-            if (LabWorkflowConstants.DetectionStatus.SUBMITTED.equals(pendingItem.getItemStatus())) {
+            if (LabWorkflowConstants.DetectionStatus.SUBMITTED.equals(pendingItem.getItemStatus())
+                    || LabWorkflowConstants.DetectionStatus.APPROVED.equals(pendingItem.getItemStatus())) {
                 throw new BusinessException("检测参数“" + parameter.getParameterName() + "”已提交结果，请勿重复录入");
             }
             if (!admin && !pendingItem.getDetectorId().equals(currentUser.getUserId())) {
@@ -502,9 +503,26 @@ public class DetectionWorkflowService {
                                           LabSample sample,
                                           List<DetectionItem> pendingItems,
                                           CurrentUser currentUser) {
-        boolean allSubmitted = !pendingItems.isEmpty() && pendingItems.stream()
-                .allMatch(item -> LabWorkflowConstants.DetectionStatus.SUBMITTED.equals(item.getItemStatus()));
-        if (allSubmitted) {
+        boolean allApproved = !pendingItems.isEmpty() && pendingItems.stream()
+                .allMatch(item -> LabWorkflowConstants.DetectionStatus.APPROVED.equals(item.getItemStatus()));
+        if (allApproved) {
+            record.setDetectionResult(buildResultFromPendingItems(pendingItems));
+            record.setDetectionStatus(LabWorkflowConstants.DetectionStatus.APPROVED);
+            labSampleService.updateStatus(
+                    sample.getId(),
+                    LabWorkflowConstants.SampleStatus.COMPLETED,
+                    record.getDetectionResult(),
+                    "检测与审查完成：封签号=" + sample.getSealNo()
+                            + "，检测套餐=" + record.getDetectionTypeName()
+                            + "，检测人=" + StrUtil.blankToDefault(record.getDetectorName(), currentUser.getRealName())
+                            + "，结果=" + record.getDetectionResult());
+            return;
+        }
+
+        boolean allReadyForReview = !pendingItems.isEmpty() && pendingItems.stream()
+                .allMatch(item -> LabWorkflowConstants.DetectionStatus.SUBMITTED.equals(item.getItemStatus())
+                        || LabWorkflowConstants.DetectionStatus.APPROVED.equals(item.getItemStatus()));
+        if (allReadyForReview) {
             record.setDetectionResult(buildResultFromPendingItems(pendingItems));
             record.setDetectionStatus(LabWorkflowConstants.DetectionStatus.SUBMITTED);
             labSampleService.updateStatus(
@@ -519,6 +537,12 @@ public class DetectionWorkflowService {
         }
 
         record.setDetectionResult(null);
+        boolean hasRejected = pendingItems.stream()
+                .anyMatch(item -> LabWorkflowConstants.DetectionStatus.REJECTED.equals(item.getItemStatus()));
+        if (hasRejected) {
+            record.setDetectionStatus(LabWorkflowConstants.DetectionStatus.WAIT_DETECT);
+            return;
+        }
         boolean hasUnassigned = pendingItems.stream().anyMatch(item -> item.getDetectorId() == null
                 || LabWorkflowConstants.DetectionStatus.WAIT_ASSIGN.equals(item.getItemStatus()));
         record.setDetectionStatus(hasUnassigned
