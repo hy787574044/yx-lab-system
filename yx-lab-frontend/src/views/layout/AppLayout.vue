@@ -5,7 +5,7 @@
         <button type="button" class="brand-panel" @click="goRoute('/dashboard')">
           <div class="brand-mark">YX</div>
           <div class="brand-copy">
-            <strong>阳新实验室水质管理平台</strong>
+            <strong>阳新化验室水质管理平台</strong>
             <p>Yangxin Laboratory Water Quality Platform</p>
           </div>
         </button>
@@ -274,7 +274,7 @@ const currentSecondaryMenu = computed(() => (
   || { title: route.meta?.title || '未命名页面', shortTitle: route.meta?.secondaryShortTitle || route.meta?.title || '页面', subtitle: route.meta?.subtitle || '' }
 ))
 
-const currentSubtitle = computed(() => currentSecondaryMenu.value.subtitle || route.meta?.subtitle || '实验室业务闭环管理')
+const currentSubtitle = computed(() => currentSecondaryMenu.value.subtitle || route.meta?.subtitle || '化验室业务闭环管理')
 const todayText = computed(() => dayjs().format('YYYY年MM月DD日 dddd'))
 
 function applyTheme(themeId) {

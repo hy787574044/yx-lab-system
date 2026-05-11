@@ -6,18 +6,18 @@ import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 
 @Data
-public class DetectionTypeSaveCommand {
+public class DetectionMethodSaveCommand {
 
-    @NotBlank(message = "检测类型名称不能为空")
-    private String typeName;
+    @NotBlank(message = "检测方法名称不能为空")
+    private String methodName;
 
-    private Long groupId;
+    private String methodCode;
 
-    private Long detectorId;
+    private String standardCode;
 
-    private String parameterIds;
+    private String methodBasis;
 
-    private String parameterNames;
+    private String applyScope;
 
     @NotNull(message = "启用状态不能为空")
     private Integer enabled;

@@ -2,16 +2,25 @@ package com.yx.lab.modules.detection.controller;
 
 import com.yx.lab.common.model.ApiResponse;
 import com.yx.lab.common.model.PageResult;
-import com.yx.lab.modules.detection.dto.DetectionParameterSaveCommand;
+import com.yx.lab.modules.detection.dto.DetectionMethodQuery;
+import com.yx.lab.modules.detection.dto.DetectionMethodSaveCommand;
+import com.yx.lab.modules.detection.dto.DetectionParameterMethodBindCommand;
 import com.yx.lab.modules.detection.dto.DetectionParameterQuery;
-import com.yx.lab.modules.detection.dto.DetectionStepSaveCommand;
+import com.yx.lab.modules.detection.dto.DetectionParameterSaveCommand;
+import com.yx.lab.modules.detection.dto.DetectionProjectGroupQuery;
+import com.yx.lab.modules.detection.dto.DetectionProjectGroupSaveCommand;
 import com.yx.lab.modules.detection.dto.DetectionStepQuery;
-import com.yx.lab.modules.detection.dto.DetectionTypeSaveCommand;
+import com.yx.lab.modules.detection.dto.DetectionStepSaveCommand;
 import com.yx.lab.modules.detection.dto.DetectionTypeQuery;
+import com.yx.lab.modules.detection.dto.DetectionTypeSaveCommand;
+import com.yx.lab.modules.detection.entity.DetectionMethod;
 import com.yx.lab.modules.detection.entity.DetectionParameter;
+import com.yx.lab.modules.detection.entity.DetectionProjectGroup;
 import com.yx.lab.modules.detection.entity.DetectionStep;
 import com.yx.lab.modules.detection.entity.DetectionType;
 import com.yx.lab.modules.detection.service.DetectionConfigService;
+import com.yx.lab.modules.detection.vo.DetectionDetectorOptionVO;
+import com.yx.lab.modules.detection.vo.DetectionParameterMethodBindingVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -26,10 +35,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.Valid;
+import java.util.List;
 
 /**
  * 检测配置控制器。
- * 负责检测类型、检测参数与检测步骤的维护。
+ * 负责检测套餐、检测参数、检测方法、检测步骤等基础配置维护。
  */
 @RestController
 @RequestMapping("/api/detection-config")
@@ -40,54 +50,117 @@ public class DetectionConfigController {
     private final DetectionConfigService detectionConfigService;
 
     /**
-     * 分页查询检测类型。
+     * 分页查询检测套餐。
      *
-     * @param query 检测类型查询条件。
-     * @return 检测类型分页结果。
+     * @param query 检测套餐查询条件。
+     * @return 检测套餐分页结果。
      */
     @GetMapping("/types")
-    @Operation(summary = "检测类型分页")
+    @Operation(summary = "检测套餐分页")
     public ApiResponse<PageResult<DetectionType>> typePage(@Validated DetectionTypeQuery query) {
         return ApiResponse.success(detectionConfigService.typePage(query));
     }
 
     /**
-     * 新增检测类型。
+     * 新增检测套餐。
      *
-     * @param command 检测类型保存命令。
+     * @param command 检测套餐保存命令。
      * @return 保存结果。
      */
     @PostMapping("/types")
-    @Operation(summary = "新增检测类型")
+    @Operation(summary = "新增检测套餐")
     public ApiResponse<Void> saveType(@Valid @RequestBody DetectionTypeSaveCommand command) {
         detectionConfigService.saveType(command);
         return ApiResponse.successMessage("新增成功");
     }
 
     /**
-     * 更新检测类型。
+     * 更新检测套餐。
      *
-     * @param id 检测类型主键。
-     * @param command 检测类型保存命令。
+     * @param id 检测套餐主键。
+     * @param command 检测套餐保存命令。
      * @return 更新结果。
      */
     @PutMapping("/types/{id}")
-    @Operation(summary = "更新检测类型")
+    @Operation(summary = "更新检测套餐")
     public ApiResponse<Void> updateType(@PathVariable Long id, @Valid @RequestBody DetectionTypeSaveCommand command) {
         detectionConfigService.updateType(id, command);
         return ApiResponse.successMessage("更新成功");
     }
 
     /**
-     * 删除检测类型。
+     * 删除检测套餐。
      *
-     * @param id 检测类型主键。
+     * @param id 检测套餐主键。
      * @return 删除结果。
      */
     @DeleteMapping("/types/{id}")
-    @Operation(summary = "删除检测类型")
+    @Operation(summary = "删除检测套餐")
     public ApiResponse<Void> deleteType(@PathVariable Long id) {
         detectionConfigService.deleteType(id);
+        return ApiResponse.successMessage("删除成功");
+    }
+
+    /**
+     * 获取检测员下拉选项。
+     *
+     * @return 检测员选项列表。
+     */
+    @GetMapping("/detectors")
+    @Operation(summary = "获取检测员选项")
+    public ApiResponse<List<DetectionDetectorOptionVO>> detectorOptions() {
+        return ApiResponse.success(detectionConfigService.detectorOptions());
+    }
+
+    /**
+     * 分页查询检测项目组。
+     *
+     * @param query 检测项目组查询条件。
+     * @return 检测项目组分页结果。
+     */
+    @GetMapping("/project-groups")
+    @Operation(summary = "检测项目组分页")
+    public ApiResponse<PageResult<DetectionProjectGroup>> projectGroupPage(@Validated DetectionProjectGroupQuery query) {
+        return ApiResponse.success(detectionConfigService.projectGroupPage(query));
+    }
+
+    /**
+     * 新增检测项目组。
+     *
+     * @param command 检测项目组保存命令。
+     * @return 保存结果。
+     */
+    @PostMapping("/project-groups")
+    @Operation(summary = "新增检测项目组")
+    public ApiResponse<Void> saveProjectGroup(@Valid @RequestBody DetectionProjectGroupSaveCommand command) {
+        detectionConfigService.saveProjectGroup(command);
+        return ApiResponse.successMessage("新增成功");
+    }
+
+    /**
+     * 更新检测项目组。
+     *
+     * @param id 检测项目组主键。
+     * @param command 检测项目组保存命令。
+     * @return 更新结果。
+     */
+    @PutMapping("/project-groups/{id}")
+    @Operation(summary = "更新检测项目组")
+    public ApiResponse<Void> updateProjectGroup(@PathVariable Long id, @Valid @RequestBody DetectionProjectGroupSaveCommand command) {
+        detectionConfigService.updateProjectGroup(id, command);
+        return ApiResponse.successMessage("更新成功");
+    }
+
+    /**
+     * 删除检测项目组。
+     *
+     * @param id 检测项目组主键。
+     * @return 删除结果。
+     */
+    @DeleteMapping("/project-groups/{id}")
+    @Operation(summary = "删除检测项目组")
+    public ApiResponse<Void> deleteProjectGroup(@PathVariable Long id) {
+        detectionConfigService.deleteProjectGroup(id);
         return ApiResponse.successMessage("删除成功");
     }
 
@@ -144,6 +217,96 @@ public class DetectionConfigController {
     }
 
     /**
+     * 分页查询检测参数与检测方法绑定关系。
+     *
+     * @param query 检测参数查询条件。
+     * @return 绑定关系分页结果。
+     */
+    @GetMapping("/parameter-method-bindings")
+    @Operation(summary = "检测参数方法绑定分页")
+    public ApiResponse<PageResult<DetectionParameterMethodBindingVO>> parameterMethodBindingPage(@Validated DetectionParameterQuery query) {
+        return ApiResponse.success(detectionConfigService.parameterMethodBindingPage(query));
+    }
+
+    /**
+     * 保存单个检测参数对应的检测方法绑定关系。
+     *
+     * @param parameterId 检测参数主键。
+     * @param command 绑定保存命令。
+     * @return 保存结果。
+     */
+    @PostMapping("/parameter-method-bindings/{parameterId}")
+    @Operation(summary = "保存检测参数方法绑定")
+    public ApiResponse<Void> bindParameterMethods(@PathVariable Long parameterId,
+                                                  @RequestBody(required = false) DetectionParameterMethodBindCommand command) {
+        detectionConfigService.bindParameterMethods(parameterId, command);
+        return ApiResponse.successMessage("保存成功");
+    }
+
+    /**
+     * 分页查询检测方法。
+     *
+     * @param query 检测方法查询条件。
+     * @return 检测方法分页结果。
+     */
+    @GetMapping("/methods")
+    @Operation(summary = "检测方法分页")
+    public ApiResponse<PageResult<DetectionMethod>> methodPage(@Validated DetectionMethodQuery query) {
+        return ApiResponse.success(detectionConfigService.methodPage(query));
+    }
+
+    /**
+     * 获取检测方法下拉选项。
+     *
+     * @return 检测方法列表。
+     */
+    @GetMapping("/methods/options")
+    @Operation(summary = "获取检测方法选项")
+    public ApiResponse<List<DetectionMethod>> methodOptions() {
+        return ApiResponse.success(detectionConfigService.methodOptions());
+    }
+
+    /**
+     * 新增检测方法。
+     *
+     * @param command 检测方法保存命令。
+     * @return 保存结果。
+     */
+    @PostMapping("/methods")
+    @Operation(summary = "新增检测方法")
+    public ApiResponse<Void> saveMethod(@Valid @RequestBody DetectionMethodSaveCommand command) {
+        detectionConfigService.saveMethod(command);
+        return ApiResponse.successMessage("新增成功");
+    }
+
+    /**
+     * 更新检测方法。
+     *
+     * @param id 检测方法主键。
+     * @param command 检测方法保存命令。
+     * @return 更新结果。
+     */
+    @PutMapping("/methods/{id}")
+    @Operation(summary = "更新检测方法")
+    public ApiResponse<Void> updateMethod(@PathVariable Long id, @Valid @RequestBody DetectionMethodSaveCommand command) {
+        detectionConfigService.updateMethod(id, command);
+        return ApiResponse.successMessage("更新成功");
+    }
+
+    /**
+     * 删除检测方法。
+     *
+     * @param id 检测方法主键。
+     * @return 删除结果。
+     */
+    @DeleteMapping("/methods/{id}")
+    @Operation(summary = "删除检测方法")
+    public ApiResponse<Void> deleteMethod(@PathVariable Long id) {
+        detectionConfigService.deleteMethod(id);
+        return ApiResponse.successMessage("删除成功");
+    }
+
+    /**
      * 分页查询检测步骤。
      *
      * @param query 检测步骤查询条件。
@@ -194,5 +357,4 @@ public class DetectionConfigController {
         detectionConfigService.deleteStep(id);
         return ApiResponse.successMessage("删除成功");
     }
-
 }

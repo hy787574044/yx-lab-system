@@ -147,6 +147,85 @@ export const loginSampleApi = (data) => request.post('/api/samples/login', data)
  */
 export const fetchDetectionTypesApi = (params) => request.get('/api/detection-config/types', { params })
 /**
+ * 新增检测项目。
+ *
+ * @param {Object} data 检测项目表单。
+ * @returns {Promise<any>} 保存结果。
+ */
+export const createDetectionTypeApi = (data) => request.post('/api/detection-config/types', data)
+/**
+ * 更新检测项目。
+ *
+ * @param {number} id 检测项目主键。
+ * @param {Object} data 检测项目表单。
+ * @returns {Promise<any>} 更新结果。
+ */
+export const updateDetectionTypeApi = (id, data) => request.put(`/api/detection-config/types/${id}`, data)
+/**
+ * 删除检测项目。
+ *
+ * @param {number} id 检测项目主键。
+ * @returns {Promise<any>} 删除结果。
+ */
+export const deleteDetectionTypeApi = (id) => request.delete(`/api/detection-config/types/${id}`)
+/**
+ * 新增检测参数。
+ *
+ * @param {Object} data 检测参数表单。
+ * @returns {Promise<any>} 保存结果。
+ */
+export const createDetectionParameterApi = (data) => request.post('/api/detection-config/parameters', data)
+/**
+ * 更新检测参数。
+ *
+ * @param {number} id 检测参数主键。
+ * @param {Object} data 检测参数表单。
+ * @returns {Promise<any>} 更新结果。
+ */
+export const updateDetectionParameterApi = (id, data) => request.put(`/api/detection-config/parameters/${id}`, data)
+/**
+ * 删除检测参数。
+ *
+ * @param {number} id 检测参数主键。
+ * @returns {Promise<any>} 删除结果。
+ */
+export const deleteDetectionParameterApi = (id) => request.delete(`/api/detection-config/parameters/${id}`)
+/**
+ * 获取检测员下拉选项。
+ *
+ * @returns {Promise<any>} 检测员列表。
+ */
+export const fetchDetectionDetectorsApi = () => request.get('/api/detection-config/detectors')
+/**
+ * 获取检测项目组分页。
+ *
+ * @param {Object} params 查询条件。
+ * @returns {Promise<any>} 检测项目组分页结果。
+ */
+export const fetchDetectionProjectGroupsApi = (params) => request.get('/api/detection-config/project-groups', { params })
+/**
+ * 新增检测项目组。
+ *
+ * @param {Object} data 检测项目组表单。
+ * @returns {Promise<any>} 保存结果。
+ */
+export const createDetectionProjectGroupApi = (data) => request.post('/api/detection-config/project-groups', data)
+/**
+ * 更新检测项目组。
+ *
+ * @param {number} id 检测项目组主键。
+ * @param {Object} data 检测项目组表单。
+ * @returns {Promise<any>} 更新结果。
+ */
+export const updateDetectionProjectGroupApi = (id, data) => request.put(`/api/detection-config/project-groups/${id}`, data)
+/**
+ * 删除检测项目组。
+ *
+ * @param {number} id 检测项目组主键。
+ * @returns {Promise<any>} 删除结果。
+ */
+export const deleteDetectionProjectGroupApi = (id) => request.delete(`/api/detection-config/project-groups/${id}`)
+/**
  * 获取检测参数分页。
  *
  * @param {Object} params 查询条件。
@@ -159,6 +238,49 @@ export const fetchDetectionParametersApi = (params) => request.get('/api/detecti
  * @param {Object} params 查询条件。
  * @returns {Promise<any>} 检测记录分页结果。
  */
+/**
+ * 获取检测方法分页。
+ * @param {Object} params 查询条件。
+ * @returns {Promise<any>} 检测方法分页结果。
+ */
+export const fetchDetectionMethodsApi = (params) => request.get('/api/detection-config/methods', { params })
+/**
+ * 新增检测方法。
+ * @param {Object} data 检测方法表单。
+ * @returns {Promise<any>} 保存结果。
+ */
+export const createDetectionMethodApi = (data) => request.post('/api/detection-config/methods', data)
+/**
+ * 更新检测方法。
+ * @param {number} id 检测方法主键。
+ * @param {Object} data 检测方法表单。
+ * @returns {Promise<any>} 更新结果。
+ */
+export const updateDetectionMethodApi = (id, data) => request.put(`/api/detection-config/methods/${id}`, data)
+/**
+ * 删除检测方法。
+ * @param {number} id 检测方法主键。
+ * @returns {Promise<any>} 删除结果。
+ */
+export const deleteDetectionMethodApi = (id) => request.delete(`/api/detection-config/methods/${id}`)
+/**
+ * 获取检测参数与检测方法绑定列表。
+ * @param {Object} params 查询条件。
+ * @returns {Promise<any>} 绑定列表分页结果。
+ */
+export const fetchDetectionParameterMethodBindingsApi = (params) => request.get('/api/detection-config/parameter-method-bindings', { params })
+/**
+ * 保存单个检测参数的检测方法绑定关系。
+ * @param {number} parameterId 检测参数主键。
+ * @param {Object} data 绑定表单。
+ * @returns {Promise<any>} 保存结果。
+ */
+export const saveDetectionParameterMethodBindingsApi = (parameterId, data) => request.post(`/api/detection-config/parameter-method-bindings/${parameterId}`, data)
+/**
+ * 获取检测方法下拉选项。
+ * @returns {Promise<any>} 检测方法列表。
+ */
+export const fetchDetectionMethodOptionsApi = () => request.get('/api/detection-config/methods/options')
 export const fetchDetectionsApi = (params) => request.get('/api/detections', { params })
 /**
  * 提交检测结果。
@@ -323,14 +445,14 @@ export const updateInstrumentApi = (id, data) => request.put(`/api/assets/instru
  */
 export const deleteInstrumentApi = (id) => request.delete(`/api/assets/instruments/${id}`)
 /**
- * 获取实验室文档分页。
+ * 获取化验室文档分页。
  *
  * @param {Object} params 查询条件。
  * @returns {Promise<any>} 文档分页结果。
  */
 export const fetchDocumentsApi = (params) => request.get('/api/assets/documents', { params })
 /**
- * 获取实验室文档详情。
+ * 获取化验室文档详情。
  *
  * @param {number} id 文档主键。
  * @returns {Promise<any>} 文档详情。
@@ -448,7 +570,7 @@ export const uploadStorageFileApi = (file) => {
   })
 }
 /**
- * 预览实验室文档文件流。
+ * 预览化验室文档文件流。
  *
  * @param {number} id 文档主键。
  * @returns {Promise<import('axios').AxiosResponse<Blob>>} 文档预览响应。
@@ -458,14 +580,14 @@ export const previewDocumentApi = (id) => axios.get(`/api/assets/documents/${id}
   headers: getToken() ? { Authorization: `Bearer ${getToken()}` } : {}
 })
 /**
- * 新增实验室文档。
+ * 新增化验室文档。
  *
  * @param {Object} data 文档表单。
  * @returns {Promise<any>} 保存结果。
  */
 export const createDocumentApi = (data) => request.post('/api/assets/documents', data)
 /**
- * 更新实验室文档。
+ * 更新化验室文档。
  *
  * @param {number} id 文档主键。
  * @param {Object} data 文档表单。
@@ -473,7 +595,7 @@ export const createDocumentApi = (data) => request.post('/api/assets/documents',
  */
 export const updateDocumentApi = (id, data) => request.put(`/api/assets/documents/${id}`, data)
 /**
- * 删除实验室文档。
+ * 删除化验室文档。
  *
  * @param {number} id 文档主键。
  * @returns {Promise<any>} 删除结果。

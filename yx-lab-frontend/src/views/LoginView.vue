@@ -4,16 +4,16 @@
       <div class="login-brand">
         <div class="login-brand__mark">YX</div>
         <div>
-          <strong>阳新实验室水质管理平台</strong>
+          <strong>阳新化验室水质管理平台</strong>
           <p>Laboratory Water Quality Management Platform</p>
         </div>
       </div>
 
       <div class="login-side__copy">
-        <span class="hero-tag">智慧实验室业务中台</span>
+        <span class="hero-tag">智慧化验室业务中台</span>
         <h1>统一支撑采样、检测、审核、报告和留痕闭环</h1>
         <p>
-          依据阳新实验室 PC 端设计规范，构建标准化、规范化、可追踪的实验室业务工作界面，
+          依据阳新化验室 PC 端设计规范，构建标准化、规范化、可追踪的化验室业务工作界面，
           让业务办理、台账管理和状态流转都保持一致的后台体验。
         </p>
       </div>

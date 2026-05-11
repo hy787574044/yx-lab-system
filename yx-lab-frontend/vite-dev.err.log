@@ -1,0 +1,32 @@
+[2m10:19:46[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/mobile/sampling/todo[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+[2m10:19:46[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/mobile/detection/todo[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+[2m10:19:46[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/mobile/detection/history[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+[2m10:19:46[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/mobile/review/todo[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+[2m10:19:46[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/mobile/review/history[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+[2m10:19:46[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/mobile/reports/mine[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+[2m10:20:02[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/detection-config/parameter-method-bindings?keyword=&pageNum=1&pageSize=30[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+[2m10:20:02[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/detection-config/methods/options[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)

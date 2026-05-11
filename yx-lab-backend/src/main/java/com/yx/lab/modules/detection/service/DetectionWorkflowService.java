@@ -110,6 +110,7 @@ public class DetectionWorkflowService {
         CurrentUser currentUser = SecurityContext.getCurrentUser();
         DetectionType detectionType = detectionTypeMapper.selectById(command.getDetectionTypeId());
         DetectionType usableType = requireUsableType(command, detectionType);
+        validateDetectorBinding(usableType, currentUser);
         List<DetectionParameter> configuredParameters = resolveConfiguredParameters(usableType);
         ensureTypeHasSteps(usableType.getId());
         Map<Long, DetectionItemCommand> itemMap = validateSubmittedItems(command.getItems(), configuredParameters);
@@ -178,6 +179,21 @@ public class DetectionWorkflowService {
             throw new BusinessException("检测类型名称与配置不一致，请刷新后重试");
         }
         return detectionType;
+    }
+
+    private void validateDetectorBinding(DetectionType detectionType, CurrentUser currentUser) {
+        if (detectionType.getDetectorId() == null) {
+            return;
+        }
+        if (currentUser == null || currentUser.getUserId() == null) {
+            throw new BusinessException("当前登录信息已失效，请重新登录");
+        }
+        if ("ADMIN".equalsIgnoreCase(currentUser.getRoleCode())) {
+            return;
+        }
+        if (!detectionType.getDetectorId().equals(currentUser.getUserId())) {
+            throw new BusinessException("当前检测项目已绑定检测员“" + detectionType.getDetectorName() + "”，不能由当前用户提交");
+        }
     }
 
     private List<DetectionParameter> resolveConfiguredParameters(DetectionType detectionType) {

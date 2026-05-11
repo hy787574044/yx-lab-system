@@ -1,0 +1,23 @@
+CREATE TABLE `lab_detection_method` (
+    `id` BIGINT NOT NULL COMMENT '主键ID',
+    `method_name` VARCHAR(100) NOT NULL COMMENT '检测方法名称',
+    `method_code` VARCHAR(100) NULL COMMENT '方法编码',
+    `parameter_id` BIGINT NULL COMMENT '绑定检测参数ID',
+    `parameter_name` VARCHAR(100) NULL COMMENT '绑定检测参数名称',
+    `standard_code` VARCHAR(100) NULL COMMENT '标准编号',
+    `method_basis` VARCHAR(200) NULL COMMENT '检测依据',
+    `apply_scope` VARCHAR(200) NULL COMMENT '适用范围',
+    `enabled` TINYINT NOT NULL DEFAULT 1 COMMENT '启用状态：1启用 0停用',
+    `remark` VARCHAR(500) NULL COMMENT '备注',
+    `deleted` TINYINT NOT NULL DEFAULT 0 COMMENT '逻辑删除标记',
+    `created_by` BIGINT NULL COMMENT '创建人ID',
+    `created_name` VARCHAR(100) NULL COMMENT '创建人姓名',
+    `created_time` DATETIME NULL COMMENT '创建时间',
+    `updated_by` BIGINT NULL COMMENT '更新人ID',
+    `updated_name` VARCHAR(100) NULL COMMENT '更新人姓名',
+    `updated_time` DATETIME NULL COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_detection_method_name` (`method_name`),
+    UNIQUE KEY `uk_detection_method_code` (`method_code`),
+    KEY `idx_detection_method_parameter_id` (`parameter_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='检测方法';

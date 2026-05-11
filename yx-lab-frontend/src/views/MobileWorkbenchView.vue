@@ -4,7 +4,7 @@
       <div class="hero-copy">
         <span class="hero-tag">移动端闭环</span>
         <h1>从采样到报告，一部手机完成流转</h1>
-        <p>聚焦待办、快速提交、即时回看，面向现场人员和审核人员的轻量工作台。</p>
+        <p>聚焦待办、快速提交、即时回看，面向现场人员与审核人员的轻量工作台。</p>
       </div>
 
       <div class="hero-user">
@@ -51,17 +51,17 @@
         <article class="overview-card" @click="activeTab = 'detection'">
           <span>检测待办</span>
           <strong>{{ detectionTodos.length }}</strong>
-          <p>已登录样品和退回重检样品都在这里</p>
+          <p>已登录样品和待重检样品都在这里</p>
         </article>
         <article class="overview-card" @click="activeTab = 'review'">
           <span>审核待办</span>
           <strong>{{ reviewTodos.length }}</strong>
-          <p>可直接通过或驳回重检</p>
+          <p>支持审核通过或驳回重检</p>
         </article>
         <article class="overview-card" @click="activeTab = 'report'">
           <span>正式报告</span>
           <strong>{{ reports.length }}</strong>
-          <p>支持在线预览和推送结果回看</p>
+          <p>支持在线预览与推送结果回看</p>
         </article>
       </div>
 
@@ -97,16 +97,18 @@
         <div v-if="samplingTodos.length" class="card-stack">
           <article class="task-card" v-for="task in samplingTodos" :key="task.id">
             <div class="card-title-row">
-              <strong>{{ task.pointName }}</strong>
+              <strong>{{ task.pointName || '未命名点位' }}</strong>
               <span class="status-chip" :class="getStatusClass('taskStatus', task.taskStatus)">
                 {{ getEnumLabel(taskStatusLabelMap, task.taskStatus) }}
               </span>
             </div>
+            <p>任务编号：{{ task.taskNo || '-' }}</p>
+            <p>封签编号：{{ task.sealNo || '待录入' }}</p>
             <p>计划时间：{{ task.samplingTime || '-' }}</p>
             <p>样品类型：{{ getEnumLabel(sampleTypeLabelMap, task.sampleType) }}</p>
-            <p>检测项目：{{ task.detectionItems || '-' }}</p>
-            <p v-if="task.sampleLogged">已登录样品：{{ task.sampleNo }} / {{ task.sealNo }}</p>
-            <p v-else-if="task.taskStatus === completedTaskStatus" class="warn-text">采样已完成，请立即做样品登录</p>
+            <p>检测项目组：{{ task.detectionItems || '-' }}</p>
+            <p v-if="task.sampleLogged">已登录样品：{{ task.sampleNo || '-' }}</p>
+            <p v-else-if="task.taskStatus === completedTaskStatus" class="warn-text">采样已完成，请尽快进行样品登录</p>
             <div class="card-actions">
               <el-button
                 v-if="task.taskStatus === pendingTaskStatus"
@@ -163,8 +165,8 @@
             </div>
             <p>封签编号：{{ sample.sealNo || '-' }}</p>
             <p>点位名称：{{ sample.pointName || '-' }}</p>
-            <p>采样人：{{ sample.samplerName || '-' }}</p>
-            <p>检测项目：{{ sample.detectionItems || '-' }}</p>
+            <p>采样人员：{{ sample.samplerName || '-' }}</p>
+            <p>检测项目组：{{ sample.detectionItems || '-' }}</p>
             <p v-if="sample.resultSummary">当前摘要：{{ sample.resultSummary }}</p>
             <div class="card-actions">
               <el-button size="small" type="primary" @click="openDetectionDialog(sample)">提交检测</el-button>
@@ -187,7 +189,7 @@
               </span>
             </div>
             <p>封签编号：{{ row.sealNo || '-' }}</p>
-            <p>检测类型：{{ row.detectionTypeName || '-' }}</p>
+            <p>检测项目组：{{ row.detectionTypeName || '-' }}</p>
             <p>检测结果：{{ getEnumLabel(detectionResultLabelMap, row.detectionResult) }}</p>
             <p>提交时间：{{ row.detectionTime || '-' }}</p>
           </article>
@@ -209,8 +211,8 @@
                 {{ getEnumLabel(detectionResultLabelMap, row.detectionResult) }}
               </span>
             </div>
-            <p>检测类型：{{ row.detectionTypeName || '-' }}</p>
-            <p>检测人：{{ row.detectorName || '-' }}</p>
+            <p>检测项目组：{{ row.detectionTypeName || '-' }}</p>
+            <p>检测人员：{{ row.detectorName || '-' }}</p>
             <p>提交时间：{{ row.detectionTime || '-' }}</p>
             <p v-if="row.abnormalRemark">异常说明：{{ row.abnormalRemark }}</p>
             <div class="card-actions">
@@ -247,7 +249,7 @@
       <div class="mobile-section">
         <div class="section-headline">
           <h3>我的报告</h3>
-          <span class="section-tip">支持正式产物在线预览和推送留痕回看</span>
+          <span class="section-tip">支持正式产物在线预览与推送留痕回看</span>
         </div>
         <div v-if="reports.length" class="card-stack">
           <article class="report-card" v-for="row in reports" :key="row.id">
@@ -259,8 +261,8 @@
             </div>
             <p>样品编号：{{ row.sampleNo || '-' }}</p>
             <p>封签编号：{{ row.sealNo || '-' }}</p>
-            <p>发布时间：{{ row.publishedTime || '-' }}</p>
-            <p>发布人：{{ row.publishedByName || '-' }}</p>
+            <p>发布时间：{{ row.publishedTime || row.generatedTime || '-' }}</p>
+            <p>发布人员：{{ row.publishedByName || '-' }}</p>
             <p>推送状态：{{ getPushStatusLabel(row.pushStatus) }}</p>
             <p v-if="row.lastPushMessage">推送结果：{{ row.lastPushMessage }}</p>
             <div class="card-actions">
@@ -282,7 +284,12 @@
     >
       <el-form label-position="top">
         <el-form-item label="现场指标">
-          <el-input v-model="completeForm.onsiteMetrics" type="textarea" :rows="3" placeholder="例如余氯、浊度、温度等现场指标" />
+          <el-input
+            v-model="completeForm.onsiteMetrics"
+            type="textarea"
+            :rows="3"
+            placeholder="例如余氯、浊度、温度等现场指标"
+          />
         </el-form-item>
         <el-form-item label="照片地址">
           <el-input v-model="completeForm.photoUrls" placeholder="多张图片可用英文逗号分隔" />
@@ -311,11 +318,29 @@
         </el-form-item>
         <el-form-item label="样品类型">
           <el-select v-model="loginForm.sampleType" style="width: 100%">
-            <el-option v-for="option in sampleTypeOptions" :key="option.value" :label="option.label" :value="option.value" />
+            <el-option
+              v-for="option in sampleTypeOptions"
+              :key="option.value"
+              :label="option.label"
+              :value="option.value"
+            />
           </el-select>
         </el-form-item>
-        <el-form-item label="检测项目">
-          <el-input v-model="loginForm.detectionItems" />
+        <el-form-item label="检测项目组">
+          <el-select
+            v-model="loginForm.detectionItems"
+            clearable
+            filterable
+            placeholder="请选择检测项目组"
+            style="width: 100%"
+          >
+            <el-option
+              v-for="item in enabledDetectionTypes"
+              :key="item.id"
+              :label="item.typeName"
+              :value="item.typeName"
+            />
+          </el-select>
         </el-form-item>
         <el-form-item label="采样时间">
           <el-date-picker
@@ -351,9 +376,14 @@
       @closed="resetDetectionForm"
     >
       <el-form label-position="top">
-        <el-form-item label="检测类型">
+        <el-form-item label="检测项目组">
           <el-select v-model="detectionForm.detectionTypeId" style="width: 100%" @change="handleDetectionTypeChange">
-            <el-option v-for="item in enabledDetectionTypes" :key="item.id" :label="item.typeName" :value="item.id" />
+            <el-option
+              v-for="item in currentDetectionTypeOptions"
+              :key="item.id"
+              :label="item.typeName"
+              :value="item.id"
+            />
           </el-select>
         </el-form-item>
         <div v-if="detectionForm.items.length" class="parameter-list">
@@ -362,7 +392,13 @@
               <strong>{{ item.parameterName }}</strong>
               <span>{{ formatStandardRange(item.standardMin, item.standardMax, item.unit) }}</span>
             </div>
-            <el-input-number v-model="item.resultValue" :precision="2" :step="0.1" style="width: 100%" />
+            <el-input-number
+              v-model="item.resultValue"
+              :precision="2"
+              :step="0.1"
+              controls-position="right"
+              style="width: 100%"
+            />
           </div>
         </div>
         <el-form-item label="异常说明">
@@ -416,7 +452,9 @@
 </template>
 
 <script setup>
+import dayjs from 'dayjs'
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElButton } from 'element-plus/es/components/button/index.mjs'
 import { ElDatePicker } from 'element-plus/es/components/date-picker/index.mjs'
 import { ElDialog } from 'element-plus/es/components/dialog/index.mjs'
@@ -427,10 +465,7 @@ import { ElInputNumber } from 'element-plus/es/components/input-number/index.mjs
 import { ElMessage } from 'element-plus/es/components/message/index.mjs'
 import { ElMessageBox } from 'element-plus/es/components/message-box/index.mjs'
 import { ElOption, ElSelect } from 'element-plus/es/components/select/index.mjs'
-import { useRouter } from 'vue-router'
 import {
-  abandonSamplingTaskApi,
-  completeSamplingTaskApi,
   fetchDetectionParametersApi,
   fetchDetectionTypesApi,
   fetchMobileDetectionHistoryApi,
@@ -443,6 +478,8 @@ import {
   loginSampleApi,
   previewReportApi,
   startSamplingTaskApi,
+  abandonSamplingTaskApi,
+  completeSamplingTaskApi,
   submitDetectionApi,
   submitReviewApi
 } from '../api/lab'
@@ -472,7 +509,6 @@ const refreshing = ref(false)
 const submitting = ref(false)
 
 const currentUser = ref(getUser())
-
 const samplingTodos = ref([])
 const detectionTodos = ref([])
 const detectionHistory = ref([])
@@ -482,6 +518,7 @@ const reports = ref([])
 
 const detectionTypes = ref([])
 const detectionParameters = ref([])
+const currentDetectionTypeOptions = ref([])
 
 const completeDialogVisible = ref(false)
 const loginDialogVisible = ref(false)
@@ -546,6 +583,22 @@ const tabOptions = computed(() => [
   { value: 'report', label: '报告', count: reports.value.length }
 ])
 
+function parseDetectionItemsText(value) {
+  return String(value || '')
+    .split(/[，,、]/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+}
+
+function matchDetectionTypesForSample(sample) {
+  const expectedNames = parseDetectionItemsText(sample?.detectionItems)
+  if (!expectedNames.length) {
+    return enabledDetectionTypes.value
+  }
+  const matched = enabledDetectionTypes.value.filter((item) => expectedNames.includes(item.typeName))
+  return matched.length ? matched : enabledDetectionTypes.value
+}
+
 function getPushStatusLabel(status) {
   if (status === 'SUCCESS') {
     return '已推送'
@@ -568,7 +621,7 @@ async function refreshCurrentUser() {
 async function refreshAll() {
   refreshing.value = true
   try {
-    if (!currentUser.value.userId) {
+    if (!currentUser.value?.userId && !currentUser.value?.id) {
       await refreshCurrentUser()
     }
     const [
@@ -597,6 +650,18 @@ async function refreshAll() {
   }
 }
 
+async function ensureDetectionConfig() {
+  if (detectionTypes.value.length && detectionParameters.value.length) {
+    return
+  }
+  const [typeResult, parameterResult] = await Promise.all([
+    fetchDetectionTypesApi({ pageNum: 1, pageSize: 200, enabled: 1 }),
+    fetchDetectionParametersApi({ pageNum: 1, pageSize: 500 })
+  ])
+  detectionTypes.value = typeResult.records || []
+  detectionParameters.value = parameterResult.records || []
+}
+
 async function handleStartTask(task) {
   let sealNo = String(task?.sealNo || '').trim()
   if (!sealNo) {
@@ -621,12 +686,6 @@ async function handleStartTask(task) {
   await refreshAll()
 }
 
-async function startTask(task) {
-  await startSamplingTaskApi(task.id, { remark: '移动端开始采样' })
-  ElMessage.success('采样任务已开始。')
-  await refreshAll()
-}
-
 async function abandonTask(task) {
   try {
     const { value } = await ElMessageBox.prompt('请填写废弃原因', '废弃采样任务', {
@@ -635,13 +694,13 @@ async function abandonTask(task) {
       inputPlaceholder: '例如：现场条件不满足，需要改日执行'
     })
     await abandonSamplingTaskApi(task.id, {
-      reason: value,
+      reason: String(value || '').trim(),
       remark: '移动端废弃采样任务'
     })
     ElMessage.success('采样任务已废弃。')
     await refreshAll()
   } catch {
-    // 用户取消废弃操作时不做处理。
+    return
   }
 }
 
@@ -681,14 +740,15 @@ async function submitComplete() {
   }
 }
 
-function openLoginDialog(task) {
+async function openLoginDialog(task) {
+  await ensureDetectionConfig()
   loginForm.taskId = task.id
-  loginForm.pointId = task.pointId
+  loginForm.pointId = task.pointId || null
   loginForm.pointName = task.pointName || ''
   loginForm.sampleType = task.sampleType || ''
-  loginForm.detectionItems = task.detectionItems || ''
-  loginForm.samplingTime = task.samplingTime || ''
-  loginForm.samplerId = task.samplerId || currentUser.value.userId || null
+  loginForm.detectionItems = String(task.detectionItems || '').trim()
+  loginForm.samplingTime = task.samplingTime || dayjs().format('YYYY-MM-DD HH:mm:ss')
+  loginForm.samplerId = task.samplerId || currentUser.value.userId || currentUser.value.id || null
   loginForm.samplerName = task.samplerName || currentUser.value.realName || currentUser.value.username || ''
   loginForm.weather = ''
   loginForm.storageCondition = ''
@@ -711,15 +771,18 @@ function resetLoginForm() {
 }
 
 async function submitSampleLogin() {
-  if (!loginForm.pointId || !loginForm.pointName || !loginForm.sampleType || !loginForm.detectionItems || !loginForm.samplingTime) {
+  if (!loginForm.taskId || !loginForm.pointId || !loginForm.pointName || !loginForm.sampleType || !loginForm.detectionItems || !loginForm.samplingTime) {
     ElMessage.warning('请完整填写样品登录信息')
     return
   }
   submitting.value = true
   try {
-    const sample = await loginSampleApi({ ...loginForm })
+    const sample = await loginSampleApi({
+      ...loginForm,
+      detectionItems: String(loginForm.detectionItems || '').trim()
+    })
     loginDialogVisible.value = false
-    ElMessage.success(`样品登录完成，封签号：${sample.sealNo}`)
+    ElMessage.success(`样品登录完成，封签编号：${sample?.sealNo || '-'}`)
     await refreshAll()
     activeTab.value = 'detection'
   } finally {
@@ -727,47 +790,45 @@ async function submitSampleLogin() {
   }
 }
 
-async function ensureDetectionConfig() {
-  if (detectionTypes.value.length && detectionParameters.value.length) {
-    return
-  }
-  const [typeResult, parameterResult] = await Promise.all([
-    fetchDetectionTypesApi({ pageNum: 1, pageSize: 200 }),
-    fetchDetectionParametersApi({ pageNum: 1, pageSize: 500 })
-  ])
-  detectionTypes.value = typeResult.records || []
-  detectionParameters.value = parameterResult.records || []
-}
-
 async function openDetectionDialog(sample) {
   await ensureDetectionConfig()
   if (!enabledDetectionTypes.value.length) {
-    ElMessage.warning('当前没有可用的检测类型配置')
+    ElMessage.warning('当前没有可用的检测项目组配置')
     return
   }
+
+  currentDetectionTypeOptions.value = matchDetectionTypesForSample(sample)
+  if (!currentDetectionTypeOptions.value.length) {
+    ElMessage.warning('当前样品未匹配到可用检测项目组，请先检查样品登录中的项目组配置')
+    return
+  }
+
   detectionForm.sampleId = sample.sampleId
   detectionForm.abnormalRemark = ''
-  detectionForm.detectionTypeId = enabledDetectionTypes.value[0].id
+  detectionForm.detectionTypeId = currentDetectionTypeOptions.value[0].id
   handleDetectionTypeChange(detectionForm.detectionTypeId)
+
   if (!detectionForm.items.length) {
-    ElMessage.warning('当前检测类型没有可用的参数配置，请先检查检测配置')
+    ElMessage.warning('当前检测项目组没有可用参数，请先检查检测配置')
     return
   }
   detectionDialogVisible.value = true
 }
 
 function handleDetectionTypeChange(typeId) {
-  const type = enabledDetectionTypes.value.find((item) => item.id === typeId)
+  const type = currentDetectionTypeOptions.value.find((item) => item.id === typeId)
   detectionForm.detectionTypeId = typeId
   detectionForm.detectionTypeName = type ? type.typeName : ''
   detectionForm.items = []
   if (!type) {
     return
   }
+
   const parameterIds = String(type.parameterIds || '')
     .split(',')
     .map((item) => Number(item.trim()))
     .filter((item) => Number.isFinite(item))
+
   const parameterMap = new Map(detectionParameters.value.map((item) => [item.id, item]))
   detectionForm.items = parameterIds
     .map((id) => parameterMap.get(id))
@@ -788,17 +849,19 @@ function resetDetectionForm() {
   detectionForm.detectionTypeName = ''
   detectionForm.abnormalRemark = ''
   detectionForm.items = []
+  currentDetectionTypeOptions.value = []
 }
 
 async function submitDetection() {
   if (!detectionForm.sampleId || !detectionForm.detectionTypeId) {
-    ElMessage.warning('请选择检测类型')
+    ElMessage.warning('请选择检测项目组')
     return
   }
   if (!detectionForm.items.length || detectionForm.items.some((item) => item.resultValue == null)) {
     ElMessage.warning('请完整填写所有检测参数结果')
     return
   }
+
   submitting.value = true
   try {
     await submitDetectionApi({
@@ -844,10 +907,11 @@ async function submitReview() {
     ElMessage.warning('请选择待审核记录')
     return
   }
-  if (reviewForm.reviewResult === rejectedReviewResult && !reviewForm.rejectReason) {
+  if (reviewForm.reviewResult === rejectedReviewResult && !String(reviewForm.rejectReason || '').trim()) {
     ElMessage.warning('请填写驳回原因')
     return
   }
+
   submitting.value = true
   try {
     await submitReviewApi({ ...reviewForm })

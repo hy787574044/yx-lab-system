@@ -42,7 +42,7 @@ import java.util.List;
 
 /**
  * 资产与文档控制器。
- * 负责仪器台账、维保记录与实验室文档的查询和维护。
+ * 负责仪器台账、维保记录与化验室文档的查询和维护。
  */
 @RestController
 @RequestMapping("/api/assets")
@@ -214,37 +214,37 @@ public class AssetController {
     }
 
     /**
-     * 分页查询实验室文档。
+     * 分页查询化验室文档。
      *
      * @param query 文档查询条件。
      * @return 文档分页结果。
      */
     @GetMapping("/documents")
-    @Operation(summary = "实验室文档分页")
+    @Operation(summary = "化验室文档分页")
     public ApiResponse<PageResult<LabDocumentVO>> documents(@Validated DocumentQuery query) {
         return ApiResponse.success(assetDocumentService.documentPage(query));
     }
 
     /**
-     * 获取实验室文档详情。
+     * 获取化验室文档详情。
      *
      * @param id 文档主键。
      * @return 文档详情。
      */
     @GetMapping("/documents/{id}")
-    @Operation(summary = "实验室文档详情")
+    @Operation(summary = "化验室文档详情")
     public ApiResponse<LabDocumentVO> documentDetail(@PathVariable Long id) {
         return ApiResponse.success(assetDocumentService.documentDetail(id));
     }
 
     /**
-     * 预览实验室文档。
+     * 预览化验室文档。
      *
      * @param id 文档主键。
      * @return 文档文件流。
      */
     @GetMapping("/documents/{id}/preview")
-    @Operation(summary = "预览实验室文档")
+    @Operation(summary = "预览化验室文档")
     public ResponseEntity<byte[]> previewDocument(@PathVariable Long id) {
         DocumentPreviewFile previewFile = assetDocumentService.previewDocument(id);
         ContentDisposition contentDisposition = ContentDisposition.inline()
@@ -257,40 +257,40 @@ public class AssetController {
     }
 
     /**
-     * 新增实验室文档。
+     * 新增化验室文档。
      *
      * @param command 文档保存命令。
      * @return 保存结果。
      */
     @PostMapping("/documents")
-    @Operation(summary = "新增实验室文档")
+    @Operation(summary = "新增化验室文档")
     public ApiResponse<Void> saveDocument(@Valid @RequestBody DocumentSaveCommand command) {
         assetDocumentService.saveDocument(command);
         return ApiResponse.successMessage("\u65b0\u589e\u6210\u529f");
     }
 
     /**
-     * 更新实验室文档。
+     * 更新化验室文档。
      *
      * @param id 文档主键。
      * @param command 文档保存命令。
      * @return 更新结果。
      */
     @PutMapping("/documents/{id}")
-    @Operation(summary = "更新实验室文档")
+    @Operation(summary = "更新化验室文档")
     public ApiResponse<Void> updateDocument(@PathVariable Long id, @Valid @RequestBody DocumentSaveCommand command) {
         assetDocumentService.updateDocument(id, command);
         return ApiResponse.successMessage("\u66f4\u65b0\u6210\u529f");
     }
 
     /**
-     * 删除实验室文档。
+     * 删除化验室文档。
      *
      * @param id 文档主键。
      * @return 删除结果。
      */
     @DeleteMapping("/documents/{id}")
-    @Operation(summary = "删除实验室文档")
+    @Operation(summary = "删除化验室文档")
     public ApiResponse<Void> deleteDocument(@PathVariable Long id) {
         assetDocumentService.deleteDocumentWithPermission(id);
         return ApiResponse.successMessage("\u5220\u9664\u6210\u529f");

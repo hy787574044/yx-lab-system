@@ -549,13 +549,21 @@
           <el-form-item label="采样人员">
             <el-input v-model="loginForm.samplerName" readonly />
           </el-form-item>
-          <el-form-item class="login-form-span-2" label="检测项目">
-            <el-input
+          <el-form-item class="login-form-span-2" label="检测项目组">
+            <el-select
               v-model="loginForm.detectionItems"
-              type="textarea"
-              :rows="3"
-              placeholder="请填写本次样品对应的检测项目"
-            />
+              clearable
+              filterable
+              placeholder="请选择本次样品对应的检测项目组"
+              style="width: 100%"
+            >
+              <el-option
+                v-for="item in detectionProjectOptions"
+                :key="item.id"
+                :label="item.typeName"
+                :value="item.typeName"
+              />
+            </el-select>
           </el-form-item>
           <el-form-item label="采样时间">
             <el-date-picker
@@ -605,6 +613,7 @@ import {
   createSamplingPlanApi,
   dispatchSamplingPlanApi,
   fetchMonitoringPointsApi,
+  fetchDetectionTypesApi,
   fetchSamplesApi,
   fetchSamplingPlansApi,
   fetchSamplingTasksApi,
@@ -673,6 +682,7 @@ const monitoringPointOptions = ref([])
 const monitoringPointLoading = ref(false)
 const samplerOptions = ref([])
 const samplerLoading = ref(false)
+const detectionProjectOptions = ref([])
 
 const loginForm = reactive({
   taskId: null,
@@ -777,7 +787,7 @@ const sceneMap = {
     quickLinks: [
       { path: '/sample-login', label: '样品登录', desc: '承接已完成任务并生成样品封签' },
       { path: '/task-history', label: '历史任务', desc: '只看已完成与已废弃任务' },
-      { path: '/detection-analysis', label: '检测分析', desc: '继续进入实验室检测流程' }
+      { path: '/detection-analysis', label: '检测分析', desc: '继续进入化验室检测流程' }
     ]
   },
   '/sample-login': {
@@ -797,7 +807,7 @@ const sceneMap = {
     sampleFilter: () => true,
     quickLinks: [
       { path: '/task-assign', label: '任务分配', desc: '先完成现场采样任务，再进行样品登录' },
-      { path: '/detection-analysis', label: '检测分析', desc: '样品登录完成后进入实验室检测流程' },
+      { path: '/detection-analysis', label: '检测分析', desc: '样品登录完成后进入化验室检测流程' },
       { path: '/sample-ledger', label: '样品台账', desc: '查看全量样品、封签与流程留痕' }
     ]
   },
@@ -1362,6 +1372,22 @@ async function promptTaskSealNo(row, options = {}) {
   }
 }
 
+async function loadDetectionProjects() {
+  if (detectionProjectOptions.value.length) {
+    return
+  }
+  const result = await fetchDetectionTypesApi({
+    pageNum: 1,
+    pageSize: 500,
+    enabled: 1
+  })
+  detectionProjectOptions.value = result.records || []
+}
+
+function parseDetectionItemsText(value) {
+  return String(value || '').trim()
+}
+
 async function editTaskSealNo(row) {
   const sealNo = await promptTaskSealNo(row)
   if (!sealNo) {
@@ -1435,7 +1461,7 @@ function applyTaskToLoginForm(task) {
   loginForm.pointId = task.pointId || null
   loginForm.pointName = task.pointName || ''
   loginForm.sampleType = task.sampleType || ''
-  loginForm.detectionItems = task.detectionItems || ''
+  loginForm.detectionItems = parseDetectionItemsText(task.detectionItems)
   loginForm.samplingTime = task.samplingTime || dayjs().format('YYYY-MM-DD HH:mm:ss')
   loginForm.samplerId = task.samplerId || null
   loginForm.samplerName = task.samplerName || ''
@@ -1459,11 +1485,12 @@ function resetLoginForm() {
   loginForm.remark = ''
 }
 
-function openLoginDialog(task = firstLoggableTask.value) {
+async function openLoginDialog(task = firstLoggableTask.value) {
   if (!pendingLoggableTasks.value.length) {
     ElMessage.warning('当前没有待登录的已完成采样任务')
     return
   }
+  await loadDetectionProjects()
   resetLoginForm()
   applyTaskToLoginForm(task || pendingLoggableTasks.value[0])
   loginDialogVisible.value = true
@@ -1504,7 +1531,10 @@ async function submitSampleLogin() {
 
   submitting.value = true
   try {
-    const sample = await loginSampleApi({ ...loginForm })
+    const sample = await loginSampleApi({
+      ...loginForm,
+      detectionItems: parseDetectionItemsText(loginForm.detectionItems)
+    })
     loginDialogVisible.value = false
     ElMessage.success(`样品登录完成，封签编号：${sample?.sealNo || '-'}`)
     sampleQuery.pageNum = 1
@@ -1516,7 +1546,7 @@ async function submitSampleLogin() {
 
 onMounted(async () => {
   syncRouteState()
-  await Promise.all([loadPlans(), loadTasks(), loadSamples()])
+  await Promise.all([loadPlans(), loadTasks(), loadSamples(), loadDetectionProjects()])
 })
 
 watch(() => route.fullPath, () => {

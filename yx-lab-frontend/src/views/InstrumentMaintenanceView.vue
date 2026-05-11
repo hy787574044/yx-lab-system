@@ -138,7 +138,7 @@
           </button>
           <button type="button" class="quick-link" @click="goRoute('/dashboard')">
             <strong>运行总览</strong>
-            <span>回到主看板继续查看整体实验室运行情况</span>
+            <span>回到主看板继续查看整体化验室运行情况</span>
           </button>
         </div>
       </div>

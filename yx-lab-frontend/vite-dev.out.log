@@ -1,0 +1,18 @@
+
+> yx-lab-frontend@1.0.0 dev
+> vite --host 0.0.0.0
+
+
+  [32m[1mVITE[22m v5.4.21[39m  [2mready in [0m[1m2411[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5173[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://192.168.6.20:[1m5173[22m/[39m
+[2m10:30:25[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionParameterMethodBindingView.vue, /src/views/DetectionParameterMethodBindingView.vue?vue&type=style&index=0&scoped=0b9ac7f0&lang.css[22m
+[2m10:32:26[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionParameterMethodBindingView.vue, /src/views/DetectionParameterMethodBindingView.vue?vue&type=style&index=0&scoped=0b9ac7f0&lang.css[22m
+[2m10:39:28[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionParameterMethodBindingView.vue, /src/views/DetectionParameterMethodBindingView.vue?vue&type=style&index=0&scoped=0b9ac7f0&lang.css[22m
+[2m10:47:38[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionParameterMethodBindingView.vue, /src/views/DetectionParameterMethodBindingView.vue?vue&type=style&index=0&scoped=0b9ac7f0&lang.css[22m
+[2m10:49:45[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionParameterMethodBindingView.vue, /src/views/DetectionParameterMethodBindingView.vue?vue&type=style&index=0&scoped=0b9ac7f0&lang.css[22m
+[2m10:56:25[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionParameterMethodBindingView.vue, /src/views/DetectionParameterMethodBindingView.vue?vue&type=style&index=0&scoped=0b9ac7f0&lang.css[22m
+[2m10:56:48[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionParameterMethodBindingView.vue[22m
+[2m10:59:12[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionParameterMethodBindingView.vue[22m
+[2m11:03:37[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionParameterMethodBindingView.vue, /src/views/DetectionParameterMethodBindingView.vue?vue&type=style&index=0&scoped=0b9ac7f0&lang.css[22m

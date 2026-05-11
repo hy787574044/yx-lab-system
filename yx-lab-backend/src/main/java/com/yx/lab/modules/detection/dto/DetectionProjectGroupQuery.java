@@ -4,15 +4,14 @@ import com.yx.lab.common.model.PageQuery;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
+/**
+ * 检测项目组查询条件。
+ */
 @Data
 @EqualsAndHashCode(callSuper = true)
-public class DetectionTypeQuery extends PageQuery {
+public class DetectionProjectGroupQuery extends PageQuery {
 
     private String keyword;
-
-    private Long groupId;
-
-    private Long detectorId;
 
     private Integer enabled;
 }

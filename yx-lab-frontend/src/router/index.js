@@ -7,6 +7,9 @@ const componentMap = {
   MonitoringPointView: () => import('../views/MonitoringPointView.vue'),
   SamplingView: () => import('../views/SamplingView.vue'),
   DetectionView: () => import('../views/DetectionView.vue'),
+  DetectionConfigView: () => import('../views/DetectionConfigView.vue'),
+  DetectionMethodView: () => import('../views/DetectionMethodView.vue'),
+  DetectionParameterMethodBindingView: () => import('../views/DetectionParameterMethodBindingView.vue'),
   ReviewView: () => import('../views/ReviewView.vue'),
   ReportView: () => import('../views/ReportView.vue'),
   AssetView: () => import('../views/AssetView.vue'),
@@ -43,7 +46,7 @@ const routes = [
     path: '/login',
     meta: {
       title: '系统登录',
-      subtitle: '登录阳新实验室水质管理平台'
+      subtitle: '登录阳新化验室水质管理平台'
     },
     component: () => import('../views/LoginView.vue')
   },
@@ -59,7 +62,7 @@ const routes = [
     path: '/mobile',
     meta: {
       title: '移动工作台',
-      subtitle: '面向移动终端的一体化实验室业务工作台'
+      subtitle: '面向移动终端的一体化化验室业务工作台'
     },
     component: () => import('../views/MobileWorkbenchView.vue')
   },
@@ -83,8 +86,8 @@ const router = createRouter({
 
 router.beforeEach((to, from, next) => {
   document.title = to.meta?.title
-    ? `${to.meta.title} - 阳新实验室水质管理平台`
-    : '阳新实验室水质管理平台'
+    ? `${to.meta.title} - 阳新化验室水质管理平台`
+    : '阳新化验室水质管理平台'
 
   if (to.path === '/login' || to.path === '/mobile/login') {
     next()

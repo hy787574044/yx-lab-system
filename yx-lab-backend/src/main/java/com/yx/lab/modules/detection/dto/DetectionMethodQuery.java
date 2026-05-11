@@ -6,13 +6,7 @@ import lombok.EqualsAndHashCode;
 
 @Data
 @EqualsAndHashCode(callSuper = true)
-public class DetectionTypeQuery extends PageQuery {
+public class DetectionMethodQuery extends PageQuery {
 
     private String keyword;
-
-    private Long groupId;
-
-    private Long detectorId;
-
-    private Integer enabled;
 }

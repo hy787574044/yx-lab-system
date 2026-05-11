@@ -5,24 +5,15 @@ import com.yx.lab.common.model.BaseEntity;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
+/**
+ * 检测项目组实体。
+ */
 @Data
-@TableName("lab_detection_type")
+@TableName("lab_detection_project_group")
 @EqualsAndHashCode(callSuper = true)
-public class DetectionType extends BaseEntity {
-
-    private String typeName;
-
-    private Long groupId;
+public class DetectionProjectGroup extends BaseEntity {
 
     private String groupName;
-
-    private Long detectorId;
-
-    private String detectorName;
-
-    private String parameterIds;
-
-    private String parameterNames;
 
     private Integer enabled;
 
