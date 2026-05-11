@@ -42,8 +42,7 @@
         <div class="toolbar-row">
           <div class="panel-note">{{ baseScene.note }}</div>
           <div class="toolbar-actions">
-            <el-button type="primary" @click="loadData">刷新检测记录</el-button>
-            <el-button v-if="baseScene.allowSubmit" @click="submitDemo">提交演示检测</el-button>
+            <el-button type="primary" @click="loadData">刷新检测流程</el-button>
             <el-button
               v-if="baseScene.key === 'detection-history'"
               type="primary"
@@ -65,11 +64,104 @@
       </div>
 
       <div class="table-card">
-        <el-table class="list-table" :data="pagedRecords" stripe max-height="460" :empty-text="baseScene.emptyText">
-          <el-table-column prop="sampleNo" label="样品编号" min-width="180" />
-          <el-table-column prop="sealNo" label="封签编号" min-width="180" />
-          <el-table-column prop="detectionTypeName" label="检测类别" min-width="180" />
-          <el-table-column prop="detectorName" label="检测人" width="120" />
+        <el-table
+          class="list-table"
+          :data="pagedRecords"
+          stripe
+          row-key="id"
+          max-height="560"
+          :empty-text="baseScene.emptyText"
+          @expand-change="handleExpandChange"
+        >
+          <el-table-column type="expand" width="56">
+            <template #default="{ row }">
+              <div v-if="row.__sampleOnly" class="subflow-empty">
+                <strong>该样品为历史旧数据</strong>
+                <p>当前只保留了样品主信息，尚未生成正式的参数子流程分配数据。建议重新登录该样品后再进行参数级分配。</p>
+              </div>
+
+              <div v-else-if="detailLoadingMap[row.id]" class="subflow-empty">
+                正在加载参数子流程...
+              </div>
+
+              <div v-else-if="getDetailItems(row.id).length" class="subflow-panel">
+                <div class="subflow-head">
+                  <div class="subflow-summary">
+                    <span class="status-chip info">参数 {{ getDetailItems(row.id).length }}</span>
+                    <span class="status-chip success">已分配 {{ countAssignedItems(row.id) }}</span>
+                    <span class="status-chip warning">待分配 {{ getDetailItems(row.id).length - countAssignedItems(row.id) }}</span>
+                  </div>
+                  <el-button
+                    v-if="canAssignRow(row)"
+                    type="primary"
+                    @click="saveAssignments(row)"
+                  >
+                    保存人员分配
+                  </el-button>
+                </div>
+
+                <div class="subflow-list">
+                  <article
+                    v-for="item in getDetailItems(row.id)"
+                    :key="item.id"
+                    class="subflow-card"
+                  >
+                    <div class="subflow-card__head">
+                      <div>
+                        <strong>{{ item.parameterName }}</strong>
+                        <p>{{ item.methodName || '未绑定检测方法' }}</p>
+                      </div>
+                      <span class="status-chip" :class="getItemStatusClass(item.itemStatus)">
+                        {{ getItemStatusLabel(item.itemStatus) }}
+                      </span>
+                    </div>
+
+                    <div class="subflow-meta">
+                      <span>标准范围：{{ formatStandardRange(item.standardMin, item.standardMax, item.unit) }}</span>
+                      <span>参考范围：{{ item.referenceStandard || '-' }}</span>
+                    </div>
+
+                    <div class="subflow-assign">
+                      <label>检测员分配</label>
+                      <el-select
+                        :model-value="getAssignedDetectorId(row.id, item.id)"
+                        :disabled="!canAssignRow(row)"
+                        clearable
+                        filterable
+                        placeholder="请选择检测员"
+                        @update:model-value="updateAssignedDetectorId(row.id, item.id, $event)"
+                      >
+                        <el-option
+                          v-for="option in detectorOptions"
+                          :key="option.id"
+                          :label="option.displayName || option.realName || option.username"
+                          :value="option.id"
+                        />
+                      </el-select>
+                    </div>
+                  </article>
+                </div>
+              </div>
+
+              <div v-else class="subflow-empty">
+                当前主流程下暂无参数子流程数据。
+              </div>
+            </template>
+          </el-table-column>
+
+          <el-table-column prop="sampleNo" label="样品编号" min-width="170" />
+          <el-table-column prop="sealNo" label="封签编号" min-width="170" />
+          <el-table-column prop="detectionTypeName" label="检测套餐" min-width="180" />
+          <el-table-column label="参数进度" min-width="150">
+            <template #default="{ row }">
+              {{ formatProgress(row) }}
+            </template>
+          </el-table-column>
+          <el-table-column label="检测人员" min-width="120">
+            <template #default="{ row }">
+              {{ row.detectorName || (row.detectionStatus === WAIT_ASSIGN_STATUS ? '待分配' : '-') }}
+            </template>
+          </el-table-column>
           <el-table-column label="检测结果" width="120" header-cell-class-name="cell-center" class-name="cell-center">
             <template #default="{ row }">
               <span class="status-chip" :class="getDetectionResultClass(row.detectionResult)">
@@ -77,15 +169,15 @@
               </span>
             </template>
           </el-table-column>
-          <el-table-column label="检测状态" width="120" header-cell-class-name="cell-center" class-name="cell-center">
+          <el-table-column label="流程状态" width="120" header-cell-class-name="cell-center" class-name="cell-center">
             <template #default="{ row }">
               <span class="status-chip" :class="getDetectionStatusClass(row.detectionStatus)">
                 {{ getDetectionStatusLabel(row.detectionStatus) }}
               </span>
             </template>
           </el-table-column>
-          <el-table-column prop="detectionTime" label="检测时间" width="170" />
-          <el-table-column prop="abnormalRemark" label="异常说明" min-width="180" show-overflow-tooltip />
+          <el-table-column prop="detectionTime" label="流程时间" width="170" />
+          <el-table-column prop="abnormalRemark" label="说明" min-width="220" show-overflow-tooltip />
         </el-table>
 
         <TablePagination
@@ -104,7 +196,7 @@
         </div>
         <div class="scene-copy">
           <p>{{ baseScene.guide }}</p>
-          <p>当前检测页已经区分“当前处理、历史追溯、全量台账”三种使用意图。</p>
+          <p>当前页面已经按“检测主流程 + 参数子流程”展开，样品登录后会先进入待分配，再按参数逐条分配检测员。</p>
         </div>
       </div>
 
@@ -134,67 +226,74 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElButton } from 'element-plus/es/components/button/index.mjs'
 import { ElMessage } from 'element-plus/es/components/message/index.mjs'
+import { ElOption, ElSelect } from 'element-plus/es/components/select/index.mjs'
 import { ElTable, ElTableColumn } from 'element-plus/es/components/table/index.mjs'
 import TablePagination from '../components/common/TablePagination.vue'
 import {
-  fetchDetectionParametersApi,
+  assignDetectionDetectorsApi,
+  fetchDetectionDetailApi,
+  fetchDetectionDetectorsApi,
   fetchDetectionsApi,
-  fetchDetectionTypesApi,
-  fetchSamplesApi,
-  submitDetectionApi
+  fetchSamplesApi
 } from '../api/lab'
 import {
   abnormalDetectionResult,
   approvedDetectionStatus,
-  availableDetectionSampleStatuses,
   DEFAULT_PAGE_SIZE,
   detectionResultLabelMap,
   detectionStatusLabelMap,
   getEnumLabel,
   getStatusClass,
-  loggedSampleStatus,
   rejectedDetectionStatus,
-  retestSampleStatus,
-  reviewPendingDetectionStatus
+  reviewPendingDetectionStatus,
+  availableDetectionSampleStatuses
 } from '../utils/labEnums'
 
 const route = useRoute()
 const router = useRouter()
 
-const WAITING_DETECTION_STATUS = 'WAITING'
-const WAITING_DETECTION_LABEL = '待检测'
+const WAIT_ASSIGN_STATUS = 'WAIT_ASSIGN'
+const WAIT_DETECT_STATUS = 'WAIT_DETECT'
 const MAX_LOAD_SIZE = 500
 
 const query = reactive({ pageNum: 1, pageSize: DEFAULT_PAGE_SIZE })
 const records = ref([])
 const samplePool = ref([])
+const detectorOptions = ref([])
 const activeStatKey = ref('all')
+const detailMap = reactive({})
+const detailLoadingMap = reactive({})
+const assignmentMap = reactive({})
 
-function toSafeNumber(value) {
-  const num = typeof value === 'number' ? value : Number.parseFloat(String(value ?? '').replace(/,/g, '').trim())
-  return Number.isFinite(num) ? num : 0
-}
-
-function parseDetectionItemsText(value) {
-  return String(value || '')
-    .split(/[，,、]/)
-    .map((item) => item.trim())
-    .filter(Boolean)
+function parseSampleConfigSnapshot(snapshotText) {
+  if (!snapshotText) {
+    return []
+  }
+  try {
+    const parsed = JSON.parse(snapshotText)
+    return Array.isArray(parsed) ? parsed.filter((item) => item && item.parameterId) : []
+  } catch {
+    return []
+  }
 }
 
 function buildPendingSampleRecord(sample) {
+  const configItems = parseSampleConfigSnapshot(sample.detectionConfigSnapshot)
   return {
-    id: `pending-${sample.id}`,
+    id: `pending-sample-${sample.id}`,
     sampleId: sample.id,
     sampleNo: sample.sampleNo,
     sealNo: sample.sealNo,
-    detectionTypeName: sample.detectionItems || '待分配检测项目',
-    detectorName: '待分配',
+    detectionTypeName: sample.detectionTypeName || sample.detectionItems || '待分配检测套餐',
+    detectorName: '',
     detectionResult: null,
-    detectionStatus: WAITING_DETECTION_STATUS,
+    detectionStatus: WAIT_ASSIGN_STATUS,
     detectionTime: sample.sealTime || sample.samplingTime || '',
-    abnormalRemark: sample.remark || '',
-    __pendingSample: true
+    abnormalRemark: '历史样品未自动生成参数子流程',
+    parameterCount: configItems.length,
+    assignedCount: 0,
+    completedCount: 0,
+    __sampleOnly: true
   }
 }
 
@@ -206,100 +305,105 @@ const sceneMap = {
   '/detection-analysis': {
     key: 'detection-analysis',
     title: '检测分析',
-    subtitle: '承接样品登录后的待检测样品与已提交检测记录，支持快速完成结果录入。',
-    tableTitle: '检测处理清单',
-    tableSubtitle: '样品登录完成后会直接进入这里，检测人员可继续提交检测结果。',
-    note: '当前页会同时展示待检测样品和已提交检测记录，避免样品登录后“有数量无列表”。',
-    guide: '如果没有可提交样品，请先在样品登录页完成样品登记；检测提交后可直接流转到结果审查。',
+    subtitle: '样品登录后先进入待分配检测流程，再按套餐参数拆分为多个待分配的检测子流程。',
+    tableTitle: '检测流程队列',
+    tableSubtitle: '展开每条主流程，即可查看套餐参数列表并逐条分配检测员。',
+    note: '当前页重点处理“待分配”和“待检测”两个阶段，分配完成后即可继续进入检测执行。',
+    guide: '建议先在本页完成参数级人员分配，再由检测员按各自分工执行后续检测录入。',
     defaultStatKey: 'all',
-    allowSubmit: true,
-    includePendingSamples: true,
     emptyText: '暂无检测分析数据',
-    recordFilter: () => true,
+    allowAssign: true,
+    includePendingFallback: true,
+    recordFilter: (item) => [WAIT_ASSIGN_STATUS, WAIT_DETECT_STATUS, reviewPendingDetectionStatus].includes(item.detectionStatus),
     quickLinks: [
-      { path: '/sample-login', label: '样品登录', desc: '先完成样品登记，再进入检测分析' },
-      { path: '/review-result', label: '结果审查', desc: '检测提交后进入审核闭环' },
-      { path: '/detection-history', label: '历史检测', desc: '查看已处理检测记录与异常回函' }
+      { path: '/sample-login', label: '样品登录', desc: '先完成样品登录，再进入检测分析分配检测员' },
+      { path: '/review-result', label: '结果审查', desc: '检测完成提交后进入结果审查闭环' },
+      { path: '/detection-history', label: '历史检测', desc: '查看已完成检测与驳回重检记录' }
     ]
   },
   '/detection-history': {
     key: 'detection-history',
     title: '历史检测',
-    subtitle: '回看已经完成提交的检测记录，重点查看已通过、已驳回与异常结果。',
+    subtitle: '回看已进入审查或已完成闭环的检测记录，重点核对异常结果与驳回重检情况。',
     tableTitle: '历史检测记录',
-    tableSubtitle: '本页只展示已经进入检测流程的历史记录，不再承接新的待检样品。',
-    note: '历史检测页强调回溯，不承担当前处理动作，避免把历史页做成重复入口。',
-    guide: '如果需要继续追踪驳回样品，可跳往历史审查页；若要看全量记录，请进入检测台账。',
+    tableSubtitle: '本页只保留历史追溯视角，不再承担当前待办分配动作。',
+    note: '历史页仅用于追溯检测链路，不再展示当前需要人员分配的流程。',
+    guide: '如需处理新的样品检测，请返回检测分析页；如需继续追踪审查结论，请前往历史审查。',
     defaultStatKey: 'approved',
-    allowSubmit: false,
-    includePendingSamples: false,
     emptyText: '暂无历史检测数据',
+    allowAssign: false,
+    includePendingFallback: false,
     recordFilter: (item) =>
       [approvedDetectionStatus, rejectedDetectionStatus].includes(item.detectionStatus)
       || item.detectionResult === abnormalDetectionResult,
     quickLinks: [
-      { path: '/review-history', label: '历史审查', desc: '继续查看检测结果的审核处理情况' },
-      { path: '/detection-ledger', label: '检测台账', desc: '切换到全量检测清单视角' },
-      { path: '/report-ledger', label: '报告台账', desc: '核对检测结果是否进入正式报告' }
+      { path: '/review-history', label: '历史审查', desc: '继续查看检测结果的审查处理结论' },
+      { path: '/detection-ledger', label: '检测台账', desc: '切换到全量检测主流程台账视角' },
+      { path: '/report-ledger', label: '报告台账', desc: '查看检测结果是否已沉淀为正式报告' }
     ]
   },
   '/detection-ledger': {
     key: 'detection-ledger',
     title: '检测台账',
-    subtitle: '集中查看全部检测记录，同时纳入已登录未检测样品，便于统一盘点。',
+    subtitle: '统一查看全部检测主流程，同时保留参数子流程与人员分配的完整留痕。',
     tableTitle: '检测全量台账',
-    tableSubtitle: '保留全量检测记录，并补充待检测样品视角，更适合管理与盘点。',
-    note: '检测台账页会把已登录但尚未提交检测的样品一并展示，避免流程断点。',
-    guide: '如需继续处理待检测样品，可回到检测分析页；如需继续审查，可前往结果审查。',
+    tableSubtitle: '适合管理端统一核对各状态主流程及其参数拆分情况。',
+    note: '台账页保留全部状态，既能看当前待办，也能看已提交、已审查与已驳回记录。',
+    guide: '如需实际执行分配动作，建议返回检测分析页操作；台账页更适合总览与核对。',
     defaultStatKey: 'all',
-    allowSubmit: false,
-    includePendingSamples: true,
     emptyText: '暂无检测台账数据',
+    allowAssign: false,
+    includePendingFallback: true,
     recordFilter: () => true,
     quickLinks: [
-      { path: '/detection-analysis', label: '检测分析', desc: '返回当前检测处理入口' },
-      { path: '/review-result', label: '结果审查', desc: '处理待审核检测结果' },
-      { path: '/sample-ledger', label: '样品台账', desc: '回看检测记录对应的样品来源' }
+      { path: '/detection-analysis', label: '检测分析', desc: '回到当前待分配和待检测主流程' },
+      { path: '/review-result', label: '结果审查', desc: '处理已经提交完成的检测结果' },
+      { path: '/sample-ledger', label: '样品台账', desc: '回看检测流程对应的样品来源信息' }
     ]
   }
 }
 
 const baseScene = computed(() => sceneMap[route.path] || sceneMap['/detection-analysis'])
-const pendingSampleRecords = computed(() => (
-  samplePool.value
+
+const pendingSampleRecords = computed(() => {
+  if (!baseScene.value.includePendingFallback) {
+    return []
+  }
+  const existingSampleIds = new Set(records.value.map((item) => item.sampleId))
+  return samplePool.value
     .filter((item) => availableDetectionSampleStatuses.includes(item.sampleStatus))
+    .filter((item) => !existingSampleIds.has(item.id))
     .map(buildPendingSampleRecord)
     .sort(compareByTimeDesc)
-))
-const sourceRecords = computed(() => {
-  const detectionRecords = [...records.value].sort(compareByTimeDesc)
-  if (!baseScene.value.includePendingSamples) {
-    return detectionRecords
-  }
-  return [...pendingSampleRecords.value, ...detectionRecords].sort(compareByTimeDesc)
 })
+
+const sourceRecords = computed(() => {
+  const actualRecords = [...records.value].sort(compareByTimeDesc)
+  if (!baseScene.value.includePendingFallback) {
+    return actualRecords
+  }
+  return [...actualRecords, ...pendingSampleRecords.value].sort(compareByTimeDesc)
+})
+
 const sceneRecords = computed(() => sourceRecords.value.filter((item) => baseScene.value.recordFilter(item)))
-const submittableSamples = computed(() => (
-  samplePool.value.filter((item) => availableDetectionSampleStatuses.includes(item.sampleStatus))
-))
 
 const currentScene = computed(() => ({
   ...baseScene.value,
   tags: [
     {
+      label: '待分配',
+      value: sceneRecords.value.filter((item) => item.detectionStatus === WAIT_ASSIGN_STATUS).length,
+      type: sceneRecords.value.some((item) => item.detectionStatus === WAIT_ASSIGN_STATUS) ? 'warning' : 'success'
+    },
+    {
+      label: '待检测',
+      value: sceneRecords.value.filter((item) => item.detectionStatus === WAIT_DETECT_STATUS).length,
+      type: sceneRecords.value.some((item) => item.detectionStatus === WAIT_DETECT_STATUS) ? 'info' : 'success'
+    },
+    {
       label: '待审查',
       value: sceneRecords.value.filter((item) => item.detectionStatus === reviewPendingDetectionStatus).length,
-      type: 'warning'
-    },
-    {
-      label: '已驳回',
-      value: sceneRecords.value.filter((item) => item.detectionStatus === rejectedDetectionStatus).length,
-      type: sceneRecords.value.some((item) => item.detectionStatus === rejectedDetectionStatus) ? 'danger' : 'success'
-    },
-    {
-      label: '待检测样品',
-      value: pendingSampleRecords.value.length,
-      type: pendingSampleRecords.value.length ? 'info' : 'success'
+      type: sceneRecords.value.some((item) => item.detectionStatus === reviewPendingDetectionStatus) ? 'danger' : 'success'
     }
   ]
 }))
@@ -307,79 +411,94 @@ const currentScene = computed(() => ({
 const currentStats = computed(() => [
   {
     key: 'all',
-    label: baseScene.value.key === 'detection-ledger' ? '台账总量' : '检测总览',
+    label: baseScene.value.key === 'detection-ledger' ? '台账总量' : '流程总量',
     value: sceneRecords.value.length,
-    desc: baseScene.value.key === 'detection-ledger' ? '检测台账总量' : '当前场景已加载的检测清单'
+    desc: baseScene.value.key === 'detection-ledger' ? '当前检测台账主流程总数' : '当前场景下可见的检测主流程总数'
+  },
+  {
+    key: 'waitAssign',
+    label: '待分配',
+    value: sceneRecords.value.filter((item) => item.detectionStatus === WAIT_ASSIGN_STATUS).length,
+    desc: '样品已进入检测分析，但参数子流程尚未完成检测员分配'
+  },
+  {
+    key: 'waitDetect',
+    label: '待检测',
+    value: sceneRecords.value.filter((item) => item.detectionStatus === WAIT_DETECT_STATUS).length,
+    desc: '参数子流程已完成检测员分配，等待检测执行'
   },
   {
     key: 'pendingReview',
     label: '待审查',
     value: sceneRecords.value.filter((item) => item.detectionStatus === reviewPendingDetectionStatus).length,
-    desc: '已提交但尚未审核的检测记录'
+    desc: '检测结果已提交，等待进入审查闭环'
   },
   {
     key: 'approved',
     label: '已通过',
-    value: sceneRecords.value.filter((item) => item.detectionStatus !== reviewPendingDetectionStatus && item.detectionStatus !== rejectedDetectionStatus && item.detectionStatus !== WAITING_DETECTION_STATUS).length,
-    desc: '已审核通过的检测记录'
+    value: sceneRecords.value.filter((item) => item.detectionStatus === approvedDetectionStatus).length,
+    desc: '检测审查已通过，可继续进入报告正式产物环节'
   },
   {
     key: 'rejected',
     label: '已驳回',
     value: sceneRecords.value.filter((item) => item.detectionStatus === rejectedDetectionStatus).length,
-    desc: '已被驳回并等待补检的检测记录'
-  },
-  {
-    key: 'abnormal',
-    label: '异常结果',
-    value: sceneRecords.value.filter((item) => item.detectionResult === abnormalDetectionResult).length,
-    desc: '检测结果判定为异常的记录'
-  },
-  {
-    key: 'todo-sample',
-    label: '待检测样品',
-    value: pendingSampleRecords.value.length,
-    desc: '样品已登录但尚未提交检测的待处理样品'
+    desc: '检测审查已驳回，样品重新回到重检待办链路'
   }
 ])
 
 const filteredRecords = computed(() => {
+  if (activeStatKey.value === 'waitAssign') {
+    return sceneRecords.value.filter((item) => item.detectionStatus === WAIT_ASSIGN_STATUS)
+  }
+  if (activeStatKey.value === 'waitDetect') {
+    return sceneRecords.value.filter((item) => item.detectionStatus === WAIT_DETECT_STATUS)
+  }
   if (activeStatKey.value === 'pendingReview') {
     return sceneRecords.value.filter((item) => item.detectionStatus === reviewPendingDetectionStatus)
   }
   if (activeStatKey.value === 'approved') {
-    return sceneRecords.value.filter((item) => (
-      item.detectionStatus !== reviewPendingDetectionStatus
-      && item.detectionStatus !== rejectedDetectionStatus
-      && item.detectionStatus !== WAITING_DETECTION_STATUS
-    ))
+    return sceneRecords.value.filter((item) => item.detectionStatus === approvedDetectionStatus)
   }
   if (activeStatKey.value === 'rejected') {
     return sceneRecords.value.filter((item) => item.detectionStatus === rejectedDetectionStatus)
-  }
-  if (activeStatKey.value === 'abnormal') {
-    return sceneRecords.value.filter((item) => item.detectionResult === abnormalDetectionResult)
-  }
-  if (activeStatKey.value === 'todo-sample') {
-    return sceneRecords.value.filter((item) => item.detectionStatus === WAITING_DETECTION_STATUS)
   }
   return sceneRecords.value
 })
 
 const displayTotal = computed(() => filteredRecords.value.length)
+
 const pagedRecords = computed(() => {
   const start = (query.pageNum - 1) * query.pageSize
   return filteredRecords.value.slice(start, start + query.pageSize)
 })
 
 function getDetectionStatusLabel(status) {
-  return status === WAITING_DETECTION_STATUS
-    ? WAITING_DETECTION_LABEL
-    : getEnumLabel(detectionStatusLabelMap, status)
+  if (status === WAIT_ASSIGN_STATUS) {
+    return '待分配'
+  }
+  if (status === WAIT_DETECT_STATUS) {
+    return '待检测'
+  }
+  return getEnumLabel(detectionStatusLabelMap, status)
 }
 
 function getDetectionStatusClass(status) {
-  return status === WAITING_DETECTION_STATUS ? 'info' : getStatusClass('detectionStatus', status)
+  if (status === WAIT_ASSIGN_STATUS) {
+    return 'warning'
+  }
+  if (status === WAIT_DETECT_STATUS) {
+    return 'info'
+  }
+  return getStatusClass('detectionStatus', status)
+}
+
+function getItemStatusLabel(status) {
+  return getDetectionStatusLabel(status)
+}
+
+function getItemStatusClass(status) {
+  return getDetectionStatusClass(status)
 }
 
 function getDetectionResultLabel(result) {
@@ -407,94 +526,129 @@ function goRoute(path) {
   router.push(path)
 }
 
-async function loadData() {
-  const [detectionResult, sampleResult] = await Promise.all([
-    fetchDetectionsApi({ pageNum: 1, pageSize: MAX_LOAD_SIZE }),
-    fetchSamplesApi({ pageNum: 1, pageSize: MAX_LOAD_SIZE })
+function formatStandardRange(min, max, unit) {
+  const suffix = unit ? ` ${unit}` : ''
+  if (min != null && max != null) {
+    return `${min} - ${max}${suffix}`
+  }
+  if (min != null) {
+    return `>= ${min}${suffix}`
+  }
+  if (max != null) {
+    return `<= ${max}${suffix}`
+  }
+  return `未设置${suffix}`
+}
+
+function formatProgress(row) {
+  const total = Number(row.parameterCount || 0)
+  const assigned = Number(row.assignedCount || 0)
+  const completed = Number(row.completedCount || 0)
+  if (!total) {
+    return '-'
+  }
+  return `${assigned}/${total} 已分配，${completed}/${total} 已提交`
+}
+
+function canAssignRow(row) {
+  return !row.__sampleOnly
+    && baseScene.value.allowAssign
+    && [WAIT_ASSIGN_STATUS, WAIT_DETECT_STATUS].includes(row.detectionStatus)
+}
+
+function getDetailItems(recordId) {
+  return detailMap[recordId]?.items || []
+}
+
+function countAssignedItems(recordId) {
+  return getDetailItems(recordId).filter((item) => {
+    const currentValue = assignmentMap[recordId]?.[item.id]
+    return currentValue !== null && currentValue !== undefined && currentValue !== ''
+  }).length
+}
+
+function ensureAssignmentState(recordId, items) {
+  assignmentMap[recordId] = items.reduce((result, item) => {
+    result[item.id] = item.detectorId ?? null
+    return result
+  }, {})
+}
+
+function getAssignedDetectorId(recordId, itemId) {
+  return assignmentMap[recordId]?.[itemId] ?? null
+}
+
+function updateAssignedDetectorId(recordId, itemId, value) {
+  if (!assignmentMap[recordId]) {
+    assignmentMap[recordId] = {}
+  }
+  assignmentMap[recordId][itemId] = value ?? null
+}
+
+async function loadRecordDetail(recordId, force = false) {
+  if (!recordId || recordId.toString().startsWith('pending-sample-')) {
+    return
+  }
+  if (!force && detailMap[recordId]) {
+    return
+  }
+  detailLoadingMap[recordId] = true
+  try {
+    const detail = await fetchDetectionDetailApi(recordId)
+    detailMap[recordId] = detail || { items: [] }
+    ensureAssignmentState(recordId, detailMap[recordId].items || [])
+  } finally {
+    detailLoadingMap[recordId] = false
+  }
+}
+
+async function handleExpandChange(row, expandedRows) {
+  if (row.__sampleOnly) {
+    return
+  }
+  const expanded = expandedRows.some((item) => item.id === row.id)
+  if (expanded) {
+    await loadRecordDetail(row.id)
+  }
+}
+
+async function saveAssignments(row) {
+  const detailItems = getDetailItems(row.id)
+  if (!detailItems.length) {
+    ElMessage.warning('当前主流程下没有可分配的参数子流程')
+    return
+  }
+  await assignDetectionDetectorsApi(row.id, {
+    items: detailItems.map((item) => ({
+      itemId: item.id,
+      detectorId: getAssignedDetectorId(row.id, item.id)
+    }))
+  })
+  ElMessage.success('检测员分配已保存')
+  await Promise.all([
+    loadRecordDetail(row.id, true),
+    loadData()
   ])
+}
+
+async function loadData() {
+  const [detectionResult, sampleResult, detectorResult] = await Promise.all([
+    fetchDetectionsApi({ pageNum: 1, pageSize: MAX_LOAD_SIZE }),
+    fetchSamplesApi({ pageNum: 1, pageSize: MAX_LOAD_SIZE }),
+    fetchDetectionDetectorsApi()
+  ])
+
   records.value = detectionResult.records || []
   samplePool.value = sampleResult.records || []
+  detectorOptions.value = (detectorResult || []).map((item) => ({
+    ...item,
+    id: item.userId ?? item.id
+  }))
 
   const maxPage = Math.max(1, Math.ceil(displayTotal.value / query.pageSize))
   if (query.pageNum > maxPage) {
     query.pageNum = 1
   }
-}
-
-async function submitDemo() {
-  const availableSamples = submittableSamples.value
-  const sample = availableSamples.find((item) => item.sampleStatus === retestSampleStatus)
-    || availableSamples.find((item) => item.sampleStatus === loggedSampleStatus)
-
-  if (!sample) {
-    ElMessage.warning('请先准备一条已登录或待重检的样品。')
-    return
-  }
-
-  const typeResult = await fetchDetectionTypesApi({ pageNum: 1, pageSize: 100 })
-  const enabledTypes = (typeResult.records || []).filter((item) => item.enabled === 1)
-  const expectedTypeNames = parseDetectionItemsText(sample.detectionItems)
-  const detectionType = enabledTypes.find((item) => expectedTypeNames.includes(item.typeName)) || enabledTypes[0]
-  if (!detectionType) {
-    ElMessage.warning('请先启用一项检测类别配置。')
-    return
-  }
-
-  const parameterIdList = String(detectionType.parameterIds || '')
-    .split(',')
-    .map((item) => Number(item.trim()))
-    .filter((item) => Number.isFinite(item))
-
-  if (!parameterIdList.length) {
-    ElMessage.warning('当前检测类别尚未配置检测参数。')
-    return
-  }
-
-  const parameterResult = await fetchDetectionParametersApi({ pageNum: 1, pageSize: 200 })
-  const parameterMap = new Map((parameterResult.records || []).map((item) => [item.id, item]))
-  const configuredParameters = parameterIdList
-    .map((id) => parameterMap.get(id))
-    .filter((item) => item && item.enabled === 1)
-
-  if (configuredParameters.length !== parameterIdList.length) {
-    ElMessage.warning('当前检测类别存在未启用或缺失的检测参数，请先修正配置。')
-    return
-  }
-
-  await submitDetectionApi({
-    sampleId: sample.id,
-    detectionTypeId: detectionType.id,
-    detectionTypeName: detectionType.typeName,
-    items: configuredParameters.map((parameter, index) => ({
-      parameterId: parameter.id,
-      parameterName: parameter.parameterName,
-      standardMin: parameter.standardMin,
-      standardMax: parameter.standardMax,
-      resultValue: buildDemoResult(parameter, index),
-      unit: parameter.unit
-    }))
-  })
-
-  ElMessage.success(
-    sample.sampleStatus === retestSampleStatus
-      ? '重检记录已提交，样品重新进入审核流程。'
-      : '检测记录已提交。'
-  )
-  query.pageNum = 1
-  await loadData()
-}
-
-function buildDemoResult(parameter, index) {
-  if (parameter.standardMin != null && parameter.standardMax != null) {
-    return Number(((Number(parameter.standardMin) + Number(parameter.standardMax)) / 2).toFixed(2))
-  }
-  if (parameter.standardMax != null) {
-    return Number((Math.max(Number(parameter.standardMax) - 0.1, 0)).toFixed(2))
-  }
-  if (parameter.standardMin != null) {
-    return Number((Number(parameter.standardMin) + 0.1).toFixed(2))
-  }
-  return Number((0.5 + index * 0.1).toFixed(2))
 }
 
 onMounted(async () => {
@@ -598,6 +752,98 @@ watch(() => route.fullPath, () => {
   line-height: 1.6;
 }
 
+.subflow-panel {
+  display: grid;
+  gap: 16px;
+  padding: 8px 6px;
+}
+
+.subflow-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.subflow-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.subflow-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.subflow-card {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--line-soft);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(250, 252, 255, 0.98), rgba(244, 248, 255, 0.92));
+}
+
+.subflow-card__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.subflow-card__head strong {
+  display: block;
+  color: var(--text-main);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.subflow-card__head p {
+  margin: 6px 0 0;
+  color: var(--text-sub);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.subflow-meta {
+  display: grid;
+  gap: 8px;
+  color: var(--text-sub);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.subflow-assign {
+  display: grid;
+  gap: 8px;
+}
+
+.subflow-assign label {
+  color: var(--text-main);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.subflow-empty {
+  padding: 20px 14px;
+  color: var(--text-sub);
+  line-height: 1.8;
+}
+
+.subflow-empty strong {
+  display: block;
+  color: var(--text-main);
+  margin-bottom: 6px;
+}
+
+@media (max-width: 1100px) {
+  .subflow-list {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 900px) {
   .page-hero,
   .scene-grid {
@@ -606,6 +852,11 @@ watch(() => route.fullPath, () => {
 
   .hero-tags {
     justify-content: flex-start;
+  }
+
+  .subflow-head {
+    align-items: stretch;
+    flex-direction: column;
   }
 }
 </style>

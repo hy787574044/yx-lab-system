@@ -1,6 +1,7 @@
 package com.yx.lab.modules.detection.entity;
 
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.yx.lab.common.model.BaseEntity;
 import lombok.Data;
@@ -35,4 +36,13 @@ public class DetectionRecord extends BaseEntity {
     private String abnormalRemark;
 
     private String detectionStatus;
+
+    @TableField(exist = false)
+    private Integer parameterCount;
+
+    @TableField(exist = false)
+    private Integer assignedCount;
+
+    @TableField(exist = false)
+    private Integer completedCount;
 }

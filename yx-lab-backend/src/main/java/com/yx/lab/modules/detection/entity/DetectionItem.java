@@ -26,5 +26,17 @@ public class DetectionItem extends BaseEntity {
 
     private String unit;
 
+    private String referenceStandard;
+
+    private Long methodId;
+
+    private String methodName;
+
+    private Long detectorId;
+
+    private String detectorName;
+
+    private String itemStatus;
+
     private Integer exceedFlag;
 }

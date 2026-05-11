@@ -134,6 +134,10 @@ public final class LabWorkflowConstants {
 
     public static final class DetectionStatus {
 
+        public static final String WAIT_ASSIGN = "WAIT_ASSIGN";
+
+        public static final String WAIT_DETECT = "WAIT_DETECT";
+
         public static final String SUBMITTED = "SUBMITTED";
 
         public static final String APPROVED = "APPROVED";
@@ -262,6 +266,11 @@ public final class LabWorkflowConstants {
             SampleStatus.LOGGED,
             SampleStatus.RETEST);
 
+    public static final Set<String> ACTIVE_DETECTION_RECORD_STATUSES = unmodifiableSet(
+            DetectionStatus.WAIT_ASSIGN,
+            DetectionStatus.WAIT_DETECT,
+            DetectionStatus.SUBMITTED);
+
     public static boolean isKnownInstrumentStatus(String status) {
         return INSTRUMENT_STATUSES.contains(status);
     }
@@ -304,6 +313,11 @@ public final class LabWorkflowConstants {
 
     public static boolean canReviewDetection(String detectionStatus) {
         return DetectionStatus.SUBMITTED.equals(detectionStatus);
+    }
+
+    public static boolean canAssignDetection(String detectionStatus) {
+        return DetectionStatus.WAIT_ASSIGN.equals(detectionStatus)
+                || DetectionStatus.WAIT_DETECT.equals(detectionStatus);
     }
 
     public static String detectionStatusForReviewResult(String reviewResult) {

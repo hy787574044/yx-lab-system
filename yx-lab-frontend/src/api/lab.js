@@ -282,6 +282,8 @@ export const saveDetectionParameterMethodBindingsApi = (parameterId, data) => re
  */
 export const fetchDetectionMethodOptionsApi = () => request.get('/api/detection-config/methods/options')
 export const fetchDetectionsApi = (params) => request.get('/api/detections', { params })
+export const fetchDetectionDetailApi = (id) => request.get(`/api/detections/${id}`)
+export const assignDetectionDetectorsApi = (id, data) => request.post(`/api/detections/${id}/assign-detectors`, data)
 /**
  * 提交检测结果。
  *

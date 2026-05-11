@@ -16,6 +16,7 @@ import com.yx.lab.modules.detection.entity.DetectionMethod;
 import com.yx.lab.modules.detection.entity.DetectionType;
 import com.yx.lab.modules.detection.mapper.DetectionMethodMapper;
 import com.yx.lab.modules.detection.mapper.DetectionTypeMapper;
+import com.yx.lab.modules.detection.service.DetectionPendingFlowService;
 import com.yx.lab.modules.sample.dto.LabSampleQuery;
 import com.yx.lab.modules.sample.dto.SampleDetectionConfigItem;
 import com.yx.lab.modules.sample.dto.SampleLoginCommand;
@@ -42,6 +43,8 @@ public class LabSampleService {
     private final DetectionTypeMapper detectionTypeMapper;
 
     private final DetectionMethodMapper detectionMethodMapper;
+
+    private final DetectionPendingFlowService detectionPendingFlowService;
 
     private final ObjectMapper objectMapper;
 
@@ -109,6 +112,7 @@ public class LabSampleService {
             task.setSealNo(sample.getSealNo());
             samplingTaskMapper.updateById(task);
         }
+        detectionPendingFlowService.createPendingFlowIfMissing(sample);
         return sample;
     }
 

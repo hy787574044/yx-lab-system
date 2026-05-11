@@ -2,6 +2,7 @@ package com.yx.lab.modules.detection.controller;
 
 import com.yx.lab.common.model.ApiResponse;
 import com.yx.lab.common.model.PageResult;
+import com.yx.lab.modules.detection.dto.DetectionAssignCommand;
 import com.yx.lab.modules.detection.dto.DetectionRecordQuery;
 import com.yx.lab.modules.detection.dto.DetectionSubmitCommand;
 import com.yx.lab.modules.detection.entity.DetectionRecord;
@@ -22,7 +23,6 @@ import javax.validation.Valid;
 
 /**
  * 检测流程控制器。
- * 负责检测记录查询与检测结果提交流程。
  */
 @RestController
 @RequestMapping("/api/detections")
@@ -33,34 +33,35 @@ public class DetectionWorkflowController {
     private final DetectionWorkflowService detectionWorkflowService;
 
     /**
-     * 分页查询检测记录。
-     *
-     * @param query 检测记录查询条件。
-     * @return 检测记录分页结果。
+     * 分页查询检测主流程。
      */
     @GetMapping
-    @Operation(summary = "检测记录分页")
+    @Operation(summary = "检测主流程分页")
     public ApiResponse<PageResult<DetectionRecord>> page(@Validated DetectionRecordQuery query) {
         return ApiResponse.success(detectionWorkflowService.page(query));
     }
 
     /**
-     * 获取检测记录详情。
-     *
-     * @param id 检测记录主键。
-     * @return 检测记录详情。
+     * 查询检测主流程详情。
      */
     @GetMapping("/{id}")
-    @Operation(summary = "检测记录详情")
+    @Operation(summary = "检测主流程详情")
     public ApiResponse<DetectionRecordDetailVO> detail(@PathVariable Long id) {
         return ApiResponse.success(detectionWorkflowService.detail(id));
     }
 
     /**
+     * 为检测主流程下的参数子流程分配检测员。
+     */
+    @PostMapping("/{id}/assign-detectors")
+    @Operation(summary = "分配检测员")
+    public ApiResponse<Void> assignDetectors(@PathVariable Long id, @Valid @RequestBody DetectionAssignCommand command) {
+        detectionWorkflowService.assignDetectors(id, command);
+        return ApiResponse.successMessage("检测员分配成功");
+    }
+
+    /**
      * 提交检测结果。
-     *
-     * @param command 检测提交命令。
-     * @return 提交结果。
      */
     @PostMapping("/submit")
     @Operation(summary = "提交检测结果")

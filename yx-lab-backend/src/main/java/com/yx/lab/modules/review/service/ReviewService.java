@@ -11,6 +11,7 @@ import com.yx.lab.common.security.SecurityContext;
 import com.yx.lab.common.util.PageUtils;
 import com.yx.lab.modules.detection.entity.DetectionRecord;
 import com.yx.lab.modules.detection.mapper.DetectionRecordMapper;
+import com.yx.lab.modules.detection.service.DetectionPendingFlowService;
 import com.yx.lab.modules.report.service.ReportService;
 import com.yx.lab.modules.review.dto.ReviewCommand;
 import com.yx.lab.modules.review.dto.ReviewQuery;
@@ -25,6 +26,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 
+/**
+ * 检测结果审查服务。
+ */
 @Service
 @RequiredArgsConstructor
 public class ReviewService {
@@ -37,8 +41,13 @@ public class ReviewService {
 
     private final LabSampleService labSampleService;
 
+    private final DetectionPendingFlowService detectionPendingFlowService;
+
     private final ReportService reportService;
 
+    /**
+     * 分页查询审查记录。
+     */
     public PageResult<ReviewRecord> page(ReviewQuery query) {
         CurrentUser currentUser = SecurityContext.getCurrentUser();
         Page<ReviewRecord> page = reviewRecordMapper.selectPage(
@@ -54,6 +63,9 @@ public class ReviewService {
         return new PageResult<>(page.getTotal(), page.getRecords());
     }
 
+    /**
+     * 提交审查结果。
+     */
     @Transactional(rollbackFor = Exception.class)
     public void review(ReviewCommand command) {
         DetectionRecord record = detectionRecordMapper.selectById(command.getDetectionRecordId());
@@ -61,7 +73,7 @@ public class ReviewService {
             throw new BusinessException("检测记录不存在");
         }
         if (!LabWorkflowConstants.canReviewDetection(record.getDetectionStatus())) {
-            throw new BusinessException("当前检测记录不在待审核状态");
+            throw new BusinessException("当前检测记录不在待审查状态");
         }
 
         LabSample sample = labSampleMapper.selectById(record.getSampleId());
@@ -99,19 +111,22 @@ public class ReviewService {
                     sample.getId(),
                     nextSampleStatus,
                     record.getDetectionResult(),
-                    "审核通过：封签号=" + sample.getSealNo()
-                            + "，审核人=" + currentUser.getRealName()
+                    "审查通过：封签号=" + sample.getSealNo()
+                            + "，审查人=" + currentUser.getRealName()
                             + "，结果=" + record.getDetectionResult());
             reportService.createApprovedReport(sample, record);
-        } else {
-            labSampleService.updateStatus(
-                    sample.getId(),
-                    nextSampleStatus,
-                    buildRetestSummary(rejectReason, reviewRemark),
-                    "审核驳回：封签号=" + sample.getSealNo()
-                            + "，审核人=" + currentUser.getRealName()
-                            + "，原因=" + rejectReason);
+            return;
         }
+
+        labSampleService.updateStatus(
+                sample.getId(),
+                nextSampleStatus,
+                buildRetestSummary(rejectReason, reviewRemark),
+                "审查驳回：封签号=" + sample.getSealNo()
+                        + "，审查人=" + currentUser.getRealName()
+                        + "，原因=" + rejectReason);
+        sample.setSampleStatus(nextSampleStatus);
+        detectionPendingFlowService.createPendingFlowIfMissing(sample);
     }
 
     private String buildRetestSummary(String rejectReason, String reviewRemark) {

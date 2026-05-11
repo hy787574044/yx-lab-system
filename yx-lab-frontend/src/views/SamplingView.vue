@@ -210,6 +210,11 @@
           <el-table-column prop="storageCondition" label="保存条件" width="140" />
           <el-table-column prop="resultSummary" label="结果摘要" min-width="180" show-overflow-tooltip />
           <el-table-column prop="traceLog" label="流程留痕" min-width="260" show-overflow-tooltip />
+          <el-table-column label="操作" width="140" fixed="right" class-name="cell-center" header-cell-class-name="cell-center">
+            <template #default="{ row }">
+              <el-button link type="primary" @click="openSampleDetailDialog(row)">查看登记明细</el-button>
+            </template>
+          </el-table-column>
         </el-table>
 
         <TablePagination
@@ -504,15 +509,23 @@
 
     <el-dialog
       v-model="loginDialogVisible"
-      title="样品登录"
-      width="1040px"
+      class="sample-login-dialog"
+      :title="loginDialogTitle"
+      width="1180px"
       destroy-on-close
       @closed="resetLoginForm"
     >
       <el-form label-width="96px">
         <div class="login-form-grid">
-          <el-form-item label="待登录任务">
+          <el-form-item :label="isLoginReadonly ? '关联任务' : '待登录任务'">
+            <el-input
+              v-if="isLoginReadonly"
+              :model-value="loginPreviewTaskLabel"
+              readonly
+              placeholder="该样品为无任务直登"
+            />
             <el-select
+              v-else
               v-model="loginForm.taskId"
               placeholder="请选择已完成采样且未登录的任务"
               style="width: 100%"
@@ -529,15 +542,21 @@
           <el-form-item label="OCR封签号">
             <el-input
               v-model="loginForm.sealNo"
+              :readonly="isLoginReadonly"
               placeholder="可粘贴 OCR 识别结果，自动匹配采样任务"
-              @change="handleLoginSealNoChange"
+              @change="isLoginReadonly ? undefined : handleLoginSealNoChange"
             />
           </el-form-item>
           <el-form-item label="点位名称">
-            <el-input v-model="loginForm.pointName" placeholder="请输入点位名称" />
+            <el-input v-model="loginForm.pointName" :readonly="isLoginReadonly" placeholder="请输入点位名称" />
           </el-form-item>
           <el-form-item label="样品类型">
-            <el-select v-model="loginForm.sampleType" style="width: 100%">
+            <el-input
+              v-if="isLoginReadonly"
+              :model-value="getEnumLabel(sampleTypeLabelMap, loginForm.sampleType) || loginForm.sampleType || '-'"
+              readonly
+            />
+            <el-select v-else v-model="loginForm.sampleType" style="width: 100%">
               <el-option
                 v-for="option in sampleTypeOptions"
                 :key="option.value"
@@ -549,8 +568,14 @@
           <el-form-item label="采样人员">
             <el-input v-model="loginForm.samplerName" readonly />
           </el-form-item>
-          <el-form-item class="login-form-span-2" label="检测套餐">
+          <el-form-item class="login-form-span-2 login-form-half-row" label="检测套餐">
+            <el-input
+              v-if="isLoginReadonly"
+              :model-value="loginForm.detectionTypeName || loginForm.detectionItems || '-'"
+              readonly
+            />
             <el-select
+              v-else
               v-model="loginForm.detectionTypeId"
               clearable
               filterable
@@ -573,20 +598,22 @@
                   已选参数<strong>{{ loginDetectionConfigRows.length }}</strong>
                 </span>
                 <span class="login-config-panel__note">
-                  选择检测套餐后，系统会带出对应检测参数；你可以临时增删参数并调整方法，仅对本次样品登录生效，不会改动原检测套餐。
+                  {{ loginConfigPanelNote }}
                 </span>
-                <el-button type="primary" plain size="small" @click="appendLoginConfigRow">新增参数</el-button>
+                <el-button v-if="!isLoginReadonly" type="primary" plain size="small" @click="appendLoginConfigRow">新增参数</el-button>
               </div>
               <el-table
                 class="login-config-table"
                 :data="loginDetectionConfigRows"
                 size="small"
-                max-height="280"
+                max-height="460"
                 border
               >
                 <el-table-column label="检测参数名称" min-width="180">
                   <template #default="{ row, $index }">
+                    <span v-if="isLoginReadonly">{{ row.parameterName || '-' }}</span>
                     <el-select
+                      v-else
                       v-model="row.parameterId"
                       placeholder="请选择检测参数"
                       style="width: 100%"
@@ -614,7 +641,9 @@
                 </el-table-column>
                 <el-table-column label="检测方法" min-width="220">
                   <template #default="{ row }">
+                    <span v-if="isLoginReadonly">{{ row.methodName || '-' }}</span>
                     <el-select
+                      v-else
                       v-model="row.methodId"
                       placeholder="请选择检测方法"
                       style="width: 100%"
@@ -630,19 +659,21 @@
                     </el-select>
                   </template>
                 </el-table-column>
-                <el-table-column label="操作" width="90" class-name="cell-center" header-cell-class-name="cell-center">
+                <el-table-column v-if="!isLoginReadonly" label="操作" width="90" class-name="cell-center" header-cell-class-name="cell-center">
                   <template #default="{ $index }">
                     <el-button link type="danger" @click="removeLoginConfigRow($index)">删除</el-button>
                   </template>
                 </el-table-column>
               </el-table>
               <div v-if="!loginDetectionConfigRows.length" class="empty-block">
-                当前套餐参数已被临时清空，可点击“新增参数”按需补充本次样品的检测参数与检测方法。
+                {{ isLoginReadonly ? '当前样品未登记套餐参数明细。' : '当前套餐参数已被临时清空，可点击“新增参数”按需补充本次样品的检测参数与检测方法。' }}
               </div>
             </div>
           </el-form-item>
           <el-form-item label="采样时间">
+            <el-input v-if="isLoginReadonly" :model-value="loginForm.samplingTime || '-'" readonly />
             <el-date-picker
+              v-else
               v-model="loginForm.samplingTime"
               type="datetime"
               format="YYYY-MM-DD HH:mm:ss"
@@ -651,19 +682,19 @@
             />
           </el-form-item>
           <el-form-item label="天气">
-            <el-input v-model="loginForm.weather" placeholder="请输入采样时天气情况" />
+            <el-input v-model="loginForm.weather" :readonly="isLoginReadonly" placeholder="请输入采样时天气情况" />
           </el-form-item>
           <el-form-item label="保存条件">
-            <el-input v-model="loginForm.storageCondition" placeholder="例如冷藏避光、常温送检" />
+            <el-input v-model="loginForm.storageCondition" :readonly="isLoginReadonly" placeholder="例如冷藏避光、常温送检" />
           </el-form-item>
           <el-form-item label="备注">
-            <el-input v-model="loginForm.remark" placeholder="可补充样品来源、容器信息等说明" />
+            <el-input v-model="loginForm.remark" :readonly="isLoginReadonly" placeholder="可补充样品来源、容器信息等说明" />
           </el-form-item>
         </div>
       </el-form>
       <template #footer>
-        <el-button @click="loginDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="submitting" @click="submitSampleLogin">确认登录</el-button>
+        <el-button @click="loginDialogVisible = false">{{ isLoginReadonly ? '关闭' : '取消' }}</el-button>
+        <el-button v-if="!isLoginReadonly" type="primary" :loading="submitting" @click="submitSampleLogin">确认登录</el-button>
       </template>
     </el-dialog>
   </div>
@@ -752,6 +783,7 @@ const taskTotal = ref(0)
 const sampleTotal = ref(0)
 const activeStatKey = ref('tasks:pending')
 const loginDialogVisible = ref(false)
+const loginDialogMode = ref('create')
 const planDialogVisible = ref(false)
 const dispatchDialogVisible = ref(false)
 const editingPlanId = ref(null)
@@ -763,6 +795,7 @@ const samplerLoading = ref(false)
 const detectionProjectOptions = ref([])
 const detectionParameterOptions = ref([])
 const detectionMethodOptions = ref([])
+const loginPreviewTaskLabel = ref('')
 
 const loginForm = reactive({
   taskId: null,
@@ -781,6 +814,14 @@ const loginForm = reactive({
   storageCondition: '',
   remark: ''
 })
+
+const isLoginReadonly = computed(() => loginDialogMode.value === 'view')
+const loginDialogTitle = computed(() => isLoginReadonly.value ? '样品登记明细' : '样品登录')
+const loginConfigPanelNote = computed(() => (
+  isLoginReadonly.value
+    ? '当前仅展示该样品登记时保存的套餐参数与检测方法明细，不可在此窗口中修改。'
+    : '选择检测套餐后，系统会带出对应检测参数；你可以临时增删参数并调整方法，仅对本次样品登录生效，不会改动原检测套餐。'
+))
 
 const planForm = reactive({
   planName: '',
@@ -1565,6 +1606,39 @@ function buildLoginDetectionConfigItems(detectionType) {
     .filter(Boolean)
 }
 
+function buildLoginConfigRowFromSnapshot(item) {
+  const parameterId = String(item?.parameterId || '').trim()
+  const parameter = detectionParameterOptions.value.find((option) => String(option.id) === parameterId)
+  const methodId = String(item?.methodId || '').trim()
+  let methodOptions = getLoginMethodOptionsByParameter(parameterId)
+  if (methodId && !methodOptions.some((option) => option.id === methodId)) {
+    methodOptions = [
+      ...methodOptions,
+      {
+        id: methodId,
+        methodName: item?.methodName || `检测方法-${methodId}`
+      }
+    ]
+  }
+  return {
+    parameterId,
+    parameterName: item?.parameterName || parameter?.parameterName || '',
+    unit: item?.unit || parameter?.unit || '',
+    standardMin: item?.standardMin ?? parameter?.standardMin ?? null,
+    standardMax: item?.standardMax ?? parameter?.standardMax ?? null,
+    referenceStandard: item?.referenceStandard || parameter?.referenceStandard || '',
+    methodId,
+    methodName: item?.methodName || methodOptions.find((option) => option.id === methodId)?.methodName || '',
+    methodOptions
+  }
+}
+
+function parseSampleDetectionConfigSnapshot(snapshot) {
+  return parseBindingJson(snapshot)
+    .map((item) => buildLoginConfigRowFromSnapshot(item))
+    .filter((item) => item.parameterId || item.parameterName || item.methodId || item.methodName)
+}
+
 const loginDetectionConfigRows = computed(() => loginForm.detectionConfigItems)
 const enabledLoginParameterOptions = computed(() => (
   detectionParameterOptions.value
@@ -1721,6 +1795,8 @@ function applyTaskToLoginForm(task) {
 }
 
 function resetLoginForm() {
+  loginDialogMode.value = 'create'
+  loginPreviewTaskLabel.value = ''
   loginForm.taskId = null
   loginForm.sealNo = ''
   loginForm.pointId = null
@@ -1745,7 +1821,52 @@ async function openLoginDialog(task = firstLoggableTask.value) {
   }
   await loadDetectionProjects()
   resetLoginForm()
+  loginDialogMode.value = 'create'
   applyTaskToLoginForm(task || pendingLoggableTasks.value[0])
+  loginDialogVisible.value = true
+}
+
+function buildSampleTaskPreviewLabel(sample) {
+  const sampleNo = sample?.sampleNo || '未生成样品编号'
+  const sealNo = sample?.sealNo || '未录入封签号'
+  const pointName = sample?.pointName || '未命名点位'
+  const samplerName = sample?.samplerName || '未指定采样员'
+  if (sample?.taskId) {
+    return `任务ID-${sample.taskId} / ${sealNo} / ${pointName} / ${samplerName}`
+  }
+  return `无任务直登 / ${sampleNo} / ${sealNo} / ${pointName} / ${samplerName}`
+}
+
+function applySampleToLoginForm(sample) {
+  if (!sample) {
+    return
+  }
+  loginForm.taskId = sample.taskId || null
+  loginPreviewTaskLabel.value = buildSampleTaskPreviewLabel(sample)
+  loginForm.sealNo = sample.sealNo || ''
+  loginForm.pointId = sample.pointId || null
+  loginForm.pointName = sample.pointName || ''
+  loginForm.sampleType = sample.sampleType || ''
+  loginForm.detectionItems = parseDetectionItemsText(sample.detectionItems)
+  loginForm.detectionTypeId = sample.detectionTypeId || null
+  loginForm.detectionTypeName = sample.detectionTypeName || sample.detectionItems || ''
+  loginForm.detectionConfigItems = parseSampleDetectionConfigSnapshot(sample.detectionConfigSnapshot)
+  if (!loginForm.detectionConfigItems.length && loginForm.detectionTypeId) {
+    loginForm.detectionConfigItems = buildLoginDetectionConfigItems(getDetectionTypeById(loginForm.detectionTypeId))
+  }
+  loginForm.samplingTime = sample.samplingTime || ''
+  loginForm.samplerId = sample.samplerId || null
+  loginForm.samplerName = sample.samplerName || ''
+  loginForm.weather = sample.weather || ''
+  loginForm.storageCondition = sample.storageCondition || ''
+  loginForm.remark = sample.remark || ''
+}
+
+async function openSampleDetailDialog(sample) {
+  await loadDetectionProjects()
+  resetLoginForm()
+  loginDialogMode.value = 'view'
+  applySampleToLoginForm(sample)
   loginDialogVisible.value = true
 }
 
@@ -1924,6 +2045,17 @@ watch(() => route.fullPath, () => {
   line-height: 1.7;
 }
 
+:deep(.sample-login-dialog) {
+  width: min(1180px, calc(100vw - 40px));
+  margin-top: 8vh;
+}
+
+:deep(.sample-login-dialog .el-dialog__body) {
+  max-height: calc(100vh - 150px);
+  overflow-y: auto;
+  padding-top: 18px;
+}
+
 .login-form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1932,6 +2064,10 @@ watch(() => route.fullPath, () => {
 
 .login-form-span-2 {
   grid-column: 1 / -1;
+}
+
+.login-form-half-row {
+  width: calc(50% - 8px);
 }
 
 .login-config-panel {
@@ -1977,6 +2113,10 @@ watch(() => route.fullPath, () => {
 
 .login-config-table {
   width: 100%;
+}
+
+:deep(.sample-login-dialog .login-config-table .el-table__inner-wrapper) {
+  min-height: 0;
 }
 
 .empty-block {
@@ -2030,6 +2170,15 @@ watch(() => route.fullPath, () => {
 }
 
 @media (max-width: 900px) {
+  :deep(.sample-login-dialog) {
+    width: calc(100vw - 20px);
+    margin-top: 2vh;
+  }
+
+  :deep(.sample-login-dialog .el-dialog__body) {
+    max-height: calc(100vh - 120px);
+  }
+
   .page-hero,
   .scene-grid {
     grid-template-columns: 1fr;
@@ -2041,6 +2190,10 @@ watch(() => route.fullPath, () => {
 
   .login-form-grid {
     grid-template-columns: 1fr;
+  }
+
+  .login-form-half-row {
+    width: 100%;
   }
 
   .plan-form-grid {
