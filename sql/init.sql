@@ -218,8 +218,13 @@ DROP TABLE IF EXISTS lab_detection_type;
 CREATE TABLE lab_detection_type (
     id BIGINT PRIMARY KEY,
     type_name VARCHAR(64) NOT NULL,
+    group_id BIGINT,
+    group_name VARCHAR(64),
+    detector_id BIGINT,
+    detector_name VARCHAR(64),
     parameter_ids VARCHAR(1000),
     parameter_names VARCHAR(1000),
+    parameter_method_bindings TEXT,
     enabled TINYINT DEFAULT 1,
     remark VARCHAR(500),
     deleted TINYINT DEFAULT 0,

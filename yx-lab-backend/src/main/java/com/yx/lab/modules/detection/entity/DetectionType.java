@@ -1,5 +1,6 @@
 package com.yx.lab.modules.detection.entity;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.yx.lab.common.model.BaseEntity;
 import lombok.Data;
@@ -23,6 +24,17 @@ public class DetectionType extends BaseEntity {
     private String parameterIds;
 
     private String parameterNames;
+
+    /**
+     * 检测套餐内“检测参数 -> 检测方法”绑定关系，JSON 数组文本。
+     */
+    private String parameterMethodBindings;
+
+    /**
+     * 前端列表展示用的参数-方法摘要，不落库。
+     */
+    @TableField(exist = false)
+    private String parameterMethodNames;
 
     private Integer enabled;
 

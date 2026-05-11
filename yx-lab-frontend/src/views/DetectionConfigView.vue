@@ -141,7 +141,7 @@
             </div>
           </div>
           <div class="panel-note">
-            检测套餐由多个检测参数组成，组内参数自动去重。样品登录时只能单选一个检测套餐，后续检测时会按该套餐自动带出参数清单。
+            检测套餐由多个检测参数组成，并要求为每个参数选定可用检测方法。样品登录时只能单选一个检测套餐，后续检测时会按该套餐自动带出参数清单。
           </div>
         </div>
 
@@ -154,8 +154,11 @@
             empty-text="暂无检测套餐数据"
           >
             <el-table-column prop="typeName" label="套餐名称" min-width="180" />
-            <el-table-column prop="parameterNames" label="组内参数" min-width="280" show-overflow-tooltip>
+            <el-table-column prop="parameterNames" label="组内参数" min-width="220" show-overflow-tooltip>
               <template #default="{ row }">{{ row.parameterNames || '-' }}</template>
+            </el-table-column>
+            <el-table-column prop="parameterMethodNames" label="参数检测方法" min-width="320" show-overflow-tooltip>
+              <template #default="{ row }">{{ row.parameterMethodNames || '-' }}</template>
             </el-table-column>
             <el-table-column label="参数数量" width="110" class-name="cell-center" header-cell-class-name="cell-center">
               <template #default="{ row }">{{ countParameterIds(row.parameterIds) }}</template>
@@ -290,7 +293,7 @@
     >
       <el-form label-width="100px">
         <div class="form-grid">
-          <el-form-item label="项目组名称">
+          <el-form-item label="套餐名称">
             <el-input v-model="groupForm.typeName" placeholder="请输入检测套餐名称" />
           </el-form-item>
           <el-form-item label="状态">
@@ -299,23 +302,95 @@
               <el-radio-button :label="0">停用</el-radio-button>
             </el-radio-group>
           </el-form-item>
-          <el-form-item class="form-span-2" label="组内参数">
-            <el-select
-              v-model="groupForm.parameterIdList"
-              multiple
-              filterable
-              collapse-tags
-              collapse-tags-tooltip
-              placeholder="请选择组内检测参数"
-              style="width: 100%"
-            >
-              <el-option
-                v-for="item in enabledParameterOptions"
-                :key="item.id"
-                :label="item.parameterName"
-                :value="item.id"
-              />
-            </el-select>
+          <el-form-item class="form-span-2" label="参数方法绑定">
+            <div class="binding-editor">
+              <div class="binding-editor__select">
+                <div class="binding-editor__summary">
+                  <span class="binding-editor__chip">
+                    已选参数 <strong>{{ selectedGroupParameterCount }}</strong>
+                  </span>
+                  <span class="binding-editor__chip">
+                    已选方法 <strong>{{ selectedGroupMethodCount }}</strong>
+                  </span>
+                </div>
+                <div class="binding-workbench">
+                  <div class="binding-workbench__parameters">
+                    <button
+                      v-for="item in groupParameterMethodOptions"
+                      :key="item.parameterId"
+                      type="button"
+                      :class="['binding-parameter-card', { 'is-active': currentBindingParameterId === item.parameterId }]"
+                      @click="switchBindingParameter(item.parameterId)"
+                    >
+                      <div class="binding-parameter-card__head">
+                        <strong>{{ item.label }}</strong>
+                        <span>{{ item.children.length }} 项方法</span>
+                      </div>
+                      <div class="binding-parameter-card__meta">
+                        已选 {{ getSelectedMethodCountByParameter(item.parameterId) }} 项
+                      </div>
+                    </button>
+                  </div>
+
+                  <div class="binding-workbench__methods">
+                    <div class="binding-workbench__methods-head">
+                      <div>
+                        <strong>{{ currentBindingParameterLabel || '请选择检测参数' }}</strong>
+                        <span>在右侧为当前检测参数选择 1 个检测方法</span>
+                      </div>
+                      <div v-if="currentBindingParameterId" class="binding-workbench__methods-actions">
+                        <el-button link @click="clearCurrentParameterMethods">清空</el-button>
+                      </div>
+                    </div>
+
+                    <div v-if="currentBindingMethods.length" class="binding-method-list">
+                      <label
+                        v-for="method in currentBindingMethods"
+                        :key="method.methodId"
+                        :class="['binding-method-item', { 'is-checked': isMethodSelected(method.methodId) }]"
+                      >
+                        <el-checkbox
+                          :model-value="isMethodSelected(method.methodId)"
+                          @change="(checked) => handleMethodSelectionChange(method.methodId, checked)"
+                        >
+                          <span class="binding-method-item__name">{{ method.label }}</span>
+                        </el-checkbox>
+                        <span class="binding-method-item__code">{{ method.methodCode || '未填写方法编码' }}</span>
+                      </label>
+                    </div>
+                    <div v-else class="binding-method-empty">
+                      当前检测参数下暂无可选检测方法
+                    </div>
+                  </div>
+                </div>
+                <div class="form-helper">
+                  仅展示已启用且已绑定检测方法的检测参数。每个检测参数在当前检测套餐内只能选择 1 个检测方法。
+                </div>
+              </div>
+              <div class="binding-editor__result">
+                <div class="binding-editor__result-head">
+                  <strong>已选套餐参数</strong>
+                  <span>仅展示已纳入当前检测套餐的参数。</span>
+                </div>
+                <div v-if="selectedGroupBindings.length" class="group-binding-preview">
+                  <div
+                    v-for="item in selectedGroupBindings"
+                    :key="item.parameterId"
+                    class="group-binding-preview__item"
+                  >
+                    <div class="group-binding-preview__label">
+                      {{ item.parameterName }}
+                    </div>
+                    <div class="group-binding-preview__meta">
+                      已选 {{ item.methodIds.length }} 个检测方法
+                    </div>
+                  </div>
+                </div>
+                <div v-else class="group-binding-preview group-binding-preview--empty">
+                  尚未选择套餐参数
+                </div>
+              </div>
+            </div>
           </el-form-item>
           <el-form-item class="form-span-2" label="备注">
             <el-input
@@ -339,12 +414,12 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElButton } from 'element-plus/es/components/button/index.mjs'
+import { ElCheckbox } from 'element-plus/es/components/checkbox/index.mjs'
 import { ElDialog } from 'element-plus/es/components/dialog/index.mjs'
 import { ElForm, ElFormItem } from 'element-plus/es/components/form/index.mjs'
 import { ElInput } from 'element-plus/es/components/input/index.mjs'
 import { ElMessage } from 'element-plus/es/components/message/index.mjs'
 import { ElMessageBox } from 'element-plus/es/components/message-box/index.mjs'
-import { ElOption, ElSelect } from 'element-plus/es/components/select/index.mjs'
 import { ElRadioButton, ElRadioGroup } from 'element-plus/es/components/radio/index.mjs'
 import { ElTable, ElTableColumn } from 'element-plus/es/components/table/index.mjs'
 import TablePagination from '../components/common/TablePagination.vue'
@@ -353,6 +428,7 @@ import {
   createDetectionTypeApi,
   deleteDetectionParameterApi,
   deleteDetectionTypeApi,
+  fetchDetectionMethodOptionsApi,
   fetchDetectionParametersApi,
   fetchDetectionTypesApi,
   updateDetectionParameterApi,
@@ -367,6 +443,7 @@ const activeStatKey = ref('all')
 const parameterRows = ref([])
 const parameterTotal = ref(0)
 const allParameters = ref([])
+const detectionMethodOptions = ref([])
 const groupRows = ref([])
 const groupTotal = ref(0)
 
@@ -374,6 +451,7 @@ const parameterDialogVisible = ref(false)
 const groupDialogVisible = ref(false)
 const savingParameter = ref(false)
 const savingGroup = ref(false)
+const currentBindingParameterId = ref('')
 
 const parameterQuery = reactive({
   keyword: '',
@@ -403,6 +481,7 @@ const groupForm = reactive({
   id: null,
   typeName: '',
   parameterIdList: [],
+  parameterMethodSelection: [],
   enabled: 1,
   remark: ''
 })
@@ -423,11 +502,11 @@ const sceneMap = {
   },
   '/detection-project-groups': {
     title: '检测套餐',
-    subtitle: '从检测参数台账中选择多个不重复参数，组成一个检测套餐。',
+    subtitle: '从检测参数台账中选择参数，并绑定对应检测方法，组成一个检测套餐。',
     tableTitle: '检测套餐列表',
     tableSubtitle: '样品登录时只能单选一个检测套餐，后续检测结果按套餐内参数录入。',
     guide: '检测套餐相当于样品登录时选择的检测方案，一个样品对应一个检测套餐。',
-    constraint: '保存检测套餐时会自动去重组内参数，检测流程中的历史样品不建议频繁改动正在使用的套餐结构。',
+    constraint: '保存检测套餐时会自动去重组内参数，并校验检测方法必须归属对应参数，检测流程中的历史样品不建议频繁改动正在使用的套餐结构。',
     quickLinks: [
       { path: '/detection-projects', label: '检测参数', desc: '先维护单个参数，再回来组合检测套餐' },
       { path: '/sample-login', label: '样品登录', desc: '查看检测套餐是否已出现在样品登录下拉中' },
@@ -439,6 +518,63 @@ const sceneMap = {
 const isParameterScene = computed(() => route.path === '/detection-projects')
 const currentScene = computed(() => sceneMap[route.path] || sceneMap['/detection-projects'])
 const enabledParameterOptions = computed(() => allParameters.value.filter((item) => item.enabled === 1))
+const parameterOptionMap = computed(() => new Map(
+  allParameters.value.map((item) => [String(item.id), item])
+))
+const methodOptionMap = computed(() => new Map(
+  detectionMethodOptions.value.map((item) => [String(item.id), item])
+))
+const groupParameterMethodOptions = computed(() => {
+  const methodMap = new Map()
+  detectionMethodOptions.value.forEach((item) => {
+    if (item.enabled !== 1 || !item.parameterId) {
+      return
+    }
+    const parameterId = String(item.parameterId)
+    const children = methodMap.get(parameterId) || []
+    children.push({
+      value: String(item.id),
+      label: item.methodName || `检测方法-${item.id}`,
+      methodId: String(item.id),
+      methodCode: item.methodCode || ''
+    })
+    methodMap.set(parameterId, children)
+  })
+
+  return enabledParameterOptions.value
+    .map((item) => {
+      const parameterId = String(item.id)
+      const children = (methodMap.get(parameterId) || []).sort((left, right) => left.label.localeCompare(right.label, 'zh-CN'))
+      return {
+        value: `parameter:${parameterId}`,
+        label: item.parameterName,
+        parameterId,
+        children
+      }
+    })
+    .filter((item) => item.children.length > 0)
+})
+const selectedGroupBindings = computed(() => buildGroupBindings())
+const selectedGroupParameterCount = computed(() => selectedGroupBindings.value.length)
+const selectedGroupMethodCount = computed(() => selectedGroupBindings.value.reduce(
+  (total, item) => total + item.methodIds.length,
+  0
+))
+const currentBindingParameterOption = computed(() => {
+  if (!currentBindingParameterId.value) {
+    return null
+  }
+  return groupParameterMethodOptions.value.find((item) => item.parameterId === currentBindingParameterId.value) || null
+})
+const currentBindingParameterLabel = computed(() => currentBindingParameterOption.value?.label || '')
+const currentBindingMethods = computed(() => {
+  const children = currentBindingParameterOption.value?.children || []
+  return children.map((item) => ({
+    methodId: item.methodId,
+    label: item.label,
+    methodCode: item.methodCode
+  }))
+})
 
 const visibleParameterRows = computed(() => {
   if (activeStatKey.value === 'enabled') {
@@ -507,8 +643,6 @@ function parseParameterIds(value) {
     .split(',')
     .map((item) => item.trim())
     .filter((item) => item !== '')
-    .map((item) => Number(item))
-    .filter((item) => Number.isFinite(item))
 }
 
 function countParameterIds(value) {
@@ -538,6 +672,156 @@ function formatStandardRange(min, max, unit) {
   return '-'
 }
 
+function parseBindingJson(value) {
+  const text = String(value || '').trim()
+  if (!text) {
+    return []
+  }
+  try {
+    const list = JSON.parse(text)
+    return Array.isArray(list) ? list : []
+  } catch (error) {
+    return []
+  }
+}
+
+function buildGroupBindings(selectedMethodIds = groupForm.parameterMethodSelection) {
+  const parameterOrderMap = new Map(
+    enabledParameterOptions.value.map((item, index) => [String(item.id), index])
+  )
+  const bindingMap = new Map()
+  Array.from(new Set(normalizeSingleMethodSelection(selectedMethodIds)))
+    .forEach((methodId) => {
+      const method = methodOptionMap.value.get(methodId)
+      if (!method || !method.parameterId) {
+        return
+      }
+      const parameterId = String(method.parameterId)
+      const parameter = parameterOptionMap.value.get(parameterId)
+      if (!bindingMap.has(parameterId)) {
+        bindingMap.set(parameterId, {
+          parameterId,
+          parameterName: parameter?.parameterName || method.parameterName || `参数-${parameterId}`,
+          methodIds: [],
+          methodNames: []
+        })
+      }
+      const item = bindingMap.get(parameterId)
+      if (!item.methodIds.includes(methodId)) {
+        item.methodIds.push(methodId)
+        item.methodNames.push(method.methodName || `方法-${methodId}`)
+      }
+    })
+
+  return Array.from(bindingMap.values()).sort((left, right) => {
+    const leftOrder = parameterOrderMap.get(left.parameterId) ?? Number.MAX_SAFE_INTEGER
+    const rightOrder = parameterOrderMap.get(right.parameterId) ?? Number.MAX_SAFE_INTEGER
+    return leftOrder - rightOrder
+  })
+}
+
+function normalizeSingleMethodSelection(selectionIds) {
+  const parameterMethodMap = new Map()
+  ;(selectionIds || [])
+    .map((item) => String(item || '').trim())
+    .filter(Boolean)
+    .forEach((methodId) => {
+      const method = methodOptionMap.value.get(methodId)
+      if (!method || !method.parameterId) {
+        return
+      }
+      const parameterId = String(method.parameterId)
+      if (!parameterMethodMap.has(parameterId)) {
+        parameterMethodMap.set(parameterId, methodId)
+      }
+    })
+  return Array.from(parameterMethodMap.values())
+}
+
+function ensureBindingParameterReady(preferredParameterId = '') {
+  const availableParameterIds = groupParameterMethodOptions.value.map((item) => item.parameterId)
+  if (!availableParameterIds.length) {
+    currentBindingParameterId.value = ''
+    return
+  }
+  if (preferredParameterId && availableParameterIds.includes(preferredParameterId)) {
+    currentBindingParameterId.value = preferredParameterId
+    return
+  }
+  if (currentBindingParameterId.value && availableParameterIds.includes(currentBindingParameterId.value)) {
+    return
+  }
+  const selectedParameterIds = selectedGroupBindings.value.map((item) => item.parameterId)
+  currentBindingParameterId.value = selectedParameterIds.find((item) => availableParameterIds.includes(item)) || availableParameterIds[0]
+}
+
+function switchBindingParameter(parameterId) {
+  currentBindingParameterId.value = String(parameterId || '').trim()
+}
+
+function isMethodSelected(methodId) {
+  return groupForm.parameterMethodSelection.includes(String(methodId || '').trim())
+}
+
+function handleMethodSelectionChange(methodId, checked) {
+  const normalizedMethodId = String(methodId || '').trim()
+  if (!normalizedMethodId) {
+    return
+  }
+  const currentMethodIds = new Set(currentBindingMethods.value.map((item) => item.methodId))
+  const nextSelection = new Set(
+    groupForm.parameterMethodSelection
+      .map((item) => String(item || '').trim())
+      .filter((item) => item && !currentMethodIds.has(item))
+  )
+  if (checked) {
+    nextSelection.add(normalizedMethodId)
+  }
+  groupForm.parameterMethodSelection = normalizeSingleMethodSelection(Array.from(nextSelection))
+}
+
+function getSelectedMethodCountByParameter(parameterId) {
+  return buildGroupBindings()
+    .find((item) => item.parameterId === String(parameterId || '').trim())
+    ?.methodIds.length || 0
+}
+
+function clearCurrentParameterMethods() {
+  if (!currentBindingParameterId.value) {
+    return
+  }
+  const currentMethodIds = new Set(currentBindingMethods.value.map((item) => item.methodId))
+  groupForm.parameterMethodSelection = groupForm.parameterMethodSelection
+    .map((item) => String(item || '').trim())
+    .filter((item) => item && !currentMethodIds.has(item))
+}
+
+function resolveGroupMethodSelection(row) {
+  const bindings = parseBindingJson(row?.parameterMethodBindings)
+  const bindingMethodIds = bindings
+    .flatMap((item) => Array.isArray(item?.methodIds) ? item.methodIds : [])
+    .map((item) => String(item || '').trim())
+    .filter(Boolean)
+
+  if (bindingMethodIds.length) {
+    return normalizeSingleMethodSelection(Array.from(new Set(bindingMethodIds)))
+  }
+
+  const selectedParameterIds = new Set(parseParameterIds(row?.parameterIds))
+  if (!selectedParameterIds.size) {
+    return []
+  }
+
+  return detectionMethodOptions.value
+    .filter((item) => item.enabled === 1 && item.parameterId && selectedParameterIds.has(String(item.parameterId)))
+    .map((item) => String(item.id))
+    .filter((item, index, list) => index === list.findIndex((methodId) => {
+      const method = methodOptionMap.value.get(methodId)
+      const current = methodOptionMap.value.get(item)
+      return method && current && String(method.parameterId) === String(current.parameterId)
+    }))
+}
+
 function resetParameterForm() {
   parameterForm.id = null
   parameterForm.parameterName = ''
@@ -554,8 +838,10 @@ function resetGroupForm() {
   groupForm.id = null
   groupForm.typeName = ''
   groupForm.parameterIdList = []
+  groupForm.parameterMethodSelection = []
   groupForm.enabled = 1
   groupForm.remark = ''
+  currentBindingParameterId.value = ''
 }
 
 function openParameterDialog(row) {
@@ -574,15 +860,20 @@ function openParameterDialog(row) {
   parameterDialogVisible.value = true
 }
 
-function openGroupDialog(row) {
+async function openGroupDialog(row) {
   resetGroupForm()
+  if (!detectionMethodOptions.value.length) {
+    await loadMethodOptions()
+  }
   if (row) {
     groupForm.id = row.id
     groupForm.typeName = row.typeName || ''
     groupForm.parameterIdList = parseParameterIds(row.parameterIds)
+    groupForm.parameterMethodSelection = resolveGroupMethodSelection(row)
     groupForm.enabled = row.enabled ?? 1
     groupForm.remark = row.remark || ''
   }
+  ensureBindingParameterReady(row ? parseParameterIds(row.parameterIds)[0] : '')
   groupDialogVisible.value = true
 }
 
@@ -620,18 +911,18 @@ async function submitParameterForm() {
 
 async function submitGroupForm() {
   if (!groupForm.typeName.trim()) {
-    ElMessage.warning('请填写项目组名称')
+    ElMessage.warning('请填写检测套餐名称')
     return
   }
-  if (!groupForm.parameterIdList.length) {
-    ElMessage.warning('请至少选择一个检测参数')
+  const bindings = buildGroupBindings()
+  if (!bindings.length) {
+    ElMessage.warning('请至少选择一个检测参数及其对应检测方法')
     return
   }
 
-  const uniqueIds = Array.from(new Set(groupForm.parameterIdList))
-  const parameterMap = new Map(allParameters.value.map((item) => [item.id, item]))
-  const selectedParameters = uniqueIds
-    .map((id) => parameterMap.get(id))
+  const uniqueIds = bindings.map((item) => item.parameterId)
+  const selectedParameters = bindings
+    .map((item) => parameterOptionMap.value.get(item.parameterId))
     .filter(Boolean)
 
   if (!selectedParameters.length) {
@@ -639,10 +930,16 @@ async function submitGroupForm() {
     return
   }
 
+  groupForm.parameterIdList = [...uniqueIds]
+
   const payload = {
     typeName: groupForm.typeName.trim(),
     parameterIds: uniqueIds.join(','),
     parameterNames: selectedParameters.map((item) => item.parameterName).join('、'),
+    parameterMethodBindings: bindings.map((item) => ({
+      parameterId: item.parameterId,
+      methodIds: item.methodIds
+    })),
     enabled: groupForm.enabled,
     remark: groupForm.remark.trim()
   }
@@ -707,6 +1004,11 @@ async function loadParameterOptions() {
   allParameters.value = result.records || []
 }
 
+async function loadMethodOptions() {
+  const result = await fetchDetectionMethodOptionsApi()
+  detectionMethodOptions.value = Array.isArray(result) ? result : []
+}
+
 async function loadParameters() {
   const result = await fetchDetectionParametersApi({ ...parameterQuery })
   parameterRows.value = result.records || []
@@ -720,7 +1022,7 @@ async function loadGroups() {
 }
 
 async function refreshAll() {
-  await loadParameterOptions()
+  await Promise.all([loadParameterOptions(), loadMethodOptions()])
   await Promise.all([loadParameters(), loadGroups()])
 }
 
@@ -736,6 +1038,12 @@ onMounted(async () => {
   syncRouteState()
   await refreshAll()
 })
+
+watch(groupParameterMethodOptions, () => {
+  if (groupDialogVisible.value) {
+    ensureBindingParameterReady()
+  }
+}, { deep: true })
 
 watch(() => route.fullPath, async () => {
   syncRouteState()
@@ -844,6 +1152,272 @@ watch(() => route.fullPath, async () => {
   grid-column: 1 / -1;
 }
 
+.binding-editor {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+  width: 100%;
+}
+
+.binding-editor__select,
+.binding-editor__result {
+  padding: 16px;
+  border: 1px solid var(--line-soft);
+  border-radius: 16px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--brand) 4%, #ffffff 96%) 0%, #ffffff 100%);
+  box-shadow: var(--shadow-sm);
+}
+
+.binding-editor__summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.binding-editor__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--brand) 16%, #ffffff 84%);
+  background: color-mix(in srgb, var(--brand) 7%, #ffffff 93%);
+  color: var(--text-sub);
+  font-size: 13px;
+}
+
+.binding-editor__chip strong {
+  color: var(--brand);
+  font-size: 15px;
+}
+
+.binding-editor__result {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  width: 100%;
+}
+
+.binding-editor__result-head {
+  display: grid;
+  gap: 4px;
+}
+
+.binding-editor__result-head strong {
+  color: var(--text-main);
+  font-size: 14px;
+}
+
+.binding-editor__result-head span {
+  color: var(--text-light);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.binding-workbench {
+  display: grid;
+  grid-template-columns: minmax(240px, 280px) minmax(0, 1fr);
+  gap: 16px;
+}
+
+.binding-workbench__parameters {
+  display: grid;
+  gap: 10px;
+  max-height: 332px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.binding-parameter-card {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+  padding: 14px 16px;
+  text-align: left;
+  border: 1px solid var(--line-soft);
+  border-radius: 14px;
+  background: #ffffff;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.binding-parameter-card:hover,
+.binding-parameter-card:focus-visible {
+  border-color: color-mix(in srgb, var(--brand) 36%, #ffffff 64%);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
+  outline: none;
+}
+
+.binding-parameter-card.is-active {
+  border-color: var(--brand);
+  background: color-mix(in srgb, var(--brand) 8%, #ffffff 92%);
+  box-shadow: 0 10px 22px rgba(17, 54, 99, 0.08);
+}
+
+.binding-parameter-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.binding-parameter-card__head strong {
+  color: var(--text-main);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.binding-parameter-card__head span,
+.binding-parameter-card__meta {
+  color: var(--text-light);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.binding-workbench__methods {
+  min-height: 332px;
+  padding: 16px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--brand) 12%, #ffffff 88%);
+  background: color-mix(in srgb, var(--brand) 3%, #ffffff 97%);
+  min-width: 0;
+}
+
+.binding-workbench__methods-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.binding-workbench__methods-head > div:first-child {
+  flex: 1 1 320px;
+  min-width: 0;
+}
+
+.binding-workbench__methods-head strong {
+  display: block;
+  color: var(--text-main);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.binding-workbench__methods-head span {
+  display: block;
+  margin-top: 4px;
+  color: var(--text-light);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.binding-workbench__methods-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.binding-method-list {
+  display: grid;
+  gap: 10px;
+}
+
+.binding-method-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 52px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--line-soft);
+  background: #ffffff;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.binding-method-item:hover {
+  border-color: color-mix(in srgb, var(--brand) 30%, #ffffff 70%);
+  box-shadow: var(--shadow-sm);
+}
+
+.binding-method-item.is-checked {
+  border-color: color-mix(in srgb, var(--brand) 55%, #ffffff 45%);
+  background: color-mix(in srgb, var(--brand) 7%, #ffffff 93%);
+}
+
+.binding-method-item__name {
+  color: var(--text-main);
+  font-size: 14px;
+}
+
+.binding-method-item__code {
+  color: var(--text-light);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.binding-method-empty {
+  display: grid;
+  place-items: center;
+  min-height: 210px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 12px;
+  background: #ffffff;
+  color: var(--text-light);
+  font-size: 13px;
+}
+
+.form-helper {
+  margin-top: 10px;
+  color: var(--text-light);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.group-binding-preview {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.group-binding-preview__item {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--brand) 12%, #ffffff 88%);
+  background: var(--bg-panel-soft);
+  box-shadow: 0 6px 16px rgba(17, 54, 99, 0.05);
+}
+
+.group-binding-preview__label {
+  color: var(--text-main);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.group-binding-preview__meta {
+  color: var(--text-light);
+  font-size: 12px;
+}
+
+.group-binding-preview--empty {
+  padding: 20px 16px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--brand) 3%, #ffffff 97%);
+  color: var(--text-light);
+  font-size: 13px;
+  text-align: center;
+}
+
 @media (max-width: 900px) {
   .page-hero,
   .scene-grid,
@@ -853,6 +1427,27 @@ watch(() => route.fullPath, async () => {
 
   .hero-tags {
     justify-content: flex-start;
+  }
+
+  .binding-workbench {
+    grid-template-columns: 1fr;
+  }
+
+  .binding-workbench__methods-head,
+  .binding-method-item {
+    flex-direction: column;
+  }
+
+  .binding-method-item {
+    align-items: flex-start;
+  }
+
+  .binding-method-item__code {
+    white-space: normal;
+  }
+
+  .group-binding-preview__item {
+    padding: 12px;
   }
 }
 </style>

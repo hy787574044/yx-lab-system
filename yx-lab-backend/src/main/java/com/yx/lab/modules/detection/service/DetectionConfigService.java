@@ -4,6 +4,9 @@ import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yx.lab.common.exception.BusinessException;
 import com.yx.lab.common.model.PageResult;
 import com.yx.lab.common.util.PageUtils;
@@ -17,6 +20,7 @@ import com.yx.lab.modules.detection.dto.DetectionProjectGroupSaveCommand;
 import com.yx.lab.modules.detection.dto.DetectionStepQuery;
 import com.yx.lab.modules.detection.dto.DetectionStepSaveCommand;
 import com.yx.lab.modules.detection.dto.DetectionTypeQuery;
+import com.yx.lab.modules.detection.dto.DetectionTypeParameterMethodBindingItem;
 import com.yx.lab.modules.detection.dto.DetectionTypeSaveCommand;
 import com.yx.lab.modules.detection.entity.DetectionItem;
 import com.yx.lab.modules.detection.entity.DetectionMethod;
@@ -76,6 +80,8 @@ public class DetectionConfigService {
 
     private final LabUserMapper labUserMapper;
 
+    private final ObjectMapper objectMapper;
+
     public PageResult<DetectionType> typePage(DetectionTypeQuery query) {
         String keyword = StrUtil.trim(query.getKeyword());
         Page<DetectionType> page = detectionTypeMapper.selectPage(
@@ -91,6 +97,7 @@ public class DetectionConfigService {
                         .eq(query.getDetectorId() != null, DetectionType::getDetectorId, query.getDetectorId())
                         .eq(query.getEnabled() != null, DetectionType::getEnabled, query.getEnabled())
                         .orderByDesc(DetectionType::getCreatedTime));
+        fillTypeParameterMethodNames(page.getRecords());
         return new PageResult<>(page.getTotal(), page.getRecords());
     }
 
@@ -294,6 +301,7 @@ public class DetectionConfigService {
     public void bindParameterMethods(Long parameterId, DetectionParameterMethodBindCommand command) {
         DetectionParameter parameter = requireParameter(parameterId);
         List<Long> methodIds = normalizeMethodIds(command == null ? null : command.getMethodIds());
+        ensureRemovedMethodsNotReferenced(parameterId, methodIds);
         Map<Long, DetectionMethod> selectedMethodMap = resolveSelectedMethods(methodIds);
 
         for (Long methodId : methodIds) {
@@ -328,11 +336,16 @@ public class DetectionConfigService {
         applyMethodCommand(entity, command);
         validateMethod(entity, id);
         detectionMethodMapper.updateById(entity);
+        syncTypeMethodBindingsByMethodId(id);
     }
 
     @Transactional(rollbackFor = Exception.class)
     public void deleteMethod(Long id) {
-        detectionMethodMapper.deleteById(requireMethod(id).getId());
+        DetectionMethod entity = requireMethod(id);
+        if (isMethodReferencedByType(entity.getId())) {
+            throw new BusinessException("当前检测方法已被检测套餐引用，请先调整检测套餐后再删除");
+        }
+        detectionMethodMapper.deleteById(entity.getId());
     }
 
     public void saveStep(DetectionStepSaveCommand command) {
@@ -399,6 +412,12 @@ public class DetectionConfigService {
         applyDetectorToType(entity, command.getDetectorId());
         entity.setParameterIds(normalizeIdList(command.getParameterIds()));
         entity.setParameterNames(StrUtil.trim(command.getParameterNames()));
+        if (command.getParameterMethodBindings() != null) {
+            entity.setParameterMethodBindings(serializeTypeParameterMethodBindings(command.getParameterMethodBindings()));
+        } else if (StrUtil.isNotBlank(command.getParameterIds()) || StrUtil.isNotBlank(command.getParameterNames())) {
+            entity.setParameterMethodBindings(null);
+        }
+        entity.setParameterMethodNames(null);
         entity.setEnabled(command.getEnabled());
         entity.setRemark(StrUtil.trim(command.getRemark()));
     }
@@ -444,20 +463,7 @@ public class DetectionConfigService {
     private void validateType(DetectionType entity, Long selfId, Long previousDetectorId) {
         validateEnabledFlag(entity.getEnabled(), "检测套餐启用状态不合法");
         ensureTypeNameUnique(entity.getTypeName(), selfId);
-        List<DetectionParameter> parameters = resolveTypeParameters(entity.getParameterIds());
-        if (parameters.isEmpty()) {
-            throw new BusinessException("检测套餐至少要绑定一个检测参数");
-        }
-        List<Long> disabledParameterIds = parameters.stream()
-                .filter(parameter -> !isEnabled(parameter.getEnabled()))
-                .map(DetectionParameter::getId)
-                .collect(Collectors.toList());
-        if (!disabledParameterIds.isEmpty()) {
-            throw new BusinessException("检测套餐不能绑定已停用的检测参数");
-        }
-        entity.setParameterNames(parameters.stream()
-                .map(DetectionParameter::getParameterName)
-                .collect(Collectors.joining(",")));
+        validateAndPopulateTypeParameters(entity);
         if (selfId != null && !equalsNullableLong(previousDetectorId, entity.getDetectorId()) && hasProcessingDetections(selfId)) {
             throw new BusinessException("当前检测套餐存在检测中的记录，暂不支持变更绑定检测员");
         }
@@ -485,6 +491,9 @@ public class DetectionConfigService {
         validateEnabledFlag(entity.getEnabled(), "检测方法启用状态不合法");
         ensureMethodNameUnique(entity.getMethodName(), selfId);
         ensureMethodCodeUnique(entity.getMethodCode(), selfId);
+        if (!isEnabled(entity.getEnabled()) && isMethodReferencedByEnabledType(selfId == null ? entity.getId() : selfId)) {
+            throw new BusinessException("当前检测方法已被启用中的检测套餐引用，不能直接停用");
+        }
     }
 
     private void validateStep(DetectionStep entity, Long selfId) {
@@ -562,6 +571,13 @@ public class DetectionConfigService {
         if (parameterIds.isEmpty()) {
             return new ArrayList<>();
         }
+        return resolveParametersByIds(parameterIds);
+    }
+
+    private List<DetectionParameter> resolveParametersByIds(List<Long> parameterIds) {
+        if (parameterIds == null || parameterIds.isEmpty()) {
+            return new ArrayList<>();
+        }
         List<DetectionParameter> parameters = detectionParameterMapper.selectList(new LambdaQueryWrapper<DetectionParameter>()
                 .in(DetectionParameter::getId, parameterIds));
         Map<Long, DetectionParameter> parameterMap = parameters.stream()
@@ -631,6 +647,33 @@ public class DetectionConfigService {
         return methodMap;
     }
 
+    private List<DetectionTypeParameterMethodBindingItem> parseTypeParameterMethodBindings(String jsonText) {
+        if (StrUtil.isBlank(jsonText)) {
+            return new ArrayList<>();
+        }
+        try {
+            List<DetectionTypeParameterMethodBindingItem> items = objectMapper.readValue(
+                    jsonText,
+                    new TypeReference<List<DetectionTypeParameterMethodBindingItem>>() {
+                    }
+            );
+            return items == null ? new ArrayList<>() : items;
+        } catch (JsonProcessingException ex) {
+            throw new BusinessException("检测套餐参数方法绑定关系格式不正确");
+        }
+    }
+
+    private String serializeTypeParameterMethodBindings(List<DetectionTypeParameterMethodBindingItem> items) {
+        if (items == null || items.isEmpty()) {
+            return null;
+        }
+        try {
+            return objectMapper.writeValueAsString(items);
+        } catch (JsonProcessingException ex) {
+            throw new BusinessException("检测套餐参数方法绑定关系序列化失败");
+        }
+    }
+
     private void clearMethodBindingsByParameter(Long parameterId) {
         detectionMethodMapper.update(
                 null,
@@ -639,6 +682,123 @@ public class DetectionConfigService {
                         .set(DetectionMethod::getParameterId, null)
                         .set(DetectionMethod::getParameterName, null)
         );
+    }
+
+    private void validateAndPopulateTypeParameters(DetectionType entity) {
+        List<DetectionTypeParameterMethodBindingItem> bindingItems = parseTypeParameterMethodBindings(entity.getParameterMethodBindings());
+        if (!bindingItems.isEmpty()) {
+            populateTypeFromParameterMethodBindings(entity, bindingItems);
+            return;
+        }
+
+        List<DetectionParameter> parameters = resolveTypeParameters(entity.getParameterIds());
+        if (parameters.isEmpty()) {
+            throw new BusinessException("检测套餐至少要绑定一个检测参数");
+        }
+        List<Long> disabledParameterIds = parameters.stream()
+                .filter(parameter -> !isEnabled(parameter.getEnabled()))
+                .map(DetectionParameter::getId)
+                .collect(Collectors.toList());
+        if (!disabledParameterIds.isEmpty()) {
+            throw new BusinessException("检测套餐不能绑定已停用的检测参数");
+        }
+        entity.setParameterNames(parameters.stream()
+                .map(DetectionParameter::getParameterName)
+                .collect(Collectors.joining(",")));
+    }
+
+    private void populateTypeFromParameterMethodBindings(DetectionType entity,
+                                                         List<DetectionTypeParameterMethodBindingItem> bindingItems) {
+        List<Long> orderedParameterIds = new ArrayList<>();
+        Map<Long, List<Long>> bindingMethodIds = new LinkedHashMap<>();
+        for (DetectionTypeParameterMethodBindingItem item : bindingItems) {
+            if (item == null || item.getParameterId() == null) {
+                throw new BusinessException("检测套餐存在未指定检测参数的绑定项");
+            }
+            if (bindingMethodIds.containsKey(item.getParameterId())) {
+                throw new BusinessException("检测套餐中同一个检测参数不能重复配置");
+            }
+            List<Long> methodIds = normalizeMethodIds(item.getMethodIds());
+            if (methodIds.isEmpty()) {
+                throw new BusinessException("检测参数至少需要绑定一个检测方法");
+            }
+            if (methodIds.size() > 1) {
+                throw new BusinessException("检测套餐中每个检测参数只能选择一个检测方法");
+            }
+            orderedParameterIds.add(item.getParameterId());
+            bindingMethodIds.put(item.getParameterId(), methodIds);
+        }
+
+        List<DetectionParameter> parameters = resolveParametersByIds(orderedParameterIds);
+        List<Long> disabledParameterIds = parameters.stream()
+                .filter(parameter -> !isEnabled(parameter.getEnabled()))
+                .map(DetectionParameter::getId)
+                .collect(Collectors.toList());
+        if (!disabledParameterIds.isEmpty()) {
+            throw new BusinessException("检测套餐不能绑定已停用的检测参数");
+        }
+        Map<Long, DetectionParameter> parameterMap = parameters.stream()
+                .collect(Collectors.toMap(DetectionParameter::getId, parameter -> parameter));
+
+        List<Long> allMethodIds = bindingMethodIds.values().stream()
+                .flatMap(List::stream)
+                .collect(Collectors.toList());
+        Map<Long, DetectionMethod> methodMap = resolveSelectedMethods(allMethodIds);
+        List<Long> disabledMethodIds = methodMap.values().stream()
+                .filter(method -> !isEnabled(method.getEnabled()))
+                .map(DetectionMethod::getId)
+                .collect(Collectors.toList());
+        if (!disabledMethodIds.isEmpty()) {
+            throw new BusinessException("当前检测套餐不能绑定已停用的检测方法");
+        }
+
+        LinkedHashSet<Long> duplicateMethodIds = new LinkedHashSet<>();
+        LinkedHashSet<Long> visitedMethodIds = new LinkedHashSet<>();
+        for (Long methodId : allMethodIds) {
+            if (!visitedMethodIds.add(methodId)) {
+                duplicateMethodIds.add(methodId);
+            }
+        }
+        if (!duplicateMethodIds.isEmpty()) {
+            throw new BusinessException("检测套餐中同一个检测方法不能重复配置");
+        }
+
+        List<DetectionTypeParameterMethodBindingItem> normalizedItems = new ArrayList<>();
+        List<String> parameterNames = new ArrayList<>();
+        List<String> parameterMethodNames = new ArrayList<>();
+        for (Long parameterId : orderedParameterIds) {
+            DetectionParameter parameter = parameterMap.get(parameterId);
+            List<Long> methodIds = bindingMethodIds.get(parameterId);
+            List<String> methodNames = new ArrayList<>();
+            for (Long methodId : methodIds) {
+                DetectionMethod method = methodMap.get(methodId);
+                if (method == null) {
+                    throw new BusinessException("检测方法不存在：" + methodId);
+                }
+                if (!parameterId.equals(method.getParameterId())) {
+                    throw new BusinessException("检测方法“" + method.getMethodName() + "”未绑定到检测参数“"
+                            + parameter.getParameterName() + "”，不能加入当前检测套餐");
+                }
+                methodNames.add(method.getMethodName());
+            }
+
+            DetectionTypeParameterMethodBindingItem normalizedItem = new DetectionTypeParameterMethodBindingItem();
+            normalizedItem.setParameterId(parameterId);
+            normalizedItem.setParameterName(parameter.getParameterName());
+            normalizedItem.setMethodIds(new ArrayList<>(methodIds));
+            normalizedItem.setMethodNames(methodNames);
+            normalizedItems.add(normalizedItem);
+
+            parameterNames.add(parameter.getParameterName());
+            parameterMethodNames.add(parameter.getParameterName() + "（" + String.join("、", methodNames) + "）");
+        }
+
+        entity.setParameterIds(orderedParameterIds.stream()
+                .map(String::valueOf)
+                .collect(Collectors.joining(",")));
+        entity.setParameterNames(String.join(",", parameterNames));
+        entity.setParameterMethodBindings(serializeTypeParameterMethodBindings(normalizedItems));
+        entity.setParameterMethodNames(String.join("；", parameterMethodNames));
     }
 
     private void applyProjectGroupToType(DetectionType entity, Long groupId) {
@@ -739,6 +899,32 @@ public class DetectionConfigService {
                 .anyMatch(type -> parseParameterIds(type.getParameterIds()).contains(parameterId));
     }
 
+    private boolean isMethodReferencedByType(Long methodId) {
+        if (methodId == null) {
+            return false;
+        }
+        return detectionTypeMapper.selectList(new LambdaQueryWrapper<DetectionType>()
+                        .like(DetectionType::getParameterMethodBindings, "\"" + methodId + "\""))
+                .stream()
+                .anyMatch(type -> containsMethodId(type.getParameterMethodBindings(), methodId));
+    }
+
+    private boolean isMethodReferencedByEnabledType(Long methodId) {
+        if (methodId == null) {
+            return false;
+        }
+        return detectionTypeMapper.selectList(new LambdaQueryWrapper<DetectionType>()
+                        .eq(DetectionType::getEnabled, 1)
+                        .like(DetectionType::getParameterMethodBindings, "\"" + methodId + "\""))
+                .stream()
+                .anyMatch(type -> containsMethodId(type.getParameterMethodBindings(), methodId));
+    }
+
+    private boolean containsMethodId(String bindingJson, Long methodId) {
+        return parseTypeParameterMethodBindings(bindingJson).stream()
+                .anyMatch(item -> normalizeMethodIds(item.getMethodIds()).contains(methodId));
+    }
+
     private void syncStepTypeName(DetectionType type) {
         detectionStepMapper.selectList(new LambdaQueryWrapper<DetectionStep>()
                         .eq(DetectionStep::getTypeId, type.getId()))
@@ -755,11 +941,22 @@ public class DetectionConfigService {
         detectionTypeMapper.selectList(new LambdaQueryWrapper<DetectionType>()
                         .like(DetectionType::getParameterIds, String.valueOf(parameterId)))
                 .forEach(type -> {
-                    List<DetectionParameter> parameters = resolveTypeParameters(type.getParameterIds());
-                    type.setParameterNames(parameters.stream()
-                            .map(DetectionParameter::getParameterName)
-                            .collect(Collectors.joining(",")));
+                    validateAndPopulateTypeParameters(type);
                     detectionTypeMapper.updateById(type);
+                });
+    }
+
+    private void syncTypeMethodBindingsByMethodId(Long methodId) {
+        if (methodId == null) {
+            return;
+        }
+        detectionTypeMapper.selectList(new LambdaQueryWrapper<DetectionType>()
+                        .like(DetectionType::getParameterMethodBindings, "\"" + methodId + "\""))
+                .forEach(type -> {
+                    if (containsMethodId(type.getParameterMethodBindings(), methodId)) {
+                        validateAndPopulateTypeParameters(type);
+                        detectionTypeMapper.updateById(type);
+                    }
                 });
     }
 
@@ -773,6 +970,21 @@ public class DetectionConfigService {
                     method.setParameterName(parameterName);
                     detectionMethodMapper.updateById(method);
                 });
+    }
+
+    private void ensureRemovedMethodsNotReferenced(Long parameterId, List<Long> nextMethodIds) {
+        List<Long> currentMethodIds = detectionMethodMapper.selectList(new LambdaQueryWrapper<DetectionMethod>()
+                        .eq(DetectionMethod::getParameterId, parameterId))
+                .stream()
+                .map(DetectionMethod::getId)
+                .collect(Collectors.toList());
+        for (Long currentMethodId : currentMethodIds) {
+            if (!nextMethodIds.contains(currentMethodId) && isMethodReferencedByType(currentMethodId)) {
+                DetectionMethod method = detectionMethodMapper.selectById(currentMethodId);
+                String methodName = method == null ? String.valueOf(currentMethodId) : method.getMethodName();
+                throw new BusinessException("检测方法“" + methodName + "”已被检测套餐引用，请先调整检测套餐后再解除绑定");
+            }
+        }
     }
 
     private boolean hasProcessingDetections(Long typeId) {
@@ -798,6 +1010,34 @@ public class DetectionConfigService {
         vo.setDisplayName(StrUtil.blankToDefault(StrUtil.trim(entity.getRealName()), entity.getUsername())
                 + "（" + entity.getUsername() + "）");
         return vo;
+    }
+
+    private void fillTypeParameterMethodNames(List<DetectionType> records) {
+        if (records == null || records.isEmpty()) {
+            return;
+        }
+        for (DetectionType record : records) {
+            List<DetectionTypeParameterMethodBindingItem> items = parseTypeParameterMethodBindings(record.getParameterMethodBindings());
+            if (items.isEmpty()) {
+                record.setParameterMethodNames(null);
+                continue;
+            }
+            List<String> segments = new ArrayList<>();
+            for (DetectionTypeParameterMethodBindingItem item : items) {
+                String parameterName = StrUtil.blankToDefault(item.getParameterName(), String.valueOf(item.getParameterId()));
+                List<String> methodNames = item.getMethodNames() == null
+                        ? Collections.emptyList()
+                        : item.getMethodNames().stream()
+                        .filter(StrUtil::isNotBlank)
+                        .collect(Collectors.toList());
+                if (methodNames.isEmpty()) {
+                    segments.add(parameterName);
+                } else {
+                    segments.add(parameterName + "（" + String.join("、", methodNames) + "）");
+                }
+            }
+            record.setParameterMethodNames(String.join("；", segments));
+        }
     }
 
     private DetectionParameterMethodBindingVO toParameterMethodBindingVO(DetectionParameter parameter, List<DetectionMethod> methods) {
