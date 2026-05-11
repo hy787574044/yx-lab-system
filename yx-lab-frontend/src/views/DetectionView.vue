@@ -90,6 +90,8 @@
                     <span class="status-chip info">参数 {{ getDetailItems(row.id).length }}</span>
                     <span class="status-chip success">已分配 {{ countAssignedItems(row.id) }}</span>
                     <span class="status-chip warning">待分配 {{ getDetailItems(row.id).length - countAssignedItems(row.id) }}</span>
+                    <span class="status-chip success">已提交 {{ countSubmittedItems(row.id) }}</span>
+                    <span class="status-chip info">待提交 {{ getDetailItems(row.id).length - countSubmittedItems(row.id) }}</span>
                   </div>
                   <el-button
                     v-if="canAssignRow(row)"
@@ -121,6 +123,13 @@
                       <span>参考范围：{{ item.referenceStandard || '-' }}</span>
                     </div>
 
+                    <div class="subflow-result">
+                      <span class="subflow-result__label">当前结果</span>
+                      <span class="status-chip" :class="getItemResultClass(item)">
+                        {{ getItemResultLabel(item) }}
+                      </span>
+                    </div>
+
                     <div class="subflow-assign">
                       <label>检测员分配</label>
                       <el-select
@@ -138,6 +147,15 @@
                           :value="option.id"
                         />
                       </el-select>
+                    </div>
+                    <div v-if="canOpenResultDialogItem(item)" class="subflow-card__action">
+                      <el-button
+                        :type="isResultEditable(item) ? 'primary' : 'default'"
+                        plain
+                        @click="openResultDialog(row, item)"
+                      >
+                        {{ getResultActionLabel(item) }}
+                      </el-button>
                     </div>
                   </article>
                 </div>
@@ -164,8 +182,8 @@
           </el-table-column>
           <el-table-column label="检测结果" width="120" header-cell-class-name="cell-center" class-name="cell-center">
             <template #default="{ row }">
-              <span class="status-chip" :class="getDetectionResultClass(row.detectionResult)">
-                {{ getDetectionResultLabel(row.detectionResult) }}
+              <span class="status-chip" :class="getDetectionResultClass(row)">
+                {{ getDetectionResultLabel(row) }}
               </span>
             </template>
           </el-table-column>
@@ -177,7 +195,11 @@
             </template>
           </el-table-column>
           <el-table-column prop="detectionTime" label="流程时间" width="170" />
-          <el-table-column prop="abnormalRemark" label="说明" min-width="220" show-overflow-tooltip />
+          <el-table-column label="说明" min-width="260" show-overflow-tooltip>
+            <template #default="{ row }">
+              {{ getRecordRemark(row) }}
+            </template>
+          </el-table-column>
         </el-table>
 
         <TablePagination
@@ -188,6 +210,94 @@
         />
       </div>
     </section>
+
+    <el-dialog
+      v-model="resultDialogVisible"
+      class="detection-result-dialog"
+      :title="resultDialogTitle"
+      width="1080px"
+      destroy-on-close
+      @closed="resetResultForm"
+    >
+      <div class="result-dialog">
+        <div class="result-dialog__summary">
+          <span class="binding-editor__chip">样品编号<strong>{{ resultForm.sampleNo || '-' }}</strong></span>
+          <span class="binding-editor__chip">封签编号<strong>{{ resultForm.sealNo || '-' }}</strong></span>
+          <span class="binding-editor__chip">检测套餐<strong>{{ resultForm.detectionTypeName || '-' }}</strong></span>
+          <span class="binding-editor__chip">当前参数<strong>{{ resultForm.parameterName || '-' }}</strong></span>
+          <span class="binding-editor__chip">参数数<strong>{{ resultForm.items.length }}</strong></span>
+          <span class="binding-editor__chip">正常<strong>{{ resultNormalCount }}</strong></span>
+          <span class="binding-editor__chip">异常<strong>{{ resultAbnormalCount }}</strong></span>
+        </div>
+
+        <div class="panel-note result-dialog__note">
+          {{ resultDialogNote }}
+        </div>
+
+        <el-table
+          class="list-table result-dialog__table"
+          :data="resultForm.items"
+          stripe
+          border
+          max-height="460"
+        >
+          <el-table-column prop="parameterName" label="检测参数" min-width="150" />
+          <el-table-column prop="methodName" label="检测方法" min-width="220" show-overflow-tooltip />
+          <el-table-column label="标准范围" min-width="140">
+            <template #default="{ row }">
+              {{ formatStandardRange(row.standardMin, row.standardMax, row.unit) }}
+            </template>
+          </el-table-column>
+          <el-table-column prop="referenceStandard" label="参考范围" min-width="160" show-overflow-tooltip>
+            <template #default="{ row }">{{ row.referenceStandard || '-' }}</template>
+          </el-table-column>
+          <el-table-column label="检测值" min-width="180">
+            <template #default="{ row }">
+              <span v-if="resultDialogReadonly">{{ row.resultValue ?? '-' }}</span>
+              <el-input-number
+                v-else
+                v-model="row.resultValue"
+                :precision="4"
+                :step="0.01"
+                controls-position="right"
+                style="width: 100%"
+              />
+            </template>
+          </el-table-column>
+          <el-table-column label="判定结果" width="120" header-cell-class-name="cell-center" class-name="cell-center">
+            <template #default="{ row }">
+              <span class="status-chip" :class="getResultValueStatusClass(row)">
+                {{ getResultValueStatusLabel(row) }}
+              </span>
+            </template>
+          </el-table-column>
+        </el-table>
+
+        <el-form label-position="top" class="result-dialog__form">
+          <el-form-item label="异常说明">
+            <el-input
+              v-model="resultForm.abnormalRemark"
+              type="textarea"
+              :rows="3"
+              :readonly="resultDialogReadonly"
+              placeholder="如有异常项，可补充现场化验情况、复核说明或异常原因"
+            />
+          </el-form-item>
+        </el-form>
+      </div>
+
+      <template #footer>
+        <el-button @click="resultDialogVisible = false">{{ resultDialogReadonly ? '关闭' : '取消' }}</el-button>
+        <el-button
+          v-if="!resultDialogReadonly"
+          type="primary"
+          :loading="resultSubmitting"
+          @click="submitDetectionResult"
+        >
+          提交检测结果
+        </el-button>
+      </template>
+    </el-dialog>
 
     <section class="scene-grid">
       <div class="glass-panel section-block">
@@ -225,6 +335,10 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElButton } from 'element-plus/es/components/button/index.mjs'
+import { ElDialog } from 'element-plus/es/components/dialog/index.mjs'
+import { ElForm, ElFormItem } from 'element-plus/es/components/form/index.mjs'
+import { ElInput } from 'element-plus/es/components/input/index.mjs'
+import { ElInputNumber } from 'element-plus/es/components/input-number/index.mjs'
 import { ElMessage } from 'element-plus/es/components/message/index.mjs'
 import { ElOption, ElSelect } from 'element-plus/es/components/select/index.mjs'
 import { ElTable, ElTableColumn } from 'element-plus/es/components/table/index.mjs'
@@ -234,7 +348,8 @@ import {
   fetchDetectionDetailApi,
   fetchDetectionDetectorsApi,
   fetchDetectionsApi,
-  fetchSamplesApi
+  fetchSamplesApi,
+  submitDetectionApi
 } from '../api/lab'
 import {
   abnormalDetectionResult,
@@ -264,6 +379,22 @@ const activeStatKey = ref('all')
 const detailMap = reactive({})
 const detailLoadingMap = reactive({})
 const assignmentMap = reactive({})
+const resultDialogVisible = ref(false)
+const resultSubmitting = ref(false)
+const resultDialogItemId = ref(null)
+const resultDialogItemStatus = ref('')
+
+const resultForm = reactive({
+  recordId: null,
+  sampleId: null,
+  sampleNo: '',
+  sealNo: '',
+  detectionTypeId: null,
+  detectionTypeName: '',
+  parameterName: '',
+  abnormalRemark: '',
+  items: []
+})
 
 function parseSampleConfigSnapshot(snapshotText) {
   if (!snapshotText) {
@@ -473,6 +604,23 @@ const pagedRecords = computed(() => {
   return filteredRecords.value.slice(start, start + query.pageSize)
 })
 
+const resultDialogReadonly = computed(() => resultDialogItemStatus.value !== WAIT_DETECT_STATUS)
+
+const resultDialogTitle = computed(() => {
+  const action = resultDialogReadonly.value ? '检测结果明细' : '检测结果录入'
+  return resultForm.parameterName ? `${action} - ${resultForm.parameterName}` : action
+})
+
+const resultNormalCount = computed(() => resultForm.items.filter((item) => getResultValueStatusLabel(item) === '正常').length)
+
+const resultAbnormalCount = computed(() => resultForm.items.filter((item) => getResultValueStatusLabel(item) === '异常').length)
+
+const resultDialogNote = computed(() => (
+  resultDialogReadonly.value
+    ? '当前窗口用于查看该参数子流程已保存的检测方法、结果值与异常判定。'
+    : '请按当前参数子流程录入化验结果，系统会根据标准范围自动判定正常或异常。'
+))
+
 function getDetectionStatusLabel(status) {
   if (status === WAIT_ASSIGN_STATUS) {
     return '待分配'
@@ -501,12 +649,31 @@ function getItemStatusClass(status) {
   return getDetectionStatusClass(status)
 }
 
-function getDetectionResultLabel(result) {
-  return result ? getEnumLabel(detectionResultLabelMap, result) : '-'
+function getDetectionResultLabel(row) {
+  const total = Number(row?.parameterCount || 0)
+  const completed = Number(row?.completedCount || 0)
+  if (!total) {
+    return '-'
+  }
+  if (completed <= 0) {
+    return '未录入'
+  }
+  if (completed < total) {
+    return '部分提交'
+  }
+  return row?.detectionResult ? getEnumLabel(detectionResultLabelMap, row.detectionResult) : '已提交'
 }
 
-function getDetectionResultClass(result) {
-  return result ? getStatusClass('detectionResult', result) : 'info'
+function getDetectionResultClass(row) {
+  const total = Number(row?.parameterCount || 0)
+  const completed = Number(row?.completedCount || 0)
+  if (!total || completed <= 0) {
+    return 'info'
+  }
+  if (completed < total) {
+    return 'warning'
+  }
+  return row?.detectionResult ? getStatusClass('detectionResult', row.detectionResult) : 'success'
 }
 
 function handleStatClick(key) {
@@ -547,6 +714,12 @@ function formatProgress(row) {
   if (!total) {
     return '-'
   }
+  if (completed > 0 && completed < total) {
+    return `${assigned}/${total} 已分配，${completed}/${total} 已提交，检测进行中`
+  }
+  if (completed === total) {
+    return `${assigned}/${total} 已分配，${completed}/${total} 已提交，已全部完成`
+  }
   return `${assigned}/${total} 已分配，${completed}/${total} 已提交`
 }
 
@@ -556,8 +729,25 @@ function canAssignRow(row) {
     && [WAIT_ASSIGN_STATUS, WAIT_DETECT_STATUS].includes(row.detectionStatus)
 }
 
+function canOpenResultDialogItem(item) {
+  return !!item
+    && [WAIT_DETECT_STATUS, reviewPendingDetectionStatus, approvedDetectionStatus, rejectedDetectionStatus].includes(item.itemStatus)
+}
+
+function isResultEditable(item) {
+  return !!item && item.itemStatus === WAIT_DETECT_STATUS
+}
+
+function getResultActionLabel(item) {
+  return isResultEditable(item) ? '录入结果' : '查看结果'
+}
+
 function getDetailItems(recordId) {
   return detailMap[recordId]?.items || []
+}
+
+function countSubmittedItems(recordId) {
+  return getDetailItems(recordId).filter((item) => item.itemStatus === reviewPendingDetectionStatus).length
 }
 
 function countAssignedItems(recordId) {
@@ -565,6 +755,66 @@ function countAssignedItems(recordId) {
     const currentValue = assignmentMap[recordId]?.[item.id]
     return currentValue !== null && currentValue !== undefined && currentValue !== ''
   }).length
+}
+
+function getItemResultLabel(item) {
+  if (!item) {
+    return '-'
+  }
+  if (item.itemStatus === WAIT_ASSIGN_STATUS) {
+    return '待分配人员'
+  }
+  if (item.itemStatus === WAIT_DETECT_STATUS) {
+    return '待录入结果'
+  }
+  if (item.itemStatus === reviewPendingDetectionStatus) {
+    return getResultValueStatusLabel(item)
+  }
+  return getResultValueStatusLabel(item)
+}
+
+function getItemResultClass(item) {
+  if (!item) {
+    return 'info'
+  }
+  if (item.itemStatus === WAIT_ASSIGN_STATUS) {
+    return 'warning'
+  }
+  if (item.itemStatus === WAIT_DETECT_STATUS) {
+    return 'info'
+  }
+  return getResultValueStatusClass(item)
+}
+
+function getRecordRemark(row) {
+  if (!row) {
+    return '-'
+  }
+  if (row.__sampleOnly) {
+    return row.abnormalRemark || '历史样品未自动生成参数子流程'
+  }
+  const total = Number(row.parameterCount || 0)
+  const assigned = Number(row.assignedCount || 0)
+  const completed = Number(row.completedCount || 0)
+  if (row.abnormalRemark) {
+    return row.abnormalRemark
+  }
+  if (!total) {
+    return '当前主流程下暂无参数子流程数据'
+  }
+  if (assigned < total) {
+    return `已完成 ${assigned}/${total} 个参数分配，仍有 ${total - assigned} 个参数待分配检测员`
+  }
+  if (completed <= 0) {
+    return '参数子流程已全部分配完成，等待检测员录入结果'
+  }
+  if (completed < total) {
+    return `已有 ${completed}/${total} 个参数提交结果，剩余 ${total - completed} 个参数待检测`
+  }
+  if (row.detectionResult === abnormalDetectionResult) {
+    return '全部参数已提交完成，存在异常项，等待结果审查'
+  }
+  return '全部参数已提交完成，等待结果审查'
 }
 
 function ensureAssignmentState(recordId, items) {
@@ -585,6 +835,52 @@ function updateAssignedDetectorId(recordId, itemId, value) {
   assignmentMap[recordId][itemId] = value ?? null
 }
 
+function resetResultForm() {
+  resultForm.recordId = null
+  resultForm.sampleId = null
+  resultForm.sampleNo = ''
+  resultForm.sealNo = ''
+  resultForm.detectionTypeId = null
+  resultForm.detectionTypeName = ''
+  resultForm.parameterName = ''
+  resultForm.abnormalRemark = ''
+  resultForm.items = []
+  resultDialogItemId.value = null
+  resultDialogItemStatus.value = ''
+}
+
+function isResultValueAbnormal(item) {
+  if (!item || item.resultValue == null || item.resultValue === '') {
+    return false
+  }
+  const value = Number(item.resultValue)
+  if (!Number.isFinite(value)) {
+    return false
+  }
+  if (item.standardMin != null && value < Number(item.standardMin)) {
+    return true
+  }
+  return item.standardMax != null && value > Number(item.standardMax)
+}
+
+function getResultValueStatusLabel(item) {
+  if (!item || item.resultValue == null || item.resultValue === '') {
+    return '待录入'
+  }
+  return isResultValueAbnormal(item) ? '异常' : '正常'
+}
+
+function getResultValueStatusClass(item) {
+  const label = getResultValueStatusLabel(item)
+  if (label === '异常') {
+    return 'danger'
+  }
+  if (label === '正常') {
+    return 'success'
+  }
+  return 'info'
+}
+
 async function loadRecordDetail(recordId, force = false) {
   if (!recordId || recordId.toString().startsWith('pending-sample-')) {
     return
@@ -600,6 +896,42 @@ async function loadRecordDetail(recordId, force = false) {
   } finally {
     detailLoadingMap[recordId] = false
   }
+}
+
+async function openResultDialog(row, item) {
+  if (!row || row.__sampleOnly) {
+    return
+  }
+  await loadRecordDetail(row.id)
+  const detail = detailMap[row.id]
+  const currentItem = (detail?.items || []).find((detailItem) => detailItem.id === item?.id)
+  if (!currentItem) {
+    ElMessage.warning('当前子流程明细不存在，请刷新后重试')
+    return
+  }
+  resetResultForm()
+  resultForm.recordId = row.id
+  resultForm.sampleId = row.sampleId || detail?.record?.sampleId || null
+  resultForm.sampleNo = row.sampleNo || detail?.record?.sampleNo || ''
+  resultForm.sealNo = row.sealNo || detail?.record?.sealNo || ''
+  resultForm.detectionTypeId = row.detectionTypeId || detail?.record?.detectionTypeId || null
+  resultForm.detectionTypeName = row.detectionTypeName || detail?.record?.detectionTypeName || ''
+  resultForm.parameterName = currentItem.parameterName || ''
+  resultForm.abnormalRemark = detail?.record?.abnormalRemark || ''
+  resultDialogItemId.value = currentItem.id
+  resultDialogItemStatus.value = currentItem.itemStatus || ''
+  resultForm.items = [{
+    id: currentItem.id,
+    parameterId: currentItem.parameterId,
+    parameterName: currentItem.parameterName || '',
+    methodName: currentItem.methodName || '',
+    standardMin: currentItem.standardMin,
+    standardMax: currentItem.standardMax,
+    referenceStandard: currentItem.referenceStandard || '',
+    unit: currentItem.unit || '',
+    resultValue: currentItem.resultValue == null ? null : Number(currentItem.resultValue)
+  }]
+  resultDialogVisible.value = true
 }
 
 async function handleExpandChange(row, expandedRows) {
@@ -629,6 +961,46 @@ async function saveAssignments(row) {
     loadRecordDetail(row.id, true),
     loadData()
   ])
+}
+
+async function submitDetectionResult() {
+  if (!resultForm.sampleId || !resultForm.detectionTypeId) {
+    ElMessage.warning('当前检测主流程缺少样品或检测套餐信息，暂不能提交')
+    return
+  }
+  if (!resultForm.items.length || resultForm.items.some((item) => item.resultValue == null || item.resultValue === '')) {
+    ElMessage.warning('请完整填写全部检测参数的结果值')
+    return
+  }
+
+  resultSubmitting.value = true
+  try {
+    const recordId = resultForm.recordId
+    await submitDetectionApi({
+      recordId: resultForm.recordId,
+      itemId: resultDialogItemId.value,
+      sampleId: resultForm.sampleId,
+      detectionTypeId: resultForm.detectionTypeId,
+      detectionTypeName: resultForm.detectionTypeName,
+      abnormalRemark: resultForm.abnormalRemark,
+      items: resultForm.items.map((item) => ({
+        parameterId: item.parameterId,
+        parameterName: item.parameterName,
+        standardMin: item.standardMin,
+        standardMax: item.standardMax,
+        resultValue: item.resultValue,
+        unit: item.unit
+      }))
+    })
+    resultDialogVisible.value = false
+    ElMessage.success('检测结果已提交')
+    await Promise.all([
+      loadRecordDetail(recordId, true),
+      loadData()
+    ])
+  } finally {
+    resultSubmitting.value = false
+  }
 }
 
 async function loadData() {
@@ -815,15 +1187,78 @@ watch(() => route.fullPath, () => {
   line-height: 1.6;
 }
 
+.subflow-result {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--brand) 5%, #ffffff 95%);
+}
+
+.subflow-result__label {
+  color: var(--text-sub);
+  font-size: 13px;
+}
+
 .subflow-assign {
   display: grid;
   gap: 8px;
+}
+
+.subflow-card__action {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  min-height: 40px;
 }
 
 .subflow-assign label {
   color: var(--text-main);
   font-size: 13px;
   font-weight: 600;
+}
+
+.binding-editor__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--brand) 16%, #ffffff 84%);
+  background: color-mix(in srgb, var(--brand) 7%, #ffffff 93%);
+  color: var(--text-sub);
+  font-size: 13px;
+}
+
+.binding-editor__chip strong {
+  color: var(--brand);
+  font-size: 15px;
+}
+
+.result-dialog {
+  display: grid;
+  gap: 14px;
+}
+
+.result-dialog__summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.result-dialog__note {
+  margin-bottom: 2px;
+}
+
+.result-dialog__table {
+  width: 100%;
+}
+
+.result-dialog__form {
+  margin-top: 4px;
 }
 
 .subflow-empty {
@@ -857,6 +1292,10 @@ watch(() => route.fullPath, () => {
   .subflow-head {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .result-dialog__summary {
+    gap: 8px;
   }
 }
 </style>

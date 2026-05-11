@@ -19,12 +19,10 @@ import com.yx.lab.modules.detection.dto.DetectionSubmitCommand;
 import com.yx.lab.modules.detection.entity.DetectionItem;
 import com.yx.lab.modules.detection.entity.DetectionParameter;
 import com.yx.lab.modules.detection.entity.DetectionRecord;
-import com.yx.lab.modules.detection.entity.DetectionStep;
 import com.yx.lab.modules.detection.entity.DetectionType;
 import com.yx.lab.modules.detection.mapper.DetectionItemMapper;
 import com.yx.lab.modules.detection.mapper.DetectionParameterMapper;
 import com.yx.lab.modules.detection.mapper.DetectionRecordMapper;
-import com.yx.lab.modules.detection.mapper.DetectionStepMapper;
 import com.yx.lab.modules.detection.mapper.DetectionTypeMapper;
 import com.yx.lab.modules.detection.vo.DetectionRecordDetailVO;
 import com.yx.lab.modules.review.entity.ReviewRecord;
@@ -61,8 +59,6 @@ public class DetectionWorkflowService {
     private final DetectionTypeMapper detectionTypeMapper;
 
     private final DetectionParameterMapper detectionParameterMapper;
-
-    private final DetectionStepMapper detectionStepMapper;
 
     private final LabSampleMapper labSampleMapper;
 
@@ -143,20 +139,27 @@ public class DetectionWorkflowService {
         DetectionType detectionType = detectionTypeMapper.selectById(command.getDetectionTypeId());
         DetectionType usableType = requireUsableType(command, detectionType);
         List<DetectionParameter> configuredParameters = resolveConfiguredParameters(usableType, sample);
-        ensureTypeHasSteps(usableType.getId());
-        Map<Long, DetectionItemCommand> itemMap = validateSubmittedItems(command.getItems(), configuredParameters);
 
         CurrentUser currentUser = requireCurrentUser();
-        DetectionRecord activeRecord = detectionPendingFlowService.createPendingFlowIfMissing(sample);
-        if (activeRecord == null) {
-            activeRecord = detectionPendingFlowService.findActiveRecordBySampleId(sample.getId());
+        DetectionRecord activeRecord = resolvePendingRecord(command, sample);
+        if (activeRecord != null) {
+            validateSubmitRecordOwnership(activeRecord, sample);
         }
 
         if (activeRecord != null && LabWorkflowConstants.canAssignDetection(activeRecord.getDetectionStatus())) {
-            submitPendingRecord(activeRecord, sample, usableType, configuredParameters, itemMap, currentUser, command.getAbnormalRemark());
+            submitPendingRecord(
+                    activeRecord,
+                    sample,
+                    usableType,
+                    configuredParameters,
+                    command.getItems(),
+                    currentUser,
+                    command.getAbnormalRemark(),
+                    command.getItemId());
             return;
         }
 
+        Map<Long, DetectionItemCommand> itemMap = validateSubmittedItems(command.getItems(), configuredParameters);
         Long pendingCount = detectionRecordMapper.selectCount(new LambdaQueryWrapper<DetectionRecord>()
                 .eq(DetectionRecord::getSampleId, sample.getId())
                 .eq(DetectionRecord::getDetectionStatus, LabWorkflowConstants.DetectionStatus.SUBMITTED));
@@ -167,23 +170,56 @@ public class DetectionWorkflowService {
         insertSubmittedRecord(sample, usableType, configuredParameters, itemMap, currentUser, command.getAbnormalRemark());
     }
 
+    private DetectionRecord resolvePendingRecord(DetectionSubmitCommand command, LabSample sample) {
+        if (command.getRecordId() != null) {
+            DetectionRecord record = detectionRecordMapper.selectById(command.getRecordId());
+            if (record == null) {
+                throw new BusinessException("检测主流程不存在");
+            }
+            return record;
+        }
+        DetectionRecord activeRecord = detectionPendingFlowService.createPendingFlowIfMissing(sample);
+        if (activeRecord == null) {
+            activeRecord = detectionPendingFlowService.findActiveRecordBySampleId(sample.getId());
+        }
+        return activeRecord;
+    }
+
+    private void validateSubmitRecordOwnership(DetectionRecord record, LabSample sample) {
+        if (record == null || sample == null) {
+            return;
+        }
+        if (record.getSampleId() == null || !record.getSampleId().equals(sample.getId())) {
+            throw new BusinessException("当前检测主流程与样品不匹配，请刷新后重试");
+        }
+    }
+
     private void submitPendingRecord(DetectionRecord record,
                                      LabSample sample,
                                      DetectionType detectionType,
                                      List<DetectionParameter> configuredParameters,
-                                     Map<Long, DetectionItemCommand> itemMap,
+                                     List<DetectionItemCommand> submittedItems,
                                      CurrentUser currentUser,
-                                     String abnormalRemark) {
+                                     String abnormalRemark,
+                                     Long expectedItemId) {
         List<DetectionItem> pendingItems = detectionItemMapper.selectList(new LambdaQueryWrapper<DetectionItem>()
                 .eq(DetectionItem::getRecordId, record.getId())
                 .orderByAsc(DetectionItem::getCreatedTime));
         Map<Long, DetectionItem> pendingItemMap = pendingItems.stream()
                 .collect(Collectors.toMap(DetectionItem::getParameterId, item -> item, (left, right) -> left));
-        validatePendingAssignmentsForSubmit(configuredParameters, pendingItemMap, currentUser);
+        Map<Long, DetectionItemCommand> itemMap = validatePendingSubmittedItems(
+                submittedItems,
+                configuredParameters,
+                pendingItemMap,
+                currentUser,
+                expectedItemId);
+        Map<Long, DetectionParameter> parameterMap = configuredParameters.stream()
+                .collect(Collectors.toMap(DetectionParameter::getId, parameter -> parameter, (left, right) -> left));
 
-        for (DetectionParameter parameter : configuredParameters) {
-            DetectionItem pendingItem = pendingItemMap.get(parameter.getId());
-            DetectionItemCommand itemCommand = itemMap.get(parameter.getId());
+        for (Map.Entry<Long, DetectionItemCommand> entry : itemMap.entrySet()) {
+            DetectionParameter parameter = parameterMap.get(entry.getKey());
+            DetectionItem pendingItem = pendingItemMap.get(entry.getKey());
+            DetectionItemCommand itemCommand = entry.getValue();
             pendingItem.setParameterName(parameter.getParameterName());
             pendingItem.setStandardMin(parameter.getStandardMin());
             pendingItem.setStandardMax(parameter.getStandardMax());
@@ -197,20 +233,12 @@ public class DetectionWorkflowService {
         record.setDetectionTypeId(detectionType.getId());
         record.setDetectionTypeName(detectionType.getTypeName());
         record.setDetectionTime(LocalDateTime.now());
-        record.setAbnormalRemark(StrUtil.trim(abnormalRemark));
-        record.setDetectionResult(buildResult(configuredParameters, itemMap));
-        record.setDetectionStatus(LabWorkflowConstants.DetectionStatus.SUBMITTED);
+        if (StrUtil.isNotBlank(abnormalRemark)) {
+            record.setAbnormalRemark(StrUtil.trim(abnormalRemark));
+        }
         applyRecordDetectorSummary(record, pendingItems, currentUser);
+        applyPendingRecordStatus(record, sample, pendingItems, currentUser);
         detectionRecordMapper.updateById(record);
-
-        labSampleService.updateStatus(
-                sample.getId(),
-                LabWorkflowConstants.SampleStatus.REVIEWING,
-                record.getDetectionResult(),
-                "检测提交：封签号=" + sample.getSealNo()
-                        + "，检测套餐=" + record.getDetectionTypeName()
-                        + "，检测人=" + StrUtil.blankToDefault(record.getDetectorName(), currentUser.getRealName())
-                        + "，结果=" + record.getDetectionResult());
     }
 
     private void insertSubmittedRecord(LabSample sample,
@@ -324,13 +352,6 @@ public class DetectionWorkflowService {
         return orderedParameters;
     }
 
-    private void ensureTypeHasSteps(Long typeId) {
-        Long stepCount = detectionStepMapper.selectCount(new LambdaQueryWrapper<DetectionStep>()
-                .eq(DetectionStep::getTypeId, typeId));
-        if (stepCount == null || stepCount == 0) {
-            throw new BusinessException("当前检测套餐未配置检测步骤，不能提交检测");
-        }
-    }
 
     private List<Long> resolveSampleParameterIds(LabSample sample, DetectionType detectionType) {
         List<Long> parameterIds = parseSampleDetectionConfigParameterIds(sample == null ? null : sample.getDetectionConfigSnapshot());
@@ -387,6 +408,56 @@ public class DetectionWorkflowService {
         return itemMap;
     }
 
+    private Map<Long, DetectionItemCommand> validatePendingSubmittedItems(List<DetectionItemCommand> items,
+                                                                          List<DetectionParameter> configuredParameters,
+                                                                          Map<Long, DetectionItem> pendingItemMap,
+                                                                          CurrentUser currentUser,
+                                                                          Long expectedItemId) {
+        if (pendingItemMap.isEmpty()) {
+            throw new BusinessException("当前样品还没有生成参数子流程，不能直接提交检测");
+        }
+        if (items == null || items.isEmpty()) {
+            throw new BusinessException("检测结果不能为空");
+        }
+        if (expectedItemId != null && items.size() != 1) {
+            throw new BusinessException("当前子流程一次只能提交一个检测参数结果");
+        }
+
+        Map<Long, DetectionParameter> parameterMap = configuredParameters.stream()
+                .collect(Collectors.toMap(DetectionParameter::getId, parameter -> parameter, (left, right) -> left));
+        Map<Long, DetectionItemCommand> itemMap = new LinkedHashMap<>();
+        boolean admin = currentUser != null && "ADMIN".equalsIgnoreCase(currentUser.getRoleCode());
+
+        for (DetectionItemCommand item : items) {
+            if (itemMap.put(item.getParameterId(), item) != null) {
+                throw new BusinessException("同一检测参数不能重复提交");
+            }
+            DetectionParameter parameter = parameterMap.get(item.getParameterId());
+            if (parameter == null) {
+                throw new BusinessException("检测套餐中不存在当前检测参数");
+            }
+            validateItemAgainstConfig(item, parameter);
+
+            DetectionItem pendingItem = pendingItemMap.get(item.getParameterId());
+            if (pendingItem == null) {
+                throw new BusinessException("检测参数“" + parameter.getParameterName() + "”缺少待分配子流程");
+            }
+            if (expectedItemId != null && !expectedItemId.equals(pendingItem.getId())) {
+                throw new BusinessException("当前提交的检测参数与子流程不匹配，请刷新后重试");
+            }
+            if (pendingItem.getDetectorId() == null) {
+                throw new BusinessException("检测参数“" + parameter.getParameterName() + "”尚未分配检测员");
+            }
+            if (LabWorkflowConstants.DetectionStatus.SUBMITTED.equals(pendingItem.getItemStatus())) {
+                throw new BusinessException("检测参数“" + parameter.getParameterName() + "”已提交结果，请勿重复录入");
+            }
+            if (!admin && !pendingItem.getDetectorId().equals(currentUser.getUserId())) {
+                throw new BusinessException("当前用户只能录入分配给自己的检测参数结果");
+            }
+        }
+        return itemMap;
+    }
+
     private void validateItemAgainstConfig(DetectionItemCommand item, DetectionParameter parameter) {
         if (!StrUtil.equals(item.getParameterName(), parameter.getParameterName())) {
             throw new BusinessException("检测参数名称与配置不一致：" + parameter.getParameterName());
@@ -400,32 +471,6 @@ public class DetectionWorkflowService {
         }
         if (item.getStandardMax() != null && compareNullableDecimal(item.getStandardMax(), parameter.getStandardMax()) != 0) {
             throw new BusinessException("检测参数标准上限与配置不一致：" + parameter.getParameterName());
-        }
-    }
-
-    private void validatePendingAssignmentsForSubmit(List<DetectionParameter> configuredParameters,
-                                                     Map<Long, DetectionItem> pendingItemMap,
-                                                     CurrentUser currentUser) {
-        if (pendingItemMap.isEmpty()) {
-            throw new BusinessException("当前样品还没有生成参数子流程，不能直接提交检测");
-        }
-        boolean admin = currentUser != null && "ADMIN".equalsIgnoreCase(currentUser.getRoleCode());
-        Set<Long> ownerIds = new LinkedHashSet<>();
-        for (DetectionParameter parameter : configuredParameters) {
-            DetectionItem pendingItem = pendingItemMap.get(parameter.getId());
-            if (pendingItem == null) {
-                throw new BusinessException("检测参数“" + parameter.getParameterName() + "”缺少待分配子流程");
-            }
-            if (pendingItem.getDetectorId() == null) {
-                throw new BusinessException("检测参数“" + parameter.getParameterName() + "”尚未分配检测员");
-            }
-            ownerIds.add(pendingItem.getDetectorId());
-            if (!admin && !pendingItem.getDetectorId().equals(currentUser.getUserId())) {
-                throw new BusinessException("当前用户只能提交分配给自己的检测参数，请先按人员分工处理");
-            }
-        }
-        if (!admin && ownerIds.size() > 1) {
-            throw new BusinessException("当前样品存在多名检测员分工，普通检测员不能一次性代替他人提交全部结果");
         }
     }
 
@@ -451,6 +496,34 @@ public class DetectionWorkflowService {
         }
         record.setDetectorId(currentUser.getUserId());
         record.setDetectorName(currentUser.getRealName());
+    }
+
+    private void applyPendingRecordStatus(DetectionRecord record,
+                                          LabSample sample,
+                                          List<DetectionItem> pendingItems,
+                                          CurrentUser currentUser) {
+        boolean allSubmitted = !pendingItems.isEmpty() && pendingItems.stream()
+                .allMatch(item -> LabWorkflowConstants.DetectionStatus.SUBMITTED.equals(item.getItemStatus()));
+        if (allSubmitted) {
+            record.setDetectionResult(buildResultFromPendingItems(pendingItems));
+            record.setDetectionStatus(LabWorkflowConstants.DetectionStatus.SUBMITTED);
+            labSampleService.updateStatus(
+                    sample.getId(),
+                    LabWorkflowConstants.SampleStatus.REVIEWING,
+                    record.getDetectionResult(),
+                    "检测提交：封签号=" + sample.getSealNo()
+                            + "，检测套餐=" + record.getDetectionTypeName()
+                            + "，检测人=" + StrUtil.blankToDefault(record.getDetectorName(), currentUser.getRealName())
+                            + "，结果=" + record.getDetectionResult());
+            return;
+        }
+
+        record.setDetectionResult(null);
+        boolean hasUnassigned = pendingItems.stream().anyMatch(item -> item.getDetectorId() == null
+                || LabWorkflowConstants.DetectionStatus.WAIT_ASSIGN.equals(item.getItemStatus()));
+        record.setDetectionStatus(hasUnassigned
+                ? LabWorkflowConstants.DetectionStatus.WAIT_ASSIGN
+                : LabWorkflowConstants.DetectionStatus.WAIT_DETECT);
     }
 
     private int compareNullableDecimal(BigDecimal left, BigDecimal right) {
@@ -488,6 +561,12 @@ public class DetectionWorkflowService {
     private String buildResult(List<DetectionParameter> configuredParameters, Map<Long, DetectionItemCommand> itemMap) {
         return configuredParameters.stream()
                 .anyMatch(parameter -> isExceeded(parameter, itemMap.get(parameter.getId()).getResultValue()))
+                ? LabWorkflowConstants.DetectionResult.ABNORMAL
+                : LabWorkflowConstants.DetectionResult.NORMAL;
+    }
+
+    private String buildResultFromPendingItems(List<DetectionItem> items) {
+        return items.stream().anyMatch(item -> Integer.valueOf(1).equals(item.getExceedFlag()))
                 ? LabWorkflowConstants.DetectionResult.ABNORMAL
                 : LabWorkflowConstants.DetectionResult.NORMAL;
     }

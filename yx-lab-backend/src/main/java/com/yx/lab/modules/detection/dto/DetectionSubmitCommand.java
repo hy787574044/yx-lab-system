@@ -10,6 +10,10 @@ import java.util.List;
 @Data
 public class DetectionSubmitCommand {
 
+    private Long recordId;
+
+    private Long itemId;
+
     @NotNull(message = "样品ID不能为空")
     private Long sampleId;
 
