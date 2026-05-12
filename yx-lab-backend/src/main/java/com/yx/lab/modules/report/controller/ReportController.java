@@ -8,6 +8,7 @@ import com.yx.lab.modules.report.dto.ReportTemplateSaveCommand;
 import com.yx.lab.modules.report.entity.LabReport;
 import com.yx.lab.modules.report.entity.ReportTemplate;
 import com.yx.lab.modules.report.service.ReportService;
+import com.yx.lab.modules.report.vo.ReportPreviewVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -69,6 +70,18 @@ public class ReportController {
                                 .toString())
                 .contentType(MediaType.TEXT_HTML)
                 .body(reportService.preview(id));
+    }
+
+    /**
+     * 获取报告预览结构化数据。
+     *
+     * @param id 报告主键。
+     * @return A4 文档预览所需结构化数据。
+     */
+    @GetMapping("/{id}/preview-data")
+    @Operation(summary = "获取报告预览结构化数据")
+    public ApiResponse<ReportPreviewVO> previewData(@PathVariable Long id) {
+        return ApiResponse.success(reportService.previewData(id));
     }
 
     /**

@@ -21,6 +21,8 @@ import com.yx.lab.modules.report.entity.ReportTemplate;
 import com.yx.lab.modules.report.mapper.LabReportMapper;
 import com.yx.lab.modules.report.mapper.ReportPushRecordMapper;
 import com.yx.lab.modules.report.mapper.ReportTemplateMapper;
+import com.yx.lab.modules.report.vo.ReportPreviewItemVO;
+import com.yx.lab.modules.report.vo.ReportPreviewVO;
 import com.yx.lab.modules.review.entity.ReviewRecord;
 import com.yx.lab.modules.review.mapper.ReviewRecordMapper;
 import com.yx.lab.modules.sample.entity.LabSample;
@@ -205,6 +207,18 @@ public class ReportService {
         ReviewRecord latestReview = loadLatestReview(report.getSampleId());
         String html = buildDetailedReportHtml(report, sample, detectionRecord, detectionItems, latestReview);
         return html.getBytes(StandardCharsets.UTF_8);
+    }
+
+    public ReportPreviewVO previewData(Long id) {
+        LabReport report = requireReport(id);
+        refreshStoredContentSnapshotIfNeeded(report);
+        LabSample sample = report.getSampleId() == null ? null : labSampleMapper.selectById(report.getSampleId());
+        DetectionRecord detectionRecord = report.getDetectionRecordId() == null
+                ? null
+                : detectionRecordMapper.selectById(report.getDetectionRecordId());
+        List<DetectionItem> detectionItems = loadDetectionItems(report.getDetectionRecordId());
+        ReviewRecord latestReview = loadLatestReview(report.getSampleId());
+        return buildPreviewVO(report, sample, detectionRecord, detectionItems, latestReview);
     }
 
     private ReportTemplate requireTemplate(Long id) {
@@ -418,6 +432,72 @@ public class ReportService {
         return html.toString();
     }
 
+    private ReportPreviewVO buildPreviewVO(LabReport report,
+                                           LabSample sample,
+                                           DetectionRecord detectionRecord,
+                                           List<DetectionItem> detectionItems,
+                                           ReviewRecord latestReview) {
+        ReportPreviewVO vo = new ReportPreviewVO();
+        vo.setReportId(report == null ? null : report.getId());
+        vo.setReportName(StrUtil.blankToDefault(report == null ? null : report.getReportName(), "检测报告"));
+        vo.setReportTypeLabel(resolveReportTypeLabel(report == null ? null : report.getReportType()));
+        vo.setReportStatusLabel(LabWorkflowConstants.getReportStatusLabel(report == null ? null : report.getReportStatus()));
+        vo.setGeneratedTime(formatDateTime(report == null ? null : report.getGeneratedTime()));
+        vo.setPublishedTime(formatDateTime(report == null ? null : report.getPublishedTime()));
+        vo.setPublishedByName(StrUtil.blankToDefault(report == null ? null : report.getPublishedByName(), "-"));
+        vo.setPushStatusLabel(LabWorkflowConstants.getPushStatusLabel(report == null ? null : report.getPushStatus()));
+        vo.setLastPushTime(formatDateTime(report == null ? null : report.getLastPushTime()));
+        vo.setLastPushMessage(translateWorkflowText(StrUtil.blankToDefault(report == null ? null : report.getLastPushMessage(), "-")));
+
+        vo.setSampleNo(StrUtil.blankToDefault(sample == null ? null : sample.getSampleNo(), "-"));
+        vo.setSealNo(StrUtil.blankToDefault(sample == null ? null : sample.getSealNo(), "-"));
+        vo.setPointName(StrUtil.blankToDefault(sample == null ? null : sample.getPointName(), "-"));
+        vo.setSampleTypeLabel(StrUtil.blankToDefault(LabWorkflowConstants.getSampleTypeLabel(sample == null ? null : sample.getSampleType()), "-"));
+        vo.setSamplingTime(formatDateTime(sample == null ? null : sample.getSamplingTime()));
+        vo.setSealTime(formatDateTime(sample == null ? null : sample.getSealTime()));
+        vo.setSamplerName(StrUtil.blankToDefault(sample == null ? null : sample.getSamplerName(), "-"));
+        vo.setWeather(StrUtil.blankToDefault(sample == null ? null : sample.getWeather(), "-"));
+        vo.setStorageCondition(StrUtil.blankToDefault(sample == null ? null : sample.getStorageCondition(), "-"));
+        vo.setSampleStatusLabel(StrUtil.blankToDefault(LabWorkflowConstants.getSampleStatusLabel(sample == null ? null : sample.getSampleStatus()), "-"));
+        vo.setResultSummary(translateWorkflowText(StrUtil.blankToDefault(sample == null ? null : sample.getResultSummary(), "-")));
+        vo.setSampleRemark(StrUtil.blankToDefault(sample == null ? null : sample.getRemark(), "-"));
+        vo.setTraceLog(translateWorkflowText(StrUtil.blankToDefault(sample == null ? null : sample.getTraceLog(), "")));
+
+        vo.setDetectionTime(formatDateTime(detectionRecord == null ? null : detectionRecord.getDetectionTime()));
+        vo.setDetectorName(StrUtil.blankToDefault(detectionRecord == null ? null : detectionRecord.getDetectorName(), "-"));
+        vo.setDetectionResultLabel(StrUtil.blankToDefault(LabWorkflowConstants.getDetectionResultLabel(detectionRecord == null ? null : detectionRecord.getDetectionResult()), "-"));
+        vo.setDetectionStatusLabel(StrUtil.blankToDefault(LabWorkflowConstants.getDetectionStatusLabel(detectionRecord == null ? null : detectionRecord.getDetectionStatus()), "-"));
+        vo.setRecordRemark(translateWorkflowText(StrUtil.blankToDefault(detectionRecord == null ? null : detectionRecord.getAbnormalRemark(), "-")));
+
+        vo.setReviewTime(formatDateTime(latestReview == null ? null : latestReview.getReviewTime()));
+        vo.setReviewerName(StrUtil.blankToDefault(latestReview == null ? null : latestReview.getReviewerName(), "-"));
+        vo.setReviewResultLabel(StrUtil.blankToDefault(LabWorkflowConstants.getReviewResultLabel(latestReview == null ? null : latestReview.getReviewResult()), "-"));
+        vo.setReviewRemark(translateWorkflowText(StrUtil.blankToDefault(latestReview == null ? null : latestReview.getReviewRemark(), "-")));
+        vo.setRejectReason(translateWorkflowText(StrUtil.blankToDefault(latestReview == null ? null : latestReview.getRejectReason(), "-")));
+
+        List<DetectionItem> items = detectionItems == null ? Collections.emptyList() : detectionItems;
+        int abnormalCount = (int) items.stream().filter(item -> Integer.valueOf(1).equals(item.getExceedFlag())).count();
+        vo.setParameterCount(items.size());
+        vo.setAbnormalCount(abnormalCount);
+        vo.setNormalCount(Math.max(0, items.size() - abnormalCount));
+        vo.setItems(items.stream().map(this::toPreviewItem).collect(java.util.stream.Collectors.toList()));
+        return vo;
+    }
+
+    private ReportPreviewItemVO toPreviewItem(DetectionItem item) {
+        ReportPreviewItemVO vo = new ReportPreviewItemVO();
+        vo.setParameterName(StrUtil.blankToDefault(item == null ? null : item.getParameterName(), "-"));
+        vo.setMethodName(StrUtil.blankToDefault(item == null ? null : item.getMethodName(), "-"));
+        vo.setUnit(StrUtil.blankToDefault(item == null ? null : item.getUnit(), "-"));
+        vo.setStandardRange(item == null ? "-" : formatStandardRange(item.getStandardMin(), item.getStandardMax(), item.getUnit()));
+        vo.setReferenceStandard(StrUtil.blankToDefault(item == null ? null : item.getReferenceStandard(), "-"));
+        vo.setResultValue(item == null ? "-" : formatDecimal(item.getResultValue()));
+        vo.setCompareText(item == null ? "-" : buildCompareText(item));
+        vo.setJudgmentLabel(item != null && Integer.valueOf(1).equals(item.getExceedFlag()) ? "异常" : "正常");
+        vo.setItemStatusLabel(getItemStatusLabel(item == null ? null : item.getItemStatus()));
+        return vo;
+    }
+
     private List<DetectionItem> loadDetectionItems(Long detectionRecordId) {
         if (detectionRecordId == null) {
             return Collections.emptyList();
@@ -487,6 +567,19 @@ public class ReportService {
             return "在标准范围内";
         }
         return "暂无标准范围，仅记录结果值";
+    }
+
+    private String resolveReportTypeLabel(String reportType) {
+        if (LabWorkflowConstants.ReportType.DAILY.equals(reportType)) {
+            return "日报";
+        }
+        if (LabWorkflowConstants.ReportType.WEEKLY.equals(reportType)) {
+            return "周报";
+        }
+        if (LabWorkflowConstants.ReportType.MONTHLY.equals(reportType)) {
+            return "月报";
+        }
+        return StrUtil.blankToDefault(reportType, "-");
     }
 
     private String renderTag(String text, String type) {

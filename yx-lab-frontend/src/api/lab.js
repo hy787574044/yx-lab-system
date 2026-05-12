@@ -344,6 +344,13 @@ export const publishReportApi = (id) => request.post(`/api/reports/${id}/publish
  * @returns {Promise<any>} 取消发布结果。
  */
 export const unpublishReportApi = (id) => request.post(`/api/reports/${id}/unpublish`)
+/**
+ * 获取报告预览结构化数据。
+ *
+ * @param {number} id 报告主键。
+ * @returns {Promise<any>} 报告预览结构化数据。
+ */
+export const fetchReportPreviewDataApi = (id) => request.get(`/api/reports/${id}/preview-data`)
 // 预览类接口返回二进制流，需要单独保留鉴权头和 blob 处理方式。
 /**
  * 预览正式报告文件流。

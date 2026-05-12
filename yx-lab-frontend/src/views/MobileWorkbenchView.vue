@@ -437,14 +437,20 @@
       v-model="previewDialogVisible"
       :title="previewTitle"
       class="mobile-dialog mobile-preview-dialog"
-      width="980px"
+      width="1360px"
+      align-center
       destroy-on-close
       @closed="closePreviewDialog"
     >
       <div v-if="previewError" class="preview-empty">{{ previewError }}</div>
-      <iframe v-else-if="previewUrl" :src="previewUrl" class="preview-frame" />
-      <div v-else class="preview-empty">暂无可预览内容</div>
+      <ReportPrintDocument
+        v-else-if="previewData"
+        ref="reportPrintRef"
+        :preview-data="previewData"
+      />
+      <div v-else class="preview-empty">正在加载报告文档...</div>
       <template #footer>
+        <el-button v-if="previewData" type="primary" plain @click="printPreview">打印</el-button>
         <el-button @click="closePreviewDialog">关闭</el-button>
       </template>
     </el-dialog>
@@ -474,15 +480,16 @@ import {
   fetchMobileReviewHistoryApi,
   fetchMobileReviewTodoApi,
   fetchMobileSamplingTodoApi,
+  fetchReportPreviewDataApi,
   getMeApi,
   loginSampleApi,
-  previewReportApi,
   startSamplingTaskApi,
   abandonSamplingTaskApi,
   completeSamplingTaskApi,
   submitDetectionApi,
   submitReviewApi
 } from '../api/lab'
+import ReportPrintDocument from '../components/report/ReportPrintDocument.vue'
 import { clearToken, getUser, setUser } from '../utils/auth'
 import {
   approvedReviewResult,
@@ -528,9 +535,10 @@ const detectionDialogVisible = ref(false)
 const reviewDialogVisible = ref(false)
 const previewDialogVisible = ref(false)
 
-const previewUrl = ref('')
+const previewData = ref(null)
 const previewTitle = ref('')
 const previewError = ref('')
+const reportPrintRef = ref(null)
 
 const completeForm = reactive({
   taskId: null,
@@ -918,48 +926,26 @@ async function submitReview() {
 }
 
 async function previewReport(row) {
-  revokePreviewUrl()
+  previewData.value = null
   previewTitle.value = row.reportName || '报告预览'
   previewError.value = ''
+  previewDialogVisible.value = true
   try {
-    const response = await previewReportApi(row.id)
-    const contentType = response.headers['content-type'] || 'text/html'
-    if (contentType.includes('application/json')) {
-      previewError.value = (await parsePreviewError(response.data)) || '报告预览失败'
-      previewDialogVisible.value = true
-      return
-    }
-    const blob = new Blob([response.data], { type: contentType })
-    previewUrl.value = window.URL.createObjectURL(blob)
-    previewDialogVisible.value = true
+    previewData.value = await fetchReportPreviewDataApi(row.id)
   } catch (error) {
     previewError.value = error?.message || '报告预览失败'
-    previewDialogVisible.value = true
   }
 }
 
-function revokePreviewUrl() {
-  if (previewUrl.value) {
-    window.URL.revokeObjectURL(previewUrl.value)
-    previewUrl.value = ''
-  }
+function printPreview() {
+  reportPrintRef.value?.printDocument?.()
 }
 
 function closePreviewDialog() {
-  revokePreviewUrl()
   previewDialogVisible.value = false
+  previewData.value = null
   previewTitle.value = ''
   previewError.value = ''
-}
-
-async function parsePreviewError(blob) {
-  try {
-    const text = await blob.text()
-    const payload = JSON.parse(text)
-    return payload.message || ''
-  } catch {
-    return ''
-  }
 }
 
 function formatStandardRange(min, max, unit) {
@@ -985,7 +971,9 @@ onMounted(async () => {
   await refreshAll()
 })
 
-onBeforeUnmount(revokePreviewUrl)
+onBeforeUnmount(() => {
+  previewData.value = null
+})
 </script>
 
 <style scoped>
@@ -1305,12 +1293,12 @@ onBeforeUnmount(revokePreviewUrl)
 }
 
 :deep(.mobile-preview-dialog) {
-  max-width: min(980px, calc(100vw - 24px));
+  max-width: min(1360px, calc(100vw - 24px));
 }
 
 :deep(.mobile-preview-dialog .el-dialog__body) {
-  padding-top: 12px;
-  padding-bottom: 12px;
+  padding: 10px 18px 18px;
+  background: #eef3fb;
 }
 
 @media (max-width: 560px) {

@@ -147,14 +147,21 @@
     <el-dialog
       v-model="previewDialogVisible"
       :title="previewTitle"
-      width="980px"
+      width="1360px"
+      align-center
+      class="report-preview-dialog"
       destroy-on-close
       @closed="closePreviewDialog"
     >
       <div v-if="previewError" class="preview-empty">{{ previewError }}</div>
-      <iframe v-else-if="previewUrl" :src="previewUrl" class="preview-frame" />
-      <div v-else class="preview-empty">暂无可预览内容</div>
+      <ReportPrintDocument
+        v-else-if="previewData"
+        ref="reportPrintRef"
+        :preview-data="previewData"
+      />
+      <div v-else class="preview-empty">正在加载报告文档...</div>
       <template #footer>
+        <el-button v-if="previewData" type="primary" plain @click="printPreview">打印</el-button>
         <el-button @click="closePreviewDialog">关闭</el-button>
       </template>
     </el-dialog>
@@ -172,11 +179,12 @@ import { ElTable, ElTableColumn } from 'element-plus/es/components/table/index.m
 import {
   createTemplateApi,
   fetchReportsApi,
-  previewReportApi,
+  fetchReportPreviewDataApi,
   publishReportApi,
   unpublishReportApi
 } from '../api/lab'
 import TablePagination from '../components/common/TablePagination.vue'
+import ReportPrintDocument from '../components/report/ReportPrintDocument.vue'
 import {
   DEFAULT_PAGE_SIZE,
   generatedReportStatus,
@@ -207,9 +215,10 @@ const activeStatKey = ref('all')
 const vLoading = ElLoadingDirective
 
 const previewDialogVisible = ref(false)
-const previewUrl = ref('')
+const previewData = ref(null)
 const previewTitle = ref('')
 const previewError = ref('')
+const reportPrintRef = ref(null)
 
 const stats = computed(() => [
   { key: 'all', label: '报告总数', value: total.value, desc: '报告台账记录总量' },
@@ -310,52 +319,32 @@ async function unpublish(id) {
 }
 
 async function previewReport(row) {
-  revokePreviewUrl()
+  previewData.value = null
   previewTitle.value = row.reportName || '报告预览'
   previewError.value = ''
+  previewDialogVisible.value = true
   try {
-    const response = await previewReportApi(row.id)
-    const contentType = response.headers['content-type'] || 'text/html'
-    if (contentType.includes('application/json')) {
-      previewError.value = (await parsePreviewError(response.data)) || '报告预览失败'
-      previewDialogVisible.value = true
-      return
-    }
-    const blob = new Blob([response.data], { type: contentType })
-    previewUrl.value = window.URL.createObjectURL(blob)
-    previewDialogVisible.value = true
+    previewData.value = await fetchReportPreviewDataApi(row.id)
   } catch (error) {
     previewError.value = error?.message || '报告预览失败'
-    previewDialogVisible.value = true
   }
 }
 
-function revokePreviewUrl() {
-  if (previewUrl.value) {
-    window.URL.revokeObjectURL(previewUrl.value)
-    previewUrl.value = ''
-  }
+function printPreview() {
+  reportPrintRef.value?.printDocument?.()
 }
 
 function closePreviewDialog() {
-  revokePreviewUrl()
   previewDialogVisible.value = false
+  previewData.value = null
   previewTitle.value = ''
   previewError.value = ''
 }
 
-async function parsePreviewError(blob) {
-  try {
-    const text = await blob.text()
-    const payload = JSON.parse(text)
-    return payload.message || ''
-  } catch {
-    return ''
-  }
-}
-
 onMounted(loadReports)
-onBeforeUnmount(revokePreviewUrl)
+onBeforeUnmount(() => {
+  previewData.value = null
+})
 </script>
 
 <style scoped>
@@ -398,16 +387,20 @@ onBeforeUnmount(revokePreviewUrl)
   gap: 8px;
 }
 
-.preview-frame {
-  width: 100%;
-  height: 72vh;
-  border: none;
-  border-radius: 12px;
-  background: #f5f7fa;
+.report-preview-dialog :deep(.el-dialog__body) {
+  max-height: calc(100vh - 170px);
+  overflow: auto;
+  padding: 10px 18px 18px;
+  background: #eef3fb;
+}
+
+.report-preview-dialog :deep(.el-dialog) {
+  max-width: calc(100vw - 32px);
+  margin: 0 auto;
 }
 
 .preview-empty {
-  min-height: 160px;
+  min-height: 240px;
   display: grid;
   place-items: center;
   color: var(--text-sub);
