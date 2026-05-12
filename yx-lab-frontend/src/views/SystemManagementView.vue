@@ -63,6 +63,7 @@
               <el-button type="primary" @click="handleUserSearch">查询</el-button>
               <el-button @click="resetUserQuery">重置</el-button>
               <el-button @click="reloadData">刷新</el-button>
+              <el-button @click="handleExportCurrentScene">导出</el-button>
               <el-button type="primary" plain @click="openUserDialog()">新增用户</el-button>
             </div>
           </div>
@@ -132,6 +133,7 @@
               <el-button type="primary" @click="handleOrgSearch">查询</el-button>
               <el-button @click="resetOrgQuery">重置</el-button>
               <el-button @click="reloadData">刷新</el-button>
+              <el-button @click="handleExportCurrentScene">导出</el-button>
               <el-button type="primary" plain @click="openOrgDialog()">新增机构</el-button>
             </div>
           </div>
@@ -178,6 +180,7 @@
               <el-button type="primary" @click="handleDictSearch">查询</el-button>
               <el-button @click="resetDictQuery">重置</el-button>
               <el-button @click="reloadData">刷新</el-button>
+              <el-button @click="handleExportCurrentScene">导出</el-button>
               <el-button type="primary" plain @click="openDictDialog()">新增字典</el-button>
             </div>
           </div>
@@ -224,6 +227,7 @@
               <el-button type="primary" @click="handleRoleSearch">查询</el-button>
               <el-button @click="resetRoleQuery">重置</el-button>
               <el-button @click="reloadData">刷新</el-button>
+              <el-button @click="handleExportCurrentScene">导出</el-button>
               <el-button type="primary" plain @click="openRoleDialog()">新增角色</el-button>
             </div>
           </div>
@@ -264,6 +268,7 @@
               <el-button type="primary" @click="handleLogSearch">查询</el-button>
               <el-button @click="resetLogQuery">重置</el-button>
               <el-button @click="reloadData">刷新</el-button>
+              <el-button @click="handleExportCurrentScene">导出</el-button>
             </div>
           </div>
           <div class="panel-note">日志管理已切换为真实业务留痕查询，统一汇总登录认证、样品留痕、检测记录、审核记录与报告推送日志。</div>
@@ -424,6 +429,11 @@ import {
   deleteSystemOrgApi,
   deleteSystemRoleApi,
   deleteSystemUserApi,
+  exportSystemDictsApi,
+  exportSystemLogsApi,
+  exportSystemOrgsApi,
+  exportSystemRolesApi,
+  exportSystemUsersApi,
   fetchSystemDictsApi,
   fetchSystemLogsApi,
   fetchSystemOrgOptionsApi,
@@ -1241,6 +1251,37 @@ async function loadPageData() {
     loadUsers(),
     loadRoles()
   ])
+}
+
+async function handleExportCurrentScene() {
+  try {
+    if (isUserScene.value) {
+      await exportSystemUsersApi({ ...userQuery })
+      ElMessage.success('用户列表导出成功')
+      return
+    }
+    if (isOrgScene.value) {
+      await exportSystemOrgsApi({ ...orgQuery })
+      ElMessage.success('机构列表导出成功')
+      return
+    }
+    if (isDictScene.value) {
+      await exportSystemDictsApi({ ...dictQuery })
+      ElMessage.success('数据字典导出成功')
+      return
+    }
+    if (isRoleScene.value) {
+      await exportSystemRolesApi({ ...roleQuery })
+      ElMessage.success('角色列表导出成功')
+      return
+    }
+    if (isLogScene.value) {
+      await exportSystemLogsApi({ ...logQuery })
+      ElMessage.success('系统日志导出成功')
+    }
+  } catch (error) {
+    ElMessage.error(error.message || '导出失败')
+  }
 }
 
 async function loadLogs() {

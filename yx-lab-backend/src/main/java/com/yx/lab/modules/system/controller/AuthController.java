@@ -42,7 +42,7 @@ public class AuthController {
      * @param request 登录请求体
      * @return 登录结果
      */
-    @PostMapping("/mobile-login")
+    @PostMapping("/mobileLogin")
     @Operation(summary = "移动端登录")
     public ApiResponse<LoginVO> mobileLogin(@Validated @RequestBody LoginRequest request) {
         return ApiResponse.success("登录成功", authService.login(request, "MOBILE"));

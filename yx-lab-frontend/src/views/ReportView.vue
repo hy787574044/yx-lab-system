@@ -53,6 +53,7 @@
             <el-button type="primary" @click="handleSearch">查询</el-button>
             <el-button @click="resetQuery">重置</el-button>
             <el-button @click="loadReports" :loading="loading">刷新报告</el-button>
+            <el-button @click="handleExport" :loading="loading">导出</el-button>
             <el-button type="primary" plain @click="createTemplate">新增模板</el-button>
           </div>
         </div>
@@ -178,6 +179,7 @@ import { ElOption, ElSelect } from 'element-plus/es/components/select/index.mjs'
 import { ElTable, ElTableColumn } from 'element-plus/es/components/table/index.mjs'
 import {
   createTemplateApi,
+  exportReportsApi,
   fetchReportsApi,
   fetchReportPreviewDataApi,
   publishReportApi,
@@ -291,6 +293,15 @@ async function loadReports() {
     total.value = result.total || 0
   } finally {
     loading.value = false
+  }
+}
+
+async function handleExport() {
+  try {
+    await exportReportsApi(query)
+    ElMessage.success('报告台账导出成功')
+  } catch (error) {
+    ElMessage.error(error.message || '报告台账导出失败')
   }
 }
 

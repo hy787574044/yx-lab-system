@@ -43,6 +43,7 @@
           <div class="panel-note">{{ baseScene.note }}</div>
           <div class="toolbar-actions">
             <el-button type="primary" @click="loadData">刷新检测流程</el-button>
+            <el-button @click="handleExport">导出</el-button>
             <el-button
               v-if="baseScene.key === 'detection-history'"
               type="primary"
@@ -358,6 +359,7 @@ import { ElTable, ElTableColumn } from 'element-plus/es/components/table/index.m
 import TablePagination from '../components/common/TablePagination.vue'
 import {
   assignDetectionDetectorsApi,
+  exportDetectionsApi,
   fetchDetectionDetailApi,
   fetchDetectionDetectorsApi,
   fetchDetectionsApi,
@@ -1090,6 +1092,15 @@ async function loadData() {
   const maxPage = Math.max(1, Math.ceil(displayTotal.value / query.pageSize))
   if (query.pageNum > maxPage) {
     query.pageNum = 1
+  }
+}
+
+async function handleExport() {
+  try {
+    await exportDetectionsApi(query)
+    ElMessage.success('检测流程导出成功')
+  } catch (error) {
+    ElMessage.error(error.message || '检测流程导出失败')
   }
 }
 

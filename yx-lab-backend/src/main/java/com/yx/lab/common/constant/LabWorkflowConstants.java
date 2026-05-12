@@ -351,6 +351,132 @@ public final class LabWorkflowConstants {
         return CycleType.ONCE.equals(cycleType);
     }
 
+    public static String getInstrumentStatusLabel(String instrumentStatus) {
+        if (InstrumentStatus.NORMAL.equals(instrumentStatus)) {
+            return "正常";
+        }
+        if (InstrumentStatus.DISABLED.equals(instrumentStatus)) {
+            return "停用";
+        }
+        if (InstrumentStatus.MAINTENANCE.equals(instrumentStatus)) {
+            return "维修中";
+        }
+        if (InstrumentStatus.CALIBRATING.equals(instrumentStatus)) {
+            return "校准中";
+        }
+        return instrumentStatus;
+    }
+
+    public static String getPointStatusLabel(String pointStatus) {
+        if (PointStatus.ENABLED.equals(pointStatus)) {
+            return "启用";
+        }
+        if (PointStatus.DISABLED.equals(pointStatus)) {
+            return "停用";
+        }
+        return pointStatus;
+    }
+
+    public static String getPointTypeLabel(String pointType) {
+        if (PointType.FACTORY.equals(pointType)) {
+            return "出厂水";
+        }
+        if (PointType.RAW.equals(pointType)) {
+            return "原水";
+        }
+        if (PointType.TERMINAL.equals(pointType)) {
+            return "管网末梢";
+        }
+        return pointType;
+    }
+
+    public static String getFrequencyTypeLabel(String frequencyType) {
+        if (FrequencyType.DAILY.equals(frequencyType)) {
+            return "每日";
+        }
+        if (FrequencyType.WEEKLY.equals(frequencyType)) {
+            return "每周";
+        }
+        if (FrequencyType.MONTHLY.equals(frequencyType)) {
+            return "每月";
+        }
+        return frequencyType;
+    }
+
+    public static String getCycleTypeLabel(String cycleType) {
+        if (CycleType.ONCE.equals(cycleType)) {
+            return "一次性";
+        }
+        if (CycleType.DAILY.equals(cycleType)) {
+            return "每日";
+        }
+        if (CycleType.WEEKLY.equals(cycleType)) {
+            return "每周";
+        }
+        if (CycleType.MONTHLY.equals(cycleType)) {
+            return "每月";
+        }
+        return cycleType;
+    }
+
+    public static String getSamplingPlanStatusLabel(String planStatus) {
+        if (SamplingPlanStatus.ACTIVE.equals(planStatus)) {
+            return "生效中";
+        }
+        if (SamplingPlanStatus.PAUSED.equals(planStatus)) {
+            return "已暂停";
+        }
+        if (SamplingPlanStatus.DISPATCHED.equals(planStatus)) {
+            return "已派发";
+        }
+        if (SamplingPlanStatus.COMPLETED.equals(planStatus)) {
+            return "已完成";
+        }
+        if (SamplingPlanStatus.UNPUBLISHED.equals(planStatus)) {
+            return "未发布";
+        }
+        return planStatus;
+    }
+
+    public static String getSamplingTaskStatusLabel(String taskStatus) {
+        if (SamplingTaskStatus.PENDING.equals(taskStatus)) {
+            return "待执行";
+        }
+        if (SamplingTaskStatus.IN_PROGRESS.equals(taskStatus)) {
+            return "执行中";
+        }
+        if (SamplingTaskStatus.ABANDONED.equals(taskStatus)) {
+            return "已废弃";
+        }
+        if (SamplingTaskStatus.COMPLETED.equals(taskStatus)) {
+            return "已完成";
+        }
+        return taskStatus;
+    }
+
+    public static String getSampleRegisterStatusLabel(String sampleRegisterStatus) {
+        if (SampleRegisterStatus.UNREGISTERED.equals(sampleRegisterStatus)) {
+            return "未登记";
+        }
+        if (SampleRegisterStatus.REGISTERED.equals(sampleRegisterStatus)) {
+            return "已登记";
+        }
+        return sampleRegisterStatus;
+    }
+
+    public static String getReportTypeLabel(String reportType) {
+        if (ReportType.DAILY.equals(reportType)) {
+            return "日报";
+        }
+        if (ReportType.WEEKLY.equals(reportType)) {
+            return "周报";
+        }
+        if (ReportType.MONTHLY.equals(reportType)) {
+            return "月报";
+        }
+        return reportType;
+    }
+
     public static String getSampleTypeLabel(String sampleType) {
         if (SampleType.FACTORY.equals(sampleType)) {
             return "出厂水";
@@ -446,6 +572,51 @@ public final class LabWorkflowConstants {
             return "已撤回";
         }
         return pushStatus;
+    }
+
+    public static String translateWorkflowText(String text) {
+        if (text == null || text.isEmpty()) {
+            return text;
+        }
+        String result = text;
+        result = result.replaceAll("\\bFACTORY\\b", "出厂水");
+        result = result.replaceAll("\\bRAW\\b", "原水");
+        result = result.replaceAll("\\bTERMINAL\\b", "管网末梢");
+        result = result.replaceAll("\\bLOGGED\\b", "已登记");
+        result = result.replaceAll("\\bREVIEWING\\b", "审核中");
+        result = result.replaceAll("\\bRETEST\\b", "待重检");
+        result = result.replaceAll("\\bCOMPLETED\\b", "已完成");
+        result = result.replaceAll("\\bWAIT_ASSIGN\\b", "待分配");
+        result = result.replaceAll("\\bWAIT_DETECT\\b", "待检测");
+        result = result.replaceAll("\\bSUBMITTED\\b", "待审核");
+        result = result.replaceAll("\\bAPPROVED\\b", "审核通过");
+        result = result.replaceAll("\\bREJECTED\\b", "审核驳回");
+        result = result.replaceAll("\\bABNORMAL\\b", "异常");
+        result = result.replaceAll("\\bNORMAL\\b", "正常");
+        result = result.replaceAll("\\bDRAFT\\b", "草稿");
+        result = result.replaceAll("\\bGENERATED\\b", "已生成");
+        result = result.replaceAll("\\bPUBLISHED\\b", "已发布");
+        result = result.replaceAll("\\bPENDING\\b", "待处理");
+        result = result.replaceAll("\\bSUCCESS\\b", "成功");
+        result = result.replaceAll("\\bFAILED\\b", "失败");
+        result = result.replaceAll("\\bCANCELLED\\b", "已取消");
+        result = result.replaceAll("\\bACTIVE\\b", "生效中");
+        result = result.replaceAll("\\bPAUSED\\b", "已暂停");
+        result = result.replaceAll("\\bDISPATCHED\\b", "已派发");
+        result = result.replaceAll("\\bUNPUBLISHED\\b", "未发布");
+        result = result.replaceAll("\\bIN_PROGRESS\\b", "进行中");
+        result = result.replaceAll("\\bABANDONED\\b", "已废弃");
+        result = result.replaceAll("\\bUNREGISTERED\\b", "未登记");
+        result = result.replaceAll("\\bREGISTERED\\b", "已登记");
+        result = result.replaceAll("\\bENABLED\\b", "启用");
+        result = result.replaceAll("\\bDISABLED\\b", "停用");
+        result = result.replaceAll("\\bDAILY\\b", "每日");
+        result = result.replaceAll("\\bWEEKLY\\b", "每周");
+        result = result.replaceAll("\\bMONTHLY\\b", "每月");
+        result = result.replaceAll("\\bONCE\\b", "一次性");
+        result = result.replaceAll("\\bMAINTENANCE\\b", "维修中");
+        result = result.replaceAll("\\bCALIBRATING\\b", "校准中");
+        return result;
     }
 
     private static Set<String> unmodifiableSet(String... values) {

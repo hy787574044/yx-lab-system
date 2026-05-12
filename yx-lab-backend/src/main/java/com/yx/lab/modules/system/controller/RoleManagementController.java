@@ -2,6 +2,7 @@ package com.yx.lab.modules.system.controller;
 
 import com.yx.lab.common.model.ApiResponse;
 import com.yx.lab.common.model.PageResult;
+import com.yx.lab.common.util.ExcelExportUtil;
 import com.yx.lab.modules.system.dto.RoleQuery;
 import com.yx.lab.modules.system.dto.RoleSaveCommand;
 import com.yx.lab.modules.system.service.RoleManagementService;
@@ -10,12 +11,11 @@ import com.yx.lab.modules.system.vo.RoleOptionVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -44,6 +44,32 @@ public class RoleManagementController {
     @Operation(summary = "分页查询角色")
     public ApiResponse<PageResult<LabRoleVO>> page(@Validated RoleQuery query) {
         return ApiResponse.success(roleManagementService.page(query));
+    }
+
+    /**
+     * 导出角色列表。
+     *
+     * @param query 查询条件
+     * @return Excel 文件流
+     */
+    @GetMapping("/export")
+    @Operation(summary = "导出角色列表")
+    public ResponseEntity<byte[]> export(@Validated RoleQuery query) {
+        ExcelExportUtil.prepareExportQuery(query);
+        return ExcelExportUtil.buildResponse(
+                "角色管理.xlsx",
+                "角色管理",
+                roleManagementService.page(query).getRecords(),
+                java.util.Arrays.asList(
+                        ExcelExportUtil.column("角色编码", LabRoleVO::getRoleCode),
+                        ExcelExportUtil.column("角色名称", LabRoleVO::getRoleName),
+                        ExcelExportUtil.column("适用范围", LabRoleVO::getRoleScope),
+                        ExcelExportUtil.column("关联用户数", LabRoleVO::getUserCount),
+                        ExcelExportUtil.column("状态", item -> item.getStatus() != null && item.getStatus() == 1 ? "启用" : "停用"),
+                        ExcelExportUtil.column("备注", LabRoleVO::getRemark),
+                        ExcelExportUtil.column("创建时间", LabRoleVO::getCreatedTime),
+                        ExcelExportUtil.column("更新时间", LabRoleVO::getUpdatedTime)
+                ));
     }
 
     /**
@@ -89,7 +115,7 @@ public class RoleManagementController {
      * @param command 角色保存命令
      * @return 操作结果
      */
-    @PutMapping("/{id}")
+    @PostMapping("/{id}")
     @Operation(summary = "更新角色")
     public ApiResponse<Void> update(@PathVariable Long id, @Valid @RequestBody RoleSaveCommand command) {
         roleManagementService.update(id, command);
@@ -102,7 +128,7 @@ public class RoleManagementController {
      * @param id 角色ID
      * @return 操作结果
      */
-    @DeleteMapping("/{id}")
+    @PostMapping("/{id}/delete")
     @Operation(summary = "删除角色")
     public ApiResponse<Void> delete(@PathVariable Long id) {
         roleManagementService.delete(id);

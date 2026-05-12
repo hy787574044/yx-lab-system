@@ -7,12 +7,20 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
+/**
+ * 统计汇总服务，负责把基础计数组装成页面可直接展示的统计摘要。
+ */
 @Service
 @RequiredArgsConstructor
 public class StatisticsService {
 
     private final StatisticsQueryService statisticsQueryService;
 
+    /**
+     * 汇总统计概览数据。
+     *
+     * @return 统计摘要结果
+     */
     public StatisticsSummaryVO summary() {
         long sampleTotal = statisticsQueryService.sampleTotal();
         long normalTotal = statisticsQueryService.normalTotal();

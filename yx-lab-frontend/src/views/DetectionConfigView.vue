@@ -57,6 +57,7 @@
               <el-button type="primary" @click="handleParameterSearch">查询</el-button>
               <el-button @click="resetParameterQuery">重置</el-button>
               <el-button @click="reloadData">刷新</el-button>
+              <el-button @click="handleExportCurrentScene">导出</el-button>
               <el-button type="primary" plain @click="openParameterDialog()">新增检测参数</el-button>
             </div>
           </div>
@@ -181,6 +182,7 @@
               <el-button type="primary" @click="handleGroupSearch">查询</el-button>
               <el-button @click="resetGroupQuery">重置</el-button>
               <el-button @click="reloadData">刷新</el-button>
+              <el-button @click="handleExportCurrentScene">导出</el-button>
               <el-button type="primary" plain @click="openGroupDialog()">新增检测套餐</el-button>
             </div>
           </div>
@@ -649,6 +651,8 @@ import {
   createDetectionTypeApi,
   deleteDetectionParameterApi,
   deleteDetectionTypeApi,
+  exportDetectionParametersApi,
+  exportDetectionTypesApi,
   fetchDetectionMethodOptionsApi,
   fetchDetectionParameterMethodBindingsApi,
   fetchDetectionParametersApi,
@@ -1539,6 +1543,20 @@ async function loadGroups() {
   const result = await fetchDetectionTypesApi({ ...groupQuery })
   groupRows.value = result.records || []
   groupTotal.value = Number(result.total || 0)
+}
+
+async function handleExportCurrentScene() {
+  try {
+    if (isParameterScene.value) {
+      await exportDetectionParametersApi({ ...parameterQuery })
+      ElMessage.success('检测参数导出成功')
+      return
+    }
+    await exportDetectionTypesApi({ ...groupQuery })
+    ElMessage.success('检测套餐导出成功')
+  } catch (error) {
+    ElMessage.error(error.message || '导出失败')
+  }
 }
 
 async function refreshAll() {

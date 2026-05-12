@@ -2,6 +2,7 @@ package com.yx.lab.modules.system.controller;
 
 import com.yx.lab.common.model.ApiResponse;
 import com.yx.lab.common.model.PageResult;
+import com.yx.lab.common.util.ExcelExportUtil;
 import com.yx.lab.modules.system.dto.OrgQuery;
 import com.yx.lab.modules.system.dto.OrgSaveCommand;
 import com.yx.lab.modules.system.service.OrgManagementService;
@@ -10,12 +11,11 @@ import com.yx.lab.modules.system.vo.OrgOptionVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -44,6 +44,33 @@ public class OrgManagementController {
     @Operation(summary = "分页查询机构")
     public ApiResponse<PageResult<LabOrgVO>> page(@Validated OrgQuery query) {
         return ApiResponse.success(orgManagementService.page(query));
+    }
+
+    /**
+     * 导出机构列表。
+     *
+     * @param query 查询条件
+     * @return Excel 文件流
+     */
+    @GetMapping("/export")
+    @Operation(summary = "导出机构列表")
+    public ResponseEntity<byte[]> export(@Validated OrgQuery query) {
+        ExcelExportUtil.prepareExportQuery(query);
+        return ExcelExportUtil.buildResponse(
+                "机构管理.xlsx",
+                "机构管理",
+                orgManagementService.page(query).getRecords(),
+                java.util.Arrays.asList(
+                        ExcelExportUtil.column("机构编码", LabOrgVO::getOrgCode),
+                        ExcelExportUtil.column("机构名称", LabOrgVO::getOrgName),
+                        ExcelExportUtil.column("上级机构", LabOrgVO::getParentName),
+                        ExcelExportUtil.column("机构类型", LabOrgVO::getOrgType),
+                        ExcelExportUtil.column("成员数", LabOrgVO::getMemberCount),
+                        ExcelExportUtil.column("状态", item -> item.getStatus() != null && item.getStatus() == 1 ? "启用" : "停用"),
+                        ExcelExportUtil.column("备注", LabOrgVO::getRemark),
+                        ExcelExportUtil.column("创建时间", LabOrgVO::getCreatedTime),
+                        ExcelExportUtil.column("更新时间", LabOrgVO::getUpdatedTime)
+                ));
     }
 
     /**
@@ -89,7 +116,7 @@ public class OrgManagementController {
      * @param command 机构保存命令
      * @return 操作结果
      */
-    @PutMapping("/{id}")
+    @PostMapping("/{id}")
     @Operation(summary = "更新机构")
     public ApiResponse<Void> update(@PathVariable Long id, @Valid @RequestBody OrgSaveCommand command) {
         orgManagementService.update(id, command);
@@ -102,7 +129,7 @@ public class OrgManagementController {
      * @param id 机构ID
      * @return 操作结果
      */
-    @DeleteMapping("/{id}")
+    @PostMapping("/{id}/delete")
     @Operation(summary = "删除机构")
     public ApiResponse<Void> delete(@PathVariable Long id) {
         orgManagementService.delete(id);

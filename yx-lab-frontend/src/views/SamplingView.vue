@@ -43,6 +43,7 @@
           <div class="panel-note">{{ currentScene.note }}</div>
           <div class="toolbar-actions">
             <el-button @click="refreshCurrentScene">刷新</el-button>
+            <el-button @click="handleExportCurrentScene">导出</el-button>
             <el-button
               v-if="baseScene.key === 'task-assign'"
               type="primary"
@@ -153,28 +154,45 @@
           >
             <template #default="{ row }">
               <div class="action-row">
-                <el-button size="small" @click="editTaskSealNo(row)">
+                <el-button
+                  size="small"
+                  :loading="isRowActionLoading('task', 'seal', row.id)"
+                  @click="editTaskSealNo(row)"
+                  :disabled="isRowActionLoading('task', 'start', row.id) || isRowActionLoading('task', 'seal', row.id)"
+                >
                   {{ row.sealNo ? '修改封签' : '录入封签' }}
                 </el-button>
-                <el-button size="small" @click="startTask(row)" :disabled="row.taskStatus !== pendingTaskStatus">
+                <el-button
+                  size="small"
+                  :loading="isRowActionLoading('task', 'start', row.id)"
+                  @click="startTask(row)"
+                  :disabled="isRowActionLoading('task', 'seal', row.id) || row.taskStatus !== pendingTaskStatus"
+                >
                   开始
                 </el-button>
                 <el-button
                   size="small"
+                  :loading="isRowActionLoading('task', 'abandon', row.id)"
                   @click="abandonTask(row)"
-                  :disabled="!abandonableTaskStatuses.includes(row.taskStatus)"
+                  :disabled="isRowActionLoading('task', 'resume', row.id) || !abandonableTaskStatuses.includes(row.taskStatus)"
                 >
                   废弃
                 </el-button>
-                <el-button size="small" @click="resumeTask(row)" :disabled="row.taskStatus !== abandonedTaskStatus">
+                <el-button
+                  size="small"
+                  :loading="isRowActionLoading('task', 'resume', row.id)"
+                  @click="resumeTask(row)"
+                  :disabled="isRowActionLoading('task', 'abandon', row.id) || row.taskStatus !== abandonedTaskStatus"
+                >
                   恢复
                 </el-button>
                 <el-button
                   size="small"
                   type="primary"
                   plain
+                  :loading="isRowActionLoading('task', 'complete', row.id)"
                   @click="completeTask(row)"
-                  :disabled="!completableTaskStatuses.includes(row.taskStatus)"
+                  :disabled="isRowActionLoading('task', 'complete', row.id) || !completableTaskStatuses.includes(row.taskStatus)"
                 >
                   完成
                 </el-button>
@@ -263,6 +281,7 @@
           <div class="panel-note">这里用于承接周期计划与自动任务能力，当前与任务分配场景联动展示。</div>
           <div class="toolbar-actions">
             <el-button @click="loadPlans">刷新计划</el-button>
+            <el-button @click="handleExportPlans">导出</el-button>
             <el-button type="primary" plain @click="createPlan">新增计划</el-button>
           </div>
         </div>
@@ -293,28 +312,30 @@
                 <el-button
                   size="small"
                   @click="openPlanEditDialog(row)"
-                  :disabled="!actionablePlanStatuses.includes(row.planStatus)"
+                  :disabled="isRowActionLoading('plan', 'pause', row.id) || isRowActionLoading('plan', 'resume', row.id) || !actionablePlanStatuses.includes(row.planStatus)"
                 >
                   编辑
                 </el-button>
                 <el-button
                   size="small"
                   @click="openDispatchDialog(row)"
-                  :disabled="!actionablePlanStatuses.includes(row.planStatus)"
+                  :disabled="dispatchSubmitting || !actionablePlanStatuses.includes(row.planStatus)"
                 >
                   派发
                 </el-button>
                 <el-button
                   size="small"
+                  :loading="isRowActionLoading('plan', 'pause', row.id)"
                   @click="pausePlan(row)"
-                  :disabled="!actionablePlanStatuses.includes(row.planStatus)"
+                  :disabled="isRowActionLoading('plan', 'resume', row.id) || !actionablePlanStatuses.includes(row.planStatus)"
                 >
                   暂停
                 </el-button>
                 <el-button
                   size="small"
+                  :loading="isRowActionLoading('plan', 'resume', row.id)"
                   @click="resumePlan(row)"
-                  :disabled="row.planStatus !== pausedPlanStatus"
+                  :disabled="isRowActionLoading('plan', 'pause', row.id) || row.planStatus !== pausedPlanStatus"
                 >
                   恢复
                 </el-button>
@@ -480,8 +501,8 @@
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="dispatchDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="submitting" @click="submitDispatchForm">确认派发</el-button>
+        <el-button :disabled="dispatchSubmitting" @click="dispatchDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="dispatchSubmitting" :disabled="dispatchSubmitting" @click="submitDispatchForm">确认派发</el-button>
       </template>
     </el-dialog>
 
@@ -727,6 +748,9 @@ import {
   completeSamplingTaskApi,
   createSamplingPlanApi,
   dispatchSamplingPlanApi,
+  exportSamplingPlansApi,
+  exportSamplesApi,
+  exportSamplingTasksApi,
   fetchDetectionMethodOptionsApi,
   fetchDetectionParametersApi,
   fetchMonitoringPointsApi,
@@ -797,6 +821,8 @@ const planDialogVisible = ref(false)
 const dispatchDialogVisible = ref(false)
 const editingPlanId = ref(null)
 const submitting = ref(false)
+const dispatchSubmitting = ref(false)
+const rowActionLoading = reactive({})
 const monitoringPointOptions = ref([])
 const monitoringPointLoading = ref(false)
 const samplerOptions = ref([])
@@ -857,6 +883,27 @@ const dispatchForm = reactive({
 function toSafeNumber(value) {
   const num = typeof value === 'number' ? value : Number.parseFloat(String(value ?? '').replace(/,/g, '').trim())
   return Number.isFinite(num) ? num : 0
+}
+
+function buildRowActionKey(scope, action, id) {
+  return `${scope}:${action}:${id ?? 'unknown'}`
+}
+
+function isRowActionLoading(scope, action, id) {
+  return Boolean(rowActionLoading[buildRowActionKey(scope, action, id)])
+}
+
+function beginRowAction(scope, action, id) {
+  const key = buildRowActionKey(scope, action, id)
+  if (rowActionLoading[key]) {
+    return false
+  }
+  rowActionLoading[key] = true
+  return true
+}
+
+function endRowAction(scope, action, id) {
+  delete rowActionLoading[buildRowActionKey(scope, action, id)]
 }
 
 const sceneMap = {
@@ -1247,6 +1294,29 @@ async function loadSamples() {
   sampleTotal.value = toSafeNumber(result.total)
 }
 
+async function handleExportCurrentScene() {
+  try {
+    if (isTaskScene.value) {
+      await exportSamplingTasksApi({ ...taskQuery })
+      ElMessage.success('采样任务导出成功')
+      return
+    }
+    await exportSamplesApi({ ...sampleQuery })
+    ElMessage.success('样品台账导出成功')
+  } catch (error) {
+    ElMessage.error(error.message || '导出失败')
+  }
+}
+
+async function handleExportPlans() {
+  try {
+    await exportSamplingPlansApi({ ...planQuery })
+    ElMessage.success('采样计划导出成功')
+  } catch (error) {
+    ElMessage.error(error.message || '采样计划导出失败')
+  }
+}
+
 async function refreshCurrentScene() {
   const requests = [loadTasks(), loadSamples()]
   if (baseScene.value.showPlanSection) {
@@ -1433,6 +1503,9 @@ async function legacyCreatePlanDoNotUse() {
 }
 
 async function openDispatchDialog(row) {
+  if (dispatchSubmitting.value) {
+    return
+  }
   await loadSamplers()
   resetDispatchForm()
   dispatchForm.planId = row.id
@@ -1444,11 +1517,14 @@ async function openDispatchDialog(row) {
 }
 
 async function submitDispatchForm() {
+  if (dispatchSubmitting.value) {
+    return
+  }
   if (!dispatchForm.planId || !dispatchForm.samplerId || !dispatchForm.samplerName) {
     ElMessage.warning('派发任务前必须指定采样员')
     return
   }
-  submitting.value = true
+  dispatchSubmitting.value = true
   try {
     await dispatchSamplingPlanApi({
       planId: dispatchForm.planId,
@@ -1462,7 +1538,7 @@ async function submitDispatchForm() {
     taskQuery.pageNum = 1
     await Promise.all([loadPlans(), loadTasks()])
   } finally {
-    submitting.value = false
+    dispatchSubmitting.value = false
   }
 }
 
@@ -1471,15 +1547,29 @@ async function legacyDispatchDoNotUse(row) {
 }
 
 async function pausePlan(row) {
-  await pauseSamplingPlanApi(row.id)
-  ElMessage.success('采样计划已暂停。')
-  await loadPlans()
+  if (!beginRowAction('plan', 'pause', row?.id)) {
+    return
+  }
+  try {
+    await pauseSamplingPlanApi(row.id)
+    ElMessage.success('采样计划已暂停。')
+    await loadPlans()
+  } finally {
+    endRowAction('plan', 'pause', row?.id)
+  }
 }
 
 async function resumePlan(row) {
-  await resumeSamplingPlanApi(row.id)
-  ElMessage.success('采样计划已恢复。')
-  await loadPlans()
+  if (!beginRowAction('plan', 'resume', row?.id)) {
+    return
+  }
+  try {
+    await resumeSamplingPlanApi(row.id)
+    ElMessage.success('采样计划已恢复。')
+    await loadPlans()
+  } finally {
+    endRowAction('plan', 'resume', row?.id)
+  }
 }
 
 async function promptTaskSealNo(row, options = {}) {
@@ -1713,55 +1803,90 @@ function handleLoginConfigParameterChange(row, parameterId) {
 }
 
 async function editTaskSealNo(row) {
-  const sealNo = await promptTaskSealNo(row)
-  if (!sealNo) {
+  if (!beginRowAction('task', 'seal', row?.id)) {
     return
   }
-  await updateSamplingTaskSealNoApi(row.id, { sealNo })
-  ElMessage.success('采样封签号已保存。')
-  await loadTasks()
+  try {
+    const sealNo = await promptTaskSealNo(row)
+    if (!sealNo) {
+      return
+    }
+    await updateSamplingTaskSealNoApi(row.id, { sealNo })
+    ElMessage.success('采样封签号已保存。')
+    await loadTasks()
+  } finally {
+    endRowAction('task', 'seal', row?.id)
+  }
 }
 
 async function startTask(row) {
-  const sealNo = row?.sealNo?.trim() || await promptTaskSealNo(row, {
-    title: '开始任务前请先录入封签号',
-    confirmButtonText: '录入并开始'
-  })
-  if (!sealNo) {
+  if (!beginRowAction('task', 'start', row?.id)) {
     return
   }
-  await startSamplingTaskApi(row.id, {
-    sealNo,
-    remark: '采样任务开始执行'
-  })
-  ElMessage.success('采样任务已开始执行。')
-  await Promise.all([loadTasks(), loadPlans()])
+  try {
+    const sealNo = row?.sealNo?.trim() || await promptTaskSealNo(row, {
+      title: '开始任务前请先录入封签号',
+      confirmButtonText: '录入并开始'
+    })
+    if (!sealNo) {
+      return
+    }
+    await startSamplingTaskApi(row.id, {
+      sealNo,
+      remark: '采样任务开始执行'
+    })
+    ElMessage.success('采样任务已开始执行。')
+    await Promise.all([loadTasks(), loadPlans()])
+  } finally {
+    endRowAction('task', 'start', row?.id)
+  }
 }
 
 async function abandonTask(row) {
-  await abandonSamplingTaskApi(row.id, {
-    reason: '现场条件暂不满足采样要求',
-    remark: '请确认现场情况后重新安排采样任务'
-  })
-  ElMessage.success('采样任务已废弃。')
-  await Promise.all([loadTasks(), loadPlans()])
+  if (!beginRowAction('task', 'abandon', row?.id)) {
+    return
+  }
+  try {
+    await abandonSamplingTaskApi(row.id, {
+      reason: '现场条件暂不满足采样要求',
+      remark: '请确认现场情况后重新安排采样任务'
+    })
+    ElMessage.success('采样任务已废弃。')
+    await Promise.all([loadTasks(), loadPlans()])
+  } finally {
+    endRowAction('task', 'abandon', row?.id)
+  }
 }
 
 async function resumeTask(row) {
-  await resumeSamplingTaskApi(row.id, { remark: '采样任务恢复为待处理状态' })
-  ElMessage.success('采样任务已恢复。')
-  await Promise.all([loadTasks(), loadPlans()])
+  if (!beginRowAction('task', 'resume', row?.id)) {
+    return
+  }
+  try {
+    await resumeSamplingTaskApi(row.id, { remark: '采样任务恢复为待处理状态' })
+    ElMessage.success('采样任务已恢复。')
+    await Promise.all([loadTasks(), loadPlans()])
+  } finally {
+    endRowAction('task', 'resume', row?.id)
+  }
 }
 
 async function completeTask(row) {
-  await completeSamplingTaskApi({
-    taskId: row.id,
-    onsiteMetrics: 'pH=7.2；余氯=0.4；浊度=0.5',
-    remark: '现场采样完成'
-  })
-  ElMessage.success('采样任务已完成。')
-  taskQuery.pageNum = 1
-  await Promise.all([loadTasks(), loadPlans()])
+  if (!beginRowAction('task', 'complete', row?.id)) {
+    return
+  }
+  try {
+    await completeSamplingTaskApi({
+      taskId: row.id,
+      onsiteMetrics: 'pH=7.2；余氯=0.4；浊度=0.5',
+      remark: '现场采样完成'
+    })
+    ElMessage.success('采样任务已完成。')
+    taskQuery.pageNum = 1
+    await Promise.all([loadTasks(), loadPlans()])
+  } finally {
+    endRowAction('task', 'complete', row?.id)
+  }
 }
 
 async function completeFirstPendingTask() {

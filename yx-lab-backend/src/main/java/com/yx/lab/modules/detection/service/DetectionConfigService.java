@@ -82,6 +82,12 @@ public class DetectionConfigService {
 
     private final ObjectMapper objectMapper;
 
+    /**
+     * 分页查询检测套餐列表。
+     *
+     * @param query 查询条件
+     * @return 检测套餐分页结果
+     */
     public PageResult<DetectionType> typePage(DetectionTypeQuery query) {
         String keyword = StrUtil.trim(query.getKeyword());
         Page<DetectionType> page = detectionTypeMapper.selectPage(
@@ -101,6 +107,12 @@ public class DetectionConfigService {
         return new PageResult<>(page.getTotal(), page.getRecords());
     }
 
+    /**
+     * 分页查询检测项目组列表。
+     *
+     * @param query 查询条件
+     * @return 检测项目组分页结果
+     */
     public PageResult<DetectionProjectGroup> projectGroupPage(DetectionProjectGroupQuery query) {
         String keyword = StrUtil.trim(query.getKeyword());
         Page<DetectionProjectGroup> page = detectionProjectGroupMapper.selectPage(
@@ -115,6 +127,11 @@ public class DetectionConfigService {
         return new PageResult<>(page.getTotal(), page.getRecords());
     }
 
+    /**
+     * 查询检测员下拉选项。
+     *
+     * @return 检测员选项列表
+     */
     public List<DetectionDetectorOptionVO> detectorOptions() {
         return labUserMapper.selectList(new LambdaQueryWrapper<LabUser>()
                         .eq(LabUser::getStatus, 1)
@@ -126,6 +143,12 @@ public class DetectionConfigService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * 分页查询检测参数列表。
+     *
+     * @param query 查询条件
+     * @return 检测参数分页结果
+     */
     public PageResult<DetectionParameter> parameterPage(DetectionParameterQuery query) {
         String keyword = StrUtil.trim(query.getKeyword());
         Page<DetectionParameter> page = detectionParameterMapper.selectPage(
@@ -143,6 +166,12 @@ public class DetectionConfigService {
         return new PageResult<>(page.getTotal(), page.getRecords());
     }
 
+    /**
+     * 分页查询检测参数与方法绑定视图。
+     *
+     * @param query 查询条件
+     * @return 参数方法绑定分页结果
+     */
     public PageResult<DetectionParameterMethodBindingVO> parameterMethodBindingPage(DetectionParameterQuery query) {
         PageResult<DetectionParameter> parameterPage = parameterPage(query);
         List<DetectionParameter> parameters = parameterPage.getRecords();
@@ -167,12 +196,23 @@ public class DetectionConfigService {
         return new PageResult<>(parameterPage.getTotal(), records);
     }
 
+    /**
+     * 查询启用的检测方法选项。
+     *
+     * @return 检测方法选项列表
+     */
     public List<DetectionMethod> methodOptions() {
         return detectionMethodMapper.selectList(new LambdaQueryWrapper<DetectionMethod>()
                 .orderByAsc(DetectionMethod::getMethodName)
                 .orderByAsc(DetectionMethod::getMethodCode));
     }
 
+    /**
+     * 分页查询检测方法列表。
+     *
+     * @param query 查询条件
+     * @return 检测方法分页结果
+     */
     public PageResult<DetectionMethod> methodPage(DetectionMethodQuery query) {
         String keyword = StrUtil.trim(query.getKeyword());
         Page<DetectionMethod> page = detectionMethodMapper.selectPage(
@@ -196,6 +236,12 @@ public class DetectionConfigService {
         return new PageResult<>(page.getTotal(), page.getRecords());
     }
 
+    /**
+     * 分页查询检测步骤列表。
+     *
+     * @param query 查询条件
+     * @return 检测步骤分页结果
+     */
     public PageResult<DetectionStep> stepPage(DetectionStepQuery query) {
         Page<DetectionStep> page = detectionStepMapper.selectPage(
                 PageUtils.buildPage(query),
@@ -206,14 +252,26 @@ public class DetectionConfigService {
     }
 
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * 新增检测套餐。
+     *
+     * @param command 检测套餐保存参数
+     */
     public void saveType(DetectionTypeSaveCommand command) {
         DetectionType entity = new DetectionType();
+        // 检测套餐保存时直接固化参数、方法绑定快照，供样品登录时选择使用。
         applyTypeCommand(entity, command);
         validateType(entity, null, null);
         detectionTypeMapper.insert(entity);
     }
 
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * 更新检测套餐。
+     *
+     * @param id 检测套餐ID
+     * @param command 检测套餐保存参数
+     */
     public void updateType(Long id, DetectionTypeSaveCommand command) {
         DetectionType entity = requireType(id);
         Long previousDetectorId = entity.getDetectorId();
@@ -223,6 +281,11 @@ public class DetectionConfigService {
         syncStepTypeName(entity);
     }
 
+    /**
+     * 删除检测套餐。
+     *
+     * @param id 检测套餐ID
+     */
     public void deleteType(Long id) {
         DetectionType entity = requireType(id);
         Long stepCount = detectionStepMapper.selectCount(new LambdaQueryWrapper<DetectionStep>()
@@ -239,15 +302,27 @@ public class DetectionConfigService {
     }
 
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * 新增检测项目组。
+     *
+     * @param command 项目组保存参数
+     */
     public void saveProjectGroup(DetectionProjectGroupSaveCommand command) {
         DetectionProjectGroup entity = new DetectionProjectGroup();
         applyProjectGroupCommand(entity, command);
         validateProjectGroup(entity, null);
         detectionProjectGroupMapper.insert(entity);
+        // 项目组只维护套餐归类关系，不直接变更套餐本身定义。
         syncProjectGroupProjects(entity, command.getProjectIds());
     }
 
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * 更新检测项目组。
+     *
+     * @param id 项目组ID
+     * @param command 项目组保存参数
+     */
     public void updateProjectGroup(Long id, DetectionProjectGroupSaveCommand command) {
         DetectionProjectGroup entity = requireProjectGroup(id);
         applyProjectGroupCommand(entity, command);
@@ -257,6 +332,11 @@ public class DetectionConfigService {
     }
 
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * 删除检测项目组。
+     *
+     * @param id 项目组ID
+     */
     public void deleteProjectGroup(Long id) {
         DetectionProjectGroup entity = requireProjectGroup(id);
         clearProjectGroupBindings(entity.getId());
@@ -264,25 +344,43 @@ public class DetectionConfigService {
     }
 
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * 新增检测参数。
+     *
+     * @param command 检测参数保存参数
+     */
     public void saveParameter(DetectionParameterSaveCommand command) {
         DetectionParameter entity = new DetectionParameter();
         applyParameterCommand(entity, command);
         validateParameter(entity, null);
         detectionParameterMapper.insert(entity);
+        // 参数保存完成后立即同步方法绑定，确保参数页面即可完成一体化维护。
         bindParameterMethods(entity.getId(), buildParameterMethodBindCommand(command.getMethodIds()));
     }
 
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * 更新检测参数。
+     *
+     * @param id 检测参数ID
+     * @param command 检测参数保存参数
+     */
     public void updateParameter(Long id, DetectionParameterSaveCommand command) {
         DetectionParameter entity = requireParameter(id);
         applyParameterCommand(entity, command);
         validateParameter(entity, id);
         detectionParameterMapper.updateById(entity);
+        // 参数名称、方法绑定一旦变更，需要同步刷新已引用的套餐快照，避免后续样品登录看到旧数据。
         syncTypeParameterSnapshots(id);
         syncMethodParameterSnapshots(id, entity.getParameterName());
         bindParameterMethods(id, buildParameterMethodBindCommand(command.getMethodIds()));
     }
 
+    /**
+     * 删除检测参数。
+     *
+     * @param id 检测参数ID
+     */
     public void deleteParameter(Long id) {
         DetectionParameter entity = requireParameter(id);
         if (isParameterReferencedByType(entity.getId())) {
@@ -302,6 +400,12 @@ public class DetectionConfigService {
     }
 
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * 维护检测参数与检测方法的绑定关系。
+     *
+     * @param parameterId 检测参数ID
+     * @param command 绑定参数
+     */
     public void bindParameterMethods(Long parameterId, DetectionParameterMethodBindCommand command) {
         DetectionParameter parameter = requireParameter(parameterId);
         List<Long> methodIds = normalizeMethodIds(command == null ? null : command.getMethodIds());
@@ -309,6 +413,7 @@ public class DetectionConfigService {
         List<Long> removedMethodIds = currentMethodIds.stream()
                 .filter(methodId -> !methodIds.contains(methodId))
                 .collect(Collectors.toList());
+        // 先校验将被解除绑定的方法是否还被套餐引用，避免配置层出现悬挂关系。
         ensureRemovedMethodsCanBeRebound(removedMethodIds, methodIds);
         Map<Long, DetectionMethod> selectedMethodMap = resolveSelectedMethods(methodIds);
 
@@ -321,6 +426,7 @@ public class DetectionConfigService {
             }
         }
 
+        // 采用先清后建的方式重建当前参数下的方法绑定，保证顺序和唯一性完全一致。
         clearMethodBindingsByParameter(parameterId);
         for (Long methodId : methodIds) {
             DetectionMethod method = selectedMethodMap.get(methodId);
@@ -332,6 +438,11 @@ public class DetectionConfigService {
     }
 
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * 新增检测方法。
+     *
+     * @param command 检测方法保存参数
+     */
     public void saveMethod(DetectionMethodSaveCommand command) {
         DetectionMethod entity = new DetectionMethod();
         applyMethodCommand(entity, command);
@@ -340,6 +451,12 @@ public class DetectionConfigService {
     }
 
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * 更新检测方法。
+     *
+     * @param id 检测方法ID
+     * @param command 检测方法保存参数
+     */
     public void updateMethod(Long id, DetectionMethodSaveCommand command) {
         DetectionMethod entity = requireMethod(id);
         applyMethodCommand(entity, command);
@@ -349,6 +466,11 @@ public class DetectionConfigService {
     }
 
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * 删除检测方法。
+     *
+     * @param id 检测方法ID
+     */
     public void deleteMethod(Long id) {
         DetectionMethod entity = requireMethod(id);
         if (isMethodReferencedByType(entity.getId())) {
@@ -357,6 +479,11 @@ public class DetectionConfigService {
         detectionMethodMapper.deleteById(entity.getId());
     }
 
+    /**
+     * 新增检测步骤。
+     *
+     * @param command 检测步骤保存参数
+     */
     public void saveStep(DetectionStepSaveCommand command) {
         DetectionStep entity = new DetectionStep();
         applyStepCommand(entity, command);
@@ -364,6 +491,12 @@ public class DetectionConfigService {
         detectionStepMapper.insert(entity);
     }
 
+    /**
+     * 更新检测步骤。
+     *
+     * @param id 检测步骤ID
+     * @param command 检测步骤保存参数
+     */
     public void updateStep(Long id, DetectionStepSaveCommand command) {
         DetectionStep entity = requireStep(id);
         applyStepCommand(entity, command);
@@ -371,6 +504,11 @@ public class DetectionConfigService {
         detectionStepMapper.updateById(entity);
     }
 
+    /**
+     * 删除检测步骤。
+     *
+     * @param id 检测步骤ID
+     */
     public void deleteStep(Long id) {
         detectionStepMapper.deleteById(requireStep(id).getId());
     }
@@ -731,7 +869,7 @@ public class DetectionConfigService {
                 throw new BusinessException("检测套餐存在未指定检测参数的绑定项");
             }
             if (bindingMethodIds.containsKey(item.getParameterId())) {
-                throw new BusinessException("检测套餐中同一个检测参数不能重复配置");
+                throw new BusinessException("检测套餐中同一检测参数不能重复配置");
             }
             List<Long> methodIds = normalizeMethodIds(item.getMethodIds());
             if (methodIds.isEmpty()) {
@@ -775,7 +913,7 @@ public class DetectionConfigService {
             }
         }
         if (!duplicateMethodIds.isEmpty()) {
-            throw new BusinessException("检测套餐中同一个检测方法不能重复配置");
+            throw new BusinessException("检测套餐中同一检测方法不能重复配置");
         }
 
         List<DetectionTypeParameterMethodBindingItem> normalizedItems = new ArrayList<>();

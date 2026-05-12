@@ -43,6 +43,7 @@
           <div class="panel-note">{{ baseScene.note }}</div>
           <div class="toolbar-actions">
             <el-button type="primary" @click="loadData">刷新审查队列</el-button>
+            <el-button @click="handleExport">导出</el-button>
             <el-button
               v-if="baseScene.key === 'review-history'"
               type="primary"
@@ -182,15 +183,17 @@
             <template #default="{ row }">
               <div v-if="canReviewItem(row)" class="review-item-actions">
                 <el-button
-                  :type="row.reviewResultDraft === approvedReviewResult ? 'primary' : 'default'"
-                  plain
+                  :type="'primary'"
+                  :plain="row.reviewResultDraft !== approvedReviewResult"
+                  :class="['review-action-button', { 'is-active': row.reviewResultDraft === approvedReviewResult }]"
                   @click="setItemReviewResult(row, approvedReviewResult)"
                 >
                   通过
                 </el-button>
                 <el-button
-                  :type="row.reviewResultDraft === rejectedReviewResult ? 'danger' : 'default'"
-                  plain
+                  :type="'danger'"
+                  :plain="row.reviewResultDraft !== rejectedReviewResult"
+                  :class="['review-action-button', 'review-action-button--danger', { 'is-active': row.reviewResultDraft === rejectedReviewResult }]"
                   @click="setItemReviewResult(row, rejectedReviewResult)"
                 >
                   驳回
@@ -292,6 +295,7 @@ import { ElInput } from 'element-plus/es/components/input/index.mjs'
 import { ElMessage } from 'element-plus/es/components/message/index.mjs'
 import { ElTable, ElTableColumn } from 'element-plus/es/components/table/index.mjs'
 import {
+  exportReviewsApi,
   fetchDetectionDetailApi,
   fetchDetectionsApi,
   fetchReviewsApi,
@@ -775,6 +779,15 @@ async function loadData() {
   )
 }
 
+async function handleExport() {
+  try {
+    await exportReviewsApi(query)
+    ElMessage.success('结果审查导出成功')
+  } catch (error) {
+    ElMessage.error(error.message || '结果审查导出失败')
+  }
+}
+
 onMounted(async () => {
   syncRouteState()
   await loadData()
@@ -908,6 +921,20 @@ watch(() => route.fullPath, () => {
 .review-item-actions {
   display: flex;
   gap: 8px;
+}
+
+.review-action-button {
+  min-width: 72px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+}
+
+.review-action-button.is-active {
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--brand) 22%, transparent);
+  transform: translateY(-1px);
+}
+
+.review-action-button--danger.is-active {
+  box-shadow: 0 10px 24px rgba(220, 38, 38, 0.2);
 }
 
 .review-item-fixed {

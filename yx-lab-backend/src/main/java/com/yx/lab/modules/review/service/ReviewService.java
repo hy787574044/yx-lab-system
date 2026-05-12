@@ -33,7 +33,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * 检测结果审查服务。
+ * 结果审查服务，负责对子流程检测结果逐项审核并驱动主流程回退或通过。
  */
 @Service
 @RequiredArgsConstructor
@@ -52,7 +52,10 @@ public class ReviewService {
     private final ReportService reportService;
 
     /**
-     * 分页查询审查记录。
+     * 分页查询审查记录列表。
+     *
+     * @param query 查询条件
+     * @return 审查记录分页结果
      */
     public PageResult<ReviewRecord> page(ReviewQuery query) {
         CurrentUser currentUser = SecurityContext.getCurrentUser();
@@ -69,22 +72,24 @@ public class ReviewService {
         return new PageResult<>(page.getTotal(), page.getRecords());
     }
 
-    /**
-     * 提交审查结果。
-     */
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * 对检测主流程及其子流程执行审查通过或驳回。
+     *
+     * @param command 审查参数
+     */
     public void review(ReviewCommand command) {
         DetectionRecord record = detectionRecordMapper.selectById(command.getDetectionRecordId());
         if (record == null) {
-            throw new BusinessException("检测记录不存在");
+            throw new BusinessException("检测记录不存在。");
         }
         if (!LabWorkflowConstants.canReviewDetection(record.getDetectionStatus())) {
-            throw new BusinessException("当前检测记录不在待审查状态");
+            throw new BusinessException("当前检测记录不在待审查状态。");
         }
 
         LabSample sample = labSampleMapper.selectById(record.getSampleId());
         if (sample == null) {
-            throw new BusinessException("样品不存在");
+            throw new BusinessException("样品不存在。");
         }
 
         CurrentUser currentUser = SecurityContext.getCurrentUser();
@@ -92,16 +97,17 @@ public class ReviewService {
                 .eq(DetectionItem::getRecordId, record.getId())
                 .orderByAsc(DetectionItem::getCreatedTime));
         if (recordItems.isEmpty()) {
-            throw new BusinessException("当前检测记录下没有可审核的子流程");
+            throw new BusinessException("当前检测记录下没有可审查的子流程。");
         }
 
         List<DetectionItem> pendingReviewItems = recordItems.stream()
                 .filter(item -> LabWorkflowConstants.DetectionStatus.SUBMITTED.equals(item.getItemStatus()))
                 .collect(Collectors.toList());
         if (pendingReviewItems.isEmpty()) {
-            throw new BusinessException("当前检测记录下没有待审核的子流程");
+            throw new BusinessException("当前检测记录下没有待审查的子流程。");
         }
 
+        // 审查以“待审子流程”为最小单位，支持逐项通过或驳回，再汇总回主流程。
         Map<Long, ReviewItemCommand> reviewItemMap = validateReviewItems(command, pendingReviewItems);
         boolean anyRejected = false;
         StringBuilder rejectSummaryBuilder = new StringBuilder();
@@ -139,6 +145,7 @@ public class ReviewService {
         reviewRecord.setReviewRemark(reviewRemark);
         reviewRecordMapper.insert(reviewRecord);
 
+        // 只有全部子流程都审核通过，主流程和样品状态才会整体流转到“已完成/已出报告”。
         if (!anyRejected && recordItems.stream().allMatch(item -> LabWorkflowConstants.DetectionStatus.APPROVED.equals(item.getItemStatus()))) {
             record.setDetectionStatus(LabWorkflowConstants.DetectionStatus.APPROVED);
             record.setAbnormalRemark(StrUtil.blankToDefault(reviewRemark, "全部子流程审核通过"));
@@ -154,6 +161,7 @@ public class ReviewService {
             return;
         }
 
+        // 只要存在任一驳回子流程，就整体回退到检测环节，由原检测人员重新化验后再提交。
         record.setDetectionStatus(resolveRetestRecordStatus(recordItems));
         record.setDetectionResult(null);
         record.setAbnormalRemark(buildRetestSummary(rejectReason, reviewRemark));
@@ -170,14 +178,14 @@ public class ReviewService {
 
     private Map<Long, ReviewItemCommand> validateReviewItems(ReviewCommand command, List<DetectionItem> pendingReviewItems) {
         if (command.getItems() == null || command.getItems().isEmpty()) {
-            throw new BusinessException("请至少审核一条子流程");
+            throw new BusinessException("请至少审核一条子流程。");
         }
         Map<Long, DetectionItem> pendingItemMap = pendingReviewItems.stream()
                 .collect(Collectors.toMap(DetectionItem::getId, item -> item, (left, right) -> left));
         Map<Long, ReviewItemCommand> reviewItemMap = new LinkedHashMap<>();
         for (ReviewItemCommand itemCommand : command.getItems()) {
             if (reviewItemMap.put(itemCommand.getItemId(), itemCommand) != null) {
-                throw new BusinessException("同一子流程不能重复审核");
+                throw new BusinessException("同一子流程不能重复审核。");
             }
             DetectionItem item = pendingItemMap.get(itemCommand.getItemId());
             if (item == null) {
@@ -185,7 +193,7 @@ public class ReviewService {
             }
             if (!LabWorkflowConstants.ReviewResult.APPROVED.equals(itemCommand.getReviewResult())
                     && !LabWorkflowConstants.ReviewResult.REJECTED.equals(itemCommand.getReviewResult())) {
-                throw new BusinessException("子流程审核结果只能为通过或驳回");
+                throw new BusinessException("子流程审核结果只允许为通过或驳回。");
             }
             if (LabWorkflowConstants.ReviewResult.REJECTED.equals(itemCommand.getReviewResult())
                     && StrUtil.isBlank(itemCommand.getRejectReason())) {
@@ -193,7 +201,7 @@ public class ReviewService {
             }
         }
         if (reviewItemMap.size() != pendingReviewItems.size()) {
-            throw new BusinessException("请完成当前主流程下全部待审核子流程的审核判定");
+            throw new BusinessException("请完成当前主流程下全部待审查子流程的审核判定。");
         }
         return reviewItemMap;
     }

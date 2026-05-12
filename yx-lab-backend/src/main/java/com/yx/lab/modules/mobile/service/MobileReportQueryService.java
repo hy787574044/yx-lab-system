@@ -20,6 +20,9 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * 移动端报告查询服务，返回当前用户可见的报告数据。
+ */
 @Service
 @RequiredArgsConstructor
 public class MobileReportQueryService {
@@ -30,6 +33,11 @@ public class MobileReportQueryService {
 
     private final ReviewRecordMapper reviewRecordMapper;
 
+    /**
+     * 查询当前用户可查看的报告列表。
+     *
+     * @return 报告列表
+     */
     public List<MobileReportVO> reportMine() {
         CurrentUser currentUser = requireCurrentUser();
         LambdaQueryWrapper<LabReport> wrapper = new LambdaQueryWrapper<LabReport>()

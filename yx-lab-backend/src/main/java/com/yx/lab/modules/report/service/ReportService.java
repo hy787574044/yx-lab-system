@@ -68,6 +68,12 @@ public class ReportService {
 
     private final StorageService storageService;
 
+    /**
+     * 分页查询报告列表。
+     *
+     * @param query 查询条件
+     * @return 报告分页结果
+     */
     public PageResult<LabReport> page(ReportQuery query) {
         Page<LabReport> page = labReportMapper.selectPage(
                 PageUtils.buildPage(query),
@@ -85,6 +91,12 @@ public class ReportService {
         return new PageResult<>(page.getTotal(), page.getRecords());
     }
 
+    /**
+     * 分页查询报告模板列表。
+     *
+     * @param query 分页参数
+     * @return 模板分页结果
+     */
     public PageResult<ReportTemplate> templatePage(com.yx.lab.common.model.PageQuery query) {
         Page<ReportTemplate> page = reportTemplateMapper.selectPage(
                 PageUtils.buildPage(query),
@@ -92,27 +104,49 @@ public class ReportService {
         return new PageResult<>(page.getTotal(), page.getRecords());
     }
 
+    /**
+     * 新增报告模板。
+     *
+     * @param command 模板保存参数
+     */
     public void saveTemplate(ReportTemplateSaveCommand command) {
         ReportTemplate template = new ReportTemplate();
         applyTemplateCommand(template, command);
         reportTemplateMapper.insert(template);
     }
 
+    /**
+     * 更新报告模板。
+     *
+     * @param id 模板ID
+     * @param command 模板保存参数
+     */
     public void updateTemplate(Long id, ReportTemplateSaveCommand command) {
         ReportTemplate template = requireTemplate(id);
         applyTemplateCommand(template, command);
         reportTemplateMapper.updateById(template);
     }
 
+    /**
+     * 删除报告模板。
+     *
+     * @param id 模板ID
+     */
     public void deleteTemplate(Long id) {
         reportTemplateMapper.deleteById(requireTemplate(id).getId());
     }
 
+    /**
+     * 正式发布报告，并生成报告产物及推送记录。
+     *
+     * @param id 报告ID
+     */
     public void publish(Long id) {
         LabReport existing = requireReport(id);
         if (!LabWorkflowConstants.canPublishReport(existing.getReportStatus())) {
             throw new BusinessException("当前报告状态不允许发布");
         }
+        // 发布前必须保证正式产物已经可预览、可打印，避免只改状态未落文件。
         ensureReportArtifact(existing);
 
         CurrentUser currentUser = requireCurrentUser();
@@ -125,6 +159,7 @@ public class ReportService {
         report.setPublishedBy(currentUser.getUserId());
         report.setPublishedByName(currentUser.getRealName());
 
+        // 发布成功后同步记录推送状态，便于后续追踪是否已下发到外部平台或接收人。
         PushResult pushResult = pushReport(existing, now);
         report.setPushStatus(pushResult.pushStatus);
         report.setLastPushTime(now);
@@ -133,12 +168,17 @@ public class ReportService {
 
         if (existing.getSampleId() != null) {
             labSampleService.appendTrace(existing.getSampleId(),
-                    "报告发布：报告名称=" + existing.getReportName()
+                    "报告已发布：报告名称=" + existing.getReportName()
                             + "，发布人=" + currentUser.getRealName()
                             + "，推送结果=" + pushResult.pushMessage);
         }
     }
 
+    /**
+     * 取消发布报告。
+     *
+     * @param id 报告ID
+     */
     public void unpublish(Long id) {
         LabReport existing = requireReport(id);
         if (!LabWorkflowConstants.canUnpublishReport(existing.getReportStatus())) {
@@ -153,20 +193,27 @@ public class ReportService {
         labReportMapper.updateById(report);
         if (existing.getSampleId() != null) {
             labSampleService.appendTrace(existing.getSampleId(),
-                    "报告撤回：报告名称=" + existing.getReportName() + "，状态=已取消发布");
+                    "报告已取消发布：报告名称=" + existing.getReportName());
         }
     }
 
+    /**
+     * 在检测流程审核通过后生成正式报告。
+     *
+     * @param sample 样品信息
+     * @param record 检测主流程
+     */
     public void createApprovedReport(LabSample sample, DetectionRecord record) {
         ReportTemplate template = reportTemplateMapper.selectOne(new LambdaQueryWrapper<ReportTemplate>()
                 .eq(ReportTemplate::getDefaultTemplate, 1)
                 .last("limit 1"));
 
         String content;
+        // 没有默认模板时仍可生成基础报告文本，保证审核通过后一定有正式产物。
         if (template == null) {
             content = "样品编号：" + sample.getSampleNo()
                     + "\n封签编号：" + sample.getSealNo()
-                    + "\n点位名称：" + sample.getPointName()
+                    + "\n监测点位：" + sample.getPointName()
                     + "\n检测结果：" + LabWorkflowConstants.getDetectionResultLabel(record.getDetectionResult());
         } else {
             content = template.getTemplateContent()
@@ -188,14 +235,21 @@ public class ReportService {
         report.setReportStatus(LabWorkflowConstants.ReportStatus.GENERATED);
         report.setContentSnapshot(content);
         report.setPushStatus("PENDING");
+        // 报告入库时同步生成 HTML 产物，后续预览和打印直接复用该正式文件。
         report.setFilePath(writeReportArtifact(report, sample, record, loadDetectionItems(record.getId()), loadLatestReview(sample.getId())));
         labReportMapper.insert(report);
         labSampleService.appendTrace(sample.getId(),
-                "报告生成：封签号=" + sample.getSealNo()
+                "已生成报告：封签号=" + sample.getSealNo()
                         + "，报告名称=" + report.getReportName()
                         + "，状态=已生成");
     }
 
+    /**
+     * 预览报告打印内容。
+     *
+     * @param id 报告ID
+     * @return 报告预览字节流
+     */
     public byte[] preview(Long id) {
         LabReport report = requireReport(id);
         refreshStoredPresentation(report, true);
@@ -209,8 +263,15 @@ public class ReportService {
         return html.getBytes(StandardCharsets.UTF_8);
     }
 
+    /**
+     * 查询报告预览所需的结构化数据。
+     *
+     * @param id 报告ID
+     * @return 报告预览数据
+     */
     public ReportPreviewVO previewData(Long id) {
         LabReport report = requireReport(id);
+        // 预览数据以最新持久化产物为准，避免页面看到的是过期内容。
         refreshStoredContentSnapshotIfNeeded(report);
         LabSample sample = report.getSampleId() == null ? null : labSampleMapper.selectById(report.getSampleId());
         DetectionRecord detectionRecord = report.getDetectionRecordId() == null
@@ -248,7 +309,7 @@ public class ReportService {
     private CurrentUser requireCurrentUser() {
         CurrentUser currentUser = SecurityContext.getCurrentUser();
         if (currentUser == null || currentUser.getUserId() == null) {
-            throw new BusinessException("当前登录信息已失效，请重新登录");
+            throw new BusinessException("当前登录用户信息失效，请重新登录");
         }
         return currentUser;
     }
@@ -270,7 +331,7 @@ public class ReportService {
         try {
             return storageService.storeText(fileName, buildDetailedReportHtml(report, sample, detectionRecord, detectionItems, latestReview));
         } catch (IOException ex) {
-            throw new BusinessException("报告文件生成失败：" + ex.getMessage());
+            throw new BusinessException("报告文件写入失败：" + ex.getMessage());
         }
     }
 
@@ -342,39 +403,39 @@ public class ReportService {
                 .append("</style></head><body><div class=\"page\"><div class=\"report-card\">");
 
         html.append("<h1 class=\"report-title\">").append(reportName).append("</h1>")
-                .append("<p class=\"report-subtitle\">报告预览已汇总样品基础信息、样品登录信息、化验结果明细、单项对比判定和审查结论。</p>");
+                .append("<p class=\"report-subtitle\">本报告根据样品登记、检测结果、审核结论自动汇总生成，可用于预览、打印和归档留痕。</p>");
 
         html.append("<div class=\"summary-grid\">")
                 .append(buildSummaryItem("样品编号", sampleNo))
                 .append(buildSummaryItem("封签编号", sealNo))
-                .append(buildSummaryItem("参数总数", String.valueOf(items.size())))
-                .append(buildSummaryItem("综合判定", detectionResult))
-                .append(buildSummaryItem("正常项", String.valueOf(normalCount)))
-                .append(buildSummaryItem("异常项", String.valueOf(abnormalCount)))
-                .append(buildSummaryItem("化验人", detectorName))
-                .append(buildSummaryItem("审查结论", reviewResult))
+                .append(buildSummaryItem("检测项数", String.valueOf(items.size())))
+                .append(buildSummaryItem("综合结果", detectionResult))
+                .append(buildSummaryItem("正常项数", String.valueOf(normalCount)))
+                .append(buildSummaryItem("异常项数", String.valueOf(abnormalCount)))
+                .append(buildSummaryItem("检测人员", detectorName))
+                .append(buildSummaryItem("审核结论", reviewResult))
                 .append("</div>");
 
-        html.append("<div class=\"section\"><h2 class=\"section-title\">一、样品基础信息</h2>")
+        html.append("<div class=\"section\"><h2 class=\"section-title\">样品基础信息</h2>")
                 .append("<table class=\"info-table\">")
                 .append(infoRow("样品编号", sampleNo, "封签编号", sealNo))
-                .append(infoRow("点位名称", pointName, "样品类型", sampleType))
+                .append(infoRow("监测点位", pointName, "样品类型", sampleType))
                 .append(infoRow("采样时间", samplingTime, "封签时间", sealTime))
                 .append(infoRow("采样人员", samplerName, "天气情况", weather))
-                .append(infoRow("保存条件", storageCondition, "当前样品状态", sampleStatus))
+                .append(infoRow("存储条件", storageCondition, "样品状态", sampleStatus))
                 .append(infoRow("样品备注", sampleRemark, "结果摘要", resultSummary))
                 .append("</table></div>");
 
-        html.append("<div class=\"section\"><h2 class=\"section-title\">二、样品登录与化验流程信息</h2>")
+        html.append("<div class=\"section\"><h2 class=\"section-title\">检测与审核信息</h2>")
                 .append("<table class=\"info-table\">")
-                .append(infoRow("化验完成时间", detectionTime, "化验人员", detectorName))
-                .append(infoRow("综合化验结果", detectionResult, "流程说明", recordRemark))
-                .append(infoRow("最近审查时间", reviewTime, "审查人员", reviewerName))
-                .append(infoRow("审查结论", reviewResult, "审查意见", reviewRemark))
+                .append(infoRow("检测时间", detectionTime, "检测人员", detectorName))
+                .append(infoRow("综合结果", detectionResult, "流程备注", recordRemark))
+                .append(infoRow("审核时间", reviewTime, "审核人员", reviewerName))
+                .append(infoRow("审核结论", reviewResult, "审核意见", reviewRemark))
                 .append(infoRow("驳回原因", rejectReason, "报告生成时间", formatDateTime(report == null ? null : report.getGeneratedTime())))
                 .append("</table></div>");
 
-        html.append("<div class=\"section\"><h2 class=\"section-title\">三、化验结果明细汇总</h2>")
+        html.append("<div class=\"section\"><h2 class=\"section-title\">化验结果明细</h2>")
                 .append("<table class=\"result-table\">")
                 .append("<thead><tr>")
                 .append("<th style=\"width:60px;\">序号</th>")
@@ -382,15 +443,15 @@ public class ReportService {
                 .append("<th style=\"width:150px;\">检测方法</th>")
                 .append("<th style=\"width:90px;\">单位</th>")
                 .append("<th style=\"width:120px;\">标准范围</th>")
-                .append("<th style=\"width:160px;\">参考范围</th>")
-                .append("<th style=\"width:90px;\">化验值</th>")
+                .append("<th style=\"width:160px;\">参考标准</th>")
+                .append("<th style=\"width:90px;\">检测值</th>")
                 .append("<th style=\"width:140px;\">结果对比</th>")
                 .append("<th style=\"width:110px;\">单项判定</th>")
-                .append("<th style=\"width:110px;\">子流程状态</th>")
+                .append("<th style=\"width:110px;\">流程状态</th>")
                 .append("</tr></thead><tbody>");
 
         if (items.isEmpty()) {
-            html.append("<tr><td colspan=\"10\" style=\"text-align:center;color:#64748b;\">当前报告暂无化验结果明细。</td></tr>");
+            html.append("<tr><td colspan=\"10\" style=\"text-align:center;color:#64748b;\">当前报告暂无化验结果明细数据</td></tr>");
         } else {
             int index = 1;
             for (DetectionItem item : items) {
@@ -418,14 +479,14 @@ public class ReportService {
         }
         html.append("</tbody></table></div>");
 
-        html.append("<div class=\"section\"><h2 class=\"section-title\">四、样品留痕与补充说明</h2>")
+        html.append("<div class=\"section\"><h2 class=\"section-title\">流程轨迹与留痕</h2>")
                 .append("<div class=\"trace-box\">")
-                .append(escapeHtml(StrUtil.isBlank(traceLog) ? "当前样品暂无额外流程留痕。" : traceLog))
+                .append(escapeHtml(StrUtil.isBlank(traceLog) ? "当前样品暂无流程轨迹记录" : traceLog))
                 .append("</div></div>");
 
         html.append("<div class=\"footer-note\">")
-                .append("说明：本预览页面重点展示样品基础信息、样品登录信息、化验参数方法结果明细、单项指标对比和审查结论。")
-                .append("当前版本暂不展示检测套餐名称，以避免干扰正式报告阅读。")
+                .append("本报告内容由样品登记、检测结果、审核结论自动汇总生成，适用于页面预览、A4打印和档案留存。")
+                .append("若后续检测数据、审核结论或样品信息发生变更，请重新生成或刷新报告产物。")
                 .append("</div>");
 
         html.append("</div></div></body></html>");
@@ -554,19 +615,19 @@ public class ReportService {
 
     private String buildCompareText(DetectionItem item) {
         if (item == null || item.getResultValue() == null) {
-            return "未录入化验值";
+            return "未录入检测值";
         }
         BigDecimal value = item.getResultValue();
         if (item.getStandardMin() != null && value.compareTo(item.getStandardMin()) < 0) {
-            return "低于标准下限 " + formatDecimal(item.getStandardMin());
+            return "低于标准下限：" + formatDecimal(item.getStandardMin());
         }
         if (item.getStandardMax() != null && value.compareTo(item.getStandardMax()) > 0) {
-            return "高于标准上限 " + formatDecimal(item.getStandardMax());
+            return "高于标准上限：" + formatDecimal(item.getStandardMax());
         }
         if (item.getStandardMin() != null || item.getStandardMax() != null) {
-            return "在标准范围内";
+            return "处于标准范围内";
         }
-        return "暂无标准范围，仅记录结果值";
+        return "未设置判定范围，无法自动判断";
     }
 
     private String resolveReportTypeLabel(String reportType) {
@@ -672,32 +733,32 @@ public class ReportService {
         String result = text;
         result = result.replaceAll("\\bFACTORY\\b", "出厂水");
         result = result.replaceAll("\\bRAW\\b", "原水");
-        result = result.replaceAll("\\bTERMINAL\\b", "管网末梢");
-        result = result.replaceAll("\\bLOGGED\\b", "已登录");
+        result = result.replaceAll("\\bTERMINAL\\b", "末梢水");
+        result = result.replaceAll("\\bLOGGED\\b", "已登记");
         result = result.replaceAll("\\bREVIEWING\\b", "审核中");
-        result = result.replaceAll("\\bRETEST\\b", "待重检");
+        result = result.replaceAll("\\bRETEST\\b", "退回重检");
         result = result.replaceAll("\\bCOMPLETED\\b", "已完成");
         result = result.replaceAll("\\bWAIT_ASSIGN\\b", "待分配");
         result = result.replaceAll("\\bWAIT_DETECT\\b", "待检测");
-        result = result.replaceAll("\\bSUBMITTED\\b", "待审核");
-        result = result.replaceAll("\\bAPPROVED\\b", "审核通过");
-        result = result.replaceAll("\\bREJECTED\\b", "审核驳回");
+        result = result.replaceAll("\\bSUBMITTED\\b", "已提交");
+        result = result.replaceAll("\\bAPPROVED\\b", "已通过");
+        result = result.replaceAll("\\bREJECTED\\b", "已驳回");
         result = result.replaceAll("\\bABNORMAL\\b", "异常");
         result = result.replaceAll("\\bNORMAL\\b", "正常");
         result = result.replaceAll("\\bDRAFT\\b", "草稿");
         result = result.replaceAll("\\bGENERATED\\b", "已生成");
         result = result.replaceAll("\\bPUBLISHED\\b", "已发布");
-        result = result.replaceAll("\\bPENDING\\b", "待处理");
-        result = result.replaceAll("\\bSUCCESS\\b", "已推送");
-        result = result.replaceAll("\\bFAILED\\b", "推送失败");
-        result = result.replaceAll("\\bCANCELLED\\b", "已撤回");
+        result = result.replaceAll("\\bPENDING\\b", "待推送");
+        result = result.replaceAll("\\bSUCCESS\\b", "成功");
+        result = result.replaceAll("\\bFAILED\\b", "失败");
+        result = result.replaceAll("\\bCANCELLED\\b", "已取消");
         return result;
     }
 
     private PushResult pushReport(LabReport report, LocalDateTime pushTime) {
         List<PushRecipient> recipients = resolvePushRecipients(report);
         if (recipients.isEmpty()) {
-            return new PushResult("PENDING", "未找到可推送接收人，已保留正式报告产物");
+            return new PushResult("PENDING", "未配置报告接收人，暂未执行推送");
         }
         List<String> recipientNames = new ArrayList<>();
         for (PushRecipient recipient : recipients) {
@@ -711,13 +772,13 @@ public class ReportService {
             pushRecord.setRecipientPhone(recipient.recipientPhone);
             pushRecord.setPushChannel("INTERNAL");
             pushRecord.setPushStatus("SUCCESS");
-            pushRecord.setPushMessage("报告已发布，可查看正式文件：" + report.getReportName());
+            pushRecord.setPushMessage("报告已推送到接收人：" + report.getReportName());
             pushRecord.setPushTime(pushTime);
             reportPushRecordMapper.insert(pushRecord);
             recipientNames.add(recipient.recipientName);
         }
         return new PushResult("SUCCESS",
-                "已推送给" + recipientNames.size() + "人：" + String.join("、", recipientNames));
+                "成功推送给" + recipientNames.size() + "位接收人：" + String.join("、", recipientNames));
     }
 
     private List<PushRecipient> resolvePushRecipients(LabReport report) {
@@ -745,7 +806,7 @@ public class ReportService {
             return;
         }
         LabUser user = labUserMapper.selectById(userId);
-        String recipientName = user == null ? StrUtil.blankToDefault(fallbackName, "未知接收人") : StrUtil.blankToDefault(user.getRealName(), fallbackName);
+        String recipientName = user == null ? StrUtil.blankToDefault(fallbackName, "未命名接收人") : StrUtil.blankToDefault(user.getRealName(), fallbackName);
         String recipientPhone = user == null ? null : user.getPhone();
         recipientMap.putIfAbsent(String.valueOf(userId), new PushRecipient(userId, recipientName, recipientPhone));
     }

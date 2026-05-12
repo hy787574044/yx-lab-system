@@ -2,6 +2,7 @@ package com.yx.lab.modules.system.controller;
 
 import com.yx.lab.common.model.ApiResponse;
 import com.yx.lab.common.model.PageResult;
+import com.yx.lab.common.util.ExcelExportUtil;
 import com.yx.lab.modules.system.dto.DictQuery;
 import com.yx.lab.modules.system.dto.DictSaveCommand;
 import com.yx.lab.modules.system.service.DictManagementService;
@@ -9,12 +10,11 @@ import com.yx.lab.modules.system.vo.LabDictVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -42,6 +42,32 @@ public class DictManagementController {
     @Operation(summary = "分页查询数据字典")
     public ApiResponse<PageResult<LabDictVO>> page(@Validated DictQuery query) {
         return ApiResponse.success(dictManagementService.page(query));
+    }
+
+    /**
+     * 导出数据字典。
+     *
+     * @param query 查询条件
+     * @return Excel 文件流
+     */
+    @GetMapping("/export")
+    @Operation(summary = "导出数据字典")
+    public ResponseEntity<byte[]> export(@Validated DictQuery query) {
+        ExcelExportUtil.prepareExportQuery(query);
+        return ExcelExportUtil.buildResponse(
+                "数据字典.xlsx",
+                "数据字典",
+                dictManagementService.page(query).getRecords(),
+                java.util.Arrays.asList(
+                        ExcelExportUtil.column("字典编码", LabDictVO::getDictCode),
+                        ExcelExportUtil.column("字典名称", LabDictVO::getDictName),
+                        ExcelExportUtil.column("所属模块", LabDictVO::getModuleName),
+                        ExcelExportUtil.column("字典项数", LabDictVO::getItemCount),
+                        ExcelExportUtil.column("字典项内容", LabDictVO::getItemText),
+                        ExcelExportUtil.column("状态", item -> item.getStatus() != null && item.getStatus() == 1 ? "启用" : "停用"),
+                        ExcelExportUtil.column("备注", LabDictVO::getRemark),
+                        ExcelExportUtil.column("更新时间", LabDictVO::getUpdatedTime)
+                ));
     }
 
     /**
@@ -76,7 +102,7 @@ public class DictManagementController {
      * @param command 保存命令
      * @return 操作结果
      */
-    @PutMapping("/{id}")
+    @PostMapping("/{id}")
     @Operation(summary = "更新数据字典")
     public ApiResponse<Void> update(@PathVariable Long id, @Valid @RequestBody DictSaveCommand command) {
         dictManagementService.update(id, command);
@@ -89,7 +115,7 @@ public class DictManagementController {
      * @param id 字典ID
      * @return 操作结果
      */
-    @DeleteMapping("/{id}")
+    @PostMapping("/{id}/delete")
     @Operation(summary = "删除数据字典")
     public ApiResponse<Void> delete(@PathVariable Long id) {
         dictManagementService.delete(id);

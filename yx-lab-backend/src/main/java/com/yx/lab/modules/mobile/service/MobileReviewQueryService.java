@@ -17,6 +17,9 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * 移动端审查查询服务，负责审查历史与待审查记录查询。
+ */
 @Service
 @RequiredArgsConstructor
 public class MobileReviewQueryService {
@@ -25,6 +28,11 @@ public class MobileReviewQueryService {
 
     private final ReviewRecordMapper reviewRecordMapper;
 
+    /**
+     * 查询当前审查人的历史审查记录。
+     *
+     * @return 审查历史列表
+     */
     public List<MobileReviewHistoryVO> reviewHistory() {
         CurrentUser currentUser = requireCurrentUser();
         List<ReviewRecord> records = reviewRecordMapper.selectList(new LambdaQueryWrapper<ReviewRecord>()
@@ -35,6 +43,11 @@ public class MobileReviewQueryService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * 查询移动端待审查主流程列表。
+     *
+     * @return 待审查列表
+     */
     public List<MobileReviewTodoVO> reviewTodo() {
         List<DetectionRecord> records = detectionRecordMapper.selectList(new LambdaQueryWrapper<DetectionRecord>()
                 .eq(DetectionRecord::getDetectionStatus, LabWorkflowConstants.DetectionStatus.SUBMITTED)

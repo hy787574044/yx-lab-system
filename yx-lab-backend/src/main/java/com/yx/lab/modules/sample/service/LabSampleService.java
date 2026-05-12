@@ -48,6 +48,12 @@ public class LabSampleService {
 
     private final ObjectMapper objectMapper;
 
+    /**
+     * 分页查询样品列表。
+     *
+     * @param query 查询条件
+     * @return 样品分页结果
+     */
     public PageResult<LabSample> page(LabSampleQuery query) {
         Page<LabSample> page = labSampleMapper.selectPage(
                 PageUtils.buildPage(query),
@@ -64,23 +70,38 @@ public class LabSampleService {
         return new PageResult<>(page.getTotal(), page.getRecords());
     }
 
+    /**
+     * 获取样品详情。
+     *
+     * @param id 样品ID
+     * @return 样品详情
+     */
     public LabSample detail(Long id) {
         return labSampleMapper.selectById(id);
     }
 
+    /**
+     * 执行样品登录，并同步任务状态与待检流程。
+     *
+     * @param command 样品登录参数
+     * @return 登录后的样品记录
+     */
     @Transactional(rollbackFor = Exception.class)
     public LabSample loginSample(SampleLoginCommand command) {
         CurrentUser currentUser = requireCurrentUser();
         String commandSealNo = normalizeSealNo(command.getSealNo());
+        // 先判断是“任务样品登录”还是“无任务直登样品”，两种入口的校验规则不同。
         SamplingTask task = resolveTaskForLogin(command);
         if (task != null) {
             validateTaskForSampleLogin(task, currentUser, commandSealNo);
         } else {
             validateSamplerOperator(command, currentUser);
         }
+        // 套餐与参数快照在登录时固化，后续检测流程都以本次登录快照为准。
         DetectionType detectionType = resolveDetectionType(command);
         List<SampleDetectionConfigItem> detectionConfigItems = normalizeDetectionConfigItems(command, detectionType);
 
+        // 封签号是样品与采样任务衔接的关键主键，先统一归一化并做唯一性校验。
         String sealNo = resolveSealNo(commandSealNo, task);
         validateSealNoUniqueness(sealNo);
 
@@ -106,20 +127,37 @@ public class LabSampleService {
         sample.setTraceLog(buildLoginTrace(sample, task));
         labSampleMapper.insert(sample);
 
+        // 如本次登录来源于采样任务，需同步回填任务的样品登记状态和样品主键。
         if (task != null) {
             task.setSampleRegisterStatus(LabWorkflowConstants.SampleRegisterStatus.REGISTERED);
             task.setSampleId(sample.getId());
             task.setSealNo(sample.getSealNo());
             samplingTaskMapper.updateById(task);
         }
+        // 样品一旦登录完成，立即补齐后续待分配检测主流程与参数子流程。
         detectionPendingFlowService.createPendingFlowIfMissing(sample);
         return sample;
     }
 
+    /**
+     * 更新样品状态与结果摘要。
+     *
+     * @param sampleId 样品ID
+     * @param status 样品状态
+     * @param resultSummary 结果摘要
+     */
     public void updateStatus(Long sampleId, String status, String resultSummary) {
         updateStatus(sampleId, status, resultSummary, null);
     }
 
+    /**
+     * 更新样品状态、结果摘要，并可追加一条流程留痕。
+     *
+     * @param sampleId 样品ID
+     * @param status 样品状态
+     * @param resultSummary 结果摘要
+     * @param traceMessage 流程留痕内容
+     */
     public void updateStatus(Long sampleId, String status, String resultSummary, String traceMessage) {
         LabSample sample = labSampleMapper.selectById(sampleId);
         if (sample == null) {
@@ -131,6 +169,12 @@ public class LabSampleService {
         labSampleMapper.updateById(sample);
     }
 
+    /**
+     * 追加样品流程留痕。
+     *
+     * @param sampleId 样品ID
+     * @param traceMessage 留痕内容
+     */
     public void appendTrace(Long sampleId, String traceMessage) {
         if (StrUtil.isBlank(traceMessage)) {
             return;
@@ -151,6 +195,7 @@ public class LabSampleService {
             }
             return task;
         }
+        // 无任务样品允许仅凭封签号回捞采样任务，实现 OCR 回填后再登录样品。
         String sealNo = normalizeSealNo(command.getSealNo());
         if (StrUtil.isBlank(sealNo)) {
             return null;

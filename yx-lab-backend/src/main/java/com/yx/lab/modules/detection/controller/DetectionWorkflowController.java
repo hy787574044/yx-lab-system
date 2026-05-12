@@ -2,6 +2,8 @@ package com.yx.lab.modules.detection.controller;
 
 import com.yx.lab.common.model.ApiResponse;
 import com.yx.lab.common.model.PageResult;
+import com.yx.lab.common.constant.LabWorkflowConstants;
+import com.yx.lab.common.util.ExcelExportUtil;
 import com.yx.lab.modules.detection.dto.DetectionAssignCommand;
 import com.yx.lab.modules.detection.dto.DetectionRecordQuery;
 import com.yx.lab.modules.detection.dto.DetectionSubmitCommand;
@@ -11,6 +13,7 @@ import com.yx.lab.modules.detection.vo.DetectionRecordDetailVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -42,6 +45,30 @@ public class DetectionWorkflowController {
     }
 
     /**
+     * 导出检测流程。
+     */
+    @GetMapping("/export")
+    @Operation(summary = "导出检测流程")
+    public ResponseEntity<byte[]> export(@Validated DetectionRecordQuery query) {
+        ExcelExportUtil.prepareExportQuery(query);
+        return ExcelExportUtil.buildResponse(
+                "检测流程.xlsx",
+                "检测流程",
+                detectionWorkflowService.page(query).getRecords(),
+                java.util.Arrays.asList(
+                        ExcelExportUtil.column("样品编号", DetectionRecord::getSampleNo),
+                        ExcelExportUtil.column("封签编号", DetectionRecord::getSealNo),
+                        ExcelExportUtil.column("检测套餐", DetectionRecord::getDetectionTypeName),
+                        ExcelExportUtil.column("检测人员", DetectionRecord::getDetectorName),
+                        ExcelExportUtil.column("流程状态", item -> LabWorkflowConstants.getDetectionStatusLabel(item.getDetectionStatus())),
+                        ExcelExportUtil.column("检测结果", item -> LabWorkflowConstants.getDetectionResultLabel(item.getDetectionResult())),
+                        ExcelExportUtil.column("流程时间", DetectionRecord::getDetectionTime),
+                        ExcelExportUtil.column("异常说明", DetectionRecord::getAbnormalRemark),
+                        ExcelExportUtil.column("更新时间", DetectionRecord::getUpdatedTime)
+                ));
+    }
+
+    /**
      * 查询检测主流程详情。
      */
     @GetMapping("/{id}")
@@ -53,7 +80,7 @@ public class DetectionWorkflowController {
     /**
      * 为检测主流程下的参数子流程分配检测员。
      */
-    @PostMapping("/{id}/assign-detectors")
+    @PostMapping("/{id}/assignDetectors")
     @Operation(summary = "分配检测员")
     public ApiResponse<Void> assignDetectors(@PathVariable Long id, @Valid @RequestBody DetectionAssignCommand command) {
         detectionWorkflowService.assignDetectors(id, command);

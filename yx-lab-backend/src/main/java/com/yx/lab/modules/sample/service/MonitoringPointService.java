@@ -13,12 +13,21 @@ import com.yx.lab.modules.sample.mapper.MonitoringPointMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+/**
+ * 监测点位管理服务，负责点位档案的查询、新增、编辑与删除。
+ */
 @Service
 @RequiredArgsConstructor
 public class MonitoringPointService {
 
     private final MonitoringPointMapper monitoringPointMapper;
 
+    /**
+     * 分页查询监测点位列表。
+     *
+     * @param query 查询条件
+     * @return 点位分页结果
+     */
     public PageResult<MonitoringPoint> page(MonitoringPointQuery query) {
         Page<MonitoringPoint> page = monitoringPointMapper.selectPage(
                 PageUtils.buildPage(query),
@@ -30,22 +39,44 @@ public class MonitoringPointService {
         return new PageResult<>(page.getTotal(), page.getRecords());
     }
 
+    /**
+     * 获取监测点位详情。
+     *
+     * @param id 点位ID
+     * @return 点位详情
+     */
     public MonitoringPoint detail(Long id) {
         return requirePoint(id);
     }
 
+    /**
+     * 新增监测点位。
+     *
+     * @param command 点位保存参数
+     */
     public void save(MonitoringPointSaveCommand command) {
         MonitoringPoint point = new MonitoringPoint();
         applyCommand(point, command);
         monitoringPointMapper.insert(point);
     }
 
+    /**
+     * 更新监测点位资料。
+     *
+     * @param id 点位ID
+     * @param command 点位保存参数
+     */
     public void update(Long id, MonitoringPointSaveCommand command) {
         MonitoringPoint point = requirePoint(id);
         applyCommand(point, command);
         monitoringPointMapper.updateById(point);
     }
 
+    /**
+     * 删除监测点位。
+     *
+     * @param id 点位ID
+     */
     public void delete(Long id) {
         monitoringPointMapper.deleteById(requirePoint(id).getId());
     }

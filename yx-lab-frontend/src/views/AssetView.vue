@@ -54,6 +54,7 @@
               <div class="toolbar-actions">
                 <el-button type="primary" @click="handleInstrumentSearch">查询</el-button>
                 <el-button @click="resetInstrumentQuery">重置</el-button>
+                <el-button @click="handleExportInstruments">导出</el-button>
                 <el-button @click="handleDownloadTemplate" :loading="templateDownloading">下载导入模板</el-button>
                 <el-button type="warning" plain @click="openImportDialog">导入设备</el-button>
                 <el-button type="primary" plain @click="openInstrumentDialog()">新增设备</el-button>
@@ -136,6 +137,7 @@
               <div class="toolbar-actions">
                 <el-button type="primary" @click="handleDocumentSearch">查询</el-button>
                 <el-button @click="resetDocumentQuery">重置</el-button>
+                <el-button @click="handleExportDocuments">导出</el-button>
                 <el-button type="primary" plain @click="openDocumentDialog()">新增文档</el-button>
               </div>
             </div>
@@ -425,6 +427,8 @@ import {
   deleteDocumentApi,
   deleteInstrumentApi,
   downloadInstrumentTemplateApi,
+  exportDocumentsApi,
+  exportInstrumentsApi,
   fetchDocumentsApi,
   fetchDocumentUsersApi,
   fetchInstrumentsApi,
@@ -806,6 +810,24 @@ async function loadDocuments() {
     documentTotal.value = result.total || 0
   } finally {
     documentLoading.value = false
+  }
+}
+
+async function handleExportInstruments() {
+  try {
+    await exportInstrumentsApi({ ...instrumentQuery })
+    ElMessage.success('设备台账导出成功')
+  } catch (error) {
+    ElMessage.error(error.message || '设备台账导出失败')
+  }
+}
+
+async function handleExportDocuments() {
+  try {
+    await exportDocumentsApi({ ...documentQuery })
+    ElMessage.success('文档台账导出成功')
+  } catch (error) {
+    ElMessage.error(error.message || '文档台账导出失败')
   }
 }
 

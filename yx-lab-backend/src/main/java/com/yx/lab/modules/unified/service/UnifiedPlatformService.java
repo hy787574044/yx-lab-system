@@ -50,6 +50,12 @@ public class UnifiedPlatformService {
 
     private final ObjectMapper objectMapper;
 
+    /**
+     * 统一平台授权码模式登录。
+     *
+     * @param request 授权请求参数
+     * @return 授权码结果
+     */
     public UnifiedAuthorizeCodeVO authorize(UnifiedAuthorizeRequest request) {
         RemoteResponse response = invokeGet(AUTHORIZE_PATH, buildAuthorizeParams(request));
         UnifiedAuthorizeCodeVO result = new UnifiedAuthorizeCodeVO();
@@ -59,16 +65,34 @@ public class UnifiedPlatformService {
         return result;
     }
 
+    /**
+     * 使用授权码换取访问令牌。
+     *
+     * @param request 令牌请求参数
+     * @return 访问令牌结果
+     */
     public UnifiedTokenVO getAccessToken(UnifiedAccessTokenRequest request) {
         RemoteResponse response = invokeGet(TOKEN_PATH, buildAccessTokenParams(request));
         return buildToken(response);
     }
 
+    /**
+     * 刷新统一平台访问令牌。
+     *
+     * @param request 刷新令牌请求
+     * @return 刷新后的令牌结果
+     */
     public UnifiedTokenVO refreshAccessToken(UnifiedRefreshTokenRequest request) {
         RemoteResponse response = invokeGet(REFRESH_PATH, buildRefreshTokenParams(request));
         return buildToken(response);
     }
 
+    /**
+     * 注销统一平台访问令牌。
+     *
+     * @param request 注销请求
+     * @return 操作结果
+     */
     public UnifiedOperationVO revokeAccessToken(UnifiedRevokeTokenRequest request) {
         RemoteResponse response = invokeGet(REVOKE_PATH, buildRevokeParams(request));
         UnifiedOperationVO result = new UnifiedOperationVO();
@@ -79,11 +103,23 @@ public class UnifiedPlatformService {
         return result;
     }
 
+    /**
+     * 按 openId 查询用户信息。
+     *
+     * @param request openId 查询参数
+     * @return 用户信息
+     */
     public UnifiedUserInfoVO getUserInfoByOpenId(UnifiedUserInfoByOpenIdRequest request) {
         RemoteResponse response = invokeGet(USERINFO_BY_OPEN_ID_PATH, buildOpenIdParams(request));
         return buildUserInfo(response, chooseBestNode(response));
     }
 
+    /**
+     * 按统一查询参数查询用户信息。
+     *
+     * @param request 用户查询参数
+     * @return 用户信息
+     */
     public UnifiedUserInfoVO queryUserInfo(UnifiedUserQueryRequest request) {
         Map<String, Object> params = new LinkedHashMap<>();
         params.put("jobNo", request.getJobNo());
@@ -92,6 +128,12 @@ public class UnifiedPlatformService {
         return buildUserInfo(response, chooseBestNode(response));
     }
 
+    /**
+     * 按用户ID查询用户信息。
+     *
+     * @param request 用户ID参数
+     * @return 用户信息
+     */
     public UnifiedUserInfoVO getUserInfoById(UnifiedUserIdRequest request) {
         Map<String, Object> params = new LinkedHashMap<>();
         params.put("id", request.getId());
@@ -99,6 +141,12 @@ public class UnifiedPlatformService {
         return buildUserInfo(response, chooseBestNode(response));
     }
 
+    /**
+     * 按工号查询用户信息。
+     *
+     * @param request 工号参数
+     * @return 用户信息
+     */
     public UnifiedUserInfoVO getUserInfoByJobNo(UnifiedUserJobNoRequest request) {
         Map<String, Object> params = new LinkedHashMap<>();
         params.put("jobNO", request.getJobNo());
@@ -106,6 +154,12 @@ public class UnifiedPlatformService {
         return buildUserInfo(response, chooseBestNode(response));
     }
 
+    /**
+     * 查询角色下的用户列表。
+     *
+     * @param request 角色用户查询参数
+     * @return 用户列表结果
+     */
     public UnifiedUserListVO listUsersByRoleId(UnifiedRoleUserRequest request) {
         Map<String, Object> params = new LinkedHashMap<>();
         params.put("roleld", request.getRoleId());
@@ -122,6 +176,12 @@ public class UnifiedPlatformService {
         return result;
     }
 
+    /**
+     * 查询指定用户的菜单权限数据。
+     *
+     * @param request 用户ID参数
+     * @return 菜单结果
+     */
     public UnifiedMenuVO getUserMenus(UnifiedUserIdRequest request) {
         Map<String, Object> params = new LinkedHashMap<>();
         params.put("id", request.getId());

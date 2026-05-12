@@ -35,7 +35,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
 
 /**
- * 检测待分配主流程与参数子流程维护服务。
+ * 检测待办流程服务。
  */
 @Service
 @RequiredArgsConstructor
@@ -44,7 +44,7 @@ public class DetectionPendingFlowService {
     private static final String DETECTOR_ROLE_CODE = "DETECTOR";
 
     /**
-     * 同一样品在单实例内串行生成待分配流程，避免并发重复插入。
+     * 按样品维度保存并发锁，避免页面派发与自动补偿同时生成重复主流程。
      */
     private final ConcurrentMap<Long, Object> sampleLocks = new ConcurrentHashMap<>();
 
@@ -58,10 +58,10 @@ public class DetectionPendingFlowService {
 
     private final ObjectMapper objectMapper;
 
-    /**
-     * 为当前处于“已登录/待重检”的样品补齐待分配检测流程。
-     */
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * 扫描所有处于待检范围内的样品，并补齐待分配检测主流程。
+     */
     public void syncPendingFlowsForOpenSamples() {
         List<LabSample> samples = labSampleMapper.selectList(new LambdaQueryWrapper<LabSample>()
                 .in(LabSample::getSampleStatus, LabWorkflowConstants.DETECTABLE_SAMPLE_STATUSES)
@@ -71,22 +71,26 @@ public class DetectionPendingFlowService {
         }
     }
 
-    /**
-     * 样品登录或重检后，为样品生成待分配的检测主流程与参数子流程。
-     * 如果已经存在活跃主流程，则直接复用；如果存在多个活跃主流程，则自动收敛为一条。
-     */
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * 为指定样品创建待分配检测主流程；若已存在有效流程则直接复用。
+     *
+     * @param sample 样品信息
+     * @return 待检主流程记录
+     */
     public DetectionRecord createPendingFlowIfMissing(LabSample sample) {
         if (sample == null || sample.getId() == null) {
             return null;
         }
         Object lock = sampleLocks.computeIfAbsent(sample.getId(), key -> new Object());
         synchronized (lock) {
+            // 同一样品始终只保留一条活跃检测主流程，避免重复登录或重复补偿造成脏数据。
             DetectionRecord existing = collapseDuplicateActiveRecords(sample.getId());
             if (existing != null) {
                 return existing;
             }
 
+            // 样品登录时冻结的套餐参数快照，是后续生成参数子流程的唯一数据来源。
             List<SampleDetectionConfigItem> configItems = parseSampleConfigItems(sample.getDetectionConfigSnapshot());
             if (configItems.isEmpty()) {
                 return null;
@@ -102,10 +106,11 @@ public class DetectionPendingFlowService {
             record.setDetectorId(null);
             record.setDetectorName(null);
             record.setDetectionResult(null);
-            record.setAbnormalRemark("等待按检测参数分配检测员");
+            record.setAbnormalRemark("待分配检测员");
             record.setDetectionStatus(LabWorkflowConstants.DetectionStatus.WAIT_ASSIGN);
             detectionRecordMapper.insert(record);
 
+            // 每一个套餐参数都展开成独立子流程，后续可单独分配检测员、录入结果和审查。
             for (SampleDetectionConfigItem configItem : configItems) {
                 DetectionItem item = new DetectionItem();
                 item.setRecordId(record.getId());
@@ -128,7 +133,10 @@ public class DetectionPendingFlowService {
     }
 
     /**
-     * 查询样品当前有效的检测主流程。
+     * 查询样品对应的有效检测主流程。
+     *
+     * @param sampleId 样品ID
+     * @return 有效检测主流程，不存在时返回空
      */
     public DetectionRecord findActiveRecordBySampleId(Long sampleId) {
         if (sampleId == null) {
@@ -137,11 +145,13 @@ public class DetectionPendingFlowService {
         return collapseDuplicateActiveRecords(sampleId);
     }
 
-    /**
-     * 收敛同一样品下重复生成的活跃检测主流程，只保留一条最优记录。
-     * 当前优先保留：已提交数更多、已分配数更多、参数子项更完整、更新时间更晚的记录。
-     */
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * 合并同一样品的重复有效主流程，只保留一条继续流转。
+     *
+     * @param sampleId 样品ID
+     * @return 保留下来的主流程记录
+     */
     public DetectionRecord collapseDuplicateActiveRecords(Long sampleId) {
         if (sampleId == null) {
             return null;
@@ -183,24 +193,27 @@ public class DetectionPendingFlowService {
         return keeper;
     }
 
-    /**
-     * 为检测主流程批量保存参数子流程的检测员分配。
-     */
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * 按检测参数对子流程分配检测员。
+     *
+     * @param recordId 检测主流程ID
+     * @param command 分配参数
+     */
     public void assignDetectors(Long recordId, DetectionAssignCommand command) {
         DetectionRecord record = detectionRecordMapper.selectById(recordId);
         if (record == null) {
             throw new BusinessException("检测主流程不存在");
         }
         if (!LabWorkflowConstants.canAssignDetection(record.getDetectionStatus())) {
-            throw new BusinessException("当前检测主流程状态不允许继续分配检测员");
+            throw new BusinessException("当前检测主流程状态不允许派发任务");
         }
 
         List<DetectionItem> items = detectionItemMapper.selectList(new LambdaQueryWrapper<DetectionItem>()
                 .eq(DetectionItem::getRecordId, recordId)
                 .orderByAsc(DetectionItem::getCreatedTime));
         if (items.isEmpty()) {
-            throw new BusinessException("当前检测主流程下没有可分配的参数子流程");
+            throw new BusinessException("当前检测主流程缺少参数子流程，无法进行派发");
         }
 
         Map<Long, DetectionItem> itemMap = items.stream()
@@ -209,9 +222,10 @@ public class DetectionPendingFlowService {
                 .map(DetectionItemAssignCommand::getDetectorId)
                 .filter(id -> id != null)
                 .distinct()
-                .collect(Collectors.toList());
+        // 子流程支持逐项派人或清空人员，主流程状态会根据全部子流程重新汇总。
         Map<Long, LabUser> detectorMap = loadDetectors(detectorIds);
 
+        // 子流程支持逐项派人或清空人员，主流程状态会根据全部子流程重新汇总。
         for (DetectionItemAssignCommand itemCommand : command.getItems()) {
             DetectionItem item = itemMap.get(itemCommand.getItemId());
             if (item == null) {
@@ -224,7 +238,7 @@ public class DetectionPendingFlowService {
             } else {
                 LabUser detector = detectorMap.get(itemCommand.getDetectorId());
                 if (detector == null) {
-                    throw new BusinessException("检测员不存在或未启用：" + itemCommand.getDetectorId());
+                    throw new BusinessException("检测员不存在或已停用：" + itemCommand.getDetectorId());
                 }
                 item.setDetectorId(detector.getId());
                 item.setDetectorName(resolveDetectorName(detector));
@@ -240,7 +254,9 @@ public class DetectionPendingFlowService {
     }
 
     /**
-     * 给检测主流程补充参数数量、已分配数量、已完成数量统计。
+     * 为主流程列表批量补充子流程统计摘要。
+     *
+     * @param records 主流程列表
      */
     public void fillRecordSummaries(List<DetectionRecord> records) {
         if (records == null || records.isEmpty()) {
@@ -266,10 +282,13 @@ public class DetectionPendingFlowService {
         }
     }
 
-    /**
-     * 刷新主流程上的分配概览信息。
-     */
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * 根据子流程分配情况刷新主流程状态与统计字段。
+     *
+     * @param record 主流程记录
+     * @param items 子流程列表
+     */
     public void refreshRecordAssignmentState(DetectionRecord record, List<DetectionItem> items) {
         if (record == null) {
             return;
@@ -294,7 +313,7 @@ public class DetectionPendingFlowService {
             record.setDetectorName(detectorNames.iterator().next());
         } else if (detectorIds.size() > 1) {
             record.setDetectorId(null);
-            record.setDetectorName("多人协同");
+            record.setDetectorName("协同检测");
         } else {
             record.setDetectorId(null);
             record.setDetectorName(null);
@@ -331,7 +350,7 @@ public class DetectionPendingFlowService {
                     .filter(item -> item != null && item.getParameterId() != null)
                     .collect(Collectors.toList());
         } catch (JsonProcessingException ex) {
-            throw new BusinessException("样品检测套餐快照格式不正确，请重新登录样品");
+            throw new BusinessException("样品检测配置快照格式错误，无法生成检测流程");
         }
     }
 

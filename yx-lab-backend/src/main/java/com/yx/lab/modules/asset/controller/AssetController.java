@@ -2,6 +2,8 @@ package com.yx.lab.modules.asset.controller;
 
 import com.yx.lab.common.model.ApiResponse;
 import com.yx.lab.common.model.PageResult;
+import com.yx.lab.common.constant.LabWorkflowConstants;
+import com.yx.lab.common.util.ExcelExportUtil;
 import com.yx.lab.modules.asset.dto.DocumentQuery;
 import com.yx.lab.modules.asset.dto.DocumentSaveCommand;
 import com.yx.lab.modules.asset.dto.InstrumentMaintenanceSaveCommand;
@@ -25,11 +27,9 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -69,6 +69,35 @@ public class AssetController {
     }
 
     /**
+     * 导出仪器台账。
+     *
+     * @param query 仪器查询条件。
+     * @return Excel 文件流。
+     */
+    @GetMapping("/instruments/export")
+    @Operation(summary = "导出仪器台账")
+    public ResponseEntity<byte[]> exportInstruments(@Validated InstrumentQuery query) {
+        ExcelExportUtil.prepareExportQuery(query);
+        return ExcelExportUtil.buildResponse(
+                "设备台账.xlsx",
+                "设备台账",
+                instrumentAssetService.instrumentPage(query).getRecords(),
+                java.util.Arrays.asList(
+                        ExcelExportUtil.column("设备名称", Instrument::getInstrumentName),
+                        ExcelExportUtil.column("设备型号", Instrument::getInstrumentModel),
+                        ExcelExportUtil.column("生产厂家", Instrument::getManufacturer),
+                        ExcelExportUtil.column("负责人", Instrument::getOwnerName),
+                        ExcelExportUtil.column("存放位置", Instrument::getStorageLocation),
+                        ExcelExportUtil.column("购置日期", Instrument::getPurchaseDate),
+                        ExcelExportUtil.column("使用年限", Instrument::getServiceLifeYears),
+                        ExcelExportUtil.column("校准周期", Instrument::getCalibrationCycle),
+                        ExcelExportUtil.column("设备状态", item -> LabWorkflowConstants.getInstrumentStatusLabel(item.getInstrumentStatus())),
+                        ExcelExportUtil.column("备注", Instrument::getRemark),
+                        ExcelExportUtil.column("更新时间", Instrument::getUpdatedTime)
+                ));
+    }
+
+    /**
      * 获取仪器台账详情。
      *
      * @param id 仪器主键。
@@ -85,7 +114,7 @@ public class AssetController {
      *
      * @return 模板文件流。
      */
-    @GetMapping("/instruments/import-template")
+    @GetMapping("/instruments/importTemplate")
     @Operation(summary = "下载仪器导入模板")
     public ResponseEntity<byte[]> downloadInstrumentImportTemplate() {
         ContentDisposition contentDisposition = ContentDisposition.attachment()
@@ -130,7 +159,7 @@ public class AssetController {
      * @param command 仪器保存命令。
      * @return 更新结果。
      */
-    @PutMapping("/instruments/{id}")
+    @PostMapping("/instruments/{id}")
     @Operation(summary = "更新仪器台账")
     public ApiResponse<Void> updateInstrument(@PathVariable Long id, @Valid @RequestBody InstrumentSaveCommand command) {
         instrumentAssetService.updateInstrument(id, command);
@@ -143,7 +172,7 @@ public class AssetController {
      * @param id 仪器主键。
      * @return 删除结果。
      */
-    @DeleteMapping("/instruments/{id}")
+    @PostMapping("/instruments/{id}/delete")
     @Operation(summary = "删除仪器台账")
     public ApiResponse<Void> deleteInstrument(@PathVariable Long id) {
         instrumentAssetService.deleteInstrument(id);
@@ -160,6 +189,33 @@ public class AssetController {
     @Operation(summary = "维保记录分页")
     public ApiResponse<PageResult<InstrumentMaintenance>> maintenances(@Validated MaintenanceQuery query) {
         return ApiResponse.success(instrumentAssetService.maintenancePage(query));
+    }
+
+    /**
+     * 导出维保记录。
+     *
+     * @param query 维保查询条件。
+     * @return Excel 文件流。
+     */
+    @GetMapping("/maintenances/export")
+    @Operation(summary = "导出维保记录")
+    public ResponseEntity<byte[]> exportMaintenances(@Validated MaintenanceQuery query) {
+        ExcelExportUtil.prepareExportQuery(query);
+        return ExcelExportUtil.buildResponse(
+                "设备维修.xlsx",
+                "设备维修",
+                instrumentAssetService.maintenancePage(query).getRecords(),
+                java.util.Arrays.asList(
+                        ExcelExportUtil.column("设备名称", InstrumentMaintenance::getInstrumentName),
+                        ExcelExportUtil.column("维修时间", InstrumentMaintenance::getMaintenanceTime),
+                        ExcelExportUtil.column("维修原因", InstrumentMaintenance::getMaintenanceReason),
+                        ExcelExportUtil.column("维修人", InstrumentMaintenance::getMaintainerName),
+                        ExcelExportUtil.column("维修公司", InstrumentMaintenance::getMaintenanceCompany),
+                        ExcelExportUtil.column("维修结果", InstrumentMaintenance::getMaintenanceResult),
+                        ExcelExportUtil.column("维修费用", InstrumentMaintenance::getMaintenanceCost),
+                        ExcelExportUtil.column("备注", InstrumentMaintenance::getRemark),
+                        ExcelExportUtil.column("更新时间", InstrumentMaintenance::getUpdatedTime)
+                ));
     }
 
     /**
@@ -182,7 +238,7 @@ public class AssetController {
      * @param command 维保保存命令。
      * @return 更新结果。
      */
-    @PutMapping("/maintenances/{id}")
+    @PostMapping("/maintenances/{id}")
     @Operation(summary = "更新维保记录")
     public ApiResponse<Void> updateMaintenance(@PathVariable Long id, @Valid @RequestBody InstrumentMaintenanceSaveCommand command) {
         instrumentAssetService.updateMaintenance(id, command);
@@ -195,7 +251,7 @@ public class AssetController {
      * @param id 维保主键。
      * @return 删除结果。
      */
-    @DeleteMapping("/maintenances/{id}")
+    @PostMapping("/maintenances/{id}/delete")
     @Operation(summary = "删除维保记录")
     public ApiResponse<Void> deleteMaintenance(@PathVariable Long id) {
         instrumentAssetService.deleteMaintenance(id);
@@ -207,7 +263,7 @@ public class AssetController {
      *
      * @return 可见人员列表。
      */
-    @GetMapping("/document-users")
+    @GetMapping("/documentUsers")
     @Operation(summary = "文档可见人员选项")
     public ApiResponse<List<DocumentUserOptionVO>> documentUsers() {
         return ApiResponse.success(assetDocumentService.documentUserOptions());
@@ -223,6 +279,31 @@ public class AssetController {
     @Operation(summary = "化验室文档分页")
     public ApiResponse<PageResult<LabDocumentVO>> documents(@Validated DocumentQuery query) {
         return ApiResponse.success(assetDocumentService.documentPage(query));
+    }
+
+    /**
+     * 导出化验室文档台账。
+     *
+     * @param query 文档查询条件。
+     * @return Excel 文件流。
+     */
+    @GetMapping("/documents/export")
+    @Operation(summary = "导出化验室文档台账")
+    public ResponseEntity<byte[]> exportDocuments(@Validated DocumentQuery query) {
+        ExcelExportUtil.prepareExportQuery(query);
+        return ExcelExportUtil.buildResponse(
+                "文档台账.xlsx",
+                "文档台账",
+                assetDocumentService.documentPage(query).getRecords(),
+                java.util.Arrays.asList(
+                        ExcelExportUtil.column("文档名称", LabDocumentVO::getDocumentName),
+                        ExcelExportUtil.column("分类", LabDocumentVO::getDocumentCategory),
+                        ExcelExportUtil.column("文件类型", LabDocumentVO::getFileType),
+                        ExcelExportUtil.column("上传人", LabDocumentVO::getCreatedName),
+                        ExcelExportUtil.column("可查看人员", LabDocumentVO::getViewerNames),
+                        ExcelExportUtil.column("上传时间", LabDocumentVO::getCreatedTime),
+                        ExcelExportUtil.column("备注", LabDocumentVO::getRemark)
+                ));
     }
 
     /**
@@ -276,7 +357,7 @@ public class AssetController {
      * @param command 文档保存命令。
      * @return 更新结果。
      */
-    @PutMapping("/documents/{id}")
+    @PostMapping("/documents/{id}")
     @Operation(summary = "更新化验室文档")
     public ApiResponse<Void> updateDocument(@PathVariable Long id, @Valid @RequestBody DocumentSaveCommand command) {
         assetDocumentService.updateDocument(id, command);
@@ -289,7 +370,7 @@ public class AssetController {
      * @param id 文档主键。
      * @return 删除结果。
      */
-    @DeleteMapping("/documents/{id}")
+    @PostMapping("/documents/{id}/delete")
     @Operation(summary = "删除化验室文档")
     public ApiResponse<Void> deleteDocument(@PathVariable Long id) {
         assetDocumentService.deleteDocumentWithPermission(id);

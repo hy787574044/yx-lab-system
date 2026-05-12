@@ -46,6 +46,7 @@
             <el-button type="primary" @click="handleSearch">查询</el-button>
             <el-button @click="resetQuery">重置</el-button>
             <el-button @click="loadData">刷新</el-button>
+            <el-button @click="handleExport">导出</el-button>
             <el-button type="primary" plain @click="openCreateDialog">新增点位</el-button>
           </div>
         </div>
@@ -175,7 +176,7 @@ import { ElMessage } from 'element-plus/es/components/message/index.mjs'
 import { ElMessageBox } from 'element-plus/es/components/message-box/index.mjs'
 import { ElOption, ElSelect } from 'element-plus/es/components/select/index.mjs'
 import { ElTable, ElTableColumn } from 'element-plus/es/components/table/index.mjs'
-import { createMonitoringPointApi, fetchMonitoringPointsApi, updateMonitoringPointApi } from '../api/lab'
+import { createMonitoringPointApi, exportMonitoringPointsApi, fetchMonitoringPointsApi, updateMonitoringPointApi } from '../api/lab'
 import TablePagination from '../components/common/TablePagination.vue'
 import {
   DEFAULT_PAGE_SIZE,
@@ -311,6 +312,15 @@ async function loadData() {
   const result = await fetchMonitoringPointsApi(query)
   records.value = result.records || []
   total.value = result.total || 0
+}
+
+async function handleExport() {
+  try {
+    await exportMonitoringPointsApi(query)
+    ElMessage.success('监测点位导出成功')
+  } catch (error) {
+    ElMessage.error(error.message || '监测点位导出失败')
+  }
 }
 
 async function submit() {

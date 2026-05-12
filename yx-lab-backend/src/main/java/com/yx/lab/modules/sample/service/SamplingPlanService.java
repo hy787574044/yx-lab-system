@@ -24,6 +24,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.locks.ReentrantLock;
 
 @Service
 @Slf4j
@@ -34,6 +37,14 @@ public class SamplingPlanService {
 
     private final SamplingTaskMapper samplingTaskMapper;
 
+    private final ConcurrentMap<Long, ReentrantLock> dispatchLocks = new ConcurrentHashMap<>();
+
+    /**
+     * 分页查询采样计划。
+     *
+     * @param query 查询条件
+     * @return 采样计划分页结果
+     */
     public PageResult<SamplingPlan> page(SamplingPlanQuery query) {
         Page<SamplingPlan> page = samplingPlanMapper.selectPage(
                 PageUtils.buildPage(query),
@@ -44,10 +55,21 @@ public class SamplingPlanService {
         return new PageResult<>(page.getTotal(), page.getRecords());
     }
 
+    /**
+     * 获取采样计划详情。
+     *
+     * @param id 计划ID
+     * @return 采样计划详情
+     */
     public SamplingPlan detail(Long id) {
         return requirePlan(id);
     }
 
+    /**
+     * 新增采样计划。
+     *
+     * @param command 计划保存参数
+     */
     public void save(SamplingPlanSaveCommand command) {
         SamplingPlan plan = new SamplingPlan();
         applyPlanCommand(plan, command);
@@ -61,6 +83,12 @@ public class SamplingPlanService {
         samplingPlanMapper.insert(plan);
     }
 
+    /**
+     * 更新采样计划。
+     *
+     * @param id 计划ID
+     * @param command 计划保存参数
+     */
     public void update(Long id, SamplingPlanSaveCommand command) {
         SamplingPlan existing = requirePlan(id);
         if (LabWorkflowConstants.isLockedPlan(existing.getPlanStatus())) {
@@ -79,6 +107,11 @@ public class SamplingPlanService {
         samplingPlanMapper.updateById(existing);
     }
 
+    /**
+     * 删除采样计划。
+     *
+     * @param id 计划ID
+     */
     public void delete(Long id) {
         SamplingPlan existing = requirePlan(id);
         if (LabWorkflowConstants.isLockedPlan(existing.getPlanStatus())) {
@@ -87,6 +120,11 @@ public class SamplingPlanService {
         samplingPlanMapper.deleteById(id);
     }
 
+    /**
+     * 暂停采样计划。
+     *
+     * @param id 计划ID
+     */
     public void pause(Long id) {
         SamplingPlan plan = requirePlan(id);
         if (!LabWorkflowConstants.canPausePlan(plan.getPlanStatus())) {
@@ -96,6 +134,11 @@ public class SamplingPlanService {
         samplingPlanMapper.updateById(plan);
     }
 
+    /**
+     * 恢复采样计划。
+     *
+     * @param id 计划ID
+     */
     public void resume(Long id) {
         SamplingPlan plan = requirePlan(id);
         if (!LabWorkflowConstants.canResumePlan(plan.getPlanStatus())) {
@@ -105,8 +148,23 @@ public class SamplingPlanService {
         samplingPlanMapper.updateById(plan);
     }
 
+    /**
+     * 手工派发采样计划生成任务。
+     *
+     * @param command 派发参数
+     */
     @Transactional(rollbackFor = Exception.class)
     public void dispatch(SamplingPlanDispatchCommand command) {
+        // 页面手工派发统一走带锁入口，避免和定时派发并发重复生成任务。
+        if (command != null) {
+            dispatchPlanTaskWithLock(
+                    command.getPlanId(),
+                    command.getSamplingTime(),
+                    true,
+                    command.getSamplerId(),
+                    command.getSamplerName());
+            return;
+        }
         SamplingPlan plan = requirePlan(command.getPlanId());
         if (!LabWorkflowConstants.canDispatchPlan(plan.getPlanStatus())) {
             throw new BusinessException("当前计划状态不允许派发");
@@ -116,13 +174,25 @@ public class SamplingPlanService {
             plan.setSamplerName(StrUtil.trim(command.getSamplerName()));
             samplingPlanMapper.updateById(plan);
         }
-        dispatchPlanTask(plan, command.getSamplingTime(), true);
+        dispatchPlanTaskWithLock(
+                command.getPlanId(),
+                command.getSamplingTime(),
+                true,
+                command.getSamplerId(),
+                command.getSamplerName());
     }
 
+    /**
+     * 自动扫描到期计划并批量派发任务。
+     *
+     * @param now 当前时间，允许外部传入测试时间
+     * @return 本次成功派发的任务数量
+     */
     @Transactional(rollbackFor = Exception.class)
     public int autoDispatchDuePlans(LocalDateTime now) {
         LocalDateTime dispatchTime = now == null ? LocalDateTime.now() : now;
         int dispatchedCount = 0;
+        // 定时任务只扫描启用中的周期计划，并按开始时间顺序尝试派发。
         for (SamplingPlan plan : samplingPlanMapper.selectList(new LambdaQueryWrapper<SamplingPlan>()
                 .eq(SamplingPlan::getPlanStatus, LabWorkflowConstants.SamplingPlanStatus.ACTIVE)
                 .in(SamplingPlan::getCycleType,
@@ -135,17 +205,27 @@ public class SamplingPlanService {
             if (scheduledTime == null) {
                 continue;
             }
-            if (dispatchPlanTask(plan, scheduledTime, false)) {
+            if (dispatchPlanTaskWithLock(plan.getId(), scheduledTime, false, null, null)) {
                 dispatchedCount++;
             }
         }
         return dispatchedCount;
     }
 
+    /**
+     * 在任务完成后刷新计划状态。
+     *
+     * @param planId 计划ID
+     */
     public void refreshPlanStatusAfterTaskCompletion(Long planId) {
         refreshPlanStatusAfterTaskChange(planId);
     }
 
+    /**
+     * 在任务状态变化后重算计划状态。
+     *
+     * @param planId 计划ID
+     */
     public void refreshPlanStatusAfterTaskChange(Long planId) {
         if (planId == null) {
             return;
@@ -184,12 +264,45 @@ public class SamplingPlanService {
         updatePlanStatus(plan, LabWorkflowConstants.SamplingPlanStatus.ACTIVE);
     }
 
+    /**
+     * 按ID获取采样计划，不存在时抛出业务异常。
+     *
+     * @param id 计划ID
+     * @return 采样计划
+     */
     public SamplingPlan requirePlan(Long id) {
         SamplingPlan plan = samplingPlanMapper.selectById(id);
         if (plan == null) {
             throw new BusinessException("采样计划不存在");
         }
         return plan;
+    }
+
+    private boolean dispatchPlanTaskWithLock(Long planId,
+                                             LocalDateTime samplingTime,
+                                             boolean manualDispatch,
+                                             Long samplerId,
+                                             String samplerName) {
+        // 计划级锁控制页面派发与定时派发串行执行，避免同一计划短时间内重复落任务。
+        ReentrantLock lock = dispatchLocks.computeIfAbsent(planId, key -> new ReentrantLock());
+        lock.lock();
+        try {
+            SamplingPlan plan = requirePlan(planId);
+            if (!LabWorkflowConstants.canDispatchPlan(plan.getPlanStatus())) {
+                if (manualDispatch) {
+                    throw new BusinessException("褰撳墠璁″垝鐘舵€佷笉鍏佽娲惧彂");
+                }
+                return false;
+            }
+            if (samplerId != null) {
+                plan.setSamplerId(samplerId);
+                plan.setSamplerName(StrUtil.trim(samplerName));
+                samplingPlanMapper.updateById(plan);
+            }
+            return dispatchPlanTask(plan, samplingTime, manualDispatch);
+        } finally {
+            lock.unlock();
+        }
     }
 
     private boolean dispatchPlanTask(SamplingPlan plan, LocalDateTime samplingTime, boolean manualDispatch) {
@@ -200,6 +313,7 @@ public class SamplingPlanService {
             log.warn("auto dispatch skipped plan without sampler, planId={}, planName={}", plan.getId(), plan.getPlanName());
             return false;
         }
+        // 任务执行时间优先取本次派发指定时间，否则回落到计划开始时间。
         LocalDateTime taskTime = samplingTime == null ? plan.getStartTime() : samplingTime;
         if (taskTime == null) {
             throw new BusinessException("采样计划未设置开始时间，不能派发任务");
@@ -211,6 +325,7 @@ public class SamplingPlanService {
             markPlanCompletedIfExpired(plan, taskTime);
             return false;
         }
+        // 同一计划在同一采样时间只允许生成一条有效任务，避免重复执行。
         LambdaQueryWrapper<SamplingTask> existingTaskQuery = new LambdaQueryWrapper<SamplingTask>()
                 .eq(SamplingTask::getPlanId, plan.getId())
                 .eq(SamplingTask::getSamplingTime, taskTime);

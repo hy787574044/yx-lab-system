@@ -19,6 +19,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * 移动端采样查询服务，返回当前采样员待办任务及样品登记关联信息。
+ */
 @Service
 @RequiredArgsConstructor
 public class MobileSamplingQueryService {
@@ -27,6 +30,11 @@ public class MobileSamplingQueryService {
 
     private final LabSampleMapper labSampleMapper;
 
+    /**
+     * 查询当前采样员的移动端采样待办。
+     *
+     * @return 采样待办列表
+     */
     public List<MobileSamplingTodoVO> samplingTodo() {
         CurrentUser currentUser = requireCurrentUser();
         List<SamplingTask> tasks = samplingTaskMapper.selectList(new LambdaQueryWrapper<SamplingTask>()

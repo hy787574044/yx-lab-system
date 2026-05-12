@@ -63,17 +63,17 @@ public class UnifiedPlatformController {
         return ApiResponse.success(unifiedPlatformService.queryUserInfo(request));
     }
 
-    @GetMapping("/users/by-id")
+    @GetMapping("/users/byId")
     public ApiResponse<UnifiedUserInfoVO> getUserInfoById(@Valid UnifiedUserIdRequest request) {
         return ApiResponse.success(unifiedPlatformService.getUserInfoById(request));
     }
 
-    @GetMapping("/users/by-job-no")
+    @GetMapping("/users/byJobNo")
     public ApiResponse<UnifiedUserInfoVO> getUserInfoByJobNo(@Valid UnifiedUserJobNoRequest request) {
         return ApiResponse.success(unifiedPlatformService.getUserInfoByJobNo(request));
     }
 
-    @GetMapping("/users/by-role-id")
+    @GetMapping("/users/byRoleId")
     public ApiResponse<UnifiedUserListVO> listUsersByRoleId(@Valid UnifiedRoleUserRequest request) {
         return ApiResponse.success(unifiedPlatformService.listUsersByRoleId(request));
     }

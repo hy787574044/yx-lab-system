@@ -15,12 +15,22 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
+/**
+ * 文件存储服务，统一处理上传目录定位、文件读写与删除。
+ */
 @Service
 @RequiredArgsConstructor
 public class StorageService {
 
     private final LabStorageProperties storageProperties;
 
+    /**
+     * 保存上传文件并返回相对存储路径。
+     *
+     * @param file 上传文件
+     * @return 存储后的相对路径
+     * @throws IOException 文件写入异常
+     */
     public String store(MultipartFile file) throws IOException {
         Path uploadRoot = resolveUploadRoot();
         Files.createDirectories(uploadRoot);
@@ -31,6 +41,12 @@ public class StorageService {
         return fileName;
     }
 
+    /**
+     * 解析业务文件路径为本地绝对路径。
+     *
+     * @param filePath 业务侧保存的文件路径
+     * @return 本地绝对路径
+     */
     public Path resolvePath(String filePath) {
         if (StrUtil.isBlank(filePath)) {
             return resolveUploadRoot();
@@ -48,6 +64,12 @@ public class StorageService {
         return resolveUploadRoot().resolve(normalizedPath).normalize();
     }
 
+    /**
+     * 按路径删除文件，文件不存在时直接忽略。
+     *
+     * @param filePath 业务侧保存的文件路径
+     * @throws IOException 文件删除异常
+     */
     public void deleteIfExists(String filePath) throws IOException {
         if (StrUtil.isBlank(filePath)) {
             return;
@@ -55,6 +77,14 @@ public class StorageService {
         Files.deleteIfExists(resolvePath(filePath));
     }
 
+    /**
+     * 将文本内容按相对路径写入存储目录。
+     *
+     * @param relativePath 相对存储路径
+     * @param content 文本内容
+     * @return 规范化后的相对路径
+     * @throws IOException 文件写入异常
+     */
     public String storeText(String relativePath, String content) throws IOException {
         Path targetPath = resolveWritePath(relativePath);
         Files.createDirectories(targetPath.getParent());
@@ -62,6 +92,13 @@ public class StorageService {
         return normalizeRelativePath(relativePath);
     }
 
+    /**
+     * 读取指定文件的完整字节数组。
+     *
+     * @param filePath 业务侧保存的文件路径
+     * @return 文件字节内容
+     * @throws IOException 文件读取异常
+     */
     public byte[] readAllBytes(String filePath) throws IOException {
         return Files.readAllBytes(resolvePath(filePath));
     }

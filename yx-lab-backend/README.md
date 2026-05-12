@@ -93,9 +93,9 @@ lab:
 - `GET /oauth/revoke`：回收 Access-Token
 - `GET /oauth/userinfo`：根据 `accessToken` 和 `openId` 获取账号信息
 - `GET /users/query`：根据 `jobNo` 和 `mobile` 查询用户信息
-- `GET /users/by-id`：根据 `id` 获取用户信息
-- `GET /users/by-job-no`：根据 `jobNo` 获取用户信息
-- `GET /users/by-role-id`：根据 `roleId` 获取用户列表
+- `GET /users/byId`：根据 `id` 获取用户信息
+- `GET /users/byJobNo`：根据 `jobNo` 获取用户信息
+- `GET /users/byRoleId`：根据 `roleId` 获取用户列表
 - `GET /users/menus`：根据 `id` 获取用户权限菜单
 
 ### 调用说明
@@ -163,7 +163,7 @@ curl -G "http://localhost:8080/api/unified/users/query" \
 根据用户 ID 获取用户信息：
 
 ```bash
-curl -G "http://localhost:8080/api/unified/users/by-id" \
+curl -G "http://localhost:8080/api/unified/users/byId" \
   -H "Authorization: Bearer YOUR_TOKEN" \
   --data-urlencode "id=123456"
 ```
@@ -171,7 +171,7 @@ curl -G "http://localhost:8080/api/unified/users/by-id" \
 根据用户工号获取用户信息：
 
 ```bash
-curl -G "http://localhost:8080/api/unified/users/by-job-no" \
+curl -G "http://localhost:8080/api/unified/users/byJobNo" \
   -H "Authorization: Bearer YOUR_TOKEN" \
   --data-urlencode "jobNo=10001"
 ```
@@ -179,7 +179,7 @@ curl -G "http://localhost:8080/api/unified/users/by-job-no" \
 根据角色 ID 获取用户列表：
 
 ```bash
-curl -G "http://localhost:8080/api/unified/users/by-role-id" \
+curl -G "http://localhost:8080/api/unified/users/byRoleId" \
   -H "Authorization: Bearer YOUR_TOKEN" \
   --data-urlencode "roleId=ROLE_001"
 ```
@@ -205,9 +205,9 @@ curl -G "http://localhost:8080/api/unified/users/menus" \
 - `GET /api/assets/instruments`
 - `GET /api/assets/instruments/{id}`
 - `POST /api/assets/instruments`
-- `PUT /api/assets/instruments/{id}`
-- `DELETE /api/assets/instruments/{id}`
-- `GET /api/assets/instruments/import-template`
+- `POST /api/assets/instruments/{id}`
+- `POST /api/assets/instruments/{id}/delete`
+- `GET /api/assets/instruments/importTemplate`
 - `POST /api/assets/instruments/import`
 
 ### 文档台账
@@ -220,13 +220,13 @@ curl -G "http://localhost:8080/api/unified/users/menus" \
 
 相关接口：
 
-- `GET /api/assets/document-users`
+- `GET /api/assets/documentUsers`
 - `GET /api/assets/documents`
 - `GET /api/assets/documents/{id}`
 - `GET /api/assets/documents/{id}/preview`
 - `POST /api/assets/documents`
-- `PUT /api/assets/documents/{id}`
-- `DELETE /api/assets/documents/{id}`
+- `POST /api/assets/documents/{id}`
+- `POST /api/assets/documents/{id}/delete`
 - `POST /api/storage/upload`
 
 文档保存请求体示例：
@@ -297,4 +297,4 @@ curl -G "http://localhost:8080/api/unified/users/menus" \
 
 移动端登录接口：
 
-- `POST /api/auth/mobile-login`
+- `POST /api/auth/mobileLogin`

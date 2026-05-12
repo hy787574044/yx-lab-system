@@ -24,6 +24,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 
+/**
+ * 采样任务服务，负责现场采样任务的执行、封签号维护和状态流转。
+ */
 @Service
 @RequiredArgsConstructor
 public class SamplingTaskService {
@@ -34,6 +37,12 @@ public class SamplingTaskService {
 
     private final SamplingPlanService samplingPlanService;
 
+    /**
+     * 分页查询采样任务列表。
+     *
+     * @param query 查询条件
+     * @return 采样任务分页结果
+     */
     public PageResult<SamplingTask> page(SamplingTaskQuery query) {
         Page<SamplingTask> page = samplingTaskMapper.selectPage(
                 PageUtils.buildPage(query),
@@ -45,10 +54,21 @@ public class SamplingTaskService {
         return new PageResult<>(page.getTotal(), page.getRecords());
     }
 
+    /**
+     * 获取采样任务详情。
+     *
+     * @param id 任务ID
+     * @return 采样任务详情
+     */
     public SamplingTask detail(Long id) {
         return requireTask(id);
     }
 
+    /**
+     * 查询当前登录采样员的待办任务。
+     *
+     * @return 我的采样任务列表
+     */
     public List<SamplingTask> todoMine() {
         CurrentUser currentUser = SecurityContext.getCurrentUser();
         return samplingTaskMapper.selectList(new LambdaQueryWrapper<SamplingTask>()
@@ -57,19 +77,30 @@ public class SamplingTaskService {
                 .orderByAsc(SamplingTask::getSamplingTime));
     }
 
+    /**
+     * 开始执行采样任务。
+     *
+     * @param taskId 任务ID
+     * @param command 操作参数
+     */
     public void start(Long taskId, SamplingTaskActionCommand command) {
         SamplingTask task = requireTask(taskId);
         validateTaskOperator(task);
         if (!LabWorkflowConstants.canStartTask(task.getTaskStatus())) {
             throw new BusinessException("当前任务状态不允许开始执行。");
         }
+
+        // 允许在开始采样前补录封签号，但一旦样品已登记则不再允许修改。
         if (command != null && StrUtil.isNotBlank(command.getSealNo())) {
             validateSealNoEditable(task);
             applySealNo(task, command.getSealNo());
         }
+
+        // 采样任务开始的硬门禁：封签号必须已存在，确保后续样品登录可准确关联。
         if (StrUtil.isBlank(task.getSealNo())) {
             throw new BusinessException("开始采样任务前必须先录入封签号。");
         }
+
         task.setTaskStatus(LabWorkflowConstants.SamplingTaskStatus.IN_PROGRESS);
         task.setStartedTime(LocalDateTime.now());
         if (command != null && StrUtil.isNotBlank(command.getRemark())) {
@@ -79,6 +110,12 @@ public class SamplingTaskService {
         samplingPlanService.refreshPlanStatusAfterTaskChange(task.getPlanId());
     }
 
+    /**
+     * 维护采样任务封签号。
+     *
+     * @param taskId 任务ID
+     * @param command 封签号参数
+     */
     public void updateSealNo(Long taskId, SamplingTaskSealNoCommand command) {
         SamplingTask task = requireTask(taskId);
         validateTaskOperator(task);
@@ -87,6 +124,12 @@ public class SamplingTaskService {
         samplingTaskMapper.updateById(task);
     }
 
+    /**
+     * 作废采样任务。
+     *
+     * @param taskId 任务ID
+     * @param command 操作参数
+     */
     public void abandon(Long taskId, SamplingTaskActionCommand command) {
         SamplingTask task = requireTask(taskId);
         validateTaskOperator(task);
@@ -106,6 +149,12 @@ public class SamplingTaskService {
         samplingPlanService.refreshPlanStatusAfterTaskChange(task.getPlanId());
     }
 
+    /**
+     * 恢复已中止的采样任务。
+     *
+     * @param taskId 任务ID
+     * @param command 操作参数
+     */
     public void resume(Long taskId, SamplingTaskActionCommand command) {
         SamplingTask task = requireTask(taskId);
         validateTaskOperator(task);
@@ -121,6 +170,11 @@ public class SamplingTaskService {
         samplingPlanService.refreshPlanStatusAfterTaskChange(task.getPlanId());
     }
 
+    /**
+     * 完成采样任务，并回填封签、任务状态及计划状态。
+     *
+     * @param command 完成任务参数
+     */
     @Transactional(rollbackFor = Exception.class)
     public void complete(SamplingTaskCompleteCommand command) {
         SamplingTask task = requireTask(command.getTaskId());
@@ -134,6 +188,8 @@ public class SamplingTaskService {
         if (!LabWorkflowConstants.canCompleteTask(task.getTaskStatus())) {
             throw new BusinessException("请先开始采样任务，再提交完成。");
         }
+
+        // 完成节点只沉淀现场采样结果与附件，样品主档在后续样品登录环节创建。
         task.setOnsiteMetrics(command.getOnsiteMetrics());
         task.setPhotoUrls(command.getPhotoUrls());
         task.setRemark(command.getRemark());
@@ -185,6 +241,7 @@ public class SamplingTaskService {
             throw new BusinessException("封签号不能为空。");
         }
 
+        // 封签号在采样任务和样品两个维度都必须唯一，避免一号多样或一号多任务。
         Long taskCount = samplingTaskMapper.selectCount(new LambdaQueryWrapper<SamplingTask>()
                 .eq(SamplingTask::getSealNo, normalizedSealNo)
                 .ne(task.getId() != null, SamplingTask::getId, task.getId()));

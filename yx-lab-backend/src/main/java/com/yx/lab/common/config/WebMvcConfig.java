@@ -19,7 +19,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
                 .addPathPatterns("/api/**")
                 .excludePathPatterns(
                         "/api/auth/login",
-                        "/api/auth/mobile-login",
+                        "/api/auth/mobileLogin",
                         "/api/auth/captcha",
                         "/error",
                         "/swagger-ui/**",

@@ -68,6 +68,7 @@
           <div class="toolbar-actions">
             <el-button type="primary" @click="handleSearch">查询</el-button>
             <el-button @click="resetQuery">重置</el-button>
+            <el-button @click="handleExport">导出</el-button>
             <el-button @click="goRoute('/instrument-ledger')">查看设备台账</el-button>
             <el-button type="primary" plain @click="openDialog()">新增维修</el-button>
           </div>
@@ -251,6 +252,7 @@ import TablePagination from '../components/common/TablePagination.vue'
 import {
   createInstrumentMaintenanceApi,
   deleteInstrumentMaintenanceApi,
+  exportInstrumentMaintenancesApi,
   fetchInstrumentMaintenancesApi,
   fetchInstrumentsApi,
   updateInstrumentMaintenanceApi
@@ -442,6 +444,15 @@ async function loadData() {
     total.value = toSafeNumber(result.total)
   } finally {
     loading.value = false
+  }
+}
+
+async function handleExport() {
+  try {
+    await exportInstrumentMaintenancesApi({ ...query })
+    ElMessage.success('设备维修导出成功')
+  } catch (error) {
+    ElMessage.error(error.message || '设备维修导出失败')
   }
 }
 

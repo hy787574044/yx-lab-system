@@ -17,6 +17,9 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * 移动端检测查询服务，提供待检样品与个人检测历史数据。
+ */
 @Service
 @RequiredArgsConstructor
 public class MobileDetectionQueryService {
@@ -25,6 +28,11 @@ public class MobileDetectionQueryService {
 
     private final DetectionRecordMapper detectionRecordMapper;
 
+    /**
+     * 查询移动端待检测样品列表。
+     *
+     * @return 待检测样品列表
+     */
     public List<MobileDetectionTodoVO> detectionTodo() {
         return labSampleMapper.selectList(new LambdaQueryWrapper<LabSample>()
                         .in(LabSample::getSampleStatus, LabWorkflowConstants.DETECTABLE_SAMPLE_STATUSES)
@@ -35,6 +43,11 @@ public class MobileDetectionQueryService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * 查询当前检测员的移动端检测历史。
+     *
+     * @return 检测历史列表
+     */
     public List<MobileDetectionHistoryVO> detectionHistory() {
         CurrentUser currentUser = requireCurrentUser();
         return detectionRecordMapper.selectList(new LambdaQueryWrapper<DetectionRecord>()

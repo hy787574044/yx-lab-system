@@ -45,6 +45,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * 设备台账导入服务，负责导入模板生成与 Excel 批量导入校验。
+ */
 @Service
 @RequiredArgsConstructor
 public class InstrumentAssetImportService {
@@ -72,6 +75,11 @@ public class InstrumentAssetImportService {
 
     private final InstrumentMapper instrumentMapper;
 
+    /**
+     * 生成设备台账导入模板。
+     *
+     * @return 模板文件字节数组
+     */
     public byte[] buildInstrumentImportTemplate() {
         try (Workbook workbook = new XSSFWorkbook();
              ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
@@ -91,6 +99,12 @@ public class InstrumentAssetImportService {
     }
 
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * 导入设备台账 Excel，并返回校验及入库结果。
+     *
+     * @param file 导入文件
+     * @return 导入结果
+     */
     public InstrumentImportResultVO importInstruments(MultipartFile file) {
         validateImportFile(file);
         try (InputStream inputStream = file.getInputStream();

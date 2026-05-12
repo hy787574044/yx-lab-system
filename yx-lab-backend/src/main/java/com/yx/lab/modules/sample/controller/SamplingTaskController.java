@@ -2,6 +2,8 @@ package com.yx.lab.modules.sample.controller;
 
 import com.yx.lab.common.model.ApiResponse;
 import com.yx.lab.common.model.PageResult;
+import com.yx.lab.common.constant.LabWorkflowConstants;
+import com.yx.lab.common.util.ExcelExportUtil;
 import com.yx.lab.modules.sample.dto.SamplingTaskActionCommand;
 import com.yx.lab.modules.sample.dto.SamplingTaskCompleteCommand;
 import com.yx.lab.modules.sample.dto.SamplingTaskQuery;
@@ -11,6 +13,7 @@ import com.yx.lab.modules.sample.service.SamplingTaskService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -27,7 +30,7 @@ import java.util.List;
  * 负责采样任务查询、封签号录入、开始、废弃、恢复和完成。
  */
 @RestController
-@RequestMapping("/api/sampling-tasks")
+@RequestMapping("/api/samplingTasks")
 @RequiredArgsConstructor
 @Tag(name = "采样任务管理")
 public class SamplingTaskController {
@@ -44,6 +47,36 @@ public class SamplingTaskController {
     @Operation(summary = "采样任务分页")
     public ApiResponse<PageResult<SamplingTask>> page(@Validated SamplingTaskQuery query) {
         return ApiResponse.success(samplingTaskService.page(query));
+    }
+
+    /**
+     * 导出采样任务。
+     *
+     * @param query 采样任务查询条件。
+     * @return Excel 文件流。
+     */
+    @GetMapping("/export")
+    @Operation(summary = "导出采样任务")
+    public ResponseEntity<byte[]> export(@Validated SamplingTaskQuery query) {
+        ExcelExportUtil.prepareExportQuery(query);
+        return ExcelExportUtil.buildResponse(
+                "采样任务.xlsx",
+                "采样任务",
+                samplingTaskService.page(query).getRecords(),
+                java.util.Arrays.asList(
+                        ExcelExportUtil.column("任务编号", SamplingTask::getTaskNo),
+                        ExcelExportUtil.column("采样封签号", SamplingTask::getSealNo),
+                        ExcelExportUtil.column("点位名称", SamplingTask::getPointName),
+                        ExcelExportUtil.column("采样人员", SamplingTask::getSamplerName),
+                        ExcelExportUtil.column("样品类型", item -> LabWorkflowConstants.getSampleTypeLabel(item.getSampleType())),
+                        ExcelExportUtil.column("任务状态", item -> LabWorkflowConstants.getSamplingTaskStatusLabel(item.getTaskStatus())),
+                        ExcelExportUtil.column("样品登记状态", item -> LabWorkflowConstants.getSampleRegisterStatusLabel(item.getSampleRegisterStatus())),
+                        ExcelExportUtil.column("计划采样时间", SamplingTask::getSamplingTime),
+                        ExcelExportUtil.column("开始时间", SamplingTask::getStartedTime),
+                        ExcelExportUtil.column("废弃原因", SamplingTask::getAbandonReason),
+                        ExcelExportUtil.column("备注", SamplingTask::getRemark),
+                        ExcelExportUtil.column("更新时间", SamplingTask::getUpdatedTime)
+                ));
     }
 
     /**
@@ -76,7 +109,7 @@ public class SamplingTaskController {
      * @param command 封签号录入命令。
      * @return 保存结果。
      */
-    @PostMapping("/{id}/seal-no")
+    @PostMapping("/{id}/sealNo")
     @Operation(summary = "录入采样任务封签号")
     public ApiResponse<Void> updateSealNo(@PathVariable Long id,
                                           @Valid @RequestBody SamplingTaskSealNoCommand command) {

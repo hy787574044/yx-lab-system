@@ -71,7 +71,10 @@ public class DetectionWorkflowService {
     private final ObjectMapper objectMapper;
 
     /**
-     * 分页查询检测主流程。
+     * 分页查询检测主流程列表。
+     *
+     * @param query 查询条件
+     * @return 检测主流程分页结果
      */
     public PageResult<DetectionRecord> page(DetectionRecordQuery query) {
         detectionPendingFlowService.syncPendingFlowsForOpenSamples();
@@ -96,7 +99,10 @@ public class DetectionWorkflowService {
     }
 
     /**
-     * 查询检测主流程详情及其参数子流程。
+     * 获取检测主流程详情及子流程明细。
+     *
+     * @param id 检测主流程ID
+     * @return 检测主流程详情
      */
     public DetectionRecordDetailVO detail(Long id) {
         DetectionRecord record = detectionRecordMapper.selectById(id);
@@ -112,30 +118,36 @@ public class DetectionWorkflowService {
         return vo;
     }
 
-    /**
-     * 保存参数子流程的检测员分配。
-     */
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * 对检测主流程执行参数级人员分配。
+     *
+     * @param recordId 检测主流程ID
+     * @param command 分配参数
+     */
     public void assignDetectors(Long recordId, DetectionAssignCommand command) {
         detectionPendingFlowService.assignDetectors(recordId, command);
     }
 
-    /**
-     * 提交检测结果。
-     */
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * 提交检测结果，可按子流程逐条录入并更新主流程汇总状态。
+     *
+     * @param command 检测结果提交参数
+     */
     public void submit(DetectionSubmitCommand command) {
         LabSample sample = labSampleMapper.selectById(command.getSampleId());
         if (sample == null) {
             throw new BusinessException("样品不存在");
         }
         if (!LabWorkflowConstants.canSubmitDetection(sample.getSampleStatus())) {
-            throw new BusinessException("当前样品状态不允许提交检测");
+            throw new BusinessException("当前样品状态不允许提交检测结果");
         }
         if (LabWorkflowConstants.SampleStatus.RETEST.equals(sample.getSampleStatus())) {
             validateRetestSubmission(sample);
         }
 
+        // 检测提交始终以样品登录时冻结的套餐配置和参数快照为准，不直接相信前端传参。
         DetectionType detectionType = detectionTypeMapper.selectById(command.getDetectionTypeId());
         DetectionType usableType = requireUsableType(command, detectionType);
         List<DetectionParameter> configuredParameters = resolveConfiguredParameters(usableType, sample);
@@ -146,6 +158,7 @@ public class DetectionWorkflowService {
             validateSubmitRecordOwnership(activeRecord, sample);
         }
 
+        // 若样品当前还处于待分配或待检测主流程，则走参数子流程逐条提交；否则按旧模式整单提交。
         if (activeRecord != null && LabWorkflowConstants.canAssignDetection(activeRecord.getDetectionStatus())) {
             submitPendingRecord(
                     activeRecord,
@@ -164,7 +177,7 @@ public class DetectionWorkflowService {
                 .eq(DetectionRecord::getSampleId, sample.getId())
                 .eq(DetectionRecord::getDetectionStatus, LabWorkflowConstants.DetectionStatus.SUBMITTED));
         if (pendingCount != null && pendingCount > 0) {
-            throw new BusinessException("当前样品已存在待审查的检测记录");
+            throw new BusinessException("当前样品已存在已提交的检测记录，请勿重复提交");
         }
         validateDetectorBinding(usableType, currentUser);
         insertSubmittedRecord(sample, usableType, configuredParameters, itemMap, currentUser, command.getAbnormalRemark());
@@ -205,6 +218,7 @@ public class DetectionWorkflowService {
         List<DetectionItem> pendingItems = detectionItemMapper.selectList(new LambdaQueryWrapper<DetectionItem>()
                 .eq(DetectionItem::getRecordId, record.getId())
                 .orderByAsc(DetectionItem::getCreatedTime));
+        // 参数子流程按 parameterId 建索引，确保单参数录入时只更新自己负责的那一条子流程。
         Map<Long, DetectionItem> pendingItemMap = pendingItems.stream()
                 .collect(Collectors.toMap(DetectionItem::getParameterId, item -> item, (left, right) -> left));
         Map<Long, DetectionItemCommand> itemMap = validatePendingSubmittedItems(
@@ -216,6 +230,7 @@ public class DetectionWorkflowService {
         Map<Long, DetectionParameter> parameterMap = configuredParameters.stream()
                 .collect(Collectors.toMap(DetectionParameter::getId, parameter -> parameter, (left, right) -> left));
 
+        // 每次提交只覆盖本次录入的参数结果，未提交的子流程保持原状态等待继续录入。
         for (Map.Entry<Long, DetectionItemCommand> entry : itemMap.entrySet()) {
             DetectionParameter parameter = parameterMap.get(entry.getKey());
             DetectionItem pendingItem = pendingItemMap.get(entry.getKey());
@@ -236,6 +251,7 @@ public class DetectionWorkflowService {
         if (StrUtil.isNotBlank(abnormalRemark)) {
             record.setAbnormalRemark(StrUtil.trim(abnormalRemark));
         }
+        // 主流程的检测员、状态和结果，统一根据全部子流程的最新状态重新汇总。
         applyRecordDetectorSummary(record, pendingItems, currentUser);
         applyPendingRecordStatus(record, sample, pendingItems, currentUser);
         detectionRecordMapper.updateById(record);
@@ -247,6 +263,7 @@ public class DetectionWorkflowService {
                                        Map<Long, DetectionItemCommand> itemMap,
                                        CurrentUser currentUser,
                                        String abnormalRemark) {
+        // 兼容旧的整单提交模式：直接生成一条主流程和完整的参数结果明细。
         DetectionRecord record = new DetectionRecord();
         record.setSampleId(sample.getId());
         record.setSampleNo(sample.getSampleNo());
@@ -280,9 +297,9 @@ public class DetectionWorkflowService {
                 sample.getId(),
                 LabWorkflowConstants.SampleStatus.REVIEWING,
                 record.getDetectionResult(),
-                "检测提交：封签号=" + sample.getSealNo()
+                "检测结果已提交：封签号=" + sample.getSealNo()
                         + "，检测套餐=" + record.getDetectionTypeName()
-                        + "，检测人=" + currentUser.getRealName()
+                        + "，检测员=" + currentUser.getRealName()
                         + "，结果=" + LabWorkflowConstants.getDetectionResultLabel(record.getDetectionResult()));
     }
 
@@ -293,10 +310,10 @@ public class DetectionWorkflowService {
                 .orderByDesc(ReviewRecord::getCreatedTime)
                 .last("limit 1"));
         if (latestReview == null) {
-            throw new BusinessException("当前样品没有审查驳回记录，不能按重检流程提交");
+            throw new BusinessException("当前样品缺少最近一次审核记录，无法按退回重检流程提交");
         }
         if (!LabWorkflowConstants.ReviewResult.REJECTED.equals(latestReview.getReviewResult())) {
-            throw new BusinessException("当前样品最近一次审查结果不是驳回，不能进入重检流程");
+            throw new BusinessException("当前样品最近一次审核结果不是驳回状态，不能按退回重检流程提交");
         }
     }
 
@@ -305,11 +322,11 @@ public class DetectionWorkflowService {
             throw new BusinessException("检测套餐不存在");
         }
         if (!Integer.valueOf(1).equals(detectionType.getEnabled())) {
-            throw new BusinessException("当前检测套餐已停用，不能提交检测");
+            throw new BusinessException("当前检测套餐已停用，请选择其他检测套餐");
         }
         if (StrUtil.isNotBlank(command.getDetectionTypeName())
                 && !StrUtil.equals(command.getDetectionTypeName(), detectionType.getTypeName())) {
-            throw new BusinessException("检测套餐名称与后端配置不一致，请刷新后重试");
+            throw new BusinessException("检测套餐名称与实际配置不一致，请刷新页面后重试");
         }
         return detectionType;
     }
@@ -319,20 +336,20 @@ public class DetectionWorkflowService {
             return;
         }
         if (currentUser == null || currentUser.getUserId() == null) {
-            throw new BusinessException("当前登录信息已失效，请重新登录");
+            throw new BusinessException("当前登录用户信息失效，请重新登录后再提交");
         }
         if ("ADMIN".equalsIgnoreCase(currentUser.getRoleCode())) {
             return;
         }
         if (!detectionType.getDetectorId().equals(currentUser.getUserId())) {
-            throw new BusinessException("当前检测套餐已绑定检测员“" + detectionType.getDetectorName() + "”，不能由当前用户提交");
+            throw new BusinessException("当前检测套餐已指定检测员“" + detectionType.getDetectorName() + "”，您无权提交该检测结果");
         }
     }
 
     private List<DetectionParameter> resolveConfiguredParameters(DetectionType detectionType, LabSample sample) {
         List<Long> parameterIds = resolveSampleParameterIds(sample, detectionType);
         if (parameterIds.isEmpty()) {
-            throw new BusinessException("当前检测套餐未配置检测参数，不能提交检测");
+            throw new BusinessException("当前检测套餐未配置检测参数，请先完善套餐配置");
         }
         List<DetectionParameter> parameters = detectionParameterMapper.selectList(new LambdaQueryWrapper<DetectionParameter>()
                 .in(DetectionParameter::getId, parameterIds));
@@ -342,10 +359,10 @@ public class DetectionWorkflowService {
         for (Long parameterId : parameterIds) {
             DetectionParameter parameter = parameterMap.get(parameterId);
             if (parameter == null) {
-                throw new BusinessException("检测套餐绑定的检测参数不存在，请先修正检测配置");
+                throw new BusinessException("检测套餐中存在已删除的检测参数，请检查套餐配置");
             }
             if (!Integer.valueOf(1).equals(parameter.getEnabled())) {
-                throw new BusinessException("检测套餐绑定了已停用的检测参数，请先修正检测配置");
+                throw new BusinessException("检测套餐中存在已停用的检测参数，请先调整套餐后再提交");
             }
             orderedParameters.add(parameter);
         }
@@ -380,19 +397,19 @@ public class DetectionWorkflowService {
                     .distinct()
                     .collect(Collectors.toList());
         } catch (JsonProcessingException ex) {
-            throw new BusinessException("样品检测套餐快照格式不正确，请重新登录样品");
+            throw new BusinessException("样品检测配置快照格式错误，无法解析检测参数");
         }
     }
 
     private Map<Long, DetectionItemCommand> validateSubmittedItems(List<DetectionItemCommand> items,
                                                                    List<DetectionParameter> configuredParameters) {
         if (items == null || items.isEmpty()) {
-            throw new BusinessException("检测结果不能为空");
+            throw new BusinessException("检测结果明细不能为空");
         }
         Map<Long, DetectionItemCommand> itemMap = new LinkedHashMap<>();
         for (DetectionItemCommand item : items) {
             if (itemMap.put(item.getParameterId(), item) != null) {
-                throw new BusinessException("同一检测参数不能重复提交");
+                throw new BusinessException("检测结果明细中存在重复的检测参数");
             }
         }
         if (itemMap.size() != configuredParameters.size()) {
@@ -401,7 +418,7 @@ public class DetectionWorkflowService {
         for (DetectionParameter parameter : configuredParameters) {
             DetectionItemCommand item = itemMap.get(parameter.getId());
             if (item == null) {
-                throw new BusinessException("缺少检测参数：" + parameter.getParameterName());
+                throw new BusinessException("缺少检测参数结果：" + parameter.getParameterName());
             }
             validateItemAgainstConfig(item, parameter);
         }
@@ -414,15 +431,16 @@ public class DetectionWorkflowService {
                                                                           CurrentUser currentUser,
                                                                           Long expectedItemId) {
         if (pendingItemMap.isEmpty()) {
-            throw new BusinessException("当前样品还没有生成参数子流程，不能直接提交检测");
+            throw new BusinessException("当前样品尚未生成参数子流程，请重新登录样品后再提交");
         }
         if (items == null || items.isEmpty()) {
-            throw new BusinessException("检测结果不能为空");
+            throw new BusinessException("检测结果明细不能为空");
         }
         if (expectedItemId != null && items.size() != 1) {
-            throw new BusinessException("当前子流程一次只能提交一个检测参数结果");
+            throw new BusinessException("单个子流程提交时只能提交一条检测参数结果");
         }
 
+        // 单个子流程录入时，必须命中当前指定子流程，且只能由被分配的检测员本人提交。
         Map<Long, DetectionParameter> parameterMap = configuredParameters.stream()
                 .collect(Collectors.toMap(DetectionParameter::getId, parameter -> parameter, (left, right) -> left));
         Map<Long, DetectionItemCommand> itemMap = new LinkedHashMap<>();
@@ -430,30 +448,30 @@ public class DetectionWorkflowService {
 
         for (DetectionItemCommand item : items) {
             if (itemMap.put(item.getParameterId(), item) != null) {
-                throw new BusinessException("同一检测参数不能重复提交");
+                throw new BusinessException("检测结果明细中存在重复的检测参数");
             }
             DetectionParameter parameter = parameterMap.get(item.getParameterId());
             if (parameter == null) {
-                throw new BusinessException("检测套餐中不存在当前检测参数");
+                throw new BusinessException("提交结果中存在未配置的检测参数");
             }
             validateItemAgainstConfig(item, parameter);
 
             DetectionItem pendingItem = pendingItemMap.get(item.getParameterId());
             if (pendingItem == null) {
-                throw new BusinessException("检测参数“" + parameter.getParameterName() + "”缺少待分配子流程");
+                throw new BusinessException("检测参数“" + parameter.getParameterName() + "”未生成对应的子流程");
             }
             if (expectedItemId != null && !expectedItemId.equals(pendingItem.getId())) {
-                throw new BusinessException("当前提交的检测参数与子流程不匹配，请刷新后重试");
+                throw new BusinessException("当前提交的不是指定子流程，请刷新页面后重试");
             }
             if (pendingItem.getDetectorId() == null) {
                 throw new BusinessException("检测参数“" + parameter.getParameterName() + "”尚未分配检测员");
             }
             if (LabWorkflowConstants.DetectionStatus.SUBMITTED.equals(pendingItem.getItemStatus())
                     || LabWorkflowConstants.DetectionStatus.APPROVED.equals(pendingItem.getItemStatus())) {
-                throw new BusinessException("检测参数“" + parameter.getParameterName() + "”已提交结果，请勿重复录入");
+                throw new BusinessException("检测参数“" + parameter.getParameterName() + "”已提交结果，不能重复录入");
             }
             if (!admin && !pendingItem.getDetectorId().equals(currentUser.getUserId())) {
-                throw new BusinessException("当前用户只能录入分配给自己的检测参数结果");
+                throw new BusinessException("当前登录人不是该子流程的检测员，不能提交检测结果");
             }
         }
         return itemMap;
@@ -492,7 +510,7 @@ public class DetectionWorkflowService {
         }
         if (detectorIds.size() > 1) {
             record.setDetectorId(null);
-            record.setDetectorName("多人协同");
+            record.setDetectorName("协同检测");
             return;
         }
         record.setDetectorId(currentUser.getUserId());
@@ -512,9 +530,9 @@ public class DetectionWorkflowService {
                     sample.getId(),
                     LabWorkflowConstants.SampleStatus.COMPLETED,
                     record.getDetectionResult(),
-                    "检测与审查完成：封签号=" + sample.getSealNo()
+                    "检测流程已完成：封签号=" + sample.getSealNo()
                             + "，检测套餐=" + record.getDetectionTypeName()
-                            + "，检测人=" + StrUtil.blankToDefault(record.getDetectorName(), currentUser.getRealName())
+                            + "，检测员=" + StrUtil.blankToDefault(record.getDetectorName(), currentUser.getRealName())
                             + "，结果=" + LabWorkflowConstants.getDetectionResultLabel(record.getDetectionResult()));
             return;
         }
@@ -529,9 +547,9 @@ public class DetectionWorkflowService {
                     sample.getId(),
                     LabWorkflowConstants.SampleStatus.REVIEWING,
                     record.getDetectionResult(),
-                    "检测提交：封签号=" + sample.getSealNo()
+                    "检测结果已提交待审核：封签号=" + sample.getSealNo()
                             + "，检测套餐=" + record.getDetectionTypeName()
-                            + "，检测人=" + StrUtil.blankToDefault(record.getDetectorName(), currentUser.getRealName())
+                            + "，检测员=" + StrUtil.blankToDefault(record.getDetectorName(), currentUser.getRealName())
                             + "，结果=" + LabWorkflowConstants.getDetectionResultLabel(record.getDetectionResult()));
             return;
         }
@@ -576,7 +594,7 @@ public class DetectionWorkflowService {
             try {
                 parameterIds.add(Long.valueOf(idText));
             } catch (NumberFormatException ex) {
-                throw new BusinessException("检测套餐参数配置格式不合法，请先修正检测配置");
+                throw new BusinessException("检测套餐参数ID格式错误，无法解析");
             }
         }
         return parameterIds;
@@ -608,7 +626,7 @@ public class DetectionWorkflowService {
     private CurrentUser requireCurrentUser() {
         CurrentUser currentUser = SecurityContext.getCurrentUser();
         if (currentUser == null || currentUser.getUserId() == null) {
-            throw new BusinessException("当前登录信息已失效，请重新登录");
+            throw new BusinessException("当前登录用户信息失效，请重新登录");
         }
         return currentUser;
     }

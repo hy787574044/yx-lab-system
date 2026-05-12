@@ -56,6 +56,7 @@
             <el-button type="primary" @click="handleSearch">查询</el-button>
             <el-button @click="resetQuery">重置</el-button>
             <el-button @click="reloadData">刷新</el-button>
+            <el-button @click="handleExport">导出</el-button>
             <el-button type="primary" plain @click="openDialog()">新增检测方法</el-button>
           </div>
         </div>
@@ -221,6 +222,7 @@ import TablePagination from '../components/common/TablePagination.vue'
 import {
   createDetectionMethodApi,
   deleteDetectionMethodApi,
+  exportDetectionMethodsApi,
   fetchDetectionMethodsApi,
   updateDetectionMethodApi
 } from '../api/lab'
@@ -378,6 +380,15 @@ async function loadRows() {
   const result = await fetchDetectionMethodsApi({ ...query })
   rows.value = result.records || []
   total.value = Number(result.total || 0)
+}
+
+async function handleExport() {
+  try {
+    await exportDetectionMethodsApi({ ...query })
+    ElMessage.success('检测方法导出成功')
+  } catch (error) {
+    ElMessage.error(error.message || '检测方法导出失败')
+  }
 }
 
 async function reloadData() {

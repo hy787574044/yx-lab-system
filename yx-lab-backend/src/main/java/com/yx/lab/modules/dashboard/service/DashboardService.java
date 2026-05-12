@@ -9,12 +9,20 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 首页看板服务，负责组织统计摘要与快捷操作展示数据。
+ */
 @Service
 @RequiredArgsConstructor
 public class DashboardService {
 
     private final DashboardQueryService dashboardQueryService;
 
+    /**
+     * 组装首页看板总览数据。
+     *
+     * @return 首页看板总览
+     */
     public DashboardOverviewVO overview() {
         DashboardOverviewVO vo = new DashboardOverviewVO();
         vo.setSampleTotal(dashboardQueryService.sampleTotal());

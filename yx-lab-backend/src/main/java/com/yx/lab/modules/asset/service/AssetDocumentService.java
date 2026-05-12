@@ -37,6 +37,9 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * 文档台账服务，处理文档资料、共享授权与预览读取。
+ */
 @Service
 @RequiredArgsConstructor
 public class AssetDocumentService {
@@ -49,6 +52,11 @@ public class AssetDocumentService {
 
     private final StorageService storageService;
 
+    /**
+     * 查询文档授权可选用户列表。
+     *
+     * @return 可授权用户列表
+     */
     public List<DocumentUserOptionVO> documentUserOptions() {
         List<LabUser> users = labUserMapper.selectList(new LambdaQueryWrapper<LabUser>()
                 .eq(LabUser::getStatus, 1)
@@ -64,6 +72,12 @@ public class AssetDocumentService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * 分页查询当前用户可见的文档台账。
+     *
+     * @param query 查询条件
+     * @return 文档分页结果
+     */
     public PageResult<LabDocumentVO> documentPage(DocumentQuery query) {
         CurrentUser currentUser = requireCurrentUser();
         Set<Long> sharedDocumentIds = listSharedDocumentIds(currentUser.getUserId());
@@ -87,6 +101,12 @@ public class AssetDocumentService {
         return new PageResult<>(page.getTotal(), records);
     }
 
+    /**
+     * 获取文档详情。
+     *
+     * @param id 文档ID
+     * @return 文档详情
+     */
     public LabDocumentVO documentDetail(Long id) {
         CurrentUser currentUser = requireCurrentUser();
         LabDocument document = getAccessibleDocument(id, currentUser);
@@ -94,6 +114,11 @@ public class AssetDocumentService {
     }
 
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * 新增文档并保存授权关系。
+     *
+     * @param command 文档保存参数
+     */
     public void saveDocument(DocumentSaveCommand command) {
         LabDocument document = new LabDocument();
         applyDocumentCommand(document, command);
@@ -102,6 +127,12 @@ public class AssetDocumentService {
     }
 
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * 更新文档资料并同步授权关系。
+     *
+     * @param id 文档ID
+     * @param command 文档保存参数
+     */
     public void updateDocument(Long id, DocumentSaveCommand command) {
         CurrentUser currentUser = requireCurrentUser();
         LabDocument existing = getManageableDocument(id, currentUser);
@@ -113,6 +144,11 @@ public class AssetDocumentService {
     }
 
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * 删除文档及其授权关系，同时清理对应文件。
+     *
+     * @param id 文档ID
+     */
     public void deleteDocumentWithPermission(Long id) {
         CurrentUser currentUser = requireCurrentUser();
         LabDocument existing = getManageableDocument(id, currentUser);
@@ -121,6 +157,12 @@ public class AssetDocumentService {
         deleteDocumentFileQuietly(existing.getFileUrl());
     }
 
+    /**
+     * 读取文档预览内容。
+     *
+     * @param id 文档ID
+     * @return 预览文件内容
+     */
     public DocumentPreviewFile previewDocument(Long id) {
         CurrentUser currentUser = requireCurrentUser();
         LabDocument document = getAccessibleDocument(id, currentUser);
