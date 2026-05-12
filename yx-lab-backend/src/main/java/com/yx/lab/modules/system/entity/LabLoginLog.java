@@ -47,7 +47,7 @@ public class LabLoginLog extends BaseEntity {
     private String roleCode;
 
     /**
-     * 登录渠道，PC / MOBILE。
+     * 登录渠道。
      */
     @Schema(description = "登录渠道")
     @TableField("login_channel")

@@ -5,6 +5,7 @@ import lombok.Data;
 
 import javax.validation.constraints.NotNull;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 public class SamplingPlanDispatchCommand {
@@ -14,6 +15,8 @@ public class SamplingPlanDispatchCommand {
 
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime samplingTime;
+
+    private List<Long> samplerIds;
 
     private Long samplerId;
 

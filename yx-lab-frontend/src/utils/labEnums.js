@@ -41,9 +41,6 @@ export const rawSampleType = 'RAW'
 export const terminalSampleType = 'TERMINAL'
 export const sourceWaterSampleType = 'SOURCE_WATER'
 
-export const parallelQualityControlType = 'PARALLEL'
-export const blankQualityControlType = 'BLANK'
-export const qcQualityControlType = 'QUALITY_CONTROL'
 
 export const routineSamplingType = 'ROUTINE'
 
@@ -61,10 +58,6 @@ export const rejectedDetectionStatus = 'REJECTED'
 
 export const normalDetectionResult = 'NORMAL'
 export const abnormalDetectionResult = 'ABNORMAL'
-
-export const inSituParameterCategory = 'IN_SITU'
-export const fieldParameterCategory = 'FIELD'
-export const laboratoryParameterCategory = 'LABORATORY'
 
 export const approvedReviewResult = 'APPROVED'
 export const rejectedReviewResult = 'REJECTED'
@@ -143,11 +136,6 @@ export const sampleTypeLabelMap = {
   [sourceWaterSampleType]: '水源水'
 }
 
-export const qualityControlTypeLabelMap = {
-  [parallelQualityControlType]: '平行样',
-  [blankQualityControlType]: '空白样',
-  [qcQualityControlType]: '质控样'
-}
 
 export const sampleStatusLabelMap = {
   [loggedSampleStatus]: '已登录',
@@ -168,15 +156,6 @@ export const detectionStatusLabelMap = {
 export const detectionResultLabelMap = {
   [normalDetectionResult]: '正常',
   [abnormalDetectionResult]: '异常'
-}
-
-export const parameterCategoryLabelMap = {
-  [inSituParameterCategory]: '原位检测',
-  [fieldParameterCategory]: '现场测定',
-  [laboratoryParameterCategory]: '实验室测定',
-  原位检测: '原位检测',
-  现场测定: '现场测定',
-  实验室测定: '实验室测定'
 }
 
 export const reviewResultLabelMap = {
@@ -218,7 +197,6 @@ export const pointTypeOptions = buildOptions(pointTypeLabelMap)
 export const frequencyTypeOptions = buildOptions(frequencyTypeLabelMap)
 export const cycleTypeOptions = buildOptions(cycleTypeLabelMap)
 export const sampleTypeOptions = buildOptions(sampleTypeLabelMap)
-export const qualityControlTypeOptions = buildOptions(qualityControlTypeLabelMap)
 export const reportTypeOptions = buildOptions(reportTypeLabelMap)
 export const reportStatusOptions = buildOptions(reportStatusLabelMap)
 export const reportCategoryOptions = buildOptions(reportCategoryLabelMap)

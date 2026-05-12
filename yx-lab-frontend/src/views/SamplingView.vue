@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<template>
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<template>
   <div :class="['content-grid', 'sampling-page', 'fixed-table-page', { 'sampling-page--plan': isPlanScene }]">
     <section v-if="!isPlanScene" class="glass-panel section-block fixed-table-section">
       <div class="section-head">
@@ -68,8 +68,8 @@
                     <el-option
                       v-for="item in samplerOptions"
                       :key="item.id"
-                      :label="item.realName || item.username"
-                      :value="item.id"
+                      :label="getSamplerDisplayName(item)"
+                      :value="getSamplerOptionId(item)"
                     />
                   </el-select>
                 </label>
@@ -149,12 +149,6 @@
           <el-table-column label="样品类型" width="120" header-cell-class-name="cell-center" class-name="cell-center">
             <template #default="{ row }">
               {{ getEnumLabel(sampleTypeLabelMap, row.sampleType) }}
-            </template>
-          </el-table-column>
-          <el-table-column prop="detectionTypeName" label="检测套餐" min-width="160" show-overflow-tooltip />
-          <el-table-column label="检测参数" min-width="150" show-overflow-tooltip>
-            <template #default="{ row }">
-              {{ formatTaskDetectionParameterSummary(row) }}
             </template>
           </el-table-column>
           <el-table-column label="任务状态" width="120" header-cell-class-name="cell-center" class-name="cell-center">
@@ -242,11 +236,6 @@
           <el-table-column label="样品类型" width="120" header-cell-class-name="cell-center" class-name="cell-center">
             <template #default="{ row }">
               {{ getEnumLabel(sampleTypeLabelMap, row.sampleType) }}
-            </template>
-          </el-table-column>
-          <el-table-column label="质控类型" width="120" header-cell-class-name="cell-center" class-name="cell-center">
-            <template #default="{ row }">
-              {{ getEnumLabel(qualityControlTypeLabelMap, row.qualityControlType) || '-' }}
             </template>
           </el-table-column>
           <el-table-column label="样品状态" width="120" header-cell-class-name="cell-center" class-name="cell-center">
@@ -354,12 +343,12 @@
                   :loading="samplerLoading"
                   @visible-change="handleSamplerDropdownVisible"
                 >
-                  <el-option
-                    v-for="item in samplerOptions"
-                    :key="item.id"
-                    :label="item.realName || item.username"
-                    :value="item.id"
-                  />
+                    <el-option
+                      v-for="item in samplerOptions"
+                      :key="item.id"
+                      :label="getSamplerDisplayName(item)"
+                      :value="getSamplerOptionId(item)"
+                    />
                 </el-select>
               </label>
             </div>
@@ -381,13 +370,7 @@
           <el-table class="list-table" :data="visiblePlans" stripe :height="isPlanScene ? '100%' : undefined" empty-text="暂无采样计划数据">
             <el-table-column prop="planName" label="计划名称" min-width="180" />
             <el-table-column prop="pointName" label="采样点位" min-width="160" />
-            <el-table-column prop="samplerName" label="采样人员" width="120" />
-            <el-table-column prop="detectionTypeName" label="检测套餐" min-width="160" show-overflow-tooltip />
-            <el-table-column prop="samplingBasis" label="采样依据" min-width="220" show-overflow-tooltip>
-              <template #default="{ row }">
-                {{ formatSamplingBasisText(row.samplingBasis) || '-' }}
-              </template>
-            </el-table-column>
+            <el-table-column prop="samplerName" label="采样人员" min-width="140" show-overflow-tooltip />
             <el-table-column label="周期类型" width="120" header-cell-class-name="cell-center" class-name="cell-center">
               <template #default="{ row }">
                 {{ getEnumLabel(cycleTypeLabelMap, row.cycleType) }}
@@ -523,10 +506,14 @@
           </el-form-item>
           <el-form-item label="采样人员" required>
             <el-select
-              v-model="planForm.samplerId"
+              v-model="planForm.samplerIds"
+              multiple
+              collapse-tags
+              collapse-tags-tooltip
+              clearable
               filterable
               style="width: 100%"
-              placeholder="请选择采样员"
+              placeholder="请选择采样员，可多选"
               :loading="samplerLoading"
               @visible-change="handleSamplerDropdownVisible"
               @change="handlePlanSamplerChange"
@@ -534,24 +521,8 @@
               <el-option
                 v-for="item in samplerOptions"
                 :key="item.id"
-                :label="item.realName || item.username"
-                :value="item.id"
-              />
-            </el-select>
-          </el-form-item>
-          <el-form-item class="plan-form-new-row" label="检测套餐" required>
-            <el-select
-              v-model="planForm.detectionTypeId"
-              filterable
-              style="width: 100%"
-              placeholder="请选择检测套餐"
-              @change="handlePlanDetectionTypeChange"
-            >
-              <el-option
-                v-for="item in detectionProjectOptions"
-                :key="item.id"
-                :label="item.typeName"
-                :value="item.id"
+                :label="getSamplerDisplayName(item)"
+                :value="getSamplerOptionId(item)"
               />
             </el-select>
           </el-form-item>
@@ -564,105 +535,6 @@
                 :value="option.value"
               />
             </el-select>
-          </el-form-item>
-          <el-form-item label="采样依据" required>
-            <el-select
-              v-model="planForm.samplingBasisList"
-              multiple
-              filterable
-              clearable
-              collapse-tags
-              collapse-tags-tooltip
-              style="width: 100%"
-              placeholder="请选择采样依据，可多选"
-            >
-              <el-option
-                v-for="option in samplingBasisOptions"
-                :key="option"
-                :label="option"
-                :value="option"
-              />
-            </el-select>
-          </el-form-item>
-          <el-form-item v-if="planForm.detectionTypeId" class="plan-form-span-2" label="套餐参数" required>
-            <div class="login-config-panel">
-              <div class="login-config-panel__summary">
-                <span class="binding-editor__chip">
-                  已选参数<strong>{{ planDetectionConfigRows.length }}</strong>
-                </span>
-                <span class="login-config-panel__note">
-                  检测套餐参数在采样计划中确认，派发任务和样品登录都会沿用这份明细。
-                </span>
-                <el-button v-permission="'samplingPlan:write'" type="primary" plain size="small" @click="appendPlanConfigRow">新增参数</el-button>
-              </div>
-              <el-table
-                class="login-config-table"
-                :data="planDetectionConfigRows"
-                size="small"
-                max-height="360"
-                border
-              >
-                <el-table-column label="检测参数名称" min-width="140">
-                  <template #default="{ row, $index }">
-                    <el-select
-                      v-model="row.parameterId"
-                      placeholder="请选择检测参数"
-                      style="width: 100%"
-                      @change="(value) => handlePlanConfigParameterChange(row, value)"
-                    >
-                      <el-option
-                        v-for="option in getPlanConfigParameterOptions($index)"
-                        :key="option.id"
-                        :label="option.parameterName"
-                        :value="option.id"
-                      />
-                    </el-select>
-                  </template>
-                </el-table-column>
-                <el-table-column label="标准范围" min-width="120">
-                  <template #default="{ row }">
-                    {{ formatStandardRange(row.standardMin, row.standardMax) }}
-                  </template>
-                </el-table-column>
-                <el-table-column prop="unit" label="单位" width="72">
-                  <template #default="{ row }">{{ row.unit || '-' }}</template>
-                </el-table-column>
-                <el-table-column prop="referenceStandard" label="检测标准" min-width="150" show-overflow-tooltip>
-                  <template #default="{ row }">{{ row.referenceStandard || '-' }}</template>
-                </el-table-column>
-                <el-table-column label="检测方法" min-width="170">
-                  <template #default="{ row }">
-                    <el-select
-                      v-model="row.methodId"
-                      placeholder="请选择检测方法"
-                      style="width: 100%"
-                      :disabled="!row.parameterId || !row.methodOptions.length"
-                      @change="(value) => handlePlanConfigMethodChange(row, value)"
-                    >
-                      <el-option
-                        v-for="method in row.methodOptions"
-                        :key="method.id"
-                        :label="method.methodName"
-                        :value="method.id"
-                      />
-                    </el-select>
-                  </template>
-                </el-table-column>
-                <el-table-column prop="sampleVolume" label="取样体积" min-width="90" show-overflow-tooltip>
-                  <template #default="{ row }">{{ row.sampleVolume || '-' }}</template>
-                </el-table-column>
-                <el-table-column label="操作" width="90" class-name="cell-center" header-cell-class-name="cell-center">
-                  <template #default="{ $index }">
-                    <div class="table-action-row">
-                      <el-button v-permission="'samplingPlan:write'" link type="danger" @click="removePlanConfigRow($index)">删除</el-button>
-                    </div>
-                  </template>
-                </el-table-column>
-              </el-table>
-              <div v-if="!planDetectionConfigRows.length" class="empty-block">
-                当前套餐参数已清空，可点击“新增参数”补充本计划需要检测的参数与方法。
-              </div>
-            </div>
           </el-form-item>
           <el-form-item label="开始时间" required>
             <el-date-picker
@@ -720,77 +592,6 @@
           <el-form-item label="样品类型">
             <el-input :model-value="getEnumLabel(sampleTypeLabelMap, taskCompletePreview?.sampleType) || '-'" readonly />
           </el-form-item>
-          <el-form-item label="检测套餐">
-            <el-input
-              :model-value="taskCompletePreview?.detectionTypeName || taskCompletePreview?.detectionItems || '-'"
-              readonly
-            />
-          </el-form-item>
-          <el-form-item label="采样依据">
-            <el-input
-              :model-value="formatSamplingBasisText(taskCompletePreview?.samplingBasis || taskCompletePreview?.sampling_basis) || '-'"
-              readonly
-            />
-          </el-form-item>
-          <el-form-item class="plan-form-span-2" label="检测参数">
-            <div class="login-config-panel">
-              <div class="login-config-panel__summary">
-                <span class="binding-editor__chip">
-                  参数数量<strong>{{ taskCompleteDetectionConfigRows.length }}</strong>
-                </span>
-                <span class="login-config-panel__note">
-                  原位检测、现场测定参数可在采样录入阶段直接填写检测值，实验室测定参数后续由检测人员录入。
-                </span>
-              </div>
-              <el-table
-                v-if="taskCompleteDetectionConfigRows.length"
-                class="login-config-table task-detail-config-table"
-                :data="taskCompleteDetectionConfigRows"
-                size="small"
-                max-height="320"
-                border
-              >
-                <el-table-column prop="parameterName" label="检测参数" min-width="130" show-overflow-tooltip />
-                <el-table-column label="参数类别" width="100" header-cell-class-name="cell-center" class-name="cell-center">
-                  <template #default="{ row }">{{ formatParameterCategory(row) }}</template>
-                </el-table-column>
-                <el-table-column label="标准范围" min-width="120">
-                  <template #default="{ row }">
-                    {{ formatStandardRange(row.standardMin, row.standardMax) }}
-                  </template>
-                </el-table-column>
-                <el-table-column prop="unit" label="单位" width="72">
-                  <template #default="{ row }">{{ row.unit || '-' }}</template>
-                </el-table-column>
-                <el-table-column label="检测值" width="150">
-                  <template #default="{ row }">
-                    <el-input-number
-                      v-if="isSamplingDetectionResultEditable(row)"
-                      v-model="row.resultValue"
-                      :precision="2"
-                      :step="0.1"
-                      controls-position="right"
-                      style="width: 128px"
-                    />
-                    <span v-else>{{ row.resultValue ?? '-' }}</span>
-                  </template>
-                </el-table-column>
-                <el-table-column prop="referenceStandard" label="检测标准" min-width="150" show-overflow-tooltip>
-                  <template #default="{ row }">{{ row.referenceStandard || '-' }}</template>
-                </el-table-column>
-                <el-table-column prop="methodName" label="检测方法" min-width="160" show-overflow-tooltip>
-                  <template #default="{ row }">{{ row.methodName || '-' }}</template>
-                </el-table-column>
-                <el-table-column prop="instrumentDisplayNames" label="采样设备" min-width="220" show-overflow-tooltip>
-                  <template #default="{ row }">{{ row.instrumentDisplayNames || '-' }}</template>
-                </el-table-column>
-                <el-table-column prop="sampleVolume" label="取样体积" min-width="90" show-overflow-tooltip>
-                  <template #default="{ row }">{{ row.sampleVolume || '-' }}</template>
-                </el-table-column>
-              </el-table>
-              <div v-else class="empty-block">暂无检测参数明细</div>
-            </div>
-          </el-form-item>
           <el-form-item label="天气">
             <el-select
               v-model="taskCompleteForm.weather"
@@ -811,11 +612,6 @@
           </el-form-item>
           <el-form-item label="温度">
             <el-input v-model="taskCompleteForm.temperature" placeholder="例如：26℃" />
-          </el-form-item>
-          <el-form-item label="应采总容量">
-            <el-input :model-value="expectedTaskCompleteSampleTotalVolume" readonly>
-              <template #append>mL</template>
-            </el-input>
           </el-form-item>
           <el-form-item label="采样总容量">
             <el-input
@@ -869,14 +665,6 @@
               <p class="sampling-photo-uploader__tip">支持 JPG、PNG、WEBP，多张照片会随采样完成信息一起保存。</p>
             </div>
           </el-form-item>
-          <el-form-item class="plan-form-span-2" label="现场指标">
-            <el-input
-              v-model="taskCompleteForm.onsiteMetrics"
-              type="textarea"
-              :rows="3"
-              placeholder="请输入现场检测指标、仪器读数或现场情况说明"
-            />
-          </el-form-item>
           <el-form-item class="plan-form-span-2" label="备注">
             <el-input v-model="taskCompleteForm.remark" type="textarea" :rows="3" placeholder="可补充采样过程、异常情况等说明" />
           </el-form-item>
@@ -907,10 +695,14 @@
       <el-form label-width="96px">
         <el-form-item label="采样人员" required>
           <el-select
-            v-model="dispatchForm.samplerId"
+            v-model="dispatchForm.samplerIds"
+            multiple
+            collapse-tags
+            collapse-tags-tooltip
+            clearable
             filterable
             style="width: 100%"
-            placeholder="请选择采样员"
+            placeholder="请选择采样员，可多选"
             :loading="samplerLoading"
             @visible-change="handleSamplerDropdownVisible"
             @change="handleDispatchSamplerChange"
@@ -918,8 +710,8 @@
             <el-option
               v-for="item in samplerOptions"
               :key="item.id"
-              :label="item.realName || item.username"
-              :value="item.id"
+              :label="getSamplerDisplayName(item)"
+              :value="getSamplerOptionId(item)"
             />
           </el-select>
         </el-form-item>
@@ -992,35 +784,30 @@
               readonly
             />
           </el-form-item>
-          <el-form-item label="质控类型">
-            <el-input
-              v-if="isLoginReadonly"
-              :model-value="getEnumLabel(qualityControlTypeLabelMap, loginForm.qualityControlType) || '-'"
-              readonly
-            />
-            <el-select
-              v-else
-              v-model="loginForm.qualityControlType"
-              clearable
-              placeholder="请选择质控类型"
-              style="width: 100%"
-            >
-              <el-option
-                v-for="option in qualityControlTypeOptions"
-                :key="option.value"
-                :label="option.label"
-                :value="option.value"
-              />
-            </el-select>
-          </el-form-item>
           <el-form-item label="采样人员" :required="!isLoginReadonly">
             <el-input v-model="loginForm.samplerName" readonly />
           </el-form-item>
           <el-form-item class="login-form-span-2 login-form-half-row" label="检测套餐" :required="!isLoginReadonly">
             <el-input
+              v-if="isLoginReadonly"
               :model-value="loginForm.detectionTypeName || loginForm.detectionItems || '-'"
               readonly
             />
+            <el-select
+              v-else
+              v-model="loginForm.detectionTypeId"
+              filterable
+              placeholder="请选择检测套餐"
+              style="width: 100%"
+              @change="handleLoginDetectionTypeChange"
+            >
+              <el-option
+                v-for="item in detectionProjectOptions"
+                :key="item.id"
+                :label="item.typeName"
+                :value="item.id"
+              />
+            </el-select>
           </el-form-item>
           <el-form-item v-if="loginForm.detectionTypeId" class="login-form-span-2" label="检测参数明细">
             <div class="login-config-panel">
@@ -1044,9 +831,6 @@
                     <span>{{ row.parameterName || '-' }}</span>
                   </template>
                 </el-table-column>
-                <el-table-column label="参数类别" width="100" header-cell-class-name="cell-center" class-name="cell-center">
-                  <template #default="{ row }">{{ formatParameterCategory(row) }}</template>
-                </el-table-column>
                 <el-table-column label="标准范围" min-width="120">
                   <template #default="{ row }">
                     {{ formatStandardRange(row.standardMin, row.standardMax) }}
@@ -1054,9 +838,6 @@
                 </el-table-column>
                 <el-table-column prop="unit" label="单位" width="72">
                   <template #default="{ row }">{{ row.unit || '-' }}</template>
-                </el-table-column>
-                <el-table-column label="检测值" width="110">
-                  <template #default="{ row }">{{ row.resultValue ?? '-' }}</template>
                 </el-table-column>
                 <el-table-column prop="referenceStandard" label="检测标准" min-width="140" show-overflow-tooltip>
                   <template #default="{ row }">{{ row.referenceStandard || '-' }}</template>
@@ -1071,7 +852,7 @@
                 </el-table-column>
               </el-table>
               <div v-if="!loginDetectionConfigRows.length" class="empty-block">
-                当前任务未携带套餐参数明细，请检查采样计划中的检测套餐配置。
+                请选择检测套餐后确认检测参数与检测方法明细。
               </div>
             </div>
           </el-form-item>
@@ -1091,28 +872,6 @@
             >
               <el-option
                 v-for="item in reviewFlowOptions"
-                :key="item.id"
-                :label="item.flowName"
-                :value="item.id"
-              />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="发布流程" :required="!isLoginReadonly">
-            <el-input
-              v-if="isLoginReadonly"
-              :model-value="loginForm.publishFlowName || '-'"
-              readonly
-            />
-            <el-select
-              v-else
-              v-model="loginForm.publishFlowId"
-              filterable
-              placeholder="请选择发布流程"
-              style="width: 100%"
-              @change="handlePublishFlowChange"
-            >
-              <el-option
-                v-for="item in publishFlowOptions"
                 :key="item.id"
                 :label="item.flowName"
                 :value="item.id"
@@ -1199,8 +958,6 @@
         <div><span>样品编号</span><strong>{{ taskDetail?.sampleNo || '-' }}</strong></div>
         <div><span>点位名称</span><strong>{{ taskDetail?.pointName || taskDetail?.point_name || '-' }}</strong></div>
         <div><span>采样人员</span><strong>{{ taskDetail?.samplerName || taskDetail?.sampler_name || '-' }}</strong></div>
-        <div><span>检测套餐</span><strong>{{ taskDetail?.detectionTypeName || taskDetail?.detection_type_name || taskDetail?.detectionItems || '-' }}</strong></div>
-        <div><span>采样依据</span><strong>{{ formatSamplingBasisText(taskDetail?.samplingBasis || taskDetail?.sampling_basis) || '-' }}</strong></div>
         <div><span>任务状态</span><strong>{{ getEnumLabel(taskStatusLabelMap, taskDetail?.taskStatus || taskDetail?.task_status) }}</strong></div>
         <div><span>完成时间</span><strong>{{ taskDetail?.finishedTime || taskDetail?.finished_time || '-' }}</strong></div>
         <div><span>天气</span><strong>{{ taskDetail?.weather || '-' }}</strong></div>
@@ -1208,49 +965,6 @@
         <div><span>采样总容量</span><strong>{{ taskDetail?.sampleTotalVolume || taskDetail?.sample_total_volume || '-' }}</strong></div>
         <div><span>采样瓶数</span><strong>{{ taskDetail?.sampleBottleCount || taskDetail?.sample_bottle_count || '-' }}</strong></div>
         <div><span>地图位置</span><strong>{{ formatLocationText(taskDetail) }}</strong></div>
-      </div>
-      <div class="task-detail-block">
-        <span>检测参数明细</span>
-        <el-table
-          v-if="taskDetailDetectionConfigRows.length"
-          class="login-config-table task-detail-config-table"
-          :data="taskDetailDetectionConfigRows"
-          size="small"
-          border
-        >
-          <el-table-column prop="parameterName" label="检测参数" min-width="130" show-overflow-tooltip />
-          <el-table-column label="参数类别" width="100" header-cell-class-name="cell-center" class-name="cell-center">
-            <template #default="{ row }">{{ formatParameterCategory(row) }}</template>
-          </el-table-column>
-          <el-table-column label="标准范围" min-width="120">
-            <template #default="{ row }">
-              {{ formatStandardRange(row.standardMin, row.standardMax) }}
-            </template>
-          </el-table-column>
-          <el-table-column prop="unit" label="单位" width="72">
-            <template #default="{ row }">{{ row.unit || '-' }}</template>
-          </el-table-column>
-          <el-table-column label="检测值" width="110">
-            <template #default="{ row }">{{ row.resultValue ?? '-' }}</template>
-          </el-table-column>
-          <el-table-column prop="referenceStandard" label="检测标准" min-width="150" show-overflow-tooltip>
-            <template #default="{ row }">{{ row.referenceStandard || '-' }}</template>
-          </el-table-column>
-          <el-table-column prop="methodName" label="检测方法" min-width="160" show-overflow-tooltip>
-            <template #default="{ row }">{{ row.methodName || '-' }}</template>
-          </el-table-column>
-          <el-table-column prop="instrumentDisplayNames" label="采样设备" min-width="220" show-overflow-tooltip>
-            <template #default="{ row }">{{ row.instrumentDisplayNames || '-' }}</template>
-          </el-table-column>
-          <el-table-column prop="sampleVolume" label="取样体积" min-width="90" show-overflow-tooltip>
-            <template #default="{ row }">{{ row.sampleVolume || '-' }}</template>
-          </el-table-column>
-        </el-table>
-        <p v-else>暂无检测参数明细</p>
-      </div>
-      <div class="task-detail-block">
-        <span>现场指标</span>
-        <p>{{ taskDetail?.onsiteMetrics || '-' }}</p>
       </div>
       <div class="task-detail-block">
         <span>现场照片</span>
@@ -1356,7 +1070,6 @@ import {
   exportSamplingPlansApi,
   exportSamplesApi,
   exportSamplingTasksApi,
-  fetchDetectionMethodInstrumentModelBindingsApi,
   fetchDetectionMethodOptionsApi,
   fetchDetectionParametersApi,
   fetchMonitoringPointsApi,
@@ -1396,16 +1109,11 @@ import {
   factorySampleType,
   getEnumLabel,
   getStatusClass,
-  fieldParameterCategory,
-  inSituParameterCategory,
   inProgressTaskStatus,
   loggedSampleStatus,
   pausedPlanStatus,
   pendingTaskStatus,
   planStatusLabelMap,
-  parameterCategoryLabelMap,
-  qualityControlTypeLabelMap,
-  qualityControlTypeOptions,
   retestSampleStatus,
   reviewingSampleStatus,
   routineSamplingType,
@@ -1419,20 +1127,6 @@ import {
 
 const route = useRoute()
 const FLOW_TYPE_REVIEW = 'REVIEW'
-const FLOW_TYPE_PUBLISH = 'PUBLISH'
-const samplingBasisOptions = [
-  'GB 5749-2022',
-  'GB/T 5750.2-2023',
-  'GB 3838-2002',
-  'HJ 91.2-2022',
-  'GB/T 14848-2017',
-  'HJ 164-2020',
-  'HJ 91.1-2019',
-  'HJ 493-2009',
-  'HJ 494-2009',
-  'GB/T 14581-1993',
-  'GB/T 13580.2-1992'
-]
 
 const planQuery = reactive({
   keyword: '',
@@ -1494,7 +1188,6 @@ const detectionProjectOptions = ref([])
 const detectionParameterOptions = ref([])
 const detectionMethodOptions = ref([])
 const reviewFlowOptions = ref([])
-const publishFlowOptions = ref([])
 const loginPreviewTaskLabel = ref('')
 const taskCompletePreview = ref(null)
 const taskCompletePhotoList = ref([])
@@ -1507,15 +1200,12 @@ const loginForm = reactive({
   pointId: null,
   pointName: '',
   sampleType: '',
-  qualityControlType: '',
   detectionItems: '',
   detectionTypeId: null,
   detectionTypeName: '',
   detectionConfigItems: [],
   reviewFlowId: null,
   reviewFlowName: '',
-  publishFlowId: null,
-  publishFlowName: '',
   samplingTime: '',
   samplerId: null,
   samplerName: '',
@@ -1531,36 +1221,12 @@ const taskDetailPhotos = computed(() => taskDetailPhotoList.value)
 const taskDetailPhotoPreviewUrls = computed(() =>
   taskDetailPhotoList.value.map((item) => item.previewUrl).filter(Boolean)
 )
-const detectionMethodInstrumentModelNameMap = ref({})
-const detectionMethodInstrumentModelLoaded = ref(false)
-const taskCompleteDetectionConfigRows = computed(() => (
-  parseTaskDetectionConfigSnapshot(taskCompletePreview.value?.detectionConfigSnapshot).map((item) => ({
-    ...item,
-    instrumentDisplayNames: resolveMethodInstrumentDisplayNames(item?.methodId)
-  }))
-))
-const expectedTaskCompleteSampleTotalVolume = computed(() => {
-  const total = taskCompleteDetectionConfigRows.value.reduce((sum, item) => (
-    sum + toSafeNumber(extractSampleVolumeNumber(item?.sampleVolume))
-  ), 0)
-  if (!Number.isFinite(total) || total <= 0) {
-    return ''
-  }
-  return Number.isInteger(total) ? String(total) : String(Number(total.toFixed(2)))
-})
-const taskDetailDetectionConfigRows = computed(() => (
-  parseTaskDetectionConfigSnapshot(taskDetail.value?.detectionConfigSnapshot).map((item) => ({
-    ...item,
-    instrumentDisplayNames: item.instrumentDisplayNames || resolveMethodInstrumentDisplayNames(item?.methodId)
-  }))
-))
-
 const isLoginReadonly = computed(() => loginDialogMode.value === 'view')
 const loginDialogTitle = computed(() => isLoginReadonly.value ? '样品登记明细' : '样品登录')
 const loginConfigPanelNote = computed(() => (
   isLoginReadonly.value
     ? '当前仅展示该样品登记时保存的检测参数与检测方法明细，不可在此窗口中修改。'
-    : '检测套餐由采样计划确定，样品登录只读展示任务携带的检测参数与检测方法明细。'
+    : '检测套餐在样品登录时选择，保存后后续检测分析沿用这份参数与方法明细。'
 ))
 
 const planForm = reactive({
@@ -1573,14 +1239,11 @@ const planForm = reactive({
   longitude: '',
   startTime: '',
   endTime: '',
+  samplerIds: [],
   samplerId: null,
   samplerName: '',
   samplingType: routineSamplingType,
   sampleType: '',
-  detectionTypeId: null,
-  detectionTypeName: '',
-  detectionConfigItems: [],
-  samplingBasisList: [],
   cycleType: dailyCycleType,
   remark: ''
 })
@@ -1588,13 +1251,13 @@ const planForm = reactive({
 const dispatchForm = reactive({
   planId: null,
   samplingTime: '',
+  samplerIds: [],
   samplerId: null,
   samplerName: ''
 })
 
 const taskCompleteForm = reactive({
   taskId: null,
-  onsiteMetrics: '',
   weather: '',
   temperature: '',
   sampleTotalVolume: '',
@@ -1630,21 +1293,6 @@ function normalizeDictOptions(items) {
       return label && value ? { label, value } : null
     })
     .filter(Boolean)
-}
-
-function formatParameterCategory(value) {
-  const rawValue = typeof value === 'object'
-    ? (value?.parameterCategoryDesc || value?.parameter_category_desc || value?.parameterCategory || value?.parameter_category || '')
-    : value
-  return getEnumLabel(parameterCategoryLabelMap, String(rawValue || '').trim())
-}
-
-function normalizeParameterCategoryCode(value) {
-  const rawValue = String(value || '').trim()
-  if (rawValue === '原位检测') return 'IN_SITU'
-  if (rawValue === '现场测定') return 'FIELD'
-  if (rawValue === '实验室测定') return 'LABORATORY'
-  return rawValue
 }
 
 function buildRowActionKey(scope, action, id) {
@@ -2448,24 +2096,71 @@ async function loadSamplingDictOptions() {
   storageConditionOptions.value = normalizeDictOptions(storageItems)
 }
 
-function handlePlanSamplerChange(userId) {
-  const user = samplerOptions.value.find((item) => item.id === userId)
-  planForm.samplerId = user?.id || null
-  planForm.samplerName = user?.realName || user?.username || ''
+function normalizeSamplerIdList(value) {
+  const rawItems = Array.isArray(value)
+    ? value
+    : String(value || '')
+      .split(',')
+      .map((item) => item.trim())
+  return rawItems
+    .map((item) => Number(item))
+    .filter((item) => Number.isFinite(item) && item > 0)
+    .filter((item, index, source) => source.indexOf(item) === index)
 }
 
-function parseSamplingBasisList(value) {
-  if (Array.isArray(value)) {
-    return value.map((item) => String(item || '').trim()).filter(Boolean)
-  }
-  return String(value || '')
-    .split('、')
-    .map((item) => item.trim())
+function getSamplerOptionId(item) {
+  const id = Number(item?.id)
+  return Number.isFinite(id) && id > 0 ? id : item?.id
+}
+
+function getSamplerDisplayName(item) {
+  return String(
+    item?.realName
+    || item?.real_name
+    || item?.name
+    || item?.nickName
+    || item?.nickname
+    || item?.displayName
+    || item?.employeeName
+    || item?.label
+    || item?.username
+    || ''
+  ).trim()
+}
+
+function resolveSamplerNames(ids) {
+  const selectedIds = normalizeSamplerIdList(ids)
+  return selectedIds
+    .map((id) => samplerOptions.value.find((item) => Number(getSamplerOptionId(item)) === id))
     .filter(Boolean)
+    .map((item) => getSamplerDisplayName(item))
+    .filter(Boolean)
+    .join('、')
 }
 
-function formatSamplingBasisText(value) {
-  return parseSamplingBasisList(value).join('、')
+function getRowSamplerIds(row) {
+  const ids = normalizeSamplerIdList(row?.samplerIds || row?.sampler_ids)
+  if (ids.length) {
+    return ids
+  }
+  return normalizeSamplerIdList(row?.samplerId || row?.sampler_id)
+}
+
+function getDefaultSamplerIds() {
+  return samplerOptions.value.map((item) => getSamplerOptionId(item))
+}
+
+function applyDefaultPlanSampler() {
+  const ids = getDefaultSamplerIds()
+  planForm.samplerIds = ids
+  handlePlanSamplerChange(ids)
+}
+
+function handlePlanSamplerChange(userIds) {
+  const ids = normalizeSamplerIdList(userIds)
+  planForm.samplerIds = ids
+  planForm.samplerId = ids[0] || null
+  planForm.samplerName = resolveSamplerNames(ids)
 }
 
 function extractSampleVolumeNumber(value) {
@@ -2487,14 +2182,6 @@ function buildSampleVolumePayload(value) {
   return numberText ? `${numberText}mL` : ''
 }
 
-function isSamplingDetectionResultEditable(row) {
-  if (!row) {
-    return false
-  }
-  const category = String(row.parameterCategory || row.parameter_category || row.parameterCategoryDesc || row.parameter_category_desc || '').trim()
-  return [inSituParameterCategory, fieldParameterCategory, '原位检测', '现场测定'].includes(category)
-}
-
 function handleTaskCompleteSampleTotalVolumeInput(value) {
   taskCompleteForm.sampleTotalVolume = sanitizeSampleVolumeNumber(value)
 }
@@ -2502,14 +2189,16 @@ function handleTaskCompleteSampleTotalVolumeInput(value) {
 function resetDispatchForm() {
   dispatchForm.planId = null
   dispatchForm.samplingTime = ''
+  dispatchForm.samplerIds = []
   dispatchForm.samplerId = null
   dispatchForm.samplerName = ''
 }
 
-function handleDispatchSamplerChange(userId) {
-  const user = samplerOptions.value.find((item) => item.id === userId)
-  dispatchForm.samplerId = user?.id || null
-  dispatchForm.samplerName = user?.realName || user?.username || ''
+function handleDispatchSamplerChange(userIds) {
+  const ids = normalizeSamplerIdList(userIds)
+  dispatchForm.samplerIds = ids
+  dispatchForm.samplerId = ids[0] || null
+  dispatchForm.samplerName = resolveSamplerNames(ids)
 }
 
 function resetPlanForm() {
@@ -2523,14 +2212,11 @@ function resetPlanForm() {
   planForm.longitude = ''
   planForm.startTime = ''
   planForm.endTime = ''
+  planForm.samplerIds = []
   planForm.samplerId = null
   planForm.samplerName = ''
   planForm.samplingType = routineSamplingType
   planForm.sampleType = ''
-  planForm.detectionTypeId = null
-  planForm.detectionTypeName = ''
-  planForm.detectionConfigItems = []
-  planForm.samplingBasisList = []
   planForm.cycleType = dailyCycleType
   planForm.remark = ''
 }
@@ -2540,17 +2226,18 @@ async function openPlanDialog() {
   planForm.planName = `采样计划-${dayjs().format('MMDD-HHmm')}`
   planForm.startTime = dayjs().format('YYYY-MM-DD HH:mm:ss')
   planForm.endTime = dayjs().add(7, 'day').format('YYYY-MM-DD HH:mm:ss')
-  await Promise.all([loadMonitoringPoints(), loadSamplers(), loadDetectionProjects()])
+  await Promise.all([loadMonitoringPoints(), loadSamplers()])
   if (monitoringPointOptions.value.length) {
     handlePlanPointChange(monitoringPointOptions.value[0].id)
   } else {
     planForm.pointSource = 'CUSTOM'
   }
+  applyDefaultPlanSampler()
   planDialogVisible.value = true
 }
 
 async function openPlanEditDialog(row) {
-  await Promise.all([loadMonitoringPoints(), loadSamplers(), loadDetectionProjects()])
+  await Promise.all([loadMonitoringPoints(), loadSamplers()])
   editingPlanId.value = row.id
   planForm.planName = row.planName || ''
   planForm.pointSource = row.pointId ? 'EXISTING' : 'CUSTOM'
@@ -2561,17 +2248,11 @@ async function openPlanEditDialog(row) {
   planForm.longitude = row.longitude || ''
   planForm.startTime = row.startTime || ''
   planForm.endTime = row.endTime || ''
-  planForm.samplerId = row.samplerId || null
-  planForm.samplerName = row.samplerName || ''
+  planForm.samplerIds = getRowSamplerIds(row)
+  planForm.samplerId = planForm.samplerIds[0] || null
+  planForm.samplerName = row.samplerName || resolveSamplerNames(planForm.samplerIds)
   planForm.samplingType = row.samplingType || routineSamplingType
   planForm.sampleType = row.sampleType || ''
-  planForm.detectionTypeId = row.detectionTypeId || null
-  planForm.detectionTypeName = row.detectionTypeName || ''
-  planForm.detectionConfigItems = parseSampleDetectionConfigSnapshot(row.detectionConfigSnapshot)
-  planForm.samplingBasisList = parseSamplingBasisList(row.samplingBasis || row.sampling_basis)
-  if (!planForm.detectionConfigItems.length && planForm.detectionTypeId) {
-    planForm.detectionConfigItems = buildLoginDetectionConfigItems(getDetectionTypeById(planForm.detectionTypeId))
-  }
   planForm.cycleType = row.cycleType || dailyCycleType
   planForm.remark = row.remark || ''
   if (planForm.pointSource === 'EXISTING' && planForm.pointId) {
@@ -2603,13 +2284,6 @@ function handlePlanPointChange(pointId) {
   planForm.longitude = point?.longitude || ''
 }
 
-function handlePlanDetectionTypeChange(typeId) {
-  const detectionType = getDetectionTypeById(typeId)
-  planForm.detectionTypeId = detectionType?.id || null
-  planForm.detectionTypeName = detectionType?.typeName || ''
-  planForm.detectionConfigItems = buildLoginDetectionConfigItems(detectionType)
-}
-
 function buildPlanPayload() {
   return {
     planName: planForm.planName?.trim() || '',
@@ -2620,26 +2294,11 @@ function buildPlanPayload() {
     longitude: planForm.longitude?.trim() || '',
     startTime: planForm.startTime || '',
     endTime: planForm.endTime || '',
+    samplerIds: normalizeSamplerIdList(planForm.samplerIds),
     samplerId: planForm.samplerId,
     samplerName: planForm.samplerName?.trim() || '',
     samplingType: planForm.samplingType || routineSamplingType,
     sampleType: planForm.sampleType || '',
-    detectionTypeId: planForm.detectionTypeId,
-    detectionTypeName: planForm.detectionTypeName?.trim() || '',
-    detectionConfigItems: planDetectionConfigRows.value.map((item) => ({
-      parameterId: item.parameterId,
-      parameterName: item.parameterName,
-      parameterCategory: item.parameterCategory,
-      parameterCategoryDesc: item.parameterCategoryDesc,
-      unit: item.unit,
-      standardMin: item.standardMin,
-      standardMax: item.standardMax,
-      referenceStandard: item.referenceStandard,
-      methodId: item.methodId,
-      methodName: item.methodName,
-      sampleVolume: item.sampleVolume
-    })),
-    samplingBasisList: parseSamplingBasisList(planForm.samplingBasisList),
     cycleType: planForm.cycleType || dailyCycleType,
     remark: planForm.remark?.trim() || ''
   }
@@ -2655,20 +2314,8 @@ async function submitPlanForm() {
     ElMessage.warning('请完整填写采样计划信息')
     return
   }
-  if (!payload.samplerId || !payload.samplerName) {
+  if (!payload.samplerIds.length || !payload.samplerId || !payload.samplerName) {
     ElMessage.warning('请选择采样人员')
-    return
-  }
-  if (!payload.detectionTypeId || !payload.detectionTypeName) {
-    ElMessage.warning('请选择检测套餐')
-    return
-  }
-  if (!payload.samplingBasisList.length) {
-    ElMessage.warning('请选择采样依据')
-    return
-  }
-  if (!payload.detectionConfigItems.length || payload.detectionConfigItems.some((item) => !item.parameterId || !item.methodId)) {
-    ElMessage.warning('请选择检测套餐对应的检测参数与检测方法')
     return
   }
   if (planForm.pointSource === 'EXISTING' && !payload.pointId) {
@@ -2712,9 +2359,7 @@ async function openDispatchDialog(row) {
   resetDispatchForm()
   dispatchForm.planId = row.id
   dispatchForm.samplingTime = row.startTime || dayjs().format('YYYY-MM-DD HH:mm:ss')
-  if (row.samplerId) {
-    handleDispatchSamplerChange(row.samplerId)
-  }
+  handleDispatchSamplerChange(getRowSamplerIds(row))
   dispatchDialogVisible.value = true
 }
 
@@ -2722,7 +2367,7 @@ async function submitDispatchForm() {
   if (dispatchSubmitting.value) {
     return
   }
-  if (!dispatchForm.planId || !dispatchForm.samplerId || !dispatchForm.samplerName) {
+  if (!dispatchForm.planId || !dispatchForm.samplerIds.length || !dispatchForm.samplerId || !dispatchForm.samplerName) {
     ElMessage.warning('派发任务前必须指定采样员')
     return
   }
@@ -2731,6 +2376,7 @@ async function submitDispatchForm() {
     await dispatchSamplingPlanApi({
       planId: dispatchForm.planId,
       samplingTime: dispatchForm.samplingTime || dayjs().format('YYYY-MM-DD HH:mm:ss'),
+      samplerIds: normalizeSamplerIdList(dispatchForm.samplerIds),
       samplerId: dispatchForm.samplerId,
       samplerName: dispatchForm.samplerName
     })
@@ -2796,15 +2442,11 @@ async function loadDetectionProjects() {
 }
 
 async function loadFlowOptions() {
-  if (reviewFlowOptions.value.length && publishFlowOptions.value.length) {
+  if (reviewFlowOptions.value.length) {
     return
   }
-  const [reviewOptions, publishOptions] = await Promise.all([
-    fetchFlowConfigOptionsApi({ flowType: FLOW_TYPE_REVIEW }),
-    fetchFlowConfigOptionsApi({ flowType: FLOW_TYPE_PUBLISH })
-  ])
+  const reviewOptions = await fetchFlowConfigOptionsApi({ flowType: FLOW_TYPE_REVIEW })
   reviewFlowOptions.value = Array.isArray(reviewOptions) ? reviewOptions : []
-  publishFlowOptions.value = Array.isArray(publishOptions) ? publishOptions : []
 }
 
 function findFlowOption(options, flowId) {
@@ -2817,11 +2459,8 @@ function getDefaultFlowOption(options) {
 
 function applyDefaultFlowSelections() {
   const reviewFlow = getDefaultFlowOption(reviewFlowOptions.value)
-  const publishFlow = getDefaultFlowOption(publishFlowOptions.value)
   loginForm.reviewFlowId = reviewFlow?.id || null
   loginForm.reviewFlowName = reviewFlow?.flowName || ''
-  loginForm.publishFlowId = publishFlow?.id || null
-  loginForm.publishFlowName = publishFlow?.flowName || ''
 }
 
 function handleReviewFlowChange(flowId) {
@@ -2829,10 +2468,6 @@ function handleReviewFlowChange(flowId) {
   loginForm.reviewFlowName = flow?.flowName || ''
 }
 
-function handlePublishFlowChange(flowId) {
-  const flow = findFlowOption(publishFlowOptions.value, flowId)
-  loginForm.publishFlowName = flow?.flowName || ''
-}
 
 function parseDetectionItemsText(value) {
   return String(value || '').trim()
@@ -2948,14 +2583,6 @@ function formatStandardRange(min, max, unit) {
   return '-'
 }
 
-function formatTaskDetectionParameterSummary(task) {
-  const rows = parseTaskDetectionConfigSnapshot(task?.detectionConfigSnapshot)
-  if (!rows.length) {
-    return task?.detectionTypeName || task?.detectionItems || '-'
-  }
-  return rows.map((item) => item.parameterName).filter(Boolean).join('、')
-}
-
 function getDetectionTypeById(typeId) {
   return detectionProjectOptions.value.find((item) => String(item.id) === String(typeId || '')) || null
 }
@@ -2996,8 +2623,6 @@ function buildLoginDetectionConfigItems(detectionType) {
       return {
         parameterId: String(parameter.id),
         parameterName: parameter.parameterName || '',
-        parameterCategory: normalizeParameterCategoryCode(parameter.parameterCategory || ''),
-        parameterCategoryDesc: formatParameterCategory(parameter),
         unit: parameter.unit || '',
         standardMin: parameter.standardMin,
         standardMax: parameter.standardMax,
@@ -3029,8 +2654,6 @@ function buildLoginConfigRowFromSnapshot(item) {
   return {
     parameterId,
     parameterName: item?.parameterName || parameter?.parameterName || '',
-    parameterCategory: normalizeParameterCategoryCode(item?.parameterCategory || item?.parameter_category || parameter?.parameterCategory || item?.parameterCategoryDesc || item?.parameter_category_desc || ''),
-    parameterCategoryDesc: formatParameterCategory(item?.parameterCategory || item?.parameter_category || parameter?.parameterCategory || item?.parameterCategoryDesc || item?.parameter_category_desc || ''),
     unit: item?.unit || parameter?.unit || '',
     standardMin: item?.standardMin ?? parameter?.standardMin ?? null,
     standardMax: item?.standardMax ?? parameter?.standardMax ?? null,
@@ -3038,7 +2661,6 @@ function buildLoginConfigRowFromSnapshot(item) {
     methodId,
     methodName: item?.methodName || methodOptions.find((option) => option.id === methodId)?.methodName || '',
     sampleVolume: item?.sampleVolume || item?.sample_volume || methodOptions.find((option) => option.id === methodId)?.sampleVolume || '',
-    resultValue: item?.resultValue ?? item?.result_value ?? null,
     methodOptions
   }
 }
@@ -3049,96 +2671,7 @@ function parseSampleDetectionConfigSnapshot(snapshot) {
     .filter((item) => item.parameterId || item.parameterName || item.methodId || item.methodName)
 }
 
-function parseTaskDetectionConfigSnapshot(snapshot) {
-  return parseBindingJson(snapshot)
-    .map((item) => buildLoginConfigRowFromSnapshot(item))
-    .filter((item) => item.parameterId || item.parameterName || item.methodId || item.methodName)
-}
-
-function buildInstrumentModelLabel(binding) {
-  const displayNames = String(binding?.instrumentDisplayNames || binding?.instrumentDisplayName || binding?.label || '').trim()
-  if (displayNames) {
-    return displayNames
-  }
-  const instrumentName = String(binding?.instrumentName || '').trim()
-  const instrumentModel = String(binding?.instrumentModel || '').trim()
-  const manufacturer = String(binding?.manufacturer || '').trim()
-  if (!instrumentModel) {
-    return ''
-  }
-  if (instrumentName) {
-    return `${instrumentName}/${instrumentModel}`
-  }
-  return manufacturer ? `${instrumentModel} / ${manufacturer}` : instrumentModel
-}
-
-function resolveMethodInstrumentDisplayNames(methodId) {
-  const key = String(methodId || '').trim()
-  if (!key) {
-    return ''
-  }
-  return detectionMethodInstrumentModelNameMap.value[key] || ''
-}
-
-async function ensureDetectionMethodInstrumentModelMap() {
-  if (detectionMethodInstrumentModelLoaded.value) {
-    return
-  }
-  const result = await fetchDetectionMethodInstrumentModelBindingsApi({
-    pageNum: 1,
-    pageSize: 1000
-  })
-  const records = Array.isArray(result?.records) ? result.records : []
-  const nextMap = {}
-  records.forEach((item) => {
-    const methodId = String(item?.id || item?.methodId || '').trim()
-    if (!methodId) {
-      return
-    }
-    const instrumentDisplayNames = String(item?.instrumentDisplayNames || '').trim()
-    if (instrumentDisplayNames) {
-      nextMap[methodId] = instrumentDisplayNames
-      return
-    }
-    const instrumentModelNames = String(item?.instrumentModelNames || '').trim()
-    if (instrumentModelNames) {
-      nextMap[methodId] = instrumentModelNames
-      return
-    }
-    const bindings = Array.isArray(item?.instrumentModelBindings) ? item.instrumentModelBindings : []
-    nextMap[methodId] = bindings
-      .map((binding) => buildInstrumentModelLabel(binding))
-      .filter(Boolean)
-      .join('、')
-  })
-  detectionMethodInstrumentModelNameMap.value = nextMap
-  detectionMethodInstrumentModelLoaded.value = true
-}
-
 const loginDetectionConfigRows = computed(() => loginForm.detectionConfigItems)
-const planDetectionConfigRows = computed(() => planForm.detectionConfigItems)
-const enabledDetectionParameterOptions = computed(() => (
-  detectionParameterOptions.value
-    .filter((item) => item.enabled === 1)
-    .sort((left, right) => String(left.parameterName || '').localeCompare(String(right.parameterName || ''), 'zh-CN'))
-))
-
-function createEmptyDetectionConfigRow() {
-  return {
-    parameterId: '',
-    parameterName: '',
-    parameterCategory: '',
-    parameterCategoryDesc: '',
-    unit: '',
-    standardMin: null,
-    standardMax: null,
-    referenceStandard: '',
-    methodId: '',
-    methodName: '',
-    sampleVolume: '',
-    methodOptions: []
-  }
-}
 
 function getDetectionConfigMethodOptionsByParameter(parameterId) {
   if (!parameterId) {
@@ -3151,48 +2684,6 @@ function getDetectionConfigMethodOptionsByParameter(parameterId) {
       methodName: item.methodName || `检测方法-${item.id}`,
       sampleVolume: item.sampleVolume || item.sample_volume || ''
     }))
-}
-
-function getPlanConfigParameterOptions(currentIndex) {
-  const selectedParameterIds = new Set(
-    planDetectionConfigRows.value
-      .map((item, index) => index === currentIndex ? '' : String(item.parameterId || '').trim())
-      .filter(Boolean)
-  )
-  return enabledDetectionParameterOptions.value.filter((item) => !selectedParameterIds.has(String(item.id)))
-}
-
-function appendPlanConfigRow() {
-  planForm.detectionConfigItems.push(createEmptyDetectionConfigRow())
-}
-
-function removePlanConfigRow(index) {
-  planForm.detectionConfigItems.splice(index, 1)
-}
-
-function handlePlanConfigParameterChange(row, parameterId) {
-  applyDetectionConfigParameterChange(row, parameterId)
-}
-
-function handlePlanConfigMethodChange(row, methodId) {
-  applyDetectionConfigMethodChange(row, methodId)
-}
-
-function applyDetectionConfigParameterChange(row, parameterId) {
-  const parameter = detectionParameterOptions.value.find((item) => String(item.id) === String(parameterId || ''))
-  row.parameterId = String(parameterId || '')
-  row.parameterName = parameter?.parameterName || ''
-  row.parameterCategory = normalizeParameterCategoryCode(parameter?.parameterCategory || '')
-  row.parameterCategoryDesc = formatParameterCategory(parameter)
-  row.unit = parameter?.unit || ''
-  row.standardMin = parameter?.standardMin ?? null
-  row.standardMax = parameter?.standardMax ?? null
-  row.referenceStandard = parameter?.referenceStandard || ''
-  row.methodOptions = getDetectionConfigMethodOptionsByParameter(parameterId)
-  const nextMethod = row.methodOptions.find((item) => item.id === row.methodId) || row.methodOptions[0] || null
-  row.methodId = nextMethod?.id || ''
-  row.methodName = nextMethod?.methodName || ''
-  row.sampleVolume = nextMethod?.sampleVolume || ''
 }
 
 async function startTask(row) {
@@ -3243,7 +2734,6 @@ async function openTaskDetailDialog(row) {
   if (!row?.id) {
     return
   }
-  await ensureDetectionMethodInstrumentModelMap()
   const detail = await fetchSamplingTaskDetailApi(row.id)
   taskDetail.value = detail || row
   await resolveTaskDetailPhotos(extractTaskPhotoUrls(taskDetail.value))
@@ -3265,7 +2755,6 @@ function resetTaskCompleteForm() {
   taskCompletePreview.value = null
   taskCompletePhotoList.value = []
   taskCompleteForm.taskId = null
-  taskCompleteForm.onsiteMetrics = ''
   taskCompleteForm.weather = ''
   taskCompleteForm.temperature = ''
   taskCompleteForm.sampleTotalVolume = ''
@@ -3459,14 +2948,12 @@ async function openTaskCompleteDialog(row) {
     return
   }
   try {
-    await ensureDetectionMethodInstrumentModelMap()
     const detail = await fetchSamplingTaskDetailApi(row.id)
     const task = detail || row
     taskCompletePreview.value = task
     clearTaskCompletePhotoPreviewUrls()
     taskCompletePhotoList.value = extractTaskPhotoUrls(task).map(buildPhotoEntry)
     taskCompleteForm.taskId = task.id
-    taskCompleteForm.onsiteMetrics = task.onsiteMetrics || task.onsite_metrics || ''
     taskCompleteForm.weather = task.weather || ''
     taskCompleteForm.temperature = task.temperature || ''
     taskCompleteForm.sampleTotalVolume = extractSampleVolumeNumber(task.sampleTotalVolume || task.sample_total_volume || '')
@@ -3499,25 +2986,10 @@ async function submitTaskCompleteForm() {
     }
     await completeSamplingTaskApi({
       taskId: taskCompleteForm.taskId,
-      onsiteMetrics: taskCompleteForm.onsiteMetrics,
       weather: taskCompleteForm.weather,
       temperature: taskCompleteForm.temperature,
       sampleTotalVolume: buildSampleVolumePayload(taskCompleteForm.sampleTotalVolume),
       sampleBottleCount: taskCompleteForm.sampleBottleCount == null ? '' : String(taskCompleteForm.sampleBottleCount),
-      detectionConfigItems: taskCompleteDetectionConfigRows.value.map((item) => ({
-        parameterId: item.parameterId,
-        parameterName: item.parameterName,
-        parameterCategory: item.parameterCategory,
-        parameterCategoryDesc: item.parameterCategoryDesc,
-        unit: item.unit,
-        standardMin: item.standardMin,
-        standardMax: item.standardMax,
-        referenceStandard: item.referenceStandard,
-        methodId: item.methodId,
-        methodName: item.methodName,
-        sampleVolume: item.sampleVolume,
-        resultValue: isSamplingDetectionResultEditable(item) ? item.resultValue : null
-      })),
       photoUrls: taskCompleteForm.photoUrls,
       remark: taskCompleteForm.remark,
       address: taskCompleteForm.address,
@@ -3545,14 +3017,10 @@ function applyTaskToLoginForm(task) {
   loginForm.pointId = task.pointId || null
   loginForm.pointName = task.pointName || ''
   loginForm.sampleType = task.sampleType || ''
-  loginForm.qualityControlType = ''
-  loginForm.detectionItems = parseDetectionItemsText(task.detectionTypeName || task.detectionItems)
-  loginForm.detectionTypeId = task.detectionTypeId || null
-  loginForm.detectionTypeName = task.detectionTypeName || task.detectionItems || ''
-  loginForm.detectionConfigItems = parseSampleDetectionConfigSnapshot(task.detectionConfigSnapshot)
-  if (!loginForm.detectionConfigItems.length && loginForm.detectionTypeId) {
-    loginForm.detectionConfigItems = buildLoginDetectionConfigItems(getDetectionTypeById(loginForm.detectionTypeId))
-  }
+  loginForm.detectionItems = ''
+  loginForm.detectionTypeId = null
+  loginForm.detectionTypeName = ''
+  loginForm.detectionConfigItems = []
   loginForm.samplingTime = task.samplingTime || dayjs().format('YYYY-MM-DD HH:mm:ss')
   loginForm.samplerId = task.samplerId || null
   loginForm.samplerName = task.samplerName || ''
@@ -3569,15 +3037,12 @@ function resetLoginForm() {
   loginForm.pointId = null
   loginForm.pointName = ''
   loginForm.sampleType = ''
-  loginForm.qualityControlType = ''
   loginForm.detectionItems = ''
   loginForm.detectionTypeId = null
   loginForm.detectionTypeName = ''
   loginForm.detectionConfigItems = []
   loginForm.reviewFlowId = null
   loginForm.reviewFlowName = ''
-  loginForm.publishFlowId = null
-  loginForm.publishFlowName = ''
   loginForm.samplingTime = ''
   loginForm.samplerId = null
   loginForm.samplerName = ''
@@ -3621,7 +3086,6 @@ function applySampleToLoginForm(sample) {
   loginForm.pointId = sample.pointId || null
   loginForm.pointName = sample.pointName || ''
   loginForm.sampleType = sample.sampleType || ''
-  loginForm.qualityControlType = sample.qualityControlType || ''
   loginForm.detectionItems = parseDetectionItemsText(sample.detectionItems)
   loginForm.detectionTypeId = sample.detectionTypeId || null
   loginForm.detectionTypeName = sample.detectionTypeName || sample.detectionItems || ''
@@ -3631,8 +3095,6 @@ function applySampleToLoginForm(sample) {
   }
   loginForm.reviewFlowId = sample.reviewFlowId || null
   loginForm.reviewFlowName = sample.reviewFlowName || ''
-  loginForm.publishFlowId = sample.publishFlowId || null
-  loginForm.publishFlowName = sample.publishFlowName || ''
   loginForm.samplingTime = sample.samplingTime || ''
   loginForm.samplerId = sample.samplerId || null
   loginForm.samplerName = sample.samplerName || ''
@@ -3654,11 +3116,12 @@ function handleLoginTaskChange(taskId) {
   applyTaskToLoginForm(task)
 }
 
-function applyDetectionConfigMethodChange(row, methodId) {
-  const method = (row.methodOptions || []).find((item) => item.id === String(methodId || ''))
-  row.methodId = String(methodId || '')
-  row.methodName = method?.methodName || ''
-  row.sampleVolume = method?.sampleVolume || ''
+function handleLoginDetectionTypeChange(typeId) {
+  const detectionType = getDetectionTypeById(typeId)
+  loginForm.detectionTypeId = detectionType?.id || null
+  loginForm.detectionTypeName = detectionType?.typeName || ''
+  loginForm.detectionItems = detectionType?.typeName || ''
+  loginForm.detectionConfigItems = buildLoginDetectionConfigItems(detectionType)
 }
 
 function formatPendingTaskLabel(task) {
@@ -3678,8 +3141,8 @@ async function submitSampleLogin() {
     ElMessage.warning('请完整填写样品登录信息')
     return
   }
-  if (!loginForm.reviewFlowId || !loginForm.publishFlowId) {
-    ElMessage.warning('请选择审核流程和发布流程')
+  if (!loginForm.reviewFlowId) {
+    ElMessage.warning('请选择审核流程')
     return
   }
   if (!loginDetectionConfigRows.value.length || loginDetectionConfigRows.value.some((item) => !item.methodId)) {
@@ -3697,8 +3160,6 @@ async function submitSampleLogin() {
       detectionConfigItems: loginDetectionConfigRows.value.map((item) => ({
         parameterId: item.parameterId,
         parameterName: item.parameterName,
-        parameterCategory: item.parameterCategory,
-        parameterCategoryDesc: item.parameterCategoryDesc,
         unit: item.unit,
         standardMin: item.standardMin,
         standardMax: item.standardMax,
@@ -3706,7 +3167,7 @@ async function submitSampleLogin() {
         methodId: item.methodId,
         methodName: item.methodName,
         sampleVolume: item.sampleVolume,
-        resultValue: item.resultValue
+        methodBasis: item.methodBasis
       }))
     })
     loginDialogVisible.value = false

@@ -10,7 +10,5 @@ public class DetectionParameterQuery extends PageQuery {
 
     private String keyword;
 
-    private String parameterCategory;
-
     private Integer enabled;
 }

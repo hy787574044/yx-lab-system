@@ -43,15 +43,13 @@
             </tr>
             <tr>
               <th>样品类型</th>
-              <td>{{ text(previewData.sampleTypeLabel) }}</td>
-              <th>质控类型</th>
-              <td>{{ text(previewData.qualityControlTypeLabel) }}</td>
+              <td colspan="3">{{ text(previewData.sampleTypeLabel) }}</td>
             </tr>
             <tr>
               <th>采样时间</th>
               <td>{{ text(previewData.samplingTime) }}</td>
               <th>采样人员</th>
-              <td>{{ text(previewData.samplerName) }}</td>
+              <td colspan="3">{{ text(previewData.samplerName) }}</td>
             </tr>
             <tr>
               <th>天气情况</th>

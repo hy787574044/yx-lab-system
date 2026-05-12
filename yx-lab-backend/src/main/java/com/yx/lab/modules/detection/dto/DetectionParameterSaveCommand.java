@@ -13,9 +13,6 @@ public class DetectionParameterSaveCommand {
     @NotBlank(message = "检测参数名称不能为空")
     private String parameterName;
 
-    @NotBlank(message = "参数类别不能为空")
-    private String parameterCategory;
-
     private BigDecimal standardMin;
 
     private BigDecimal standardMax;
@@ -31,8 +28,5 @@ public class DetectionParameterSaveCommand {
 
     private String remark;
 
-    /**
-     * 当前检测参数绑定的检测方法主键集合。
-     */
     private List<Long> methodIds;
 }

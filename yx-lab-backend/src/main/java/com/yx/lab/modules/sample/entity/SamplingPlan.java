@@ -10,9 +10,6 @@ import lombok.EqualsAndHashCode;
 
 import java.time.LocalDateTime;
 
-/**
- * 采样计划实体，定义点位、周期、采样人和任务生成规则。
- */
 @Data
 @TableName("lab_sampling_plan")
 @EqualsAndHashCode(callSuper = true)
@@ -56,6 +53,10 @@ public class SamplingPlan extends BaseEntity {
     @TableField("sampler_id")
     private Long samplerId;
 
+    @Schema(description = "采样员ID集合")
+    @TableField("sampler_ids")
+    private String samplerIds;
+
     @Schema(description = "采样员名称")
     @TableField("sampler_name")
     private String samplerName;
@@ -79,10 +80,6 @@ public class SamplingPlan extends BaseEntity {
     @Schema(description = "检测配置快照")
     @TableField("detection_config_snapshot")
     private String detectionConfigSnapshot;
-
-    @Schema(description = "采样依据")
-    @TableField("sampling_basis")
-    private String samplingBasis;
 
     @Schema(description = "周期类型")
     @TableField("cycle_type")

@@ -20,10 +20,6 @@ public class SampleDetectionConfigItem {
      */
     private String parameterName;
 
-    private String parameterCategory;
-
-    private String parameterCategoryDesc;
-
     /**
      * 单位。
      */

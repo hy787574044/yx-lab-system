@@ -49,15 +49,12 @@ FROM lab_flow_node
 WHERE id = @reviewNodeId
 LIMIT 1;
 
-SELECT id INTO @publishFlowId
 FROM lab_flow_config
 WHERE flow_type = 'PUBLISH' AND status = 1
 ORDER BY default_flag DESC, id
 LIMIT 1;
 
-SELECT flow_name INTO @publishFlowName
 FROM lab_flow_config
-WHERE id = @publishFlowId
 LIMIT 1;
 
 -- 清理本次演示数据，便于重复执行。
@@ -124,20 +121,14 @@ VALUES
 
 -- 4. 样品主档
 INSERT INTO lab_sample (
-    id, sample_no, task_id, point_id, point_name, sample_type, quality_control_type,
+    id, sample_no, task_id, point_id, point_name, sample_type,
     detection_items, detection_type_id, detection_type_name, detection_config_snapshot,
-    review_flow_id, review_flow_name, publish_flow_id, publish_flow_name,
+    review_flow_id, review_flow_name,
     sampling_time, sampler_id, sampler_name, weather, storage_condition,
     sample_status, result_summary, remark, trace_log, deleted,
     created_by, created_name, created_time, updated_by, updated_name, updated_time
 )
 VALUES
-(970001, 'YX202605250001', 960001, 940001, '城东水厂出厂水', 'FACTORY', 'PARALLEL', 'pH,浊度,余氯', 720001, '出厂水常规九项', '[{"parameterId":700001,"parameterName":"pH","unit":"","standardMin":6.50,"standardMax":8.50,"referenceStandard":"GB 5749-2022","methodId":710001,"methodName":"玻璃电极法","methodBasis":"校准 pH 计后直接测定。"},{"parameterId":700002,"parameterName":"浊度","unit":"NTU","standardMin":0.00,"standardMax":1.00,"referenceStandard":"GB 5749-2022","methodId":710002,"methodName":"散射光浊度法","methodBasis":"使用浊度仪读取 NTU 值。"},{"parameterId":700003,"parameterName":"余氯","unit":"mg/L","standardMin":0.05,"standardMax":2.00,"referenceStandard":"GB 5749-2022","methodId":710003,"methodName":"DPD分光光度法","methodBasis":"加入 DPD 试剂显色后测定。"}]', @reviewFlowId, @reviewFlowName, @publishFlowId, @publishFlowName, DATE_SUB(NOW(), INTERVAL 4 DAY), 1101, '陈采样', '晴', '4℃冷藏', 'LOGGED', '待检测', '演示：样品已登录。', '样品登录：样品编号=YX202605250001，点位=城东水厂出厂水，采样人=陈采样，采样时间=' , 0, 1101, '陈采样', NOW() - INTERVAL 4 DAY, 1101, '陈采样', NOW() - INTERVAL 3 DAY),
-(970002, 'YX202605250002', 960005, 940004, '兴国大道管网末梢', 'TERMINAL', 'BLANK', 'pH,浊度,余氯,肉眼可见物', 720003, '管网末梢四项', '[{"parameterId":700001,"parameterName":"pH","unit":"","standardMin":6.50,"standardMax":8.50,"referenceStandard":"GB 5749-2022","methodId":710001,"methodName":"玻璃电极法","methodBasis":"校准 pH 计后直接测定。"},{"parameterId":700002,"parameterName":"浊度","unit":"NTU","standardMin":0.00,"standardMax":1.00,"referenceStandard":"GB 5749-2022","methodId":710002,"methodName":"散射光浊度法","methodBasis":"使用浊度仪读取 NTU 值。"},{"parameterId":700003,"parameterName":"余氯","unit":"mg/L","standardMin":0.05,"standardMax":2.00,"referenceStandard":"GB 5749-2022","methodId":710003,"methodName":"DPD分光光度法","methodBasis":"加入 DPD 试剂显色后测定。"},{"parameterId":700007,"parameterName":"肉眼可见物","unit":"项","standardMin":0.00,"standardMax":0.00,"referenceStandard":"GB 5749-2022","methodId":710007,"methodName":"目视观察法","methodBasis":"自然光下观察是否存在可见物。"}]', @reviewFlowId, @reviewFlowName, @publishFlowId, @publishFlowName, DATE_SUB(NOW(), INTERVAL 2 DAY), 1102, '李采样', '晴', '4℃冷藏', 'REVIEWING', '待审核', '演示：结果待审查。', '样品登录：样品编号=YX202605250002，点位=兴国大道管网末梢，采样人=李采样，采样时间=' , 0, 1102, '李采样', NOW() - INTERVAL 2 DAY, 1102, '李采样', NOW() - INTERVAL 1 DAY),
-(970003, 'YX202605250003', 960008, 940006, '应急加密监测点', 'RAW', 'QUALITY_CONTROL', 'pH,浊度,氨氮', 720004, '应急复检套牌', '[{"parameterId":700001,"parameterName":"pH","unit":"","standardMin":6.50,"standardMax":8.50,"referenceStandard":"GB 5749-2022","methodId":710001,"methodName":"玻璃电极法","methodBasis":"校准 pH 计后直接测定。"},{"parameterId":700002,"parameterName":"浊度","unit":"NTU","standardMin":0.00,"standardMax":1.00,"referenceStandard":"GB 5749-2022","methodId":710002,"methodName":"散射光浊度法","methodBasis":"使用浊度仪读取 NTU 值。"},{"parameterId":700004,"parameterName":"氨氮","unit":"mg/L","standardMin":0.00,"standardMax":0.50,"referenceStandard":"GB 5749-2022","methodId":710004,"methodName":"纳氏试剂分光光度法","methodBasis":"加入纳氏试剂显色后测定。"}]', @reviewFlowId, @reviewFlowName, @publishFlowId, @publishFlowName, DATE_SUB(NOW(), INTERVAL 8 DAY), 1102, '李采样', '阴', '4℃冷藏', 'RETEST', '待重检', '演示：被驳回后进入重检。', '样品登录：样品编号=YX202605250003，点位=应急加密监测点，采样人=李采样，采样时间=' , 0, 1102, '李采样', NOW() - INTERVAL 8 DAY, 1102, '李采样', NOW() - INTERVAL 7 DAY),
-(970004, 'YX202605250004', NULL, 940003, '富河原水取水口', 'SOURCE_WATER', NULL, 'pH,浊度,氨氮,高锰酸盐指数', 720002, '原水重点五项', '[{"parameterId":700001,"parameterName":"pH","unit":"","standardMin":6.50,"standardMax":8.50,"referenceStandard":"GB 5749-2022","methodId":710001,"methodName":"玻璃电极法","methodBasis":"校准 pH 计后直接测定。"},{"parameterId":700002,"parameterName":"浊度","unit":"NTU","standardMin":0.00,"standardMax":1.00,"referenceStandard":"GB 5749-2022","methodId":710002,"methodName":"散射光浊度法","methodBasis":"使用浊度仪读取 NTU 值。"},{"parameterId":700004,"parameterName":"氨氮","unit":"mg/L","standardMin":0.00,"standardMax":0.50,"referenceStandard":"GB 5749-2022","methodId":710004,"methodName":"纳氏试剂分光光度法","methodBasis":"加入纳氏试剂显色后测定。"},{"parameterId":700010,"parameterName":"高锰酸盐指数","unit":"mg/L","standardMin":0.00,"standardMax":3.00,"referenceStandard":"GB 5749-2022","methodId":710010,"methodName":"酸性高锰酸钾滴定法","methodBasis":"酸性条件下滴定计算耗氧量。"}]', @reviewFlowId, @reviewFlowName, @publishFlowId, @publishFlowName, DATE_SUB(NOW(), INTERVAL 5 DAY), 1101, '陈采样', '多云', '4℃冷藏', 'COMPLETED', '已完成', '演示：直接登录的样品。', '样品登录：样品编号=YX202605250004，点位=富河原水取水口，采样人=陈采样，采样时间=' , 0, 1101, '陈采样', NOW() - INTERVAL 5 DAY, 1101, '陈采样', NOW() - INTERVAL 4 DAY),
-(970005, 'YX202605250005', NULL, 940005, '莲花湖社区末梢点', 'TERMINAL', 'PARALLEL', 'pH,浊度,余氯', 720001, '出厂水常规九项', '[{"parameterId":700001,"parameterName":"pH","unit":"","standardMin":6.50,"standardMax":8.50,"referenceStandard":"GB 5749-2022","methodId":710001,"methodName":"玻璃电极法","methodBasis":"校准 pH 计后直接测定。"},{"parameterId":700002,"parameterName":"浊度","unit":"NTU","standardMin":0.00,"standardMax":1.00,"referenceStandard":"GB 5749-2022","methodId":710002,"methodName":"散射光浊度法","methodBasis":"使用浊度仪读取 NTU 值。"},{"parameterId":700003,"parameterName":"余氯","unit":"mg/L","standardMin":0.05,"standardMax":2.00,"referenceStandard":"GB 5749-2022","methodId":710003,"methodName":"DPD分光光度法","methodBasis":"加入 DPD 试剂显色后测定。"}]', @reviewFlowId, @reviewFlowName, @publishFlowId, @publishFlowName, DATE_SUB(NOW(), INTERVAL 1 DAY), 1101, '陈采样', '阴', '4℃冷藏', 'LOGGED', '待检测', '演示：备用样品。', '样品登录：样品编号=YX202605250005，点位=莲花湖社区末梢点，采样人=陈采样，采样时间=' , 0, 1101, '陈采样', NOW() - INTERVAL 1 DAY, 1101, '陈采样', NOW()),
-(970006, 'YX202605250006', NULL, 940002, '城西水厂出厂水', 'FACTORY', 'BLANK', 'pH,浊度,余氯', 720002, '原水重点五项', '[{"parameterId":700001,"parameterName":"pH","unit":"","standardMin":6.50,"standardMax":8.50,"referenceStandard":"GB 5749-2022","methodId":710001,"methodName":"玻璃电极法","methodBasis":"校准 pH 计后直接测定。"},{"parameterId":700002,"parameterName":"浊度","unit":"NTU","standardMin":0.00,"standardMax":1.00,"referenceStandard":"GB 5749-2022","methodId":710002,"methodName":"散射光浊度法","methodBasis":"使用浊度仪读取 NTU 值。"},{"parameterId":700003,"parameterName":"余氯","unit":"mg/L","standardMin":0.05,"standardMax":2.00,"referenceStandard":"GB 5749-2022","methodId":710003,"methodName":"DPD分光光度法","methodBasis":"加入 DPD 试剂显色后测定。"}]', @reviewFlowId, @reviewFlowName, @publishFlowId, @publishFlowName, DATE_SUB(NOW(), INTERVAL 6 DAY), 1102, '李采样', '晴', '4℃冷藏', 'LOGGED', '待检测', '演示：备用样品。', '样品登录：样品编号=YX202605250006，点位=城西水厂出厂水，采样人=李采样，采样时间=' , 0, 1102, '李采样', NOW() - INTERVAL 6 DAY, 1102, '李采样', NOW() - INTERVAL 5 DAY);
 
 INSERT INTO lab_sample_no_sequence(sequence_date, current_value)
 VALUES ('20260525', 6)

@@ -10,9 +10,6 @@ import lombok.EqualsAndHashCode;
 
 import java.time.LocalDateTime;
 
-/**
- * 采样任务实体，记录由计划派发后的现场采样执行任务。
- */
 @Data
 @TableName("lab_sampling_task")
 @EqualsAndHashCode(callSuper = true)
@@ -47,6 +44,10 @@ public class SamplingTask extends BaseEntity {
     @TableField("sampler_id")
     private Long samplerId;
 
+    @Schema(description = "采样员ID集合")
+    @TableField("sampler_ids")
+    private String samplerIds;
+
     @Schema(description = "采样员名称")
     @TableField("sampler_name")
     private String samplerName;
@@ -78,10 +79,6 @@ public class SamplingTask extends BaseEntity {
     @Schema(description = "检测配置快照")
     @TableField("detection_config_snapshot")
     private String detectionConfigSnapshot;
-
-    @Schema(description = "采样依据")
-    @TableField("sampling_basis")
-    private String samplingBasis;
 
     @Schema(description = "任务状态")
     @TableField("task_status")

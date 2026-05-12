@@ -118,8 +118,6 @@ public class DetectionPendingFlowService {
             if (configItems.isEmpty()) {
                 return null;
             }
-            boolean allResultsEntered = allResultsEntered(configItems);
-
             DetectionRecord record = new DetectionRecord();
             record.setSampleId(sample.getId());
             record.setSampleNo(sample.getSampleNo());
@@ -130,9 +128,7 @@ public class DetectionPendingFlowService {
             record.setDetectorName(null);
             record.setDetectionResult(null);
             record.setAbnormalRemark("待分配检测员");
-            record.setDetectionStatus(allResultsEntered
-                    ? LabWorkflowConstants.DetectionStatus.SUBMITTED
-                    : LabWorkflowConstants.DetectionStatus.WAIT_ASSIGN);
+            record.setDetectionStatus(LabWorkflowConstants.DetectionStatus.WAIT_ASSIGN);
             detectionRecordMapper.insert(record);
 
             // 每一个套餐参数都展开成独立子流程，后续可单独分配检测员、录入结果和审查。
@@ -147,23 +143,11 @@ public class DetectionPendingFlowService {
                 item.setReferenceStandard(configItem.getReferenceStandard());
                 item.setMethodId(configItem.getMethodId());
                 item.setMethodName(configItem.getMethodName());
-                if (configItem.getResultValue() != null) {
-                    item.setResultValue(configItem.getResultValue());
-                    item.setDetectorId(sample.getSamplerId());
-                    item.setDetectorName(sample.getSamplerName());
-                    item.setItemStatus(allResultsEntered
-                            ? LabWorkflowConstants.DetectionStatus.SUBMITTED
-                            : LabWorkflowConstants.DetectionStatus.ENTERED);
-                } else {
-                    item.setDetectorId(null);
-                    item.setDetectorName(null);
-                    item.setItemStatus(LabWorkflowConstants.DetectionStatus.WAIT_ASSIGN);
-                }
+                item.setDetectorId(null);
+                item.setDetectorName(null);
+                item.setItemStatus(LabWorkflowConstants.DetectionStatus.WAIT_ASSIGN);
                 item.setExceedFlag(0);
                 detectionItemMapper.insert(item);
-            }
-            if (allResultsEntered) {
-                updateSampleStatusForReviewing(sample);
             }
             return record;
         }
@@ -412,11 +396,6 @@ public class DetectionPendingFlowService {
             return sample.getDetectionTypeName();
         }
         return StrUtil.trim(sample.getDetectionItems());
-    }
-
-    private boolean allResultsEntered(List<SampleDetectionConfigItem> configItems) {
-        return configItems != null && !configItems.isEmpty()
-                && configItems.stream().allMatch(item -> item != null && item.getResultValue() != null);
     }
 
     private void promoteEnteredRecordIfReady(DetectionRecord record, LabSample sample) {

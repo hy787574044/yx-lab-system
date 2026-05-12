@@ -164,10 +164,10 @@ public class DictManagementService {
     }
 
     private void validateDictCodeUnique(String dictCode, Long excludeId) {
-        Long count = labDictMapper.selectCount(new LambdaQueryWrapper<LabDict>()
+        Number count = labDictMapper.selectCount(new LambdaQueryWrapper<LabDict>()
                 .eq(LabDict::getDictCode, dictCode)
                 .ne(excludeId != null, LabDict::getId, excludeId));
-        if (count != null && count > 0L) {
+        if (count != null && count.longValue() > 0L) {
             throw new BusinessException("字典编码已存在");
         }
     }
@@ -287,14 +287,7 @@ public class DictManagementService {
                         "TERMINAL", "管网末梢",
                         "SOURCE_WATER", "水源水"
                 )),
-                "系统内置：样品登录、样品台账、移动端统一使用。"));
-        definitions.add(new BuiltInDictDefinition("quality_control_type", "质控类型", "采样管理",
-                buildItemText(mapOf(
-                        "PARALLEL", "平行样",
-                        "BLANK", "空白样",
-                        "QUALITY_CONTROL", "质控样"
-                )),
-                "系统内置：样品登录时用于标识本次样品的质控属性。"));
+                "系统内置：样品登录、样品台账统一使用。"));
         definitions.add(new BuiltInDictDefinition("weather_condition", "天气情况", "采样管理",
                 buildItemText(mapOf(
                         "SUNNY", "晴",
@@ -337,13 +330,6 @@ public class DictManagementService {
                         "ABNORMAL", "异常"
                 )),
                 "系统内置：检测结果判定统一使用。"));
-        definitions.add(new BuiltInDictDefinition("detection_parameter_category", "参数类别", "检测管理",
-                buildItemText(mapOf(
-                        "IN_SITU", "原位检测",
-                        "FIELD", "现场测定",
-                        "LABORATORY", "实验室测定"
-                )),
-                "系统内置：检测参数基础台账的参数类别。"));
         definitions.add(new BuiltInDictDefinition("review_result", "审核结果", "审核管理",
                 buildItemText(mapOf(
                         "APPROVED", "审核通过",

@@ -112,18 +112,6 @@ public final class LabWorkflowConstants {
         }
     }
 
-    public static final class QualityControlType {
-
-        public static final String PARALLEL = "PARALLEL";
-
-        public static final String BLANK = "BLANK";
-
-        public static final String QUALITY_CONTROL = "QUALITY_CONTROL";
-
-        private QualityControlType() {
-        }
-    }
-
     public static final class SamplingType {
 
         public static final String ROUTINE = "ROUTINE";
@@ -171,24 +159,6 @@ public final class LabWorkflowConstants {
         public static final String ABNORMAL = "ABNORMAL";
 
         private DetectionResult() {
-        }
-    }
-
-    public static final class DetectionParameterCategory {
-
-        public static final String IN_SITU = "IN_SITU";
-
-        public static final String FIELD = "FIELD";
-
-        public static final String LABORATORY = "LABORATORY";
-
-        public static final String IN_SITU_LABEL = "原位检测";
-
-        public static final String FIELD_LABEL = "现场测定";
-
-        public static final String LABORATORY_LABEL = "实验室测定";
-
-        private DetectionParameterCategory() {
         }
     }
 
@@ -281,12 +251,6 @@ public final class LabWorkflowConstants {
             SampleType.RAW,
             SampleType.TERMINAL,
             SampleType.SOURCE_WATER);
-
-    public static final Set<String> QUALITY_CONTROL_TYPES = unmodifiableSet(
-            QualityControlType.PARALLEL,
-            QualityControlType.BLANK,
-            QualityControlType.QUALITY_CONTROL);
-
     public static final Set<String> REPORT_TYPES = unmodifiableSet(
             ReportType.DAILY,
             ReportType.WEEKLY,
@@ -548,31 +512,18 @@ public final class LabWorkflowConstants {
 
     public static String getSampleTypeLabel(String sampleType) {
         if (SampleType.FACTORY.equals(sampleType)) {
-            return "出厂水";
+            return "\u51fa\u5382\u6c34";
         }
         if (SampleType.RAW.equals(sampleType)) {
-            return "原水";
+            return "\u539f\u6c34";
         }
         if (SampleType.TERMINAL.equals(sampleType)) {
-            return "管网末梢";
+            return "\u7ba1\u7f51\u672b\u68a2";
         }
         if (SampleType.SOURCE_WATER.equals(sampleType)) {
-            return "水源水";
+            return "\u6c34\u6e90\u6c34";
         }
         return sampleType;
-    }
-
-    public static String getQualityControlTypeLabel(String qualityControlType) {
-        if (QualityControlType.PARALLEL.equals(qualityControlType)) {
-            return "平行样";
-        }
-        if (QualityControlType.BLANK.equals(qualityControlType)) {
-            return "空白样";
-        }
-        if (QualityControlType.QUALITY_CONTROL.equals(qualityControlType)) {
-            return "质控样";
-        }
-        return qualityControlType;
     }
 
     public static String getSampleStatusLabel(String sampleStatus) {
@@ -621,22 +572,6 @@ public final class LabWorkflowConstants {
             return "异常";
         }
         return detectionResult;
-    }
-
-    public static String getDetectionParameterCategoryLabel(String parameterCategory) {
-        if (DetectionParameterCategory.IN_SITU.equals(parameterCategory)
-                || DetectionParameterCategory.IN_SITU_LABEL.equals(parameterCategory)) {
-            return DetectionParameterCategory.IN_SITU_LABEL;
-        }
-        if (DetectionParameterCategory.FIELD.equals(parameterCategory)
-                || DetectionParameterCategory.FIELD_LABEL.equals(parameterCategory)) {
-            return DetectionParameterCategory.FIELD_LABEL;
-        }
-        if (DetectionParameterCategory.LABORATORY.equals(parameterCategory)
-                || DetectionParameterCategory.LABORATORY_LABEL.equals(parameterCategory)) {
-            return DetectionParameterCategory.LABORATORY_LABEL;
-        }
-        return parameterCategory;
     }
 
     public static String getReviewResultLabel(String reviewResult) {

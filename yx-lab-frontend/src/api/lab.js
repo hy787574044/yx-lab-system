@@ -58,26 +58,10 @@ export const loginApi = (data) => request.post('/api/auth/login', data)
  * @returns {Promise<any>} 验证码图片和标识。
  */
 export const fetchCaptchaApi = () => request.get('/api/auth/captcha')
-/**
- * 移动端登录。
- *
- * @param {Object} data 登录请求体。
- * @returns {Promise<any>} 登录结果。
- */
-export const mobileLoginApi = (data) => request.post('/api/auth/mobileLogin', data)
-/**
- * 获取当前登录人信息。
- *
- * @returns {Promise<any>} 当前用户信息。
- */
 export const getMeApi = () => request.get('/api/auth/me')
 export const updateMyProfileApi = (data) => request.post('/api/auth/profile', data)
 export const changeMyPasswordApi = (data) => request.post('/api/auth/changePassword', data)
 export const logoutApi = () => request.post('/api/auth/logout')
-export const fetchMobileProfileApi = () => request.get('/api/mobile/profile')
-export const updateMobileProfileApi = (data) => request.post('/api/mobile/profile', data)
-export const changeMobilePasswordApi = (data) => request.post('/api/mobile/changePassword', data)
-export const mobileLogoutApi = () => request.post('/api/mobile/logout')
 /**
  * 获取驾驶舱首页总览。
  *
@@ -97,43 +81,6 @@ export const leaderDashboardApi = () => request.get('/api/dashboard/leaderOvervi
  */
 export const detectorDashboardApi = () => request.get('/api/dashboard/detectorOverview')
 
-// 移动端闭环看板接口
-/**
- * 获取移动端采样待办。
- *
- * @returns {Promise<any>} 采样待办列表。
- */
-export const fetchMobileSamplingTodoApi = (params) => request.get('/api/mobile/sampling/todo', { params })
-/**
- * 获取移动端检测待办。
- *
- * @returns {Promise<any>} 检测待办列表。
- */
-export const fetchMobileDetectionTodoApi = (params) => request.get('/api/mobile/detection/todo', { params })
-/**
- * 获取移动端检测历史。
- *
- * @returns {Promise<any>} 检测历史列表。
- */
-export const fetchMobileDetectionHistoryApi = (params) => request.get('/api/mobile/detection/history', { params })
-/**
- * 获取移动端审核待办。
- *
- * @returns {Promise<any>} 审核待办列表。
- */
-export const fetchMobileReviewTodoApi = (params) => request.get('/api/mobile/review/todo', { params })
-/**
- * 获取移动端审核历史。
- *
- * @returns {Promise<any>} 审核历史列表。
- */
-export const fetchMobileReviewHistoryApi = (params) => request.get('/api/mobile/review/history', { params })
-/**
- * 获取移动端我的报告。
- *
- * @returns {Promise<any>} 报告列表。
- */
-export const fetchMobileReportsApi = (params) => request.get('/api/mobile/reports/mine', { params })
 
 // 监测点位
 export const fetchMonitoringPointsApi = (params) => request.get('/api/monitoringPoints', { params })

@@ -314,9 +314,9 @@ const flowRules = {
 
 const stats = computed(() => [
   { key: 'all', label: '流程总数', value: summaryRows.value.length, desc: '当前已维护的审核与发布流程' },
-  { key: 'review', label: '审核流程', value: summaryRows.value.filter((item) => item.flowType === FLOW_TYPE_REVIEW).length, desc: '样品登录可选择的审核流程' },
+  { key: 'review', label: '审核流程', value: summaryRows.value.filter((item) => item.flowType === FLOW_TYPE_REVIEW).length, desc: '样品登录选择的审核流程' },
   { key: 'publish', label: '发布流程', value: summaryRows.value.filter((item) => item.flowType === FLOW_TYPE_PUBLISH).length, desc: '报告发布前可选择的发布流程' },
-  { key: 'enabled', label: '启用中', value: summaryRows.value.filter((item) => Number(item.status) === 1).length, desc: '可被样品登录选择的流程' }
+  { key: 'enabled', label: '启用中', value: summaryRows.value.filter((item) => Number(item.status) === 1).length, desc: '当前可用的流程配置' }
 ])
 
 const nodeDialogTitle = computed(() => {

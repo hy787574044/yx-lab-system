@@ -389,9 +389,6 @@ public class SystemLogManagementService {
     }
 
     private String resolveLoginChannelLabel(String loginChannel) {
-        if ("MOBILE".equalsIgnoreCase(loginChannel)) {
-            return "移动";
-        }
         if ("PC".equalsIgnoreCase(loginChannel)) {
             return "PC";
         }
@@ -465,7 +462,7 @@ public class SystemLogManagementService {
             return "微信";
         }
         if ("APP".equalsIgnoreCase(pushChannel)) {
-            return "移动端";
+            return "APP";
         }
         return normalizeDisplayValue(pushChannel);
     }

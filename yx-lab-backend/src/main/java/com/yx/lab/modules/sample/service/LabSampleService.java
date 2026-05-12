@@ -113,10 +113,11 @@ public class LabSampleService {
     }
 
     private Long countSamplesByStatus(String sampleStatus) {
-        return labSampleMapper.selectCount(new LambdaQueryWrapper<LabSample>()
+        Number count = labSampleMapper.selectCount(new LambdaQueryWrapper<LabSample>()
                 .eq(StrUtil.isNotBlank(sampleStatus), LabSample::getSampleStatus, sampleStatus)
                 .eq(resolveScopedSamplerId() != null, LabSample::getSamplerId, resolveScopedSamplerId())
                 .eq(dataScopeHelper.onlySelfScope(), LabSample::getCreatedBy, dataScopeHelper.currentUserId()));
+        return count == null ? 0L : count.longValue();
     }
 
     private Long resolveScopedSamplerId() {
@@ -160,11 +161,6 @@ public class LabSampleService {
                 command.getReviewFlowName(),
                 FlowConfigManagementService.FLOW_TYPE_REVIEW,
                 "审核流程");
-        LabFlowConfig publishFlow = resolveSelectedFlow(
-                command.getPublishFlowId(),
-                command.getPublishFlowName(),
-                FlowConfigManagementService.FLOW_TYPE_PUBLISH,
-                "发布流程");
 
         LabSample sample = new LabSample();
         sample.setSampleNo(StrUtil.trim(task.getSampleNo()));
@@ -172,7 +168,6 @@ public class LabSampleService {
         sample.setPointId(command.getPointId() != null ? command.getPointId() : task.getPointId());
         sample.setPointName(StrUtil.isNotBlank(command.getPointName()) ? command.getPointName() : task.getPointName());
         sample.setSampleType(StrUtil.isNotBlank(command.getSampleType()) ? command.getSampleType() : task.getSampleType());
-        sample.setQualityControlType(StrUtil.blankToDefault(StrUtil.trim(command.getQualityControlType()), null));
         sample.setDetectionItems(resolveDetectionItems(command, task, detectionType));
         sample.setDetectionTypeId(resolveDetectionTypeId(command, task, detectionType));
         sample.setDetectionTypeName(resolveDetectionTypeName(command, task, detectionType));
@@ -180,8 +175,6 @@ public class LabSampleService {
                 serializeDetectionConfigItems(detectionConfigItems)));
         sample.setReviewFlowId(reviewFlow == null ? null : reviewFlow.getId());
         sample.setReviewFlowName(reviewFlow == null ? null : reviewFlow.getFlowName());
-        sample.setPublishFlowId(publishFlow == null ? null : publishFlow.getId());
-        sample.setPublishFlowName(publishFlow == null ? null : publishFlow.getFlowName());
         sample.setSamplingTime(command.getSamplingTime());
         sample.setSampleTotalVolume(task.getSampleTotalVolume());
         sample.setSampleBottleCount(task.getSampleBottleCount());
@@ -197,10 +190,42 @@ public class LabSampleService {
         task.setSampleRegisterStatus(LabWorkflowConstants.SampleRegisterStatus.REGISTERED);
         task.setSampleId(sample.getId());
         samplingTaskMapper.updateById(task);
+        abandonOtherTasksInSamePlan(task, currentUser);
         // 样品一旦登录完成，立即补齐后续待分配检测主流程与参数子流程。
         detectionPendingFlowService.createPendingFlowIfMissing(sample);
         enrichSampleDetectionConfigSnapshotForView(sample);
         return sample;
+    }
+
+    private void abandonOtherTasksInSamePlan(SamplingTask completedTask, CurrentUser currentUser) {
+        if (completedTask == null || completedTask.getPlanId() == null || completedTask.getId() == null) {
+            return;
+        }
+        String abandonReason = resolveCompletedOperatorName(currentUser, completedTask) + "已完成";
+        List<SamplingTask> siblingTasks = samplingTaskMapper.selectList(new LambdaQueryWrapper<SamplingTask>()
+                .eq(SamplingTask::getPlanId, completedTask.getPlanId())
+                .ne(SamplingTask::getId, completedTask.getId())
+                .ne(SamplingTask::getTaskStatus, LabWorkflowConstants.SamplingTaskStatus.ABANDONED)
+                .isNull(SamplingTask::getSampleId)
+                .and(wrapper -> wrapper
+                        .isNull(SamplingTask::getSampleRegisterStatus)
+                        .or()
+                        .ne(SamplingTask::getSampleRegisterStatus, LabWorkflowConstants.SampleRegisterStatus.REGISTERED)));
+        for (SamplingTask siblingTask : siblingTasks) {
+            siblingTask.setTaskStatus(LabWorkflowConstants.SamplingTaskStatus.ABANDONED);
+            siblingTask.setAbandonReason(abandonReason);
+            samplingTaskMapper.updateById(siblingTask);
+        }
+        if (!siblingTasks.isEmpty()) {
+            samplingPlanService.refreshPlanStatusAfterTaskChange(completedTask.getPlanId());
+        }
+    }
+
+    private String resolveCompletedOperatorName(CurrentUser currentUser, SamplingTask completedTask) {
+        String operatorName = currentUser == null
+                ? null
+                : StrUtil.blankToDefault(StrUtil.trim(currentUser.getRealName()), StrUtil.trim(currentUser.getUsername()));
+        return StrUtil.blankToDefault(operatorName, StrUtil.blankToDefault(StrUtil.trim(completedTask.getSamplerName()), "采样员"));
     }
 
     private void enrichSampleDetectionConfigSnapshotForView(LabSample sample) {
@@ -276,34 +301,25 @@ public class LabSampleService {
         if (StrUtil.isBlank(task.getSampleNo())) {
             throw new BusinessException("采样任务尚未生成样品编号，请先完成采样录入。");
         }
-        Long existingCount = labSampleMapper.selectCount(new LambdaQueryWrapper<LabSample>()
+        Number existingCount = labSampleMapper.selectCount(new LambdaQueryWrapper<LabSample>()
                 .eq(LabSample::getTaskId, task.getId()));
-        if (existingCount != null && existingCount > 0) {
+        if (existingCount != null && existingCount.longValue() > 0) {
             throw new BusinessException("该采样任务已完成样品登录，不能重复登录。");
         }
-    }
-
-    private DetectionType resolveDetectionType(SampleLoginCommand command, SamplingTask task) {
-        Long detectionTypeId = task == null ? command.getDetectionTypeId() : task.getDetectionTypeId();
-        String detectionTypeName = task == null ? command.getDetectionTypeName() : task.getDetectionTypeName();
-        if (task != null && detectionTypeId == null) {
-            throw new BusinessException("当前采样任务未配置检测套餐，不能进行样品登录");
-        }
+    }    private DetectionType resolveDetectionType(SampleLoginCommand command, SamplingTask task) {
+        Long detectionTypeId = command.getDetectionTypeId();
+        String detectionTypeName = command.getDetectionTypeName();
         if (detectionTypeId == null) {
-            return null;
+            throw new BusinessException("请选择检测套餐");
         }
         DetectionType detectionType = detectionTypeMapper.selectById(detectionTypeId);
         if (detectionType == null) {
-            if (task != null && StrUtil.isNotBlank(task.getDetectionConfigSnapshot())) {
-                return null;
-            }
             throw new BusinessException("检测套餐不存在");
         }
-        if (task == null && !Integer.valueOf(1).equals(detectionType.getEnabled())) {
+        if (!Integer.valueOf(1).equals(detectionType.getEnabled())) {
             throw new BusinessException("当前检测套餐已停用，不能用于样品登录");
         }
-        if (task == null
-                && StrUtil.isNotBlank(detectionTypeName)
+        if (StrUtil.isNotBlank(detectionTypeName)
                 && !StrUtil.equals(StrUtil.trim(detectionTypeName), detectionType.getTypeName())) {
             throw new BusinessException("检测套餐名称与配置不一致，请刷新后重试");
         }
@@ -311,9 +327,6 @@ public class LabSampleService {
     }
 
     private String resolveDetectionItems(SampleLoginCommand command, SamplingTask task, DetectionType detectionType) {
-        if (task != null) {
-            return StrUtil.blankToDefault(StrUtil.trim(task.getDetectionTypeName()), StrUtil.trim(task.getDetectionItems()));
-        }
         if (detectionType != null) {
             return detectionType.getTypeName();
         }
@@ -321,22 +334,10 @@ public class LabSampleService {
     }
 
     private Long resolveDetectionTypeId(SampleLoginCommand command, SamplingTask task, DetectionType detectionType) {
-        if (task != null) {
-            return task.getDetectionTypeId();
-        }
         return detectionType == null ? command.getDetectionTypeId() : detectionType.getId();
     }
 
     private String resolveDetectionTypeName(SampleLoginCommand command, SamplingTask task, DetectionType detectionType) {
-        if (task != null) {
-            if (StrUtil.isNotBlank(task.getDetectionTypeName())) {
-                return StrUtil.trim(task.getDetectionTypeName());
-            }
-            if (detectionType != null) {
-                return detectionType.getTypeName();
-            }
-            return StrUtil.trim(task.getDetectionItems());
-        }
         if (detectionType != null) {
             return detectionType.getTypeName();
         }
@@ -346,7 +347,6 @@ public class LabSampleService {
         }
         return StrUtil.trim(command.getDetectionItems());
     }
-
     private LabFlowConfig resolveSelectedFlow(Long flowId, String submittedFlowName, String expectedType, String label) {
         LabFlowConfig flow = flowId == null ? findDefaultFlow(expectedType) : labFlowConfigMapper.selectById(flowId);
         if (flow == null) {
@@ -376,16 +376,6 @@ public class LabSampleService {
     private List<SampleDetectionConfigItem> normalizeDetectionConfigItems(SampleLoginCommand command,
                                                                           SamplingTask task,
                                                                           DetectionType detectionType) {
-        if (task != null) {
-            List<SampleDetectionConfigItem> taskSnapshotItems = parseDetectionConfigSnapshot(task.getDetectionConfigSnapshot());
-            if (!taskSnapshotItems.isEmpty()) {
-                return taskSnapshotItems;
-            }
-            if (detectionType != null) {
-                return buildDetectionConfigItems(detectionType);
-            }
-            throw new BusinessException("当前采样任务缺少检测套餐参数快照，不能进行样品登录");
-        }
         if (detectionType == null) {
             return new ArrayList<>();
         }
@@ -431,7 +421,6 @@ public class LabSampleService {
             SampleDetectionConfigItem normalizedItem = new SampleDetectionConfigItem();
             normalizedItem.setParameterId(item.getParameterId());
             normalizedItem.setParameterName(StrUtil.blankToDefault(StrUtil.trim(item.getParameterName()), method.getParameterName()));
-            normalizedItem.setParameterCategory(StrUtil.trim(item.getParameterCategory()));
             normalizedItem.setUnit(StrUtil.trim(item.getUnit()));
             normalizedItem.setStandardMin(item.getStandardMin());
             normalizedItem.setStandardMax(item.getStandardMax());
@@ -515,7 +504,6 @@ public class LabSampleService {
         SampleDetectionConfigItem item = new SampleDetectionConfigItem();
         item.setParameterId(parameter.getId());
         item.setParameterName(parameter.getParameterName());
-        item.setParameterCategory(parameter.getParameterCategory());
         item.setUnit(parameter.getUnit());
         item.setStandardMin(parameter.getStandardMin());
         item.setStandardMax(parameter.getStandardMax());
@@ -583,7 +571,7 @@ public class LabSampleService {
         if (isAdmin(currentUser)) {
             return;
         }
-        if (task.getSamplerId() == null || !task.getSamplerId().equals(currentUser.getUserId())) {
+        if (!isSamplerAssigned(task, currentUser.getUserId())) {
             throw new BusinessException("当前用户不是该采样任务的责任采样员，不能进行样品登录。");
         }
     }
@@ -603,6 +591,16 @@ public class LabSampleService {
             return command.getSamplerName();
         }
         return StrUtil.isNotBlank(currentUser.getRealName()) ? currentUser.getRealName() : command.getSamplerName();
+    }
+
+    private boolean isSamplerAssigned(SamplingTask task, Long samplerId) {
+        if (task == null || samplerId == null) {
+            return false;
+        }
+        if (samplerId.equals(task.getSamplerId())) {
+            return true;
+        }
+        return StrUtil.contains(task.getSamplerIds(), "," + samplerId + ",");
     }
 
     private boolean isAdmin(CurrentUser currentUser) {

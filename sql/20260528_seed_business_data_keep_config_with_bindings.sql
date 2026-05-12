@@ -1,6 +1,6 @@
 -- 保留系统管理配置，清理并重建业务演示数据。
 -- 保留不清理：角色、组织、字典、用户、流程、报告模板、检测参数、检测方法、检测套餐、检测步骤等系统/基础配置。
--- 本脚本会补齐：检测参数参数类别、检测方法采样容量、检测套餐参数-方法绑定、检测方法-设备型号绑定。
+-- 本脚本会补齐：检测方法采样容量、检测套餐参数-方法绑定、检测方法-设备型号绑定。
 -- 本脚本会清理：监测点、采样计划、采样任务、样品、检测、审核、报告、仪器台账、文档、登录日志等业务数据。
 
 USE yx_lab;
@@ -70,19 +70,6 @@ CREATE TABLE IF NOT EXISTS lab_detection_method_instrument_model_binding (
     KEY idx_instrument_model (instrument_model),
     KEY idx_model_manufacturer (instrument_model, manufacturer)
 ) COMMENT='检测方法与设备型号绑定关系';
-
-SET @ddl = (
-    SELECT IF(COUNT(*) = 0,
-        'ALTER TABLE lab_detection_parameter ADD COLUMN parameter_category VARCHAR(32) NOT NULL DEFAULT ''实验室测定'' COMMENT ''参数类别'' AFTER parameter_name',
-        'SELECT 1')
-    FROM information_schema.COLUMNS
-    WHERE TABLE_SCHEMA = DATABASE()
-      AND TABLE_NAME = 'lab_detection_parameter'
-      AND COLUMN_NAME = 'parameter_category'
-);
-PREPARE stmt FROM @ddl;
-EXECUTE stmt;
-DEALLOCATE PREPARE stmt;
 
 SET @ddl = (
     SELECT IF(COUNT(*) = 0,
@@ -309,37 +296,6 @@ TRUNCATE TABLE lab_document_share;
 TRUNCATE TABLE lab_document;
 TRUNCATE TABLE lab_login_log;
 
--- 参数类别字典补齐，不清空已有字典。
-INSERT INTO lab_dict (
-    id, dict_code, dict_name, module_name, item_text, status, remark, deleted,
-    created_by, created_name, created_time, updated_by, updated_name, updated_time
-)
-VALUES (
-    2026052801,
-    'detection_parameter_category',
-    '参数类别',
-    '检测管理',
-    'IN_SITU=原位检测\nFIELD=现场测定\nLABORATORY=实验室测定',
-    1,
-    '检测参数基础台账参数类别',
-    0,
-    1001,
-    '系统管理员',
-    NOW(),
-    1001,
-    '系统管理员',
-    NOW()
-)
-ON DUPLICATE KEY UPDATE
-    dict_name = VALUES(dict_name),
-    module_name = VALUES(module_name),
-    item_text = VALUES(item_text),
-    status = 1,
-    deleted = 0,
-    updated_by = VALUES(updated_by),
-    updated_name = VALUES(updated_name),
-    updated_time = NOW();
-
 -- 补齐演示账号，不清理或删除已有系统用户。
 INSERT INTO lab_user (
     id, username, password, real_name, org_id, org_name, role_code, phone, avatar_url,
@@ -385,24 +341,23 @@ ON DUPLICATE KEY UPDATE
     updated_time = NOW();
 
 INSERT INTO lab_detection_parameter (
-    id, parameter_name, parameter_category, standard_min, standard_max, unit, exceed_rule,
+    id, parameter_name, standard_min, standard_max, unit, exceed_rule,
     reference_standard, enabled, remark, deleted, created_by, created_name, created_time,
     updated_by, updated_name, updated_time
 )
 VALUES
-(700001, 'pH', '原位检测', 6.50, 8.50, '', 'OUT_OF_RANGE', 'GB 5749-2022', 1, '生活饮用水酸碱度', 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
-(700002, '浊度', '现场测定', 0.00, 1.00, 'NTU', 'GREATER_THAN_MAX', 'GB 5749-2022', 1, '反映水体悬浮物情况', 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
-(700003, '余氯', '现场测定', 0.05, 2.00, 'mg/L', 'OUT_OF_RANGE', 'GB 5749-2022', 1, '消毒剂余量控制指标', 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
-(700004, '氨氮', '实验室测定', 0.00, 0.50, 'mg/L', 'GREATER_THAN_MAX', 'GB 5749-2022', 1, '氮素污染风险指标', 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
-(700005, '色度', '现场测定', 0.00, 15.00, '度', 'GREATER_THAN_MAX', 'GB 5749-2022', 1, '感官性状指标', 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
-(700006, '臭和味', '现场测定', 0.00, 0.00, '级', 'GREATER_THAN_MAX', 'GB 5749-2022', 1, '感官性状指标', 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
-(700007, '肉眼可见物', '现场测定', 0.00, 0.00, '项', 'GREATER_THAN_MAX', 'GB 5749-2022', 1, '感官性状指标', 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
-(700008, '铁', '实验室测定', 0.00, 0.30, 'mg/L', 'GREATER_THAN_MAX', 'GB 5749-2022', 1, '金属指标', 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
-(700009, '锰', '实验室测定', 0.00, 0.10, 'mg/L', 'GREATER_THAN_MAX', 'GB 5749-2022', 1, '金属指标', 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
-(700010, '耗氧量', '实验室测定', 0.00, 3.00, 'mg/L', 'GREATER_THAN_MAX', 'GB 5749-2022', 1, '有机污染综合指标', 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW())
+(700001, 'pH', 6.50, 8.50, '', 'OUT_OF_RANGE', 'GB 5749-2022', 1, '生活饮用水酸碱度', 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
+(700002, '浊度', 0.00, 1.00, 'NTU', 'GREATER_THAN_MAX', 'GB 5749-2022', 1, '反映水体悬浮物情况', 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
+(700003, '余氯', 0.05, 2.00, 'mg/L', 'OUT_OF_RANGE', 'GB 5749-2022', 1, '消毒剂余量控制指标', 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
+(700004, '氨氮', 0.00, 0.50, 'mg/L', 'GREATER_THAN_MAX', 'GB 5749-2022', 1, '氮素污染风险指标', 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
+(700005, '色度', 0.00, 15.00, '度', 'GREATER_THAN_MAX', 'GB 5749-2022', 1, '感官性状指标', 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
+(700006, '臭和味', 0.00, 0.00, '级', 'GREATER_THAN_MAX', 'GB 5749-2022', 1, '感官性状指标', 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
+(700007, '肉眼可见物', 0.00, 0.00, '项', 'GREATER_THAN_MAX', 'GB 5749-2022', 1, '感官性状指标', 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
+(700008, '铁', 0.00, 0.30, 'mg/L', 'GREATER_THAN_MAX', 'GB 5749-2022', 1, '金属指标', 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
+(700009, '锰', 0.00, 0.10, 'mg/L', 'GREATER_THAN_MAX', 'GB 5749-2022', 1, '金属指标', 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
+(700010, '耗氧量', 0.00, 3.00, 'mg/L', 'GREATER_THAN_MAX', 'GB 5749-2022', 1, '有机污染综合指标', 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW())
 ON DUPLICATE KEY UPDATE
     parameter_name = VALUES(parameter_name),
-    parameter_category = VALUES(parameter_category),
     standard_min = VALUES(standard_min),
     standard_max = VALUES(standard_max),
     unit = VALUES(unit),
@@ -414,15 +369,6 @@ ON DUPLICATE KEY UPDATE
     updated_by = VALUES(updated_by),
     updated_name = VALUES(updated_name),
     updated_time = NOW();
-
-UPDATE lab_detection_parameter
-SET parameter_category = CASE
-    WHEN parameter_name = 'pH' THEN '原位检测'
-    WHEN parameter_name IN ('浊度', '余氯', '色度', '臭和味', '肉眼可见物') THEN '现场测定'
-    ELSE '实验室测定'
-END
-WHERE deleted = 0
-  AND (parameter_category IS NULL OR parameter_category = '' OR parameter_name IN ('pH', '浊度', '余氯', '色度', '臭和味', '肉眼可见物', '氨氮', '铁', '锰', '耗氧量'));
 
 INSERT INTO lab_detection_method (
     id, method_name, method_code, parameter_id, parameter_name, standard_code, sample_volume,
@@ -512,10 +458,10 @@ ON DUPLICATE KEY UPDATE
     updated_name = VALUES(updated_name),
     updated_time = NOW();
 
-SET @snapshot_common = '[{"parameterId":700001,"parameterName":"pH","parameterCategory":"原位检测","unit":"","standardMin":6.50,"standardMax":8.50,"referenceStandard":"GB 5749-2022","methodId":710001,"methodName":"玻璃电极法","sampleVolume":"100mL","methodBasis":"校准 pH 计后直接测定，记录温度补偿后的稳定读数。"},{"parameterId":700002,"parameterName":"浊度","parameterCategory":"现场测定","unit":"NTU","standardMin":0.00,"standardMax":1.00,"referenceStandard":"GB 5749-2022","methodId":710002,"methodName":"散射光浊度法","sampleVolume":"50mL","methodBasis":"摇匀样品后装入比色瓶，使用浊度仪读取 NTU 值。"},{"parameterId":700003,"parameterName":"余氯","parameterCategory":"现场测定","unit":"mg/L","standardMin":0.05,"standardMax":2.00,"referenceStandard":"GB 5749-2022","methodId":710003,"methodName":"DPD 分光光度法","sampleVolume":"10mL","methodBasis":"加入 DPD 试剂显色，在规定波长下测定吸光度并换算浓度。"},{"parameterId":700004,"parameterName":"氨氮","parameterCategory":"实验室测定","unit":"mg/L","standardMin":0.00,"standardMax":0.50,"referenceStandard":"GB 5749-2022","methodId":710004,"methodName":"纳氏试剂分光光度法","sampleVolume":"50mL","methodBasis":"样品经预处理后加入纳氏试剂显色，使用分光光度计测定。"},{"parameterId":700005,"parameterName":"色度","parameterCategory":"现场测定","unit":"度","standardMin":0.00,"standardMax":15.00,"referenceStandard":"GB 5749-2022","methodId":710005,"methodName":"铂钴标准比色法","sampleVolume":"50mL","methodBasis":"与铂钴标准色列比对，读取最接近色度值。"},{"parameterId":700006,"parameterName":"臭和味","parameterCategory":"现场测定","unit":"级","standardMin":0.00,"standardMax":0.00,"referenceStandard":"GB 5749-2022","methodId":710006,"methodName":"嗅味直接判断法","sampleVolume":"250mL","methodBasis":"按标准温度条件嗅辨并记录等级。"},{"parameterId":700007,"parameterName":"肉眼可见物","parameterCategory":"现场测定","unit":"项","standardMin":0.00,"standardMax":0.00,"referenceStandard":"GB 5749-2022","methodId":710007,"methodName":"目视观察法","sampleVolume":"250mL","methodBasis":"取样后在自然光下目视观察是否存在可见悬浮物。"},{"parameterId":700008,"parameterName":"铁","parameterCategory":"实验室测定","unit":"mg/L","standardMin":0.00,"standardMax":0.30,"referenceStandard":"GB 5749-2022","methodId":710008,"methodName":"原子吸收分光光度法-铁","sampleVolume":"100mL","methodBasis":"消解后使用原子吸收分光光度计测定铁含量。"},{"parameterId":700010,"parameterName":"耗氧量","parameterCategory":"实验室测定","unit":"mg/L","standardMin":0.00,"standardMax":3.00,"referenceStandard":"GB 5749-2022","methodId":710010,"methodName":"酸性高锰酸钾滴定法","sampleVolume":"100mL","methodBasis":"酸性条件下高锰酸钾氧化，滴定计算耗氧量。"}]';
-SET @snapshot_raw = '[{"parameterId":700001,"parameterName":"pH","parameterCategory":"原位检测","unit":"","standardMin":6.50,"standardMax":8.50,"referenceStandard":"GB 5749-2022","methodId":710001,"methodName":"玻璃电极法","sampleVolume":"100mL","methodBasis":"校准 pH 计后直接测定，记录温度补偿后的稳定读数。"},{"parameterId":700002,"parameterName":"浊度","parameterCategory":"现场测定","unit":"NTU","standardMin":0.00,"standardMax":1.00,"referenceStandard":"GB 5749-2022","methodId":710002,"methodName":"散射光浊度法","sampleVolume":"50mL","methodBasis":"摇匀样品后装入比色瓶，使用浊度仪读取 NTU 值。"},{"parameterId":700004,"parameterName":"氨氮","parameterCategory":"实验室测定","unit":"mg/L","standardMin":0.00,"standardMax":0.50,"referenceStandard":"GB 5749-2022","methodId":710004,"methodName":"纳氏试剂分光光度法","sampleVolume":"50mL","methodBasis":"样品经预处理后加入纳氏试剂显色，使用分光光度计测定。"},{"parameterId":700009,"parameterName":"锰","parameterCategory":"实验室测定","unit":"mg/L","standardMin":0.00,"standardMax":0.10,"referenceStandard":"GB 5749-2022","methodId":710009,"methodName":"原子吸收分光光度法-锰","sampleVolume":"100mL","methodBasis":"消解后使用原子吸收分光光度计测定锰含量。"},{"parameterId":700010,"parameterName":"耗氧量","parameterCategory":"实验室测定","unit":"mg/L","standardMin":0.00,"standardMax":3.00,"referenceStandard":"GB 5749-2022","methodId":710010,"methodName":"酸性高锰酸钾滴定法","sampleVolume":"100mL","methodBasis":"酸性条件下高锰酸钾氧化，滴定计算耗氧量。"}]';
-SET @snapshot_terminal = '[{"parameterId":700001,"parameterName":"pH","parameterCategory":"原位检测","unit":"","standardMin":6.50,"standardMax":8.50,"referenceStandard":"GB 5749-2022","methodId":710001,"methodName":"玻璃电极法","sampleVolume":"100mL","methodBasis":"校准 pH 计后直接测定，记录温度补偿后的稳定读数。"},{"parameterId":700002,"parameterName":"浊度","parameterCategory":"现场测定","unit":"NTU","standardMin":0.00,"standardMax":1.00,"referenceStandard":"GB 5749-2022","methodId":710002,"methodName":"散射光浊度法","sampleVolume":"50mL","methodBasis":"摇匀样品后装入比色瓶，使用浊度仪读取 NTU 值。"},{"parameterId":700003,"parameterName":"余氯","parameterCategory":"现场测定","unit":"mg/L","standardMin":0.05,"standardMax":2.00,"referenceStandard":"GB 5749-2022","methodId":710003,"methodName":"DPD 分光光度法","sampleVolume":"10mL","methodBasis":"加入 DPD 试剂显色，在规定波长下测定吸光度并换算浓度。"},{"parameterId":700007,"parameterName":"肉眼可见物","parameterCategory":"现场测定","unit":"项","standardMin":0.00,"standardMax":0.00,"referenceStandard":"GB 5749-2022","methodId":710007,"methodName":"目视观察法","sampleVolume":"250mL","methodBasis":"取样后在自然光下目视观察是否存在可见悬浮物。"}]';
-SET @snapshot_emergency = '[{"parameterId":700002,"parameterName":"浊度","parameterCategory":"现场测定","unit":"NTU","standardMin":0.00,"standardMax":1.00,"referenceStandard":"GB 5749-2022","methodId":710002,"methodName":"散射光浊度法","sampleVolume":"50mL","methodBasis":"摇匀样品后装入比色瓶，使用浊度仪读取 NTU 值。"},{"parameterId":700004,"parameterName":"氨氮","parameterCategory":"实验室测定","unit":"mg/L","standardMin":0.00,"standardMax":0.50,"referenceStandard":"GB 5749-2022","methodId":710004,"methodName":"纳氏试剂分光光度法","sampleVolume":"50mL","methodBasis":"样品经预处理后加入纳氏试剂显色，使用分光光度计测定。"},{"parameterId":700008,"parameterName":"铁","parameterCategory":"实验室测定","unit":"mg/L","standardMin":0.00,"standardMax":0.30,"referenceStandard":"GB 5749-2022","methodId":710008,"methodName":"原子吸收分光光度法-铁","sampleVolume":"100mL","methodBasis":"消解后使用原子吸收分光光度计测定铁含量。"},{"parameterId":700009,"parameterName":"锰","parameterCategory":"实验室测定","unit":"mg/L","standardMin":0.00,"standardMax":0.10,"referenceStandard":"GB 5749-2022","methodId":710009,"methodName":"原子吸收分光光度法-锰","sampleVolume":"100mL","methodBasis":"消解后使用原子吸收分光光度计测定锰含量。"},{"parameterId":700010,"parameterName":"耗氧量","parameterCategory":"实验室测定","unit":"mg/L","standardMin":0.00,"standardMax":3.00,"referenceStandard":"GB 5749-2022","methodId":710010,"methodName":"酸性高锰酸钾滴定法","sampleVolume":"100mL","methodBasis":"酸性条件下高锰酸钾氧化，滴定计算耗氧量。"}]';
+SET @snapshot_common = '[{"parameterId":700001,"parameterName":"pH","unit":"","standardMin":6.50,"standardMax":8.50,"referenceStandard":"GB 5749-2022","methodId":710001,"methodName":"玻璃电极法","sampleVolume":"100mL","methodBasis":"校准 pH 计后直接测定，记录温度补偿后的稳定读数。"},{"parameterId":700002,"parameterName":"浊度","unit":"NTU","standardMin":0.00,"standardMax":1.00,"referenceStandard":"GB 5749-2022","methodId":710002,"methodName":"散射光浊度法","sampleVolume":"50mL","methodBasis":"摇匀样品后装入比色瓶，使用浊度仪读取 NTU 值。"},{"parameterId":700003,"parameterName":"余氯","unit":"mg/L","standardMin":0.05,"standardMax":2.00,"referenceStandard":"GB 5749-2022","methodId":710003,"methodName":"DPD 分光光度法","sampleVolume":"10mL","methodBasis":"加入 DPD 试剂显色，在规定波长下测定吸光度并换算浓度。"},{"parameterId":700004,"parameterName":"氨氮","unit":"mg/L","standardMin":0.00,"standardMax":0.50,"referenceStandard":"GB 5749-2022","methodId":710004,"methodName":"纳氏试剂分光光度法","sampleVolume":"50mL","methodBasis":"样品经预处理后加入纳氏试剂显色，使用分光光度计测定。"},{"parameterId":700005,"parameterName":"色度","unit":"度","standardMin":0.00,"standardMax":15.00,"referenceStandard":"GB 5749-2022","methodId":710005,"methodName":"铂钴标准比色法","sampleVolume":"50mL","methodBasis":"与铂钴标准色列比对，读取最接近色度值。"},{"parameterId":700006,"parameterName":"臭和味","unit":"级","standardMin":0.00,"standardMax":0.00,"referenceStandard":"GB 5749-2022","methodId":710006,"methodName":"嗅味直接判断法","sampleVolume":"250mL","methodBasis":"按标准温度条件嗅辨并记录等级。"},{"parameterId":700007,"parameterName":"肉眼可见物","unit":"项","standardMin":0.00,"standardMax":0.00,"referenceStandard":"GB 5749-2022","methodId":710007,"methodName":"目视观察法","sampleVolume":"250mL","methodBasis":"取样后在自然光下目视观察是否存在可见悬浮物。"},{"parameterId":700008,"parameterName":"铁","unit":"mg/L","standardMin":0.00,"standardMax":0.30,"referenceStandard":"GB 5749-2022","methodId":710008,"methodName":"原子吸收分光光度法-铁","sampleVolume":"100mL","methodBasis":"消解后使用原子吸收分光光度计测定铁含量。"},{"parameterId":700010,"parameterName":"耗氧量","unit":"mg/L","standardMin":0.00,"standardMax":3.00,"referenceStandard":"GB 5749-2022","methodId":710010,"methodName":"酸性高锰酸钾滴定法","sampleVolume":"100mL","methodBasis":"酸性条件下高锰酸钾氧化，滴定计算耗氧量。"}]';
+SET @snapshot_raw = '[{"parameterId":700001,"parameterName":"pH","unit":"","standardMin":6.50,"standardMax":8.50,"referenceStandard":"GB 5749-2022","methodId":710001,"methodName":"玻璃电极法","sampleVolume":"100mL","methodBasis":"校准 pH 计后直接测定，记录温度补偿后的稳定读数。"},{"parameterId":700002,"parameterName":"浊度","unit":"NTU","standardMin":0.00,"standardMax":1.00,"referenceStandard":"GB 5749-2022","methodId":710002,"methodName":"散射光浊度法","sampleVolume":"50mL","methodBasis":"摇匀样品后装入比色瓶，使用浊度仪读取 NTU 值。"},{"parameterId":700004,"parameterName":"氨氮","unit":"mg/L","standardMin":0.00,"standardMax":0.50,"referenceStandard":"GB 5749-2022","methodId":710004,"methodName":"纳氏试剂分光光度法","sampleVolume":"50mL","methodBasis":"样品经预处理后加入纳氏试剂显色，使用分光光度计测定。"},{"parameterId":700009,"parameterName":"锰","unit":"mg/L","standardMin":0.00,"standardMax":0.10,"referenceStandard":"GB 5749-2022","methodId":710009,"methodName":"原子吸收分光光度法-锰","sampleVolume":"100mL","methodBasis":"消解后使用原子吸收分光光度计测定锰含量。"},{"parameterId":700010,"parameterName":"耗氧量","unit":"mg/L","standardMin":0.00,"standardMax":3.00,"referenceStandard":"GB 5749-2022","methodId":710010,"methodName":"酸性高锰酸钾滴定法","sampleVolume":"100mL","methodBasis":"酸性条件下高锰酸钾氧化，滴定计算耗氧量。"}]';
+SET @snapshot_terminal = '[{"parameterId":700001,"parameterName":"pH","unit":"","standardMin":6.50,"standardMax":8.50,"referenceStandard":"GB 5749-2022","methodId":710001,"methodName":"玻璃电极法","sampleVolume":"100mL","methodBasis":"校准 pH 计后直接测定，记录温度补偿后的稳定读数。"},{"parameterId":700002,"parameterName":"浊度","unit":"NTU","standardMin":0.00,"standardMax":1.00,"referenceStandard":"GB 5749-2022","methodId":710002,"methodName":"散射光浊度法","sampleVolume":"50mL","methodBasis":"摇匀样品后装入比色瓶，使用浊度仪读取 NTU 值。"},{"parameterId":700003,"parameterName":"余氯","unit":"mg/L","standardMin":0.05,"standardMax":2.00,"referenceStandard":"GB 5749-2022","methodId":710003,"methodName":"DPD 分光光度法","sampleVolume":"10mL","methodBasis":"加入 DPD 试剂显色，在规定波长下测定吸光度并换算浓度。"},{"parameterId":700007,"parameterName":"肉眼可见物","unit":"项","standardMin":0.00,"standardMax":0.00,"referenceStandard":"GB 5749-2022","methodId":710007,"methodName":"目视观察法","sampleVolume":"250mL","methodBasis":"取样后在自然光下目视观察是否存在可见悬浮物。"}]';
+SET @snapshot_emergency = '[{"parameterId":700002,"parameterName":"浊度","unit":"NTU","standardMin":0.00,"standardMax":1.00,"referenceStandard":"GB 5749-2022","methodId":710002,"methodName":"散射光浊度法","sampleVolume":"50mL","methodBasis":"摇匀样品后装入比色瓶，使用浊度仪读取 NTU 值。"},{"parameterId":700004,"parameterName":"氨氮","unit":"mg/L","standardMin":0.00,"standardMax":0.50,"referenceStandard":"GB 5749-2022","methodId":710004,"methodName":"纳氏试剂分光光度法","sampleVolume":"50mL","methodBasis":"样品经预处理后加入纳氏试剂显色，使用分光光度计测定。"},{"parameterId":700008,"parameterName":"铁","unit":"mg/L","standardMin":0.00,"standardMax":0.30,"referenceStandard":"GB 5749-2022","methodId":710008,"methodName":"原子吸收分光光度法-铁","sampleVolume":"100mL","methodBasis":"消解后使用原子吸收分光光度计测定铁含量。"},{"parameterId":700009,"parameterName":"锰","unit":"mg/L","standardMin":0.00,"standardMax":0.10,"referenceStandard":"GB 5749-2022","methodId":710009,"methodName":"原子吸收分光光度法-锰","sampleVolume":"100mL","methodBasis":"消解后使用原子吸收分光光度计测定锰含量。"},{"parameterId":700010,"parameterName":"耗氧量","unit":"mg/L","standardMin":0.00,"standardMax":3.00,"referenceStandard":"GB 5749-2022","methodId":710010,"methodName":"酸性高锰酸钾滴定法","sampleVolume":"100mL","methodBasis":"酸性条件下高锰酸钾氧化，滴定计算耗氧量。"}]';
 
 SET @sampling_basis_routine = 'GB/T 5750.2-2023 生活饮用水标准检验方法 水样采集与保存; CJ/T 206-2005 城市供水水质标准';
 SET @sampling_basis_raw = 'HJ 91.1-2019 污水监测技术规范; GB/T 5750.2-2023 水样采集与保存';
@@ -538,8 +484,6 @@ SET @reviewNodeId = COALESCE((SELECT id FROM lab_flow_node WHERE flow_id = @revi
 SET @reviewNodeName = COALESCE((SELECT node_name FROM lab_flow_node WHERE id = @reviewNodeId LIMIT 1), '初审');
 SET @reviewNodeOrder = COALESCE((SELECT node_order FROM lab_flow_node WHERE id = @reviewNodeId LIMIT 1), 1);
 SET @reviewRequiredFlag = COALESCE((SELECT required_flag FROM lab_flow_node WHERE id = @reviewNodeId LIMIT 1), 1);
-SET @publishFlowId = COALESCE((SELECT id FROM lab_flow_config WHERE flow_type = 'PUBLISH' AND status = 1 AND deleted = 0 ORDER BY default_flag DESC, id LIMIT 1), 9602);
-SET @publishFlowName = COALESCE((SELECT flow_name FROM lab_flow_config WHERE id = @publishFlowId LIMIT 1), '报告发布审批');
 
 -- 1. 监测点位。
 INSERT INTO lab_monitoring_point (
@@ -596,19 +540,14 @@ ON DUPLICATE KEY UPDATE
 
 -- 4. 样品台账。
 INSERT INTO lab_sample (
-    id, sample_no, task_id, point_id, point_name, sample_type, quality_control_type,
+    id, sample_no, task_id, point_id, point_name, sample_type,
     detection_items, detection_type_id, detection_type_name, detection_config_snapshot,
-    review_flow_id, review_flow_name, publish_flow_id, publish_flow_name,
+    review_flow_id, review_flow_name,
     sampling_time, sampler_id, sampler_name, weather, storage_condition,
     sample_status, result_summary, remark, trace_log, deleted,
     created_by, created_name, created_time, updated_by, updated_name, updated_time
 )
 VALUES
-(970001, @sampleNo1, 960001, 940001, '城东水厂出厂水', 'FACTORY', 'PARALLEL', '出厂水常规九项', 720001, '出厂水常规九项', @snapshot_common, @reviewFlowId, @reviewFlowName, @publishFlowId, @publishFlowName, NOW() - INTERVAL 6 DAY, 1101, '陈采样', '晴', '4℃冷藏避光', 'LOGGED', '待检测分样', '样品已登录，等待检测分样。', CONCAT('样品登录：样品编号=', @sampleNo1, '，采样员=陈采样'), 0, 1101, '陈采样', NOW() - INTERVAL 6 DAY + INTERVAL 2 HOUR, 1101, '陈采样', NOW() - INTERVAL 6 DAY + INTERVAL 2 HOUR),
-(970002, @sampleNo6, 960006, 940003, '富河原水取水口', 'RAW', NULL, '原水重点五项', 720002, '原水重点五项', @snapshot_raw, @reviewFlowId, @reviewFlowName, @publishFlowId, @publishFlowName, NOW() - INTERVAL 8 DAY, 1101, '陈采样', '阴', '4℃冷藏送检', 'LOGGED', '已分配检测', '样品已分配检测员，待检测结果录入。', CONCAT('样品登录：样品编号=', @sampleNo6, '，检测已分配。'), 0, 1101, '陈采样', NOW() - INTERVAL 8 DAY + INTERVAL 2 HOUR, 1202, '赵检测', NOW() - INTERVAL 8 DAY + INTERVAL 3 HOUR),
-(970003, @sampleNo7, 960007, 940004, '兴国大道管网末梢', 'TERMINAL', 'BLANK', '管网末梢四项', 720003, '管网末梢四项', @snapshot_terminal, @reviewFlowId, @reviewFlowName, @publishFlowId, @publishFlowName, NOW() - INTERVAL 5 DAY, 1102, '李采样', '晴', '常温送检', 'REVIEWING', '异常待审核', '余氯偏低，检测已提交等待审核。', CONCAT('样品登录：样品编号=', @sampleNo7, '，检测结果=异常。'), 0, 1102, '李采样', NOW() - INTERVAL 5 DAY + INTERVAL 2 HOUR, 1203, '周检测', NOW() - INTERVAL 5 DAY + INTERVAL 5 HOUR),
-(970004, @sampleNo8, 960008, 940006, '应急加密监测点', 'RAW', 'QUALITY_CONTROL', '应急复检套餐', 720004, '应急复检套餐', @snapshot_emergency, @reviewFlowId, @reviewFlowName, @publishFlowId, @publishFlowName, NOW() - INTERVAL 3 DAY, 1102, '李采样', '雷阵雨', '4℃冷藏送检', 'RETEST', '审核驳回待重检', '异常样品已被驳回，等待复检。', CONCAT('样品登录：样品编号=', @sampleNo8, '，审核驳回进入重检。'), 0, 1102, '李采样', NOW() - INTERVAL 3 DAY + INTERVAL 2 HOUR, 1302, '何审核', NOW() - INTERVAL 2 DAY),
-(970005, @sampleNo9, 960009, 940001, '城东水厂出厂水', 'FACTORY', NULL, '出厂水常规九项', 720001, '出厂水常规九项', @snapshot_common, @reviewFlowId, @reviewFlowName, @publishFlowId, @publishFlowName, NOW() - INTERVAL 12 DAY, 1101, '陈采样', '晴', '4℃冷藏避光', 'COMPLETED', '正常', '审核通过并已发布报告。', CONCAT('样品登录：样品编号=', @sampleNo9, '，检测正常，报告已发布。'), 0, 1101, '陈采样', NOW() - INTERVAL 12 DAY + INTERVAL 2 HOUR, 1401, '孙报告', NOW() - INTERVAL 10 DAY);
 
 -- 5. 检测记录与检测参数子流程。
 INSERT INTO lab_detection_record (
@@ -681,7 +620,7 @@ INSERT INTO lab_instrument (
     deleted, created_by, created_name, created_time, updated_by, updated_name, updated_time
 )
 VALUES
-(830001, 'pH计', 'SevenCompact', '梅特勒', CURDATE() - INTERVAL 500 DAY, 5, '6个月', '周检测', 'NORMAL', '理化室-A03', NULL, '用于 pH 原位检测。', 0, 1001, '系统管理员', NOW() - INTERVAL 60 DAY, 1001, '系统管理员', NOW()),
+(830001, 'pH计', 'SevenCompact', '梅特勒', CURDATE() - INTERVAL 500 DAY, 5, '6个月', '周检测', 'NORMAL', '理化室-A03', NULL, '用于 pH 检测。', 0, 1001, '系统管理员', NOW() - INTERVAL 60 DAY, 1001, '系统管理员', NOW()),
 (830002, '浊度仪', '2100Q', 'HACH', CURDATE() - INTERVAL 620 DAY, 6, '6个月', '赵检测', 'NORMAL', '理化室-A02', NULL, '用于浊度检测。', 0, 1001, '系统管理员', NOW() - INTERVAL 58 DAY, 1001, '系统管理员', NOW()),
 (830003, '紫外可见分光光度计', 'UV-2600i', '岛津', CURDATE() - INTERVAL 900 DAY, 8, '12个月', '王检测', 'NORMAL', '理化室-A01', NULL, '用于余氯、氨氮比色检测。', 0, 1001, '系统管理员', NOW() - INTERVAL 55 DAY, 1001, '系统管理员', NOW()),
 (830004, '色度比色仪', 'SD901', 'HACH', CURDATE() - INTERVAL 720 DAY, 6, '12个月', '周检测', 'NORMAL', '感官室-B01', NULL, '用于色度比对。', 0, 1001, '系统管理员', NOW() - INTERVAL 50 DAY, 1001, '系统管理员', NOW()),
@@ -753,10 +692,7 @@ VALUES
 SET FOREIGN_KEY_CHECKS = 1;
 
 -- 执行结果核对。
-SELECT 'lab_detection_parameter_category_ready' AS table_name, COUNT(*) AS total
-FROM lab_detection_parameter
-WHERE deleted = 0 AND parameter_category IN ('原位检测', '现场测定', '实验室测定')
-UNION ALL SELECT 'lab_detection_method_sample_volume_ready', COUNT(*) FROM lab_detection_method WHERE deleted = 0 AND sample_volume IS NOT NULL AND sample_volume <> ''
+SELECT 'lab_detection_method_sample_volume_ready', COUNT(*) FROM lab_detection_method WHERE deleted = 0 AND sample_volume IS NOT NULL AND sample_volume <> ''
 UNION ALL SELECT 'lab_detection_method_instrument_model_binding', COUNT(*) FROM lab_detection_method_instrument_model_binding WHERE id BETWEEN 831001 AND 831020
 UNION ALL SELECT 'lab_monitoring_point', COUNT(*) FROM lab_monitoring_point
 UNION ALL SELECT 'lab_sampling_plan', COUNT(*) FROM lab_sampling_plan

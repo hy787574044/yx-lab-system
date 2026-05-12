@@ -317,7 +317,7 @@ export const labMenuGroups = [
         path: '/system-flow-config',
         title: '流程配置',
         shortTitle: '流程配置',
-        subtitle: '提前维护审核流程与发布流程，供样品登录选择使用。',
+        subtitle: '提前维护审核流程与报告发布流程，支撑后续审核和报告闭环。',
         componentKey: 'FlowConfigView'
       },
       {

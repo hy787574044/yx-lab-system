@@ -34,8 +34,6 @@ import com.yx.lab.modules.sample.service.LabSampleService;
 import com.yx.lab.modules.sample.vo.StatusCountVO;
 import com.yx.lab.modules.storage.service.StorageService;
 import com.yx.lab.modules.system.entity.LabUser;
-import com.yx.lab.modules.system.service.FlowConfigManagementService;
-import com.yx.lab.modules.system.service.FlowNodeGateService;
 import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -82,8 +80,6 @@ public class ReportService {
     private final SamplingPlanMapper samplingPlanMapper;
 
     private final ReviewRecordMapper reviewRecordMapper;
-
-    private final FlowNodeGateService flowNodeGateService;
 
     private final StorageService storageService;
 
@@ -230,12 +226,6 @@ public class ReportService {
         ensureReportArtifact(existing);
 
         CurrentUser currentUser = requireCurrentUser();
-        LabSample sample = existing.getSampleId() == null ? null : labSampleMapper.selectById(existing.getSampleId());
-        flowNodeGateService.assertCanHandle(
-                sample == null ? null : sample.getPublishFlowId(),
-                FlowConfigManagementService.FLOW_TYPE_PUBLISH,
-                currentUser,
-                "发布");
         LocalDateTime now = LocalDateTime.now();
 
         LabReport report = new LabReport();
@@ -655,7 +645,6 @@ public class ReportService {
         vo.setSampleNo(StrUtil.blankToDefault(sample == null ? null : sample.getSampleNo(), "-"));
         vo.setPointName(StrUtil.blankToDefault(sample == null ? null : sample.getPointName(), "-"));
         vo.setSampleTypeLabel(StrUtil.blankToDefault(LabWorkflowConstants.getSampleTypeLabel(sample == null ? null : sample.getSampleType()), "-"));
-        vo.setQualityControlTypeLabel(StrUtil.blankToDefault(LabWorkflowConstants.getQualityControlTypeLabel(sample == null ? null : sample.getQualityControlType()), "-"));
         vo.setSamplingTime(formatDateTime(sample == null ? null : sample.getSamplingTime()));
         vo.setSamplerName(StrUtil.blankToDefault(sample == null ? null : sample.getSamplerName(), "-"));
         vo.setWeather(StrUtil.blankToDefault(sample == null ? null : sample.getWeather(), "-"));
@@ -1080,8 +1069,7 @@ public class ReportService {
                         .append(safeText(previewData.getReportTypeLabel())).append("</td><td class=\"label\">报告状态</td><td>").append(safeText(previewData.getReportStatusLabel())).append("</td></tr>")
                         .append("<tr><td class=\"label\">样品编号</td><td>").append(safeText(previewData.getSampleNo())).append("</td><td class=\"label\">点位名称</td><td>")
                         .append(safeText(previewData.getPointName())).append("</td><td class=\"label\">采样人员</td><td>").append(safeText(previewData.getSamplerName())).append("</td></tr>")
-                        .append("<tr><td class=\"label\">样品类型</td><td>").append(safeText(previewData.getSampleTypeLabel())).append("</td><td class=\"label\">质控类型</td><td>")
-                        .append(safeText(previewData.getQualityControlTypeLabel())).append("</td><td class=\"label\">样品状态</td><td>").append(safeText(previewData.getSampleStatusLabel())).append("</td></tr>")
+                        .append("<tr><td class=\"label\">\u6837\u54c1\u7c7b\u578b</td><td>").append(safeText(previewData.getSampleTypeLabel())).append("</td><td class=\"label\">\u6837\u54c1\u72b6\u6001</td><td colspan=\"3\">").append(safeText(previewData.getSampleStatusLabel())).append("</td></tr>")
                         .append("<tr><td class=\"label\">结果摘要</td><td colspan=\"5\">").append(safeText(previewData.getResultSummary())).append("</td></tr>")
                         .append("<tr><td class=\"label\">采样时间</td><td>").append(safeText(previewData.getSamplingTime())).append("</td><td class=\"label\">天气情况</td><td>")
                         .append(safeText(previewData.getWeather())).append("</td><td class=\"label\">保存条件</td><td>").append(safeText(previewData.getStorageCondition())).append("</td></tr>")
@@ -1249,8 +1237,7 @@ public class ReportService {
                         .append(safeText(data.getSampleTypeLabel())).append("</td></tr>")
                         .append("<tr><th>采样点位</th><td>").append(safeText(data.getPointName())).append("</td><th>采样时间</th><td>")
                         .append(safeText(data.getSamplingTime())).append("</td></tr>")
-                        .append("<tr><th>采样人员</th><td>").append(safeText(data.getSamplerName())).append("</td><th>质控品类</th><td>")
-                        .append(safeText(data.getQualityControlTypeLabel())).append("</td></tr>")
+                        .append("<tr><th>\u91c7\u6837\u4eba\u5458</th><td colspan=\"3\">").append(safeText(data.getSamplerName())).append("</td></tr>")
                         .append("</tbody></table></section>");
             }
 

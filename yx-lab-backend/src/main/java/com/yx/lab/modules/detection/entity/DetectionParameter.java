@@ -9,9 +9,6 @@ import lombok.EqualsAndHashCode;
 
 import java.math.BigDecimal;
 
-/**
- * 检测参数实体，维护 pH、浊度、余氯等参数基础定义。
- */
 @Data
 @TableName("lab_detection_parameter")
 @EqualsAndHashCode(callSuper = true)
@@ -20,10 +17,6 @@ public class DetectionParameter extends BaseEntity {
     @Schema(description = "检测参数名称")
     @TableField("parameter_name")
     private String parameterName;
-
-    @Schema(description = "参数类别")
-    @TableField("parameter_category")
-    private String parameterCategory;
 
     @Schema(description = "标准下限")
     @TableField("standard_min")

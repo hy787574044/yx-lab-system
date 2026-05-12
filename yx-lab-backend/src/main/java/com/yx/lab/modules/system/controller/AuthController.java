@@ -56,17 +56,6 @@ public class AuthController {
         return ApiResponse.success("登录成功", authService.login(request, "PC"));
     }
 
-    /**
-     * 移动端登录。
-     *
-     * @param request 登录请求体
-     * @return 登录结果
-     */
-    @PostMapping("/mobileLogin")
-    @Operation(summary = "移动端登录")
-    public ApiResponse<LoginVO> mobileLogin(@Validated @RequestBody LoginRequest request) {
-        return ApiResponse.success("登录成功", authService.login(request, "MOBILE"));
-    }
 
     /**
      * 获取当前登录人信息。

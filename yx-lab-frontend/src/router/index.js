@@ -56,22 +56,6 @@ const routes = [
     component: () => import('../views/LoginView.vue')
   },
   {
-    path: '/mobile/login',
-    meta: {
-      title: '移动端登录',
-      subtitle: '进入移动端采样、检测、审查与报告闭环'
-    },
-    component: () => import('../views/MobileLoginView.vue')
-  },
-  {
-    path: '/mobile',
-    meta: {
-      title: '移动工作台',
-      subtitle: '面向移动终端的一体化化验室业务工作台'
-    },
-    component: () => import('../views/MobileWorkbenchView.vue')
-  },
-  {
     path: '/',
     component: () => import('../views/layout/AppLayout.vue'),
     redirect: '/dashboard',
@@ -94,13 +78,13 @@ router.beforeEach((to, from, next) => {
     ? `${to.meta.title} - 阳新化验室水质管理平台`
     : '阳新化验室水质管理平台'
 
-  if (to.path === '/login' || to.path === '/mobile/login') {
+  if (to.path === '/login') {
     next()
     return
   }
 
   if (!getToken()) {
-    next(to.path.startsWith('/mobile') ? '/mobile/login' : '/login')
+    next('/login')
     return
   }
 

@@ -27,6 +27,17 @@
               <el-button type="primary" class="toolbar-primary-button" @click="openCreateDialog">新增点位</el-button>
               <div class="toolbar-fields">
                 <label class="toolbar-field">
+                  <span>所属水厂</span>
+                  <el-select v-model="query.regionName" placeholder="请选择所属水厂" clearable filterable>
+                    <el-option
+                      v-for="option in waterPlantOptions"
+                    :key="option.value"
+                    :label="option.label"
+                    :value="option.value"
+                  />
+                </el-select>
+                </label>
+                <label class="toolbar-field">
                   <span>点位名称</span>
                   <el-input v-model="query.keyword" placeholder="请输入点位名称查询" clearable />
                 </label>
@@ -35,17 +46,6 @@
                   <el-select v-model="query.pointType" placeholder="请选择点位类型" clearable>
                     <el-option
                       v-for="option in pointTypeOptions"
-                      :key="option.value"
-                      :label="option.label"
-                      :value="option.value"
-                    />
-                  </el-select>
-                </label>
-                <label class="toolbar-field">
-                  <span>点位状态</span>
-                  <el-select v-model="query.pointStatus" placeholder="请选择点位状态" clearable>
-                    <el-option
-                      v-for="option in pointStatusOptions"
                     :key="option.value"
                     :label="option.label"
                     :value="option.value"
@@ -68,19 +68,12 @@
         <el-table class="list-table" :data="visibleRecords" stripe height="100%" empty-text="暂无监测点位数据">
           <el-table-column prop="pointName" label="点位名称" min-width="180" />
           <el-table-column prop="address" label="地图位置" min-width="220" />
-          <el-table-column prop="regionName" label="所属区域" min-width="160" />
+          <el-table-column prop="regionName" label="所属水厂" min-width="160" />
           <el-table-column label="点位类型" width="120">
             <template #default="{ row }">
               {{ getEnumLabel(pointTypeLabelMap, row.pointType) }}
             </template>
           </el-table-column>
-          <el-table-column label="监测频次" width="120">
-            <template #default="{ row }">
-              {{ getEnumLabel(frequencyTypeLabelMap, row.frequencyType) }}
-            </template>
-          </el-table-column>
-          <el-table-column prop="ownerName" label="负责人" width="120" />
-          <el-table-column prop="contactPhone" label="联系电话" width="140" />
           <el-table-column label="状态" width="110">
             <template #default="{ row }">
               <span class="status-chip" :class="getStatusClass('pointStatus', row.pointStatus)">
@@ -115,14 +108,28 @@
       </div>
     </section>
 
-    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="820px" @closed="resetForm">
+    <el-dialog
+      v-model="dialogVisible"
+      :title="dialogTitle"
+      width="760px"
+      class="monitoring-point-dialog"
+      align-center
+      @closed="resetForm"
+    >
       <el-form :model="form" label-width="100px">
         <div class="form-grid">
           <el-form-item label="点位名称" required>
             <el-input v-model="form.pointName" placeholder="请输入点位名称" />
           </el-form-item>
-          <el-form-item label="所属区域">
-            <el-input v-model="form.regionName" placeholder="请输入所属区域" />
+          <el-form-item label="所属水厂" required>
+            <el-select v-model="form.regionName" filterable style="width: 100%" placeholder="请选择所属水厂">
+              <el-option
+                v-for="option in waterPlantOptions"
+                :key="option.value"
+                :label="option.label"
+                :value="option.value"
+              />
+            </el-select>
           </el-form-item>
           <el-form-item label="点位坐标" required>
             <div class="location-picker">
@@ -135,26 +142,10 @@
           <el-form-item label="地图位置">
             <el-input v-model="form.address" placeholder="地图选点后自动回填，可再次编辑" />
           </el-form-item>
-          <el-form-item label="负责人">
-            <el-input v-model="form.ownerName" placeholder="请输入负责人" />
-          </el-form-item>
-          <el-form-item label="联系电话">
-            <el-input v-model="form.contactPhone" placeholder="请输入联系电话" />
-          </el-form-item>
           <el-form-item label="点位类型">
             <el-select v-model="form.pointType" style="width: 100%">
               <el-option
                 v-for="option in pointTypeOptions"
-                :key="option.value"
-                :label="option.label"
-                :value="option.value"
-              />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="监测频次">
-            <el-select v-model="form.frequencyType" style="width: 100%">
-              <el-option
-                v-for="option in frequencyTypeOptions"
                 :key="option.value"
                 :label="option.label"
                 :value="option.value"
@@ -170,9 +161,6 @@
                 :value="option.value"
               />
             </el-select>
-          </el-form-item>
-          <el-form-item label="服务人口">
-            <el-input-number v-model="form.servicePopulation" :min="0" style="width: 100%" />
           </el-form-item>
         </div>
       </el-form>
@@ -204,22 +192,18 @@ import { ElButton } from 'element-plus/es/components/button/index.mjs'
 import { ElDialog } from 'element-plus/es/components/dialog/index.mjs'
 import { ElForm, ElFormItem } from 'element-plus/es/components/form/index.mjs'
 import { ElInput } from 'element-plus/es/components/input/index.mjs'
-import { ElInputNumber } from 'element-plus/es/components/input-number/index.mjs'
 import { ElMessage } from 'element-plus/es/components/message/index.mjs'
 import { ElMessageBox } from 'element-plus/es/components/message-box/index.mjs'
 import { ElOption, ElSelect } from 'element-plus/es/components/select/index.mjs'
 import { ElTable, ElTableColumn } from 'element-plus/es/components/table/index.mjs'
-import { createMonitoringPointApi, exportMonitoringPointsApi, fetchMonitoringPointsApi, updateMonitoringPointApi } from '../api/lab'
+import { createMonitoringPointApi, exportMonitoringPointsApi, fetchDictItemsApi, fetchMonitoringPointsApi, updateMonitoringPointApi } from '../api/lab'
 import TablePagination from '../components/common/TablePagination.vue'
 import TiandituPointSelector from '../components/TiandituPointSelector.vue'
 import {
   DEFAULT_PAGE_SIZE,
-  dailyFrequencyType,
   disabledPointStatus,
   enabledPointStatus,
   factoryPointType,
-  frequencyTypeOptions,
-  frequencyTypeLabelMap,
   getEnumLabel,
   getStatusClass,
   pointStatusOptions,
@@ -228,7 +212,7 @@ import {
   pointTypeLabelMap
 } from '../utils/labEnums'
 
-const query = reactive({ pageNum: 1, pageSize: DEFAULT_PAGE_SIZE, keyword: '', pointType: '', pointStatus: '' })
+const query = reactive({ pageNum: 1, pageSize: DEFAULT_PAGE_SIZE, keyword: '', pointType: '', regionName: '', pointStatus: '' })
 const records = ref([])
 const total = ref(0)
 const dialogVisible = ref(false)
@@ -238,6 +222,7 @@ const statusUpdatingId = ref(null)
 const submitting = ref(false)
 const mapSelectorVisible = ref(false)
 const mapSelectorValue = reactive({ pointName: '', address: '', latitude: '', longitude: '' })
+const waterPlantOptions = ref([])
 
 const defaultForm = () => ({
   pointName: '',
@@ -245,12 +230,8 @@ const defaultForm = () => ({
   longitude: '',
   latitude: '',
   regionName: '',
-  ownerName: '',
-  contactPhone: '',
   pointType: factoryPointType,
-  frequencyType: dailyFrequencyType,
   pointStatus: enabledPointStatus,
-  servicePopulation: 0
 })
 
 const form = reactive(defaultForm())
@@ -307,12 +288,8 @@ function openEditDialog(row) {
     longitude: row.longitude || '',
     latitude: row.latitude || '',
     regionName: row.regionName || '',
-    ownerName: row.ownerName || '',
-    contactPhone: row.contactPhone || '',
     pointType: row.pointType || factoryPointType,
-    frequencyType: row.frequencyType || dailyFrequencyType,
-    pointStatus: row.pointStatus || enabledPointStatus,
-    servicePopulation: Number(row.servicePopulation) || 0
+    pointStatus: row.pointStatus || enabledPointStatus
   })
   dialogVisible.value = true
 }
@@ -328,6 +305,7 @@ function resetQuery() {
   query.pageSize = DEFAULT_PAGE_SIZE
   query.keyword = ''
   query.pointType = ''
+  query.regionName = ''
   query.pointStatus = ''
   activeStatKey.value = 'all'
   loadData()
@@ -355,12 +333,8 @@ function buildPayload(source) {
     longitude: source.longitude?.trim() || '',
     latitude: source.latitude?.trim() || '',
     regionName: source.regionName?.trim() || '',
-    ownerName: source.ownerName?.trim() || '',
-    contactPhone: source.contactPhone?.trim() || '',
     pointType: source.pointType || factoryPointType,
-    frequencyType: source.frequencyType || dailyFrequencyType,
-    pointStatus: source.pointStatus || enabledPointStatus,
-    servicePopulation: Number(source.servicePopulation) || 0
+    pointStatus: source.pointStatus || enabledPointStatus
   }
 }
 
@@ -403,6 +377,23 @@ async function loadData() {
   total.value = result.total || 0
 }
 
+function normalizeDictOptions(items) {
+  if (!Array.isArray(items)) {
+    return []
+  }
+  return items
+    .map((item) => ({
+      label: item.label || item.value || '',
+      value: item.value || item.label || ''
+    }))
+    .filter((item) => item.label && item.value)
+}
+
+async function loadWaterPlants() {
+  const result = await fetchDictItemsApi('water_plant')
+  waterPlantOptions.value = normalizeDictOptions(result)
+}
+
 async function handleExport() {
   try {
     await exportMonitoringPointsApi(query)
@@ -416,6 +407,10 @@ async function submit() {
   const payload = buildPayload(form)
   if (!payload.pointName) {
     ElMessage.warning('请先填写点位名称')
+    return
+  }
+  if (!payload.regionName) {
+    ElMessage.warning('请选择所属水厂')
     return
   }
   if (payload.pointStatus === enabledPointStatus && (!payload.longitude || !payload.latitude)) {
@@ -461,7 +456,10 @@ async function togglePointStatus(row) {
   }
 }
 
-onMounted(loadData)
+onMounted(() => {
+  loadData()
+  loadWaterPlants()
+})
 </script>
 
 <style scoped>
@@ -501,7 +499,24 @@ onMounted(loadData)
 .form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0 16px;
+  gap: 0 14px;
+}
+
+:deep(.monitoring-point-dialog .el-dialog__body) {
+  padding-bottom: 4px;
+}
+
+:deep(.el-dialog.monitoring-point-dialog) {
+  min-height: auto !important;
+  height: auto !important;
+}
+
+:deep(.monitoring-point-dialog .el-dialog__footer) {
+  padding-top: 8px;
+}
+
+:deep(.monitoring-point-dialog .el-form-item) {
+  margin-bottom: 10px;
 }
 
 .location-picker {

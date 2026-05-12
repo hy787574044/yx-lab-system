@@ -162,21 +162,17 @@ public class DetectionConfigService {
      */
     public PageResult<DetectionParameter> parameterPage(DetectionParameterQuery query) {
         String keyword = StrUtil.trim(query.getKeyword());
-        String parameterCategory = normalizeParameterCategoryCode(query.getParameterCategory());
         Page<DetectionParameter> page = detectionParameterMapper.selectPage(
                 PageUtils.buildPage(query),
                 new LambdaQueryWrapper<DetectionParameter>()
                         .and(StrUtil.isNotBlank(keyword), wrapper -> wrapper
                                 .like(DetectionParameter::getParameterName, keyword)
                                 .or()
-                                .like(DetectionParameter::getParameterCategory, keyword)
-                                .or()
                                 .like(DetectionParameter::getUnit, keyword)
                                 .or()
                                 .like(DetectionParameter::getReferenceStandard, keyword)
                                 .or()
                                 .like(DetectionParameter::getRemark, keyword))
-                        .eq(StrUtil.isNotBlank(parameterCategory), DetectionParameter::getParameterCategory, parameterCategory)
                         .eq(query.getEnabled() != null, DetectionParameter::getEnabled, query.getEnabled())
                         .orderByDesc(DetectionParameter::getCreatedTime));
         return new PageResult<>(page.getTotal(), page.getRecords());
@@ -398,14 +394,14 @@ public class DetectionConfigService {
      */
     public void deleteType(Long id) {
         DetectionType entity = requireType(id);
-        Long stepCount = detectionStepMapper.selectCount(new LambdaQueryWrapper<DetectionStep>()
+        Number stepCount = detectionStepMapper.selectCount(new LambdaQueryWrapper<DetectionStep>()
                 .eq(DetectionStep::getTypeId, entity.getId()));
-        if (stepCount != null && stepCount > 0) {
+        if (stepCount != null && stepCount.longValue() > 0L) {
             throw new BusinessException("当前检测套餐已配置检测步骤，不能删除");
         }
-        Long recordCount = detectionRecordMapper.selectCount(new LambdaQueryWrapper<DetectionRecord>()
+        Number recordCount = detectionRecordMapper.selectCount(new LambdaQueryWrapper<DetectionRecord>()
                 .eq(DetectionRecord::getDetectionTypeId, entity.getId()));
-        if (recordCount != null && recordCount > 0) {
+        if (recordCount != null && recordCount.longValue() > 0L) {
             throw new BusinessException("当前检测套餐已产生检测记录，不能删除");
         }
         detectionTypeMapper.deleteById(entity.getId());
@@ -496,14 +492,14 @@ public class DetectionConfigService {
         if (isParameterReferencedByType(entity.getId())) {
             throw new BusinessException("当前检测参数已被检测套餐引用，不能删除");
         }
-        Long methodCount = detectionMethodMapper.selectCount(new LambdaQueryWrapper<DetectionMethod>()
+        Number methodCount = detectionMethodMapper.selectCount(new LambdaQueryWrapper<DetectionMethod>()
                 .eq(DetectionMethod::getParameterId, entity.getId()));
-        if (methodCount != null && methodCount > 0) {
+        if (methodCount != null && methodCount.longValue() > 0L) {
             throw new BusinessException("当前检测参数已绑定检测方法，请先解除绑定后再删除");
         }
-        Long itemCount = detectionItemMapper.selectCount(new LambdaQueryWrapper<DetectionItem>()
+        Number itemCount = detectionItemMapper.selectCount(new LambdaQueryWrapper<DetectionItem>()
                 .eq(DetectionItem::getParameterId, entity.getId()));
-        if (itemCount != null && itemCount > 0) {
+        if (itemCount != null && itemCount.longValue() > 0L) {
             throw new BusinessException("当前检测参数已产生检测结果记录，不能删除");
         }
         detectionParameterMapper.deleteById(entity.getId());
@@ -689,7 +685,6 @@ public class DetectionConfigService {
 
     private void applyParameterCommand(DetectionParameter entity, DetectionParameterSaveCommand command) {
         entity.setParameterName(StrUtil.trim(command.getParameterName()));
-        entity.setParameterCategory(normalizeParameterCategoryCode(command.getParameterCategory()));
         entity.setStandardMin(command.getStandardMin());
         entity.setStandardMax(command.getStandardMax());
         entity.setUnit(StrUtil.trim(command.getUnit()));
@@ -697,20 +692,6 @@ public class DetectionConfigService {
         entity.setReferenceStandard(StrUtil.trim(command.getReferenceStandard()));
         entity.setEnabled(command.getEnabled());
         entity.setRemark(StrUtil.trim(command.getRemark()));
-    }
-
-    private String normalizeParameterCategoryCode(String parameterCategory) {
-        String category = StrUtil.trim(parameterCategory);
-        if ("原位检测".equals(category)) {
-            return "IN_SITU";
-        }
-        if ("现场测定".equals(category)) {
-            return "FIELD";
-        }
-        if ("实验室测定".equals(category)) {
-            return "LABORATORY";
-        }
-        return category;
     }
 
     private void applyMethodCommand(DetectionMethod entity, DetectionMethodSaveCommand command) {
@@ -765,9 +746,6 @@ public class DetectionConfigService {
 
     private void validateParameter(DetectionParameter entity, Long selfId) {
         validateEnabledFlag(entity.getEnabled(), "检测参数启用状态不合法");
-        if (StrUtil.isBlank(entity.getParameterCategory())) {
-            throw new BusinessException("参数类别不能为空");
-        }
         ensureParameterNameUnique(entity.getParameterName(), selfId);
         BigDecimal min = entity.getStandardMin();
         BigDecimal max = entity.getStandardMax();
@@ -794,54 +772,54 @@ public class DetectionConfigService {
         if (entity.getStepOrder() == null || entity.getStepOrder() <= 0) {
             throw new BusinessException("检测步骤顺序必须为正整数");
         }
-        Long duplicateOrderCount = detectionStepMapper.selectCount(new LambdaQueryWrapper<DetectionStep>()
+        Number duplicateOrderCount = detectionStepMapper.selectCount(new LambdaQueryWrapper<DetectionStep>()
                 .eq(DetectionStep::getTypeId, entity.getTypeId())
                 .eq(DetectionStep::getStepOrder, entity.getStepOrder())
                 .ne(selfId != null, DetectionStep::getId, selfId));
-        if (duplicateOrderCount != null && duplicateOrderCount > 0) {
+        if (duplicateOrderCount != null && duplicateOrderCount.longValue() > 0L) {
             throw new BusinessException("同一检测套餐下步骤顺序不能重复");
         }
-        Long duplicateNameCount = detectionStepMapper.selectCount(new LambdaQueryWrapper<DetectionStep>()
+        Number duplicateNameCount = detectionStepMapper.selectCount(new LambdaQueryWrapper<DetectionStep>()
                 .eq(DetectionStep::getTypeId, entity.getTypeId())
                 .eq(DetectionStep::getStepName, entity.getStepName())
                 .ne(selfId != null, DetectionStep::getId, selfId));
-        if (duplicateNameCount != null && duplicateNameCount > 0) {
+        if (duplicateNameCount != null && duplicateNameCount.longValue() > 0L) {
             throw new BusinessException("同一检测套餐下步骤名称不能重复");
         }
     }
 
     private void ensureTypeNameUnique(String typeName, Long selfId) {
-        Long duplicateCount = detectionTypeMapper.selectCount(new LambdaQueryWrapper<DetectionType>()
+        Number duplicateCount = detectionTypeMapper.selectCount(new LambdaQueryWrapper<DetectionType>()
                 .eq(DetectionType::getTypeName, typeName)
                 .ne(selfId != null, DetectionType::getId, selfId));
-        if (duplicateCount != null && duplicateCount > 0) {
+        if (duplicateCount != null && duplicateCount.longValue() > 0L) {
             throw new BusinessException("检测套餐名称不能重复");
         }
     }
 
     private void ensureProjectGroupNameUnique(String groupName, Long selfId) {
-        Long duplicateCount = detectionProjectGroupMapper.selectCount(new LambdaQueryWrapper<DetectionProjectGroup>()
+        Number duplicateCount = detectionProjectGroupMapper.selectCount(new LambdaQueryWrapper<DetectionProjectGroup>()
                 .eq(DetectionProjectGroup::getGroupName, groupName)
                 .ne(selfId != null, DetectionProjectGroup::getId, selfId));
-        if (duplicateCount != null && duplicateCount > 0) {
+        if (duplicateCount != null && duplicateCount.longValue() > 0L) {
             throw new BusinessException("检测项目组名称不能重复");
         }
     }
 
     private void ensureParameterNameUnique(String parameterName, Long selfId) {
-        Long duplicateCount = detectionParameterMapper.selectCount(new LambdaQueryWrapper<DetectionParameter>()
+        Number duplicateCount = detectionParameterMapper.selectCount(new LambdaQueryWrapper<DetectionParameter>()
                 .eq(DetectionParameter::getParameterName, parameterName)
                 .ne(selfId != null, DetectionParameter::getId, selfId));
-        if (duplicateCount != null && duplicateCount > 0) {
+        if (duplicateCount != null && duplicateCount.longValue() > 0L) {
             throw new BusinessException("检测参数名称不能重复");
         }
     }
 
     private void ensureMethodNameUnique(String methodName, Long selfId) {
-        Long duplicateCount = detectionMethodMapper.selectCount(new LambdaQueryWrapper<DetectionMethod>()
+        Number duplicateCount = detectionMethodMapper.selectCount(new LambdaQueryWrapper<DetectionMethod>()
                 .eq(DetectionMethod::getMethodName, methodName)
                 .ne(selfId != null, DetectionMethod::getId, selfId));
-        if (duplicateCount != null && duplicateCount > 0) {
+        if (duplicateCount != null && duplicateCount.longValue() > 0L) {
             throw new BusinessException("检测方法名称不能重复");
         }
     }
@@ -850,10 +828,10 @@ public class DetectionConfigService {
         if (StrUtil.isBlank(methodCode)) {
             return;
         }
-        Long duplicateCount = detectionMethodMapper.selectCount(new LambdaQueryWrapper<DetectionMethod>()
+        Number duplicateCount = detectionMethodMapper.selectCount(new LambdaQueryWrapper<DetectionMethod>()
                 .eq(DetectionMethod::getMethodCode, methodCode)
                 .ne(selfId != null, DetectionMethod::getId, selfId));
-        if (duplicateCount != null && duplicateCount > 0) {
+        if (duplicateCount != null && duplicateCount.longValue() > 0L) {
             throw new BusinessException("检测方法编码不能重复");
         }
     }
@@ -1176,9 +1154,9 @@ public class DetectionConfigService {
         if (parameterId == null) {
             return false;
         }
-        Long typeCount = detectionTypeMapper.selectCount(new LambdaQueryWrapper<DetectionType>()
+        Number typeCount = detectionTypeMapper.selectCount(new LambdaQueryWrapper<DetectionType>()
                 .like(DetectionType::getParameterIds, String.valueOf(parameterId)));
-        if (typeCount == null || typeCount == 0) {
+        if (typeCount == null || typeCount.longValue() == 0L) {
             return false;
         }
         return detectionTypeMapper.selectList(new LambdaQueryWrapper<DetectionType>()
@@ -1350,10 +1328,10 @@ public class DetectionConfigService {
     }
 
     private boolean hasProcessingDetections(Long typeId) {
-        Long count = detectionRecordMapper.selectCount(new LambdaQueryWrapper<DetectionRecord>()
+        Number count = detectionRecordMapper.selectCount(new LambdaQueryWrapper<DetectionRecord>()
                 .eq(DetectionRecord::getDetectionTypeId, typeId)
                 .eq(DetectionRecord::getDetectionStatus, SUBMITTED_DETECTION_STATUS));
-        return count != null && count > 0L;
+        return count != null && count.longValue() > 0L;
     }
 
     private boolean equalsNullableLong(Long left, Long right) {
@@ -1444,7 +1422,6 @@ public class DetectionConfigService {
         DetectionParameterMethodBindingVO vo = new DetectionParameterMethodBindingVO();
         vo.setId(parameter.getId());
         vo.setParameterName(parameter.getParameterName());
-        vo.setParameterCategory(parameter.getParameterCategory());
         vo.setStandardMin(parameter.getStandardMin());
         vo.setStandardMax(parameter.getStandardMax());
         vo.setUnit(parameter.getUnit());

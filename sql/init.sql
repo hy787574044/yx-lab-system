@@ -109,7 +109,7 @@ DROP TABLE IF EXISTS lab_flow_config;
 CREATE TABLE lab_flow_config (
     id BIGINT PRIMARY KEY,
     flow_name VARCHAR(128) NOT NULL,
-    flow_type VARCHAR(32) NOT NULL COMMENT 'REVIEW审核流程，PUBLISH发布流程',
+    flow_type VARCHAR(32) NOT NULL COMMENT 'REVIEW瀹℃牳娴佺▼锛孭UBLISH鍙戝竷娴佺▼',
     scope_name VARCHAR(128) NOT NULL,
     default_flag TINYINT DEFAULT 0,
     status TINYINT DEFAULT 1,
@@ -136,7 +136,7 @@ CREATE TABLE lab_flow_node (
     assignee_id BIGINT,
     assignee_name VARCHAR(64),
     required_flag TINYINT DEFAULT 1,
-    reject_mode VARCHAR(32) DEFAULT 'PREVIOUS' COMMENT 'PREVIOUS退回上一步，DETECTION退回检测，TERMINATE流程终止',
+    reject_mode VARCHAR(32) DEFAULT 'PREVIOUS' COMMENT 'PREVIOUS閫€鍥炰笂涓€姝ワ紝DETECTION閫€鍥炴娴嬶紝TERMINATE娴佺▼缁堟',
     deleted TINYINT DEFAULT 0,
     created_by BIGINT,
     created_name VARCHAR(64),
@@ -186,13 +186,13 @@ CREATE TABLE lab_sampling_plan (
     start_time DATETIME,
     end_time DATETIME,
     sampler_id BIGINT,
+    sampler_ids VARCHAR(255),
     sampler_name VARCHAR(64),
     sampling_type VARCHAR(32),
     sample_type VARCHAR(32),
     detection_type_id BIGINT,
     detection_type_name VARCHAR(128),
     detection_config_snapshot TEXT,
-    sampling_basis VARCHAR(1000),
     cycle_type VARCHAR(32),
     plan_status VARCHAR(32),
     remark VARCHAR(500),
@@ -215,6 +215,7 @@ CREATE TABLE lab_sampling_task (
     point_name VARCHAR(128) NOT NULL,
     sampling_time DATETIME,
     sampler_id BIGINT,
+    sampler_ids VARCHAR(255),
     sampler_name VARCHAR(64),
     sample_type VARCHAR(32),
     sample_register_status VARCHAR(32),
@@ -223,7 +224,6 @@ CREATE TABLE lab_sampling_task (
     detection_type_id BIGINT,
     detection_type_name VARCHAR(128),
     detection_config_snapshot TEXT,
-    sampling_basis VARCHAR(1000),
     task_status VARCHAR(32),
     started_time DATETIME,
     onsite_metrics TEXT,
@@ -254,15 +254,12 @@ CREATE TABLE lab_sample (
     point_id BIGINT NOT NULL,
     point_name VARCHAR(128) NOT NULL,
     sample_type VARCHAR(32),
-    quality_control_type VARCHAR(32),
     detection_items VARCHAR(1000),
     detection_type_id BIGINT,
     detection_type_name VARCHAR(128),
     detection_config_snapshot TEXT,
     review_flow_id BIGINT,
     review_flow_name VARCHAR(128),
-    publish_flow_id BIGINT,
-    publish_flow_name VARCHAR(128),
     sampling_time DATETIME,
     sample_total_volume VARCHAR(64),
     sample_bottle_count VARCHAR(32),
@@ -282,8 +279,7 @@ CREATE TABLE lab_sample (
     updated_name VARCHAR(64),
     updated_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     KEY idx_lab_sample_no (sample_no),
-    KEY idx_lab_sample_review_flow_id (review_flow_id),
-    KEY idx_lab_sample_publish_flow_id (publish_flow_id)
+    KEY idx_lab_sample_review_flow_id (review_flow_id)
 );
 
 DROP TABLE IF EXISTS lab_sample_no_sequence;
@@ -320,7 +316,6 @@ DROP TABLE IF EXISTS lab_detection_parameter;
 CREATE TABLE lab_detection_parameter (
     id BIGINT PRIMARY KEY,
     parameter_name VARCHAR(64) NOT NULL,
-    parameter_category VARCHAR(32) NOT NULL DEFAULT '实验室测定',
     standard_min DECIMAL(10,2),
     standard_max DECIMAL(10,2),
     unit VARCHAR(32),
@@ -603,108 +598,109 @@ CREATE TABLE lab_document_share (
 );
 
 INSERT INTO lab_role (id, role_code, role_name, role_scope, status, remark, deleted, created_name, updated_name)
-VALUES (901, 'ADMIN', '系统管理员', '全系统', 1, '负责系统配置、账号维护与基础资料管理', 0, 'system', 'system');
+VALUES (901, 'ADMIN', '绯荤粺绠＄悊鍛?, '鍏ㄧ郴缁?, 1, '璐熻矗绯荤粺閰嶇疆銆佽处鍙风淮鎶や笌鍩虹璧勬枡绠＄悊', 0, 'system', 'system');
 
 INSERT INTO lab_role (id, role_code, role_name, role_scope, status, remark, deleted, created_name, updated_name)
-VALUES (902, 'SAMPLER', '采样员', '采样闭环', 1, '负责采样任务执行、样品登录与现场填报', 0, 'system', 'system');
+VALUES (902, 'SAMPLER', '閲囨牱鍛?, '閲囨牱闂幆', 1, '璐熻矗閲囨牱浠诲姟鎵ц銆佹牱鍝佺櫥褰曚笌鐜板満濉姤', 0, 'system', 'system');
 
 INSERT INTO lab_role (id, role_code, role_name, role_scope, status, remark, deleted, created_name, updated_name)
-VALUES (903, 'DETECTOR', '检测员', '检测闭环', 1, '负责检测分析、结果录入与重检提交', 0, 'system', 'system');
+VALUES (903, 'DETECTOR', '妫€娴嬪憳', '妫€娴嬮棴鐜?, 1, '璐熻矗妫€娴嬪垎鏋愩€佺粨鏋滃綍鍏ヤ笌閲嶆鎻愪氦', 0, 'system', 'system');
 
 INSERT INTO lab_role (id, role_code, role_name, role_scope, status, remark, deleted, created_name, updated_name)
-VALUES (904, 'REVIEWER', '审核员', '审核闭环', 1, '负责审核通过、驳回与重检门禁控制', 0, 'system', 'system');
+VALUES (904, 'REVIEWER', '瀹℃牳鍛?, '瀹℃牳闂幆', 1, '璐熻矗瀹℃牳閫氳繃銆侀┏鍥炰笌閲嶆闂ㄧ鎺у埗', 0, 'system', 'system');
 
 INSERT INTO lab_role (id, role_code, role_name, role_scope, status, remark, deleted, created_name, updated_name)
-VALUES (905, 'REPORTER', '报告员', '报告闭环', 1, '负责正式报告生成、发布与推送', 0, 'system', 'system');
+VALUES (905, 'REPORTER', '鎶ュ憡鍛?, '鎶ュ憡闂幆', 1, '璐熻矗姝ｅ紡鎶ュ憡鐢熸垚銆佸彂甯冧笌鎺ㄩ€?, 0, 'system', 'system');
 
 INSERT INTO lab_org (id, org_code, org_name, parent_id, parent_name, org_type, status, remark, deleted, created_name, updated_name)
-VALUES (801, 'YX-LAB', '阳新实验室', NULL, NULL, '中心实验室', 1, '系统默认顶级机构', 0, 'system', 'system');
+VALUES (801, 'YX-LAB', '闃虫柊瀹為獙瀹?, NULL, NULL, '涓績瀹為獙瀹?, 1, '绯荤粺榛樿椤剁骇鏈烘瀯', 0, 'system', 'system');
 
 INSERT INTO lab_org (id, org_code, org_name, parent_id, parent_name, org_type, status, remark, deleted, created_name, updated_name)
-VALUES (802, 'YX-SAMPLE', '采样组', 801, '阳新实验室', '业务组', 1, '负责采样任务与样品登录', 0, 'system', 'system');
+VALUES (802, 'YX-SAMPLE', '閲囨牱缁?, 801, '闃虫柊瀹為獙瀹?, '涓氬姟缁?, 1, '璐熻矗閲囨牱浠诲姟涓庢牱鍝佺櫥褰?, 0, 'system', 'system');
 
 INSERT INTO lab_org (id, org_code, org_name, parent_id, parent_name, org_type, status, remark, deleted, created_name, updated_name)
-VALUES (803, 'YX-DETECT', '检测审核组', 801, '阳新实验室', '业务组', 1, '负责检测、审核与报告发布', 0, 'system', 'system');
+VALUES (803, 'YX-DETECT', '妫€娴嬪鏍哥粍', 801, '闃虫柊瀹為獙瀹?, '涓氬姟缁?, 1, '璐熻矗妫€娴嬨€佸鏍镐笌鎶ュ憡鍙戝竷', 0, 'system', 'system');
 
 INSERT INTO lab_dict (id, dict_code, dict_name, module_name, item_text, status, remark, deleted, created_name, updated_name)
-VALUES (851, 'instrument_status', '设备状态字典', '仪器管理', '闲置\n使用中\n维保中\n停用', 1, '用于仪器设备状态展示与筛选', 0, 'system', 'system');
+VALUES (851, 'instrument_status', '璁惧鐘舵€佸瓧鍏?, '浠櫒绠＄悊', '闂茬疆\n浣跨敤涓璡n缁翠繚涓璡n鍋滅敤', 1, '鐢ㄤ簬浠櫒璁惧鐘舵€佸睍绀轰笌绛涢€?, 0, 'system', 'system');
 
 INSERT INTO lab_dict (id, dict_code, dict_name, module_name, item_text, status, remark, deleted, created_name, updated_name)
-VALUES (852, 'point_status', '点位状态字典', '监测点位', '启用\n停用\n维护中', 1, '用于监测点位状态管理', 0, 'system', 'system');
+VALUES (852, 'point_status', '鐐逛綅鐘舵€佸瓧鍏?, '鐩戞祴鐐逛綅', '鍚敤\n鍋滅敤\n缁存姢涓?, 1, '鐢ㄤ簬鐩戞祴鐐逛綅鐘舵€佺鐞?, 0, 'system', 'system');
 
 INSERT INTO lab_dict (id, dict_code, dict_name, module_name, item_text, status, remark, deleted, created_name, updated_name)
-VALUES (853, 'plan_status', '计划状态字典', '采样计划', '草稿\n待下发\n执行中\n已暂停\n已完成', 1, '用于采样计划生命周期控制', 0, 'system', 'system');
+VALUES (853, 'plan_status', '璁″垝鐘舵€佸瓧鍏?, '閲囨牱璁″垝', '鑽夌\n寰呬笅鍙慭n鎵ц涓璡n宸叉殏鍋淺n宸插畬鎴?, 1, '鐢ㄤ簬閲囨牱璁″垝鐢熷懡鍛ㄦ湡鎺у埗', 0, 'system', 'system');
 
 INSERT INTO lab_dict (id, dict_code, dict_name, module_name, item_text, status, remark, deleted, created_name, updated_name)
-VALUES (854, 'task_status', '任务状态字典', '采样任务', '待执行\n执行中\n已完成\n已废弃', 1, '用于采样任务流转控制', 0, 'system', 'system');
+VALUES (854, 'task_status', '浠诲姟鐘舵€佸瓧鍏?, '閲囨牱浠诲姟', '寰呮墽琛孿n鎵ц涓璡n宸插畬鎴怽n宸插簾寮?, 1, '鐢ㄤ簬閲囨牱浠诲姟娴佽浆鎺у埗', 0, 'system', 'system');
 
 INSERT INTO lab_dict (id, dict_code, dict_name, module_name, item_text, status, remark, deleted, created_name, updated_name)
-VALUES (855, 'sample_status', '样品状态字典', '样品管理', '待登录\n已登录\n检测中\n已完成\n已退回', 1, '用于样品流转状态控制', 0, 'system', 'system');
+VALUES (855, 'sample_status', '鏍峰搧鐘舵€佸瓧鍏?, '鏍峰搧绠＄悊', '寰呯櫥褰昞n宸茬櫥褰昞n妫€娴嬩腑\n宸插畬鎴怽n宸查€€鍥?, 1, '鐢ㄤ簬鏍峰搧娴佽浆鐘舵€佹帶鍒?, 0, 'system', 'system');
 
 INSERT INTO lab_dict (id, dict_code, dict_name, module_name, item_text, status, remark, deleted, created_name, updated_name)
-VALUES (856, 'detection_status', '检测状态字典', '检测管理', '待检测\n检测中\n待复核\n已退回\n已完成', 1, '用于检测流程状态控制', 0, 'system', 'system');
+VALUES (856, 'detection_status', '妫€娴嬬姸鎬佸瓧鍏?, '妫€娴嬬鐞?, '寰呮娴媆n妫€娴嬩腑\n寰呭鏍竆n宸查€€鍥瀄n宸插畬鎴?, 1, '鐢ㄤ簬妫€娴嬫祦绋嬬姸鎬佹帶鍒?, 0, 'system', 'system');
 
 INSERT INTO lab_dict (id, dict_code, dict_name, module_name, item_text, status, remark, deleted, created_name, updated_name)
-VALUES (857, 'report_status', '报告状态字典', '报告管理', '待生成\n待发布\n已发布\n已撤回', 1, '用于报告正式产物状态管理', 0, 'system', 'system');
+VALUES (857, 'report_status', '鎶ュ憡鐘舵€佸瓧鍏?, '鎶ュ憡绠＄悊', '寰呯敓鎴怽n寰呭彂甯僜n宸插彂甯僜n宸叉挙鍥?, 1, '鐢ㄤ簬鎶ュ憡姝ｅ紡浜х墿鐘舵€佺鐞?, 0, 'system', 'system');
 
 INSERT INTO lab_dict (id, dict_code, dict_name, module_name, item_text, status, remark, deleted, created_name, updated_name)
-VALUES (858, 'cycle_type', '周期类型字典', '基础配置', '每日\n每周\n每月\n每季度', 1, '用于周期计划与自动任务配置', 0, 'system', 'system');
+VALUES (858, 'cycle_type', '鍛ㄦ湡绫诲瀷瀛楀吀', '鍩虹閰嶇疆', '姣忔棩\n姣忓懆\n姣忔湀\n姣忓搴?, 1, '鐢ㄤ簬鍛ㄦ湡璁″垝涓庤嚜鍔ㄤ换鍔￠厤缃?, 0, 'system', 'system');
+
 
 INSERT INTO lab_dict (id, dict_code, dict_name, module_name, item_text, status, remark, deleted, created_name, updated_name)
-VALUES (859, 'detection_parameter_category', '参数类别', '检测管理', 'IN_SITU=原位检测\nFIELD=现场测定\nLABORATORY=实验室测定', 1, '检测参数基础台账参数类别', 0, 'system', 'system');
+VALUES (860, 'water_plant', '鎵€灞炴按鍘?, '閲囨牱绠＄悊', 'EAST=鍩庝笢姘村巶\nWEST=鍩庤タ姘村巶', 1, '鐢ㄤ簬鐩戞祴鐐瑰彴璐︽墍灞炴按鍘備笅鎷夐厤缃?, 0, 'system', 'system');
 
 INSERT INTO lab_flow_config (id, flow_name, flow_type, scope_name, default_flag, status, remark, deleted, created_name, updated_name)
-VALUES (9601, '常规三级审核', 'REVIEW', '全部样品', 1, 1, '样品检测完成后进入初审、复审、终审。', 0, 'system', 'system');
+VALUES (9601, '甯歌涓夌骇瀹℃牳', 'REVIEW', '鍏ㄩ儴鏍峰搧', 1, 1, '鏍峰搧妫€娴嬪畬鎴愬悗杩涘叆鍒濆銆佸瀹°€佺粓瀹°€?, 0, 'system', 'system');
 
 INSERT INTO lab_flow_config (id, flow_name, flow_type, scope_name, default_flag, status, remark, deleted, created_name, updated_name)
-VALUES (9602, '报告发布审批', 'PUBLISH', '全部报告', 1, 1, '报告生成后先复核，再确认发布。', 0, 'system', 'system');
+VALUES (9602, '鎶ュ憡鍙戝竷瀹℃壒', 'PUBLISH', '鍏ㄩ儴鎶ュ憡', 1, 1, '鎶ュ憡鐢熸垚鍚庡厛澶嶆牳锛屽啀纭鍙戝竷銆?, 0, 'system', 'system');
 
 INSERT INTO lab_flow_node (id, flow_id, node_order, node_name, role_name, role_code, assignee_id, assignee_name, required_flag, reject_mode, deleted, created_name, updated_name)
-VALUES (9611, 9601, 1, '初审', '审核员', 'REVIEWER', NULL, NULL, 1, 'DETECTION', 0, 'system', 'system');
+VALUES (9611, 9601, 1, '鍒濆', '瀹℃牳鍛?, 'REVIEWER', NULL, NULL, 1, 'DETECTION', 0, 'system', 'system');
 
 INSERT INTO lab_flow_node (id, flow_id, node_order, node_name, role_name, role_code, assignee_id, assignee_name, required_flag, reject_mode, deleted, created_name, updated_name)
-VALUES (9612, 9601, 2, '复审', '审核员', 'REVIEWER', NULL, NULL, 1, 'PREVIOUS', 0, 'system', 'system');
+VALUES (9612, 9601, 2, '澶嶅', '瀹℃牳鍛?, 'REVIEWER', NULL, NULL, 1, 'PREVIOUS', 0, 'system', 'system');
 
 INSERT INTO lab_flow_node (id, flow_id, node_order, node_name, role_name, role_code, assignee_id, assignee_name, required_flag, reject_mode, deleted, created_name, updated_name)
-VALUES (9613, 9601, 3, '终审', '审核员', 'REVIEWER', NULL, NULL, 1, 'PREVIOUS', 0, 'system', 'system');
+VALUES (9613, 9601, 3, '缁堝', '瀹℃牳鍛?, 'REVIEWER', NULL, NULL, 1, 'PREVIOUS', 0, 'system', 'system');
 
 INSERT INTO lab_flow_node (id, flow_id, node_order, node_name, role_name, role_code, assignee_id, assignee_name, required_flag, reject_mode, deleted, created_name, updated_name)
-VALUES (9621, 9602, 1, '报告复核', '报告员', 'REPORTER', NULL, NULL, 1, 'PREVIOUS', 0, 'system', 'system');
+VALUES (9621, 9602, 1, '鎶ュ憡澶嶆牳', '鎶ュ憡鍛?, 'REPORTER', NULL, NULL, 1, 'PREVIOUS', 0, 'system', 'system');
 
 INSERT INTO lab_flow_node (id, flow_id, node_order, node_name, role_name, role_code, assignee_id, assignee_name, required_flag, reject_mode, deleted, created_name, updated_name)
-VALUES (9622, 9602, 2, '发布确认', '报告员', 'REPORTER', NULL, NULL, 1, 'TERMINATE', 0, 'system', 'system');
+VALUES (9622, 9602, 2, '鍙戝竷纭', '鎶ュ憡鍛?, 'REPORTER', NULL, NULL, 1, 'TERMINATE', 0, 'system', 'system');
 
 INSERT INTO lab_user (id, username, password, real_name, role_code, phone, status, deleted, created_name, updated_name)
-VALUES (1001, 'admin', 'e86f78a8a3caf0b60d8e74e5942aa6d86dc150cd3c03338aef25b7d2d7e3acc7', '系统管理员', 'ADMIN', '13800000000', 1, 0, 'system', 'system');
+VALUES (1001, 'admin', 'e86f78a8a3caf0b60d8e74e5942aa6d86dc150cd3c03338aef25b7d2d7e3acc7', '绯荤粺绠＄悊鍛?, 'ADMIN', '13800000000', 1, 0, 'system', 'system');
 
 INSERT INTO lab_user (id, username, password, real_name, role_code, phone, status, deleted, created_name, updated_name)
-VALUES (1002, 'sampler', 'e86f78a8a3caf0b60d8e74e5942aa6d86dc150cd3c03338aef25b7d2d7e3acc7', '采样员', 'SAMPLER', '13800000001', 1, 0, 'system', 'system');
+VALUES (1002, 'sampler', 'e86f78a8a3caf0b60d8e74e5942aa6d86dc150cd3c03338aef25b7d2d7e3acc7', '閲囨牱鍛?, 'SAMPLER', '13800000001', 1, 0, 'system', 'system');
 
 INSERT INTO lab_user (id, username, password, real_name, role_code, phone, status, deleted, created_name, updated_name)
-VALUES (1003, 'reviewer', 'e86f78a8a3caf0b60d8e74e5942aa6d86dc150cd3c03338aef25b7d2d7e3acc7', '审核员', 'REVIEWER', '13800000002', 1, 0, 'system', 'system');
+VALUES (1003, 'reviewer', 'e86f78a8a3caf0b60d8e74e5942aa6d86dc150cd3c03338aef25b7d2d7e3acc7', '瀹℃牳鍛?, 'REVIEWER', '13800000002', 1, 0, 'system', 'system');
 
-UPDATE lab_user SET real_name = '系统管理员', org_id = 801, org_name = '阳新实验室' WHERE id = 1001;
-UPDATE lab_user SET real_name = '采样员', org_id = 802, org_name = '采样组' WHERE id = 1002;
-UPDATE lab_user SET real_name = '审核员', org_id = 803, org_name = '检测审核组' WHERE id = 1003;
+UPDATE lab_user SET real_name = '绯荤粺绠＄悊鍛?, org_id = 801, org_name = '闃虫柊瀹為獙瀹? WHERE id = 1001;
+UPDATE lab_user SET real_name = '閲囨牱鍛?, org_id = 802, org_name = '閲囨牱缁? WHERE id = 1002;
+UPDATE lab_user SET real_name = '瀹℃牳鍛?, org_id = 803, org_name = '妫€娴嬪鏍哥粍' WHERE id = 1003;
 
 INSERT INTO lab_monitoring_point (id, point_name, longitude, latitude, region_name, service_population, frequency_type, owner_id, owner_name, contact_phone, point_type, point_status, created_name, updated_name)
-VALUES (2001, '城东水厂出厂水', '115.2121', '30.2211', '阳新县城东片区', 36000, 'DAILY', 1002, '采样员', '13800000001', 'FACTORY', 'ENABLED', 'system', 'system');
+VALUES (2001, '鍩庝笢姘村巶鍑哄巶姘?, '115.2121', '30.2211', '闃虫柊鍘垮煄涓滅墖鍖?, 36000, 'DAILY', 1002, '閲囨牱鍛?, '13800000001', 'FACTORY', 'ENABLED', 'system', 'system');
 
 INSERT INTO lab_detection_parameter (id, parameter_name, standard_min, standard_max, unit, exceed_rule, reference_standard, enabled, created_name, updated_name)
 VALUES
 (3001, 'pH', 6.50, 8.50, '', 'OUT_OF_RANGE', 'GB 5749-2022', 1, 'system', 'system'),
-(3002, '浊度', 0.00, 1.00, 'NTU', 'GREATER_THAN_MAX', 'GB 5749-2022', 1, 'system', 'system'),
-(3003, '余氯', 0.05, 2.00, 'mg/L', 'OUT_OF_RANGE', 'GB 5749-2022', 1, 'system', 'system'),
-(3004, '氨氮', 0.00, 0.50, 'mg/L', 'GREATER_THAN_MAX', 'GB 5749-2022', 1, 'system', 'system');
+(3002, '娴婂害', 0.00, 1.00, 'NTU', 'GREATER_THAN_MAX', 'GB 5749-2022', 1, 'system', 'system'),
+(3003, '浣欐隘', 0.05, 2.00, 'mg/L', 'OUT_OF_RANGE', 'GB 5749-2022', 1, 'system', 'system'),
+(3004, '姘ㄦ爱', 0.00, 0.50, 'mg/L', 'GREATER_THAN_MAX', 'GB 5749-2022', 1, 'system', 'system');
 
 INSERT INTO lab_detection_type (id, type_name, parameter_ids, parameter_names, enabled, created_name, updated_name)
-VALUES (3101, '日检九项', '3001,3002,3003,3004', 'pH,浊度,余氯,氨氮', 1, 'system', 'system');
+VALUES (3101, '鏃ユ涔濋」', '3001,3002,3003,3004', 'pH,娴婂害,浣欐隘,姘ㄦ爱', 1, 'system', 'system');
 
 INSERT INTO lab_detection_step (id, type_id, type_name, step_name, step_order, step_description, reagent_requirement, operation_requirement, created_name, updated_name)
 VALUES
-(3201, 3101, '日检九项', '样品预处理', 1, '确认样品编号与保存条件，轻摇混匀后静置。', '无', '佩戴防护装备，核对样品标签。', 'system', 'system'),
-(3202, 3101, '日检九项', '参数检测', 2, '按检测参数逐项完成仪器或人工检测。', '比色试剂、标准液', '按照标准操作步骤记录原始值。', 'system', 'system'),
-(3203, 3101, '日检九项', '结果复核', 3, '检测完成后核对异常值并提交。', '无', '超标项需补充备注。', 'system', 'system');
+(3201, 3101, '鏃ユ涔濋」', '鏍峰搧棰勫鐞?, 1, '纭鏍峰搧缂栧彿涓庝繚瀛樻潯浠讹紝杞绘憞娣峰寑鍚庨潤缃€?, '鏃?, '浣╂埓闃叉姢瑁呭锛屾牳瀵规牱鍝佹爣绛俱€?, 'system', 'system'),
+(3202, 3101, '鏃ユ涔濋」', '鍙傛暟妫€娴?, 2, '鎸夋娴嬪弬鏁伴€愰」瀹屾垚浠櫒鎴栦汉宸ユ娴嬨€?, '姣旇壊璇曞墏銆佹爣鍑嗘恫', '鎸夌収鏍囧噯鎿嶄綔姝ラ璁板綍鍘熷鍊笺€?, 'system', 'system'),
+(3203, 3101, '鏃ユ涔濋」', '缁撴灉澶嶆牳', 3, '妫€娴嬪畬鎴愬悗鏍稿寮傚父鍊煎苟鎻愪氦銆?, '鏃?, '瓒呮爣椤归渶琛ュ厖澶囨敞銆?, 'system', 'system');
 
 INSERT INTO lab_report_template (id, report_type, template_name, default_template, template_content, created_name, updated_name)
-VALUES (4001, 'DAILY', '日检默认模板', 1, '样品编号：${sampleNo}\n点位名称：${pointName}\n检测类型：${detectionType}\n检测结果：${detectionResult}\n结论：请结合现场复核。', 'system', 'system');
+VALUES (4001, 'DAILY', '鏃ユ榛樿妯℃澘', 1, '鏍峰搧缂栧彿锛?{sampleNo}\n鐐逛綅鍚嶇О锛?{pointName}\n妫€娴嬬被鍨嬶細${detectionType}\n妫€娴嬬粨鏋滐細${detectionResult}\n缁撹锛氳缁撳悎鐜板満澶嶆牳銆?, 'system', 'system');

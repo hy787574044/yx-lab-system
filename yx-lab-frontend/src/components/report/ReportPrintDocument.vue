@@ -30,7 +30,7 @@
                   <th>样品编号</th>
                   <td>{{ text(previewData.sampleNo) }}</td>
                   <th>样品类型</th>
-                  <td>{{ text(previewData.sampleTypeLabel) }}</td>
+                  <td colspan="3">{{ text(previewData.sampleTypeLabel) }}</td>
                 </tr>
                 <tr>
                   <th>采样点位</th>
@@ -40,9 +40,7 @@
                 </tr>
                 <tr>
                   <th>采样人员</th>
-                  <td>{{ text(previewData.samplerName) }}</td>
-                  <th>质控品类</th>
-                  <td>{{ text(previewData.qualityControlTypeLabel) }}</td>
+                  <td colspan="3">{{ text(previewData.samplerName) }}</td>
                 </tr>
               </tbody>
             </table>

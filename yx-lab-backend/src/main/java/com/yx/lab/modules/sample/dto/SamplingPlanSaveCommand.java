@@ -32,6 +32,8 @@ public class SamplingPlanSaveCommand {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime endTime;
 
+    private List<Long> samplerIds;
+
     private Long samplerId;
 
     private String samplerName;
@@ -40,16 +42,6 @@ public class SamplingPlanSaveCommand {
 
     @NotBlank(message = "样品类型不能为空")
     private String sampleType;
-
-    @NotNull(message = "检测套餐不能为空")
-    private Long detectionTypeId;
-
-    private String detectionTypeName;
-
-    private List<SampleDetectionConfigItem> detectionConfigItems;
-
-    @NotNull(message = "采样依据不能为空")
-    private List<String> samplingBasisList;
 
     private String cycleType;
 

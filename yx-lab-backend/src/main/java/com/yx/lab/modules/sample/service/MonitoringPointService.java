@@ -35,6 +35,7 @@ public class MonitoringPointService {
                 new LambdaQueryWrapper<MonitoringPoint>()
                         .like(StrUtil.isNotBlank(query.getKeyword()), MonitoringPoint::getPointName, query.getKeyword())
                         .eq(StrUtil.isNotBlank(query.getPointType()), MonitoringPoint::getPointType, query.getPointType())
+                        .eq(StrUtil.isNotBlank(query.getRegionName()), MonitoringPoint::getRegionName, query.getRegionName())
                         .eq(StrUtil.isNotBlank(query.getPointStatus()), MonitoringPoint::getPointStatus, query.getPointStatus())
                         .orderByDesc(MonitoringPoint::getCreatedTime));
         return new PageResult<>(page.getTotal(), page.getRecords());
@@ -96,11 +97,6 @@ public class MonitoringPointService {
         point.setLongitude(StrUtil.trim(command.getLongitude()));
         point.setLatitude(StrUtil.trim(command.getLatitude()));
         point.setRegionName(StrUtil.trim(command.getRegionName()));
-        point.setServicePopulation(command.getServicePopulation());
-        point.setFrequencyType(StrUtil.trim(command.getFrequencyType()));
-        point.setOwnerId(command.getOwnerId());
-        point.setOwnerName(StrUtil.trim(command.getOwnerName()));
-        point.setContactPhone(StrUtil.trim(command.getContactPhone()));
         point.setPointType(StrUtil.trim(command.getPointType()));
         point.setPointStatus(StrUtil.trim(command.getPointStatus()));
         validatePoint(point);

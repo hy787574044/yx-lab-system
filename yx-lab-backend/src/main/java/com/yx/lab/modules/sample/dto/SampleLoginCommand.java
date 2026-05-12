@@ -22,7 +22,6 @@ public class SampleLoginCommand {
     @NotBlank(message = "样品类型不能为空")
     private String sampleType;
 
-    private String qualityControlType;
 
     @NotBlank(message = "检测项目不能为空")
     private String detectionItems;
@@ -37,9 +36,7 @@ public class SampleLoginCommand {
 
     private String reviewFlowName;
 
-    private Long publishFlowId;
 
-    private String publishFlowName;
 
     @NotNull(message = "采样时间不能为空")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")

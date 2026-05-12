@@ -13,7 +13,6 @@ import com.yx.lab.common.util.PageUtils;
 import com.yx.lab.modules.sample.dto.SamplingTaskActionCommand;
 import com.yx.lab.modules.sample.dto.SamplingTaskCompleteCommand;
 import com.yx.lab.modules.sample.dto.SamplingTaskQuery;
-import com.yx.lab.modules.sample.dto.SampleDetectionConfigItem;
 import com.yx.lab.modules.sample.entity.LabSample;
 import com.yx.lab.modules.sample.entity.SamplingTask;
 import com.yx.lab.modules.sample.mapper.LabSampleMapper;
@@ -55,20 +54,18 @@ public class SamplingTaskService {
         if (isTodoScope(query)) {
             return pageTodoTasks(query);
         }
-        Page<SamplingTask> page = samplingTaskMapper.selectPage(
-                PageUtils.buildPage(query),
-                new LambdaQueryWrapper<SamplingTask>()
-                        .and(StrUtil.isNotBlank(query.getKeyword()), wrapper -> wrapper
-                                .like(SamplingTask::getTaskNo, query.getKeyword())
-                                .or()
-                                .like(SamplingTask::getPointName, query.getKeyword())
-                                .or()
-                                .like(SamplingTask::getSampleNo, query.getKeyword()))
-                        .eq(StrUtil.isNotBlank(query.getTaskStatus()), SamplingTask::getTaskStatus, query.getTaskStatus())
-                        .eq(resolveScopedSamplerId(query.getSamplerId()) != null,
-                                SamplingTask::getSamplerId,
-                                resolveScopedSamplerId(query.getSamplerId()))
-                        .orderByDesc(SamplingTask::getCreatedTime));
+        Long scopedSamplerId = resolveScopedSamplerId(query.getSamplerId());
+        LambdaQueryWrapper<SamplingTask> wrapper = new LambdaQueryWrapper<SamplingTask>()
+                .and(StrUtil.isNotBlank(query.getKeyword()), item -> item
+                        .like(SamplingTask::getTaskNo, query.getKeyword())
+                        .or()
+                        .like(SamplingTask::getPointName, query.getKeyword())
+                        .or()
+                        .like(SamplingTask::getSampleNo, query.getKeyword()))
+                .eq(StrUtil.isNotBlank(query.getTaskStatus()), SamplingTask::getTaskStatus, query.getTaskStatus());
+        applyTaskSamplerScope(wrapper, scopedSamplerId);
+        wrapper.orderByDesc(SamplingTask::getCreatedTime);
+        Page<SamplingTask> page = samplingTaskMapper.selectPage(PageUtils.buildPage(query), wrapper);
         page.getRecords().forEach(this::normalizeTaskFileUrlsForView);
         page.getRecords().forEach(this::enrichTaskDetectionConfigSnapshotForView);
         return new PageResult<>(page.getTotal(), page.getRecords());
@@ -103,20 +100,18 @@ public class SamplingTaskService {
     }
 
     private Long countTasksByStatus(String taskStatus) {
-        Number count = samplingTaskMapper.selectCount(new LambdaQueryWrapper<SamplingTask>()
-                .eq(StrUtil.isNotBlank(taskStatus), SamplingTask::getTaskStatus, taskStatus)
-                .eq(resolveScopedSamplerId(null) != null,
-                        SamplingTask::getSamplerId,
-                        resolveScopedSamplerId(null)));
+        LambdaQueryWrapper<SamplingTask> wrapper = new LambdaQueryWrapper<SamplingTask>()
+                .eq(StrUtil.isNotBlank(taskStatus), SamplingTask::getTaskStatus, taskStatus);
+        applyTaskSamplerScope(wrapper, resolveScopedSamplerId(null));
+        Number count = samplingTaskMapper.selectCount(wrapper);
         return count == null ? 0L : count.longValue();
     }
 
     private Long countUnloggedCompletedTasks() {
-        List<SamplingTask> completedTasks = samplingTaskMapper.selectList(new LambdaQueryWrapper<SamplingTask>()
-                .eq(SamplingTask::getTaskStatus, LabWorkflowConstants.SamplingTaskStatus.COMPLETED)
-                .eq(resolveScopedSamplerId(null) != null,
-                        SamplingTask::getSamplerId,
-                        resolveScopedSamplerId(null)));
+        LambdaQueryWrapper<SamplingTask> wrapper = new LambdaQueryWrapper<SamplingTask>()
+                .eq(SamplingTask::getTaskStatus, LabWorkflowConstants.SamplingTaskStatus.COMPLETED);
+        applyTaskSamplerScope(wrapper, resolveScopedSamplerId(null));
+        List<SamplingTask> completedTasks = samplingTaskMapper.selectList(wrapper);
         return completedTasks.stream()
                 .filter(task -> !isTaskRegistered(task))
                 .count();
@@ -176,20 +171,21 @@ public class SamplingTaskService {
         String keyword = query == null ? null : StrUtil.trim(query.getKeyword());
         String taskStatus = query == null ? null : StrUtil.trim(query.getTaskStatus());
         Long scopedSamplerId = resolveScopedSamplerId(query == null ? null : query.getSamplerId());
-        List<SamplingTask> candidates = samplingTaskMapper.selectList(new LambdaQueryWrapper<SamplingTask>()
-                .and(StrUtil.isNotBlank(keyword), wrapper -> wrapper
+        LambdaQueryWrapper<SamplingTask> wrapper = new LambdaQueryWrapper<SamplingTask>()
+                .and(StrUtil.isNotBlank(keyword), item -> item
                         .like(SamplingTask::getTaskNo, keyword)
                         .or()
                         .like(SamplingTask::getPointName, keyword)
                         .or()
                         .like(SamplingTask::getSampleNo, keyword))
                 .eq(!ignoreTaskStatus && StrUtil.isNotBlank(taskStatus), SamplingTask::getTaskStatus, taskStatus)
-                .eq(scopedSamplerId != null, SamplingTask::getSamplerId, scopedSamplerId)
                 .in(SamplingTask::getTaskStatus,
                         LabWorkflowConstants.SamplingTaskStatus.PENDING,
                         LabWorkflowConstants.SamplingTaskStatus.IN_PROGRESS,
                         LabWorkflowConstants.SamplingTaskStatus.COMPLETED)
-                .orderByDesc(SamplingTask::getCreatedTime));
+                .orderByDesc(SamplingTask::getCreatedTime);
+        applyTaskSamplerScope(wrapper, scopedSamplerId);
+        List<SamplingTask> candidates = samplingTaskMapper.selectList(wrapper);
         if (candidates.isEmpty()) {
             return Collections.emptyList();
         }
@@ -233,10 +229,11 @@ public class SamplingTaskService {
 
     public List<SamplingTask> todoMine() {
         CurrentUser currentUser = SecurityContext.getCurrentUser();
-        List<SamplingTask> tasks = samplingTaskMapper.selectList(new LambdaQueryWrapper<SamplingTask>()
-                .eq(SamplingTask::getSamplerId, currentUser.getUserId())
-                .in(SamplingTask::getTaskStatus, LabWorkflowConstants.TODO_TASK_STATUSES)
-                .orderByAsc(SamplingTask::getSamplingTime));
+        LambdaQueryWrapper<SamplingTask> wrapper = new LambdaQueryWrapper<SamplingTask>()
+                .in(SamplingTask::getTaskStatus, LabWorkflowConstants.TODO_TASK_STATUSES);
+        applyTaskSamplerScope(wrapper, currentUser.getUserId());
+        wrapper.orderByAsc(SamplingTask::getSamplingTime);
+        List<SamplingTask> tasks = samplingTaskMapper.selectList(wrapper);
         tasks.forEach(this::normalizeTaskFileUrlsForView);
         tasks.forEach(this::enrichTaskDetectionConfigSnapshotForView);
         return tasks;
@@ -306,14 +303,11 @@ public class SamplingTaskService {
         }
 
         task.setSampleNo(sampleNoGeneratorService.ensureSampleNo(task.getSampleNo()));
-        task.setOnsiteMetrics(command.getOnsiteMetrics());
+        task.setOnsiteMetrics(null);
         task.setWeather(command.getWeather());
         task.setTemperature(command.getTemperature());
         task.setSampleTotalVolume(StrUtil.trim(command.getSampleTotalVolume()));
         task.setSampleBottleCount(StrUtil.trim(command.getSampleBottleCount()));
-        task.setDetectionConfigSnapshot(mergeSamplingDetectionResults(
-                task.getDetectionConfigSnapshot(),
-                command.getDetectionConfigItems()));
         task.setPhotoUrls(normalizePhotoUrls(command.getPhotoUrls()));
         task.setRemark(command.getRemark());
         if (StrUtil.isNotBlank(command.getAddress())) {
@@ -348,43 +342,6 @@ public class SamplingTaskService {
                 .collect(Collectors.joining(","));
     }
 
-    private String mergeSamplingDetectionResults(String snapshotText, List<SampleDetectionConfigItem> submittedItems) {
-        List<SampleDetectionConfigItem> snapshotItems = samplingPlanService.parseDetectionConfigSnapshot(snapshotText);
-        if (snapshotItems.isEmpty() || submittedItems == null || submittedItems.isEmpty()) {
-            return snapshotText;
-        }
-        Map<Long, SampleDetectionConfigItem> submittedMap = submittedItems.stream()
-                .filter(item -> item != null && item.getParameterId() != null)
-                .collect(Collectors.toMap(
-                        SampleDetectionConfigItem::getParameterId,
-                        item -> item,
-                        (left, right) -> right,
-                        LinkedHashMap::new));
-        if (submittedMap.isEmpty()) {
-            return snapshotText;
-        }
-        for (SampleDetectionConfigItem item : snapshotItems) {
-            SampleDetectionConfigItem submitted = submittedMap.get(item.getParameterId());
-            if (submitted == null || submitted.getResultValue() == null || !isSamplingDetectableCategory(item)) {
-                item.setResultValue(isSamplingDetectableCategory(item) ? item.getResultValue() : null);
-                continue;
-            }
-            item.setResultValue(submitted.getResultValue());
-        }
-        return samplingPlanService.serializeDetectionConfigItems(snapshotItems);
-    }
-
-    private boolean isSamplingDetectableCategory(SampleDetectionConfigItem item) {
-        if (item == null) {
-            return false;
-        }
-        String category = StrUtil.trim(item.getParameterCategory());
-        return LabWorkflowConstants.DetectionParameterCategory.IN_SITU.equals(category)
-                || LabWorkflowConstants.DetectionParameterCategory.FIELD.equals(category)
-                || LabWorkflowConstants.DetectionParameterCategory.IN_SITU_LABEL.equals(category)
-                || LabWorkflowConstants.DetectionParameterCategory.FIELD_LABEL.equals(category);
-    }
-
     private void normalizeTaskFileUrlsForView(SamplingTask task) {
         if (task != null) {
             task.setPhotoUrls(storageService.toFullUrls(task.getPhotoUrls()));
@@ -413,9 +370,33 @@ public class SamplingTaskService {
         if (isAdmin(currentUser)) {
             return;
         }
-        if (task.getSamplerId() == null || !task.getSamplerId().equals(currentUser.getUserId())) {
+        if (!isSamplerAssigned(task, currentUser.getUserId())) {
             throw new BusinessException("当前用户不是该采样任务的责任采样员，不能执行此操作。");
         }
+    }
+
+    private void applyTaskSamplerScope(LambdaQueryWrapper<SamplingTask> wrapper, Long samplerId) {
+        if (wrapper == null || samplerId == null) {
+            return;
+        }
+        wrapper.and(item -> item
+                .eq(SamplingTask::getSamplerId, samplerId)
+                .or()
+                .like(SamplingTask::getSamplerIds, wrapSamplerId(samplerId)));
+    }
+
+    private boolean isSamplerAssigned(SamplingTask task, Long samplerId) {
+        if (task == null || samplerId == null) {
+            return false;
+        }
+        if (samplerId.equals(task.getSamplerId())) {
+            return true;
+        }
+        return StrUtil.contains(task.getSamplerIds(), wrapSamplerId(samplerId));
+    }
+
+    private String wrapSamplerId(Long samplerId) {
+        return samplerId == null ? null : "," + samplerId + ",";
     }
 
     private boolean isAdmin(CurrentUser currentUser) {

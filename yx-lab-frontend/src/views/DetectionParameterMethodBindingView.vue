@@ -85,9 +85,6 @@
               </div>
             </template>
           </el-table-column>
-          <el-table-column label="参数类别" width="110" header-cell-class-name="cell-center" class-name="cell-center">
-            <template #default="{ row }">{{ row.parameterCategory || '-' }}</template>
-          </el-table-column>
           <el-table-column label="标准范围" min-width="120">
             <template #default="{ row }">
               {{ formatStandardRange(row.standardMin, row.standardMax) }}

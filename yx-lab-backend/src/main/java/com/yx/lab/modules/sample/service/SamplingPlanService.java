@@ -11,13 +11,8 @@ import com.yx.lab.common.exception.BusinessException;
 import com.yx.lab.common.model.PageResult;
 import com.yx.lab.common.security.DataScopeHelper;
 import com.yx.lab.common.util.PageUtils;
-import com.yx.lab.modules.detection.dto.DetectionTypeParameterMethodBindingItem;
-import com.yx.lab.modules.detection.entity.DetectionMethod;
 import com.yx.lab.modules.detection.entity.DetectionParameter;
-import com.yx.lab.modules.detection.entity.DetectionType;
-import com.yx.lab.modules.detection.mapper.DetectionMethodMapper;
 import com.yx.lab.modules.detection.mapper.DetectionParameterMapper;
-import com.yx.lab.modules.detection.mapper.DetectionTypeMapper;
 import com.yx.lab.modules.sample.dto.SampleDetectionConfigItem;
 import com.yx.lab.modules.sample.dto.SamplingPlanDispatchCommand;
 import com.yx.lab.modules.sample.dto.SamplingPlanQuery;
@@ -38,7 +33,6 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -59,11 +53,7 @@ public class SamplingPlanService {
 
     private final MonitoringPointMapper monitoringPointMapper;
 
-    private final DetectionTypeMapper detectionTypeMapper;
-
     private final DetectionParameterMapper detectionParameterMapper;
-
-    private final DetectionMethodMapper detectionMethodMapper;
 
     private final ObjectMapper objectMapper;
 
@@ -80,15 +70,13 @@ public class SamplingPlanService {
      * @return 采样计划分页结果
      */
     public PageResult<SamplingPlan> page(SamplingPlanQuery query) {
-        Page<SamplingPlan> page = samplingPlanMapper.selectPage(
-                PageUtils.buildPage(query),
-                new LambdaQueryWrapper<SamplingPlan>()
-                        .like(StrUtil.isNotBlank(query.getKeyword()), SamplingPlan::getPlanName, query.getKeyword())
-                        .eq(StrUtil.isNotBlank(query.getPlanStatus()), SamplingPlan::getPlanStatus, query.getPlanStatus())
-                        .eq(resolveScopedSamplerId(query.getSamplerId()) != null,
-                                SamplingPlan::getSamplerId,
-                                resolveScopedSamplerId(query.getSamplerId()))
-                        .orderByDesc(SamplingPlan::getCreatedTime));
+        Long scopedSamplerId = resolveScopedSamplerId(query.getSamplerId());
+        LambdaQueryWrapper<SamplingPlan> wrapper = new LambdaQueryWrapper<SamplingPlan>()
+                .like(StrUtil.isNotBlank(query.getKeyword()), SamplingPlan::getPlanName, query.getKeyword())
+                .eq(StrUtil.isNotBlank(query.getPlanStatus()), SamplingPlan::getPlanStatus, query.getPlanStatus());
+        applyPlanSamplerScope(wrapper, scopedSamplerId);
+        wrapper.orderByDesc(SamplingPlan::getCreatedTime);
+        Page<SamplingPlan> page = samplingPlanMapper.selectPage(PageUtils.buildPage(query), wrapper);
         page.getRecords().forEach(this::enrichPlanDetectionConfigSnapshotForView);
         return new PageResult<>(page.getTotal(), page.getRecords());
     }
@@ -120,26 +108,24 @@ public class SamplingPlanService {
     }
 
     private Long countPlansByStatus(String planStatus) {
-        Number count = samplingPlanMapper.selectCount(new LambdaQueryWrapper<SamplingPlan>()
-                .eq(StrUtil.isNotBlank(planStatus), SamplingPlan::getPlanStatus, planStatus)
-                .eq(resolveScopedSamplerId(null) != null,
-                        SamplingPlan::getSamplerId,
-                        resolveScopedSamplerId(null)));
+        LambdaQueryWrapper<SamplingPlan> wrapper = new LambdaQueryWrapper<SamplingPlan>()
+                .eq(StrUtil.isNotBlank(planStatus), SamplingPlan::getPlanStatus, planStatus);
+        applyPlanSamplerScope(wrapper, resolveScopedSamplerId(null));
+        Number count = samplingPlanMapper.selectCount(wrapper);
         return count == null ? 0L : count.longValue();
     }
 
     private Long countActiveMissingSamplerPlans() {
-        Number count = samplingPlanMapper.selectCount(new LambdaQueryWrapper<SamplingPlan>()
+        LambdaQueryWrapper<SamplingPlan> wrapper = new LambdaQueryWrapper<SamplingPlan>()
                 .eq(SamplingPlan::getPlanStatus, LabWorkflowConstants.SamplingPlanStatus.ACTIVE)
-                .and(wrapper -> wrapper
+                .and(item -> item
                         .isNull(SamplingPlan::getSamplerId)
                         .or()
                         .isNull(SamplingPlan::getSamplerName)
                         .or()
-                        .eq(SamplingPlan::getSamplerName, ""))
-                .eq(resolveScopedSamplerId(null) != null,
-                        SamplingPlan::getSamplerId,
-                        resolveScopedSamplerId(null)));
+                        .eq(SamplingPlan::getSamplerName, ""));
+        applyPlanSamplerScope(wrapper, resolveScopedSamplerId(null));
+        Number count = samplingPlanMapper.selectCount(wrapper);
         return count == null ? 0L : count.longValue();
     }
 
@@ -184,7 +170,7 @@ public class SamplingPlanService {
         samplingPlanMapper.insert(plan);
         LocalDateTime scheduledTime = resolveScheduledTime(plan, LocalDateTime.now());
         if (scheduledTime != null) {
-            dispatchPlanTaskWithLock(plan.getId(), scheduledTime, false, null, null);
+            dispatchPlanTaskWithLock(plan.getId(), scheduledTime, false, null, null, null);
         }
     }
 
@@ -261,28 +247,14 @@ public class SamplingPlanService {
     @Transactional(rollbackFor = Exception.class)
     public void dispatch(SamplingPlanDispatchCommand command) {
         // 页面手工派发统一走带锁入口，避免和定时派发并发重复生成任务。
-        if (command != null) {
-            dispatchPlanTaskWithLock(
-                    command.getPlanId(),
-                    command.getSamplingTime(),
-                    true,
-                    command.getSamplerId(),
-                    command.getSamplerName());
-            return;
-        }
-        SamplingPlan plan = requirePlan(command.getPlanId());
-        if (!LabWorkflowConstants.canDispatchPlan(plan.getPlanStatus())) {
-            throw new BusinessException("当前计划状态不允许派发");
-        }
-        if (command.getSamplerId() != null) {
-            plan.setSamplerId(command.getSamplerId());
-            plan.setSamplerName(StrUtil.trim(command.getSamplerName()));
-            samplingPlanMapper.updateById(plan);
+        if (command == null) {
+            throw new BusinessException("派发参数不能为空");
         }
         dispatchPlanTaskWithLock(
                 command.getPlanId(),
                 command.getSamplingTime(),
                 true,
+                command.getSamplerIds(),
                 command.getSamplerId(),
                 command.getSamplerName());
     }
@@ -310,7 +282,7 @@ public class SamplingPlanService {
             if (scheduledTime == null) {
                 continue;
             }
-            if (dispatchPlanTaskWithLock(plan.getId(), scheduledTime, false, null, null)) {
+            if (dispatchPlanTaskWithLock(plan.getId(), scheduledTime, false, null, null, null)) {
                 dispatchedCount++;
             }
         }
@@ -386,6 +358,7 @@ public class SamplingPlanService {
     private boolean dispatchPlanTaskWithLock(Long planId,
                                              LocalDateTime samplingTime,
                                              boolean manualDispatch,
+                                             List<Long> samplerIds,
                                              Long samplerId,
                                              String samplerName) {
         // 计划级锁控制页面派发与定时派发串行执行，避免同一计划短时间内重复落任务。
@@ -399,9 +372,9 @@ public class SamplingPlanService {
                 }
                 return false;
             }
-            if (samplerId != null) {
-                plan.setSamplerId(samplerId);
-                plan.setSamplerName(StrUtil.trim(samplerName));
+            List<Long> targetSamplerIds = normalizeSamplerIds(samplerIds, samplerId);
+            if (!targetSamplerIds.isEmpty()) {
+                applySamplerSnapshot(plan, targetSamplerIds, samplerName);
                 samplingPlanMapper.updateById(plan);
             }
             return dispatchPlanTask(plan, samplingTime, manualDispatch);
@@ -456,15 +429,11 @@ public class SamplingPlanService {
         task.setLongitude(plan.getLongitude());
         task.setSamplingTime(taskTime);
         task.setSamplerId(plan.getSamplerId());
+        task.setSamplerIds(plan.getSamplerIds());
         task.setSamplerName(plan.getSamplerName());
         task.setSampleType(plan.getSampleType());
         task.setSampleRegisterStatus(LabWorkflowConstants.SampleRegisterStatus.UNREGISTERED);
         task.setSampleId(null);
-        task.setDetectionItems(plan.getDetectionTypeName());
-        task.setDetectionTypeId(plan.getDetectionTypeId());
-        task.setDetectionTypeName(plan.getDetectionTypeName());
-        task.setDetectionConfigSnapshot(resolvePlanDetectionConfigSnapshot(plan));
-        task.setSamplingBasis(plan.getSamplingBasis());
         task.setTaskStatus(LabWorkflowConstants.SamplingTaskStatus.PENDING);
         task.setRemark(buildTaskRemark(plan, manualDispatch));
         samplingTaskMapper.insert(task);
@@ -503,6 +472,10 @@ public class SamplingPlanService {
                 existingTask.setSamplerId(plan.getSamplerId());
                 changed = true;
             }
+            if (StrUtil.isBlank(existingTask.getSamplerIds()) && StrUtil.isNotBlank(plan.getSamplerIds())) {
+                existingTask.setSamplerIds(plan.getSamplerIds());
+                changed = true;
+            }
             if (StrUtil.isBlank(existingTask.getSamplerName()) && StrUtil.isNotBlank(plan.getSamplerName())) {
                 existingTask.setSamplerName(plan.getSamplerName());
                 changed = true;
@@ -513,26 +486,6 @@ public class SamplingPlanService {
             }
             if (StrUtil.isBlank(existingTask.getSampleRegisterStatus())) {
                 existingTask.setSampleRegisterStatus(LabWorkflowConstants.SampleRegisterStatus.UNREGISTERED);
-                changed = true;
-            }
-            if (StrUtil.isBlank(existingTask.getDetectionItems()) && StrUtil.isNotBlank(plan.getDetectionTypeName())) {
-                existingTask.setDetectionItems(plan.getDetectionTypeName());
-                changed = true;
-            }
-            if (existingTask.getDetectionTypeId() == null && plan.getDetectionTypeId() != null) {
-                existingTask.setDetectionTypeId(plan.getDetectionTypeId());
-                changed = true;
-            }
-            if (StrUtil.isBlank(existingTask.getDetectionTypeName()) && StrUtil.isNotBlank(plan.getDetectionTypeName())) {
-                existingTask.setDetectionTypeName(plan.getDetectionTypeName());
-                changed = true;
-            }
-            if (parseDetectionConfigSnapshot(existingTask.getDetectionConfigSnapshot()).isEmpty()) {
-                existingTask.setDetectionConfigSnapshot(resolvePlanDetectionConfigSnapshot(plan));
-                changed = true;
-            }
-            if (StrUtil.isBlank(existingTask.getSamplingBasis()) && StrUtil.isNotBlank(plan.getSamplingBasis())) {
-                existingTask.setSamplingBasis(plan.getSamplingBasis());
                 changed = true;
             }
             if (changed) {
@@ -551,16 +504,12 @@ public class SamplingPlanService {
         applyMonitoringPointSnapshot(plan);
         plan.setStartTime(command.getStartTime());
         plan.setEndTime(command.getEndTime());
-        plan.setSamplerId(command.getSamplerId());
-        plan.setSamplerName(StrUtil.trim(command.getSamplerName()));
+        applySamplerSnapshot(plan, normalizeSamplerIds(command.getSamplerIds(), command.getSamplerId()), command.getSamplerName());
         plan.setSamplingType(StrUtil.trim(command.getSamplingType()));
         plan.setSampleType(StrUtil.trim(command.getSampleType()));
-        DetectionType detectionType = requireEnabledDetectionType(command.getDetectionTypeId(), command.getDetectionTypeName());
-        plan.setDetectionTypeId(detectionType.getId());
-        plan.setDetectionTypeName(detectionType.getTypeName());
-        plan.setDetectionConfigSnapshot(serializeDetectionConfigItems(
-                normalizeDetectionConfigItems(command.getDetectionConfigItems(), detectionType)));
-        plan.setSamplingBasis(normalizeSamplingBasis(command.getSamplingBasisList()));
+        plan.setDetectionTypeId(null);
+        plan.setDetectionTypeName(null);
+        plan.setDetectionConfigSnapshot(null);
         plan.setCycleType(StrUtil.trim(command.getCycleType()));
         plan.setPlanStatus(StrUtil.trim(command.getPlanStatus()));
         plan.setRemark(StrUtil.trim(command.getRemark()));
@@ -580,15 +529,6 @@ public class SamplingPlanService {
         }
         if (StrUtil.isBlank(plan.getCycleType())) {
             throw new BusinessException("采样计划周期类型不能为空");
-        }
-        if (plan.getDetectionTypeId() == null || StrUtil.isBlank(plan.getDetectionTypeName())) {
-            throw new BusinessException("采样计划必须选择检测套餐");
-        }
-        if (parseDetectionConfigSnapshot(plan.getDetectionConfigSnapshot()).isEmpty()) {
-            throw new BusinessException("采样计划必须配置检测套餐参数");
-        }
-        if (StrUtil.isBlank(plan.getSamplingBasis())) {
-            throw new BusinessException("采样依据不能为空");
         }
         if (!LabWorkflowConstants.CYCLE_TYPES.contains(plan.getCycleType())) {
             throw new BusinessException("采样计划周期类型不合法");
@@ -628,117 +568,6 @@ public class SamplingPlanService {
             throw new BusinessException("采样点位" + label + "格式不正确");
         }
     }
-
-    private DetectionType requireEnabledDetectionType(Long detectionTypeId, String submittedTypeName) {
-        if (detectionTypeId == null) {
-            throw new BusinessException("请选择检测套餐");
-        }
-        DetectionType detectionType = detectionTypeMapper.selectById(detectionTypeId);
-        if (detectionType == null) {
-            throw new BusinessException("检测套餐不存在");
-        }
-        if (!Integer.valueOf(1).equals(detectionType.getEnabled())) {
-            throw new BusinessException("当前检测套餐已停用，不能用于采样计划");
-        }
-        if (StrUtil.isNotBlank(submittedTypeName)
-                && !StrUtil.equals(StrUtil.trim(submittedTypeName), detectionType.getTypeName())) {
-            throw new BusinessException("检测套餐名称与配置不一致，请刷新后重试");
-        }
-        return detectionType;
-    }
-
-    private String buildDetectionConfigSnapshot(DetectionType detectionType) {
-        return serializeDetectionConfigItems(buildDetectionConfigItems(detectionType));
-    }
-
-    private String resolvePlanDetectionConfigSnapshot(SamplingPlan plan) {
-        if (plan == null) {
-            throw new BusinessException("采样计划不存在");
-        }
-        if (!parseDetectionConfigSnapshot(plan.getDetectionConfigSnapshot()).isEmpty()) {
-            return plan.getDetectionConfigSnapshot();
-        }
-        return buildDetectionConfigSnapshot(requireEnabledDetectionType(plan.getDetectionTypeId(), plan.getDetectionTypeName()));
-    }
-
-    private List<SampleDetectionConfigItem> buildDetectionConfigItems(DetectionType detectionType) {
-        if (detectionType == null) {
-            throw new BusinessException("请选择检测套餐");
-        }
-        List<Long> parameterIds = parseIdList(detectionType.getParameterIds());
-        if (parameterIds.isEmpty()) {
-            throw new BusinessException("当前检测套餐未配置检测参数，不能用于采样计划");
-        }
-
-        Map<Long, DetectionParameter> parameterMap = detectionParameterMapper.selectList(
-                        new LambdaQueryWrapper<DetectionParameter>().in(DetectionParameter::getId, parameterIds))
-                .stream()
-                .collect(Collectors.toMap(DetectionParameter::getId, item -> item, (left, right) -> left, LinkedHashMap::new));
-
-        Map<Long, Long> methodIdByParameterId = parseBindingItems(detectionType.getParameterMethodBindings()).stream()
-                .filter(item -> item != null && item.getParameterId() != null && item.getMethodIds() != null && !item.getMethodIds().isEmpty())
-                .collect(Collectors.toMap(
-                        DetectionTypeParameterMethodBindingItem::getParameterId,
-                        item -> item.getMethodIds().get(0),
-                        (left, right) -> left,
-                        LinkedHashMap::new));
-
-        List<Long> methodIds = methodIdByParameterId.values().stream()
-                .filter(id -> id != null)
-                .distinct()
-                .collect(Collectors.toList());
-        Map<Long, DetectionMethod> methodMap = methodIds.isEmpty()
-                ? Collections.emptyMap()
-                : detectionMethodMapper.selectList(new LambdaQueryWrapper<DetectionMethod>().in(DetectionMethod::getId, methodIds))
-                .stream()
-                .collect(Collectors.toMap(DetectionMethod::getId, item -> item, (left, right) -> left, LinkedHashMap::new));
-
-        return parameterIds.stream()
-                .map(parameterId -> buildSnapshotItem(parameterId, parameterMap.get(parameterId), methodMap.get(methodIdByParameterId.get(parameterId))))
-                .collect(Collectors.toList());
-    }
-
-    private List<SampleDetectionConfigItem> normalizeDetectionConfigItems(List<SampleDetectionConfigItem> submittedItems,
-                                                                          DetectionType detectionType) {
-        List<SampleDetectionConfigItem> items = submittedItems == null || submittedItems.isEmpty()
-                ? buildDetectionConfigItems(detectionType)
-                : submittedItems;
-        if (items.isEmpty()) {
-            throw new BusinessException("请选择检测套餐对应的检测参数与检测方法");
-        }
-
-        List<Long> parameterIds = items.stream()
-                .map(SampleDetectionConfigItem::getParameterId)
-                .filter(id -> id != null)
-                .distinct()
-                .collect(Collectors.toList());
-        if (parameterIds.size() != items.size()) {
-            throw new BusinessException("检测套餐参数明细存在空项或重复项");
-        }
-
-        Map<Long, DetectionParameter> parameterMap = detectionParameterMapper.selectList(
-                        new LambdaQueryWrapper<DetectionParameter>().in(DetectionParameter::getId, parameterIds))
-                .stream()
-                .collect(Collectors.toMap(DetectionParameter::getId, item -> item, (left, right) -> left, LinkedHashMap::new));
-
-        List<Long> methodIds = items.stream()
-                .map(SampleDetectionConfigItem::getMethodId)
-                .filter(id -> id != null)
-                .distinct()
-                .collect(Collectors.toList());
-        if (methodIds.size() != items.size()) {
-            throw new BusinessException("请为每个检测参数选择对应的检测方法");
-        }
-        Map<Long, DetectionMethod> methodMap = detectionMethodMapper.selectList(
-                        new LambdaQueryWrapper<DetectionMethod>().in(DetectionMethod::getId, methodIds))
-                .stream()
-                .collect(Collectors.toMap(DetectionMethod::getId, item -> item, (left, right) -> left, LinkedHashMap::new));
-
-        return items.stream()
-                .map(item -> buildSnapshotItem(item.getParameterId(), parameterMap.get(item.getParameterId()), methodMap.get(item.getMethodId())))
-                .collect(Collectors.toList());
-    }
-
     public String serializeDetectionConfigItems(List<SampleDetectionConfigItem> snapshotItems) {
         try {
             return objectMapper.writeValueAsString(snapshotItems);
@@ -767,36 +596,6 @@ public class SamplingPlanService {
             throw new BusinessException("采样计划检测套餐参数快照格式错误");
         }
     }
-
-    private SampleDetectionConfigItem buildSnapshotItem(Long parameterId,
-                                                        DetectionParameter parameter,
-                                                        DetectionMethod method) {
-        if (parameter == null || !Integer.valueOf(1).equals(parameter.getEnabled())) {
-            throw new BusinessException("检测套餐包含不存在或已停用的检测参数：" + parameterId);
-        }
-        if (method == null || !Integer.valueOf(1).equals(method.getEnabled())) {
-            throw new BusinessException("检测套餐参数“" + parameter.getParameterName() + "”未配置可用检测方法");
-        }
-        if (!parameterId.equals(method.getParameterId())) {
-            throw new BusinessException("检测套餐参数“" + parameter.getParameterName() + "”绑定的检测方法不匹配");
-        }
-
-        SampleDetectionConfigItem item = new SampleDetectionConfigItem();
-        item.setParameterId(parameter.getId());
-        item.setParameterName(parameter.getParameterName());
-        applyParameterCategory(item, parameter.getParameterCategory());
-        item.setUnit(parameter.getUnit());
-        item.setStandardMin(parameter.getStandardMin());
-        item.setStandardMax(parameter.getStandardMax());
-        item.setResultValue(null);
-        item.setReferenceStandard(parameter.getReferenceStandard());
-        item.setMethodId(method.getId());
-        item.setMethodName(method.getMethodName());
-        item.setSampleVolume(method.getSampleVolume());
-        item.setMethodBasis(method.getMethodBasis());
-        return item;
-    }
-
     public String enrichDetectionConfigSnapshotForView(String snapshotText) {
         if (StrUtil.isBlank(snapshotText)) {
             return snapshotText;
@@ -840,76 +639,12 @@ public class SamplingPlanService {
                 continue;
             }
             DetectionParameter parameter = parameterMap.get(item.getParameterId());
-            String category = normalizeParameterCategoryCode(StrUtil.blankToDefault(
-                    StrUtil.trim(item.getParameterCategory()),
-                    parameter == null ? null : StrUtil.trim(parameter.getParameterCategory())));
-            item.setParameterCategory(category);
-            item.setParameterCategoryDesc(LabWorkflowConstants.getDetectionParameterCategoryLabel(category));
             if (StrUtil.isBlank(item.getParameterName()) && parameter != null) {
                 item.setParameterName(parameter.getParameterName());
             }
-            if (item.getResultValue() != null) {
-                item.setResultValue(item.getResultValue());
-            }
+            item.setResultValue(null);
         }
     }
-
-    private void applyParameterCategory(SampleDetectionConfigItem item, String parameterCategory) {
-        if (item == null) {
-            return;
-        }
-        String category = normalizeParameterCategoryCode(parameterCategory);
-        item.setParameterCategory(category);
-        item.setParameterCategoryDesc(LabWorkflowConstants.getDetectionParameterCategoryLabel(category));
-    }
-
-    private String normalizeParameterCategoryCode(String parameterCategory) {
-        String category = StrUtil.trim(parameterCategory);
-        if (StrUtil.equals(category, LabWorkflowConstants.DetectionParameterCategory.IN_SITU_LABEL)) {
-            return LabWorkflowConstants.DetectionParameterCategory.IN_SITU;
-        }
-        if (StrUtil.equals(category, LabWorkflowConstants.DetectionParameterCategory.FIELD_LABEL)) {
-            return LabWorkflowConstants.DetectionParameterCategory.FIELD;
-        }
-        if (StrUtil.equals(category, LabWorkflowConstants.DetectionParameterCategory.LABORATORY_LABEL)) {
-            return LabWorkflowConstants.DetectionParameterCategory.LABORATORY;
-        }
-        return category;
-    }
-
-    private List<Long> parseIdList(String value) {
-        if (StrUtil.isBlank(value)) {
-            return Collections.emptyList();
-        }
-        return Arrays.stream(value.split(","))
-                .map(StrUtil::trim)
-                .filter(StrUtil::isNotBlank)
-                .map(item -> {
-                    try {
-                        return Long.valueOf(item);
-                    } catch (NumberFormatException ex) {
-                        throw new BusinessException("检测套餐参数配置格式错误：" + item);
-                    }
-                })
-                .collect(Collectors.toList());
-    }
-
-    private List<DetectionTypeParameterMethodBindingItem> parseBindingItems(String value) {
-        if (StrUtil.isBlank(value)) {
-            return Collections.emptyList();
-        }
-        try {
-            List<DetectionTypeParameterMethodBindingItem> items = objectMapper.readValue(
-                    value,
-                    new TypeReference<List<DetectionTypeParameterMethodBindingItem>>() {
-                    }
-            );
-            return items == null ? Collections.emptyList() : items;
-        } catch (JsonProcessingException ex) {
-            throw new BusinessException("检测套餐参数方法配置格式错误");
-        }
-    }
-
     private LocalDateTime resolveScheduledTime(SamplingPlan plan, LocalDateTime now) {
         if (plan.getStartTime() == null || now == null) {
             return null;
@@ -995,13 +730,37 @@ public class SamplingPlanService {
         samplingPlanMapper.updateById(plan);
     }
 
-    private String normalizeSamplingBasis(List<String> samplingBasisList) {
-        List<String> items = samplingBasisList == null ? Collections.emptyList() : samplingBasisList.stream()
-                .map(StrUtil::trim)
-                .filter(StrUtil::isNotBlank)
+    private void applyPlanSamplerScope(LambdaQueryWrapper<SamplingPlan> wrapper, Long samplerId) {
+        if (wrapper == null || samplerId == null) {
+            return;
+        }
+        wrapper.and(item -> item
+                .eq(SamplingPlan::getSamplerId, samplerId)
+                .or()
+                .like(SamplingPlan::getSamplerIds, wrapSamplerId(samplerId)));
+    }
+
+    private List<Long> normalizeSamplerIds(List<Long> samplerIds, Long fallbackSamplerId) {
+        List<Long> ids = samplerIds == null ? Collections.emptyList() : samplerIds;
+        List<Long> normalized = ids.stream()
+                .filter(id -> id != null && id > 0)
                 .distinct()
                 .collect(Collectors.toList());
-        return items.isEmpty() ? null : String.join("、", items);
+        if (normalized.isEmpty() && fallbackSamplerId != null && fallbackSamplerId > 0) {
+            normalized = Collections.singletonList(fallbackSamplerId);
+        }
+        return normalized;
+    }
+
+    private void applySamplerSnapshot(SamplingPlan plan, List<Long> samplerIds, String samplerName) {
+        List<Long> ids = normalizeSamplerIds(samplerIds, null);
+        plan.setSamplerId(ids.isEmpty() ? null : ids.get(0));
+        plan.setSamplerIds(ids.isEmpty() ? null : "," + ids.stream().map(String::valueOf).collect(Collectors.joining(",")) + ",");
+        plan.setSamplerName(StrUtil.trim(samplerName));
+    }
+
+    private String wrapSamplerId(Long samplerId) {
+        return samplerId == null ? null : "," + samplerId + ",";
     }
 
     private String generateTaskNo() {

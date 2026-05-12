@@ -18,17 +18,6 @@ public class MonitoringPointSaveCommand {
 
     private String regionName;
 
-    private Integer servicePopulation;
-
-    @NotBlank(message = "监测频次不能为空")
-    private String frequencyType;
-
-    private Long ownerId;
-
-    private String ownerName;
-
-    private String contactPhone;
-
     @NotBlank(message = "点位类型不能为空")
     private String pointType;
 

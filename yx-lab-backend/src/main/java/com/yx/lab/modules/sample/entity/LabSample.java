@@ -38,9 +38,6 @@ public class LabSample extends BaseEntity {
     @TableField("sample_type")
     private String sampleType;
 
-    @Schema(description = "质控类型")
-    @TableField("quality_control_type")
-    private String qualityControlType;
 
     @Schema(description = "检测项目文本")
     @TableField("detection_items")
@@ -66,13 +63,7 @@ public class LabSample extends BaseEntity {
     @TableField("review_flow_name")
     private String reviewFlowName;
 
-    @Schema(description = "发布流程ID")
-    @TableField("publish_flow_id")
-    private Long publishFlowId;
 
-    @Schema(description = "发布流程名称")
-    @TableField("publish_flow_name")
-    private String publishFlowName;
 
     @Schema(description = "采样时间")
     @TableField("sampling_time")

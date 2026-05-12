@@ -228,7 +228,6 @@ public class DetectionConfigController {
                 detectionConfigService.parameterPage(query).getRecords(),
                 java.util.Arrays.asList(
                         ExcelExportUtil.column("参数名称", DetectionParameter::getParameterName),
-                        ExcelExportUtil.column("参数类别", DetectionParameter::getParameterCategory),
                         ExcelExportUtil.column("单位", DetectionParameter::getUnit),
                         ExcelExportUtil.column("标准下限", DetectionParameter::getStandardMin),
                         ExcelExportUtil.column("标准上限", DetectionParameter::getStandardMax),
