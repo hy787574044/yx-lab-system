@@ -72,102 +72,7 @@
           row-key="id"
           max-height="560"
           :empty-text="baseScene.emptyText"
-          @expand-change="handleExpandChange"
         >
-          <el-table-column type="expand" width="56">
-            <template #default="{ row }">
-              <div v-if="row.__sampleOnly" class="subflow-empty">
-                <strong>该样品为历史旧数据</strong>
-                <p>当前只保留了样品主信息，尚未生成正式的参数子流程分配数据。建议重新登录该样品后再进行参数级分配。</p>
-              </div>
-
-              <div v-else-if="detailLoadingMap[row.id]" class="subflow-empty">
-                正在加载参数子流程...
-              </div>
-
-              <div v-else-if="getDetailItems(row.id).length" class="subflow-panel">
-                <div class="subflow-head">
-                  <div class="subflow-summary">
-                    <span class="status-chip info">参数 {{ getDetailItems(row.id).length }}</span>
-                    <span class="status-chip success">已分配 {{ countAssignedItems(row.id) }}</span>
-                    <span class="status-chip warning">待分配 {{ getDetailItems(row.id).length - countAssignedItems(row.id) }}</span>
-                    <span class="status-chip success">已提交 {{ countSubmittedItems(row.id) }}</span>
-                    <span class="status-chip info">待提交 {{ getDetailItems(row.id).length - countSubmittedItems(row.id) }}</span>
-                  </div>
-                  <el-button
-                    v-if="canAssignRow(row)"
-                    type="primary"
-                    @click="saveAssignments(row)"
-                  >
-                    保存人员分配
-                  </el-button>
-                </div>
-
-                <div class="subflow-list">
-                  <article
-                    v-for="item in getDetailItems(row.id)"
-                    :key="item.id"
-                    class="subflow-card"
-                  >
-                    <div class="subflow-card__head">
-                      <div>
-                        <strong>{{ item.parameterName }}</strong>
-                        <p>{{ item.methodName || '未绑定检测方法' }}</p>
-                      </div>
-                      <span class="status-chip" :class="getItemStatusClass(item.itemStatus)">
-                        {{ getItemStatusLabel(item.itemStatus) }}
-                      </span>
-                    </div>
-
-                    <div class="subflow-meta">
-                      <span>标准范围：{{ formatStandardRange(item.standardMin, item.standardMax, item.unit) }}</span>
-                      <span>参考范围：{{ item.referenceStandard || '-' }}</span>
-                    </div>
-
-                    <div class="subflow-result">
-                      <span class="subflow-result__label">当前结果</span>
-                      <span class="status-chip" :class="getItemResultClass(item)">
-                        {{ getItemResultLabel(item) }}
-                      </span>
-                    </div>
-
-                    <div class="subflow-assign">
-                      <label>检测员分配</label>
-                      <el-select
-                        :model-value="getAssignedDetectorId(row.id, item.id)"
-                        :disabled="!canAssignRow(row)"
-                        clearable
-                        filterable
-                        placeholder="请选择检测员"
-                        @update:model-value="updateAssignedDetectorId(row.id, item.id, $event)"
-                      >
-                        <el-option
-                          v-for="option in detectorOptions"
-                          :key="option.id"
-                          :label="option.displayName || option.realName || option.username"
-                          :value="option.id"
-                        />
-                      </el-select>
-                    </div>
-                    <div v-if="canOpenResultDialogItem(item)" class="subflow-card__action">
-                      <el-button
-                        :type="isResultEditable(item) ? 'primary' : 'default'"
-                        plain
-                        @click="openResultDialog(row, item)"
-                      >
-                        {{ getResultActionLabel(item) }}
-                      </el-button>
-                    </div>
-                  </article>
-                </div>
-              </div>
-
-              <div v-else class="subflow-empty">
-                当前主流程下暂无参数子流程数据。
-              </div>
-            </template>
-          </el-table-column>
-
           <el-table-column prop="sampleNo" label="样品编号" min-width="170" />
           <el-table-column prop="sealNo" label="封签编号" min-width="170" />
           <el-table-column prop="detectionTypeName" label="检测套餐" min-width="180" />
@@ -195,17 +100,25 @@
               </span>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="120" header-cell-class-name="cell-center" class-name="cell-center">
+          <el-table-column label="操作" width="190" header-cell-class-name="cell-center" class-name="cell-center">
             <template #default="{ row }">
-              <el-button
-                v-if="canViewRecordResults(row)"
-                type="primary"
-                link
-                @click="openRecordResultDialog(row)"
-              >
-                查看结果
-              </el-button>
-              <span v-else>-</span>
+              <div class="table-action-group">
+                <el-button
+                  type="primary"
+                  link
+                  @click="openSubflowDialog(row)"
+                >
+                  查看检测项
+                </el-button>
+                <el-button
+                  v-if="canViewRecordResults(row)"
+                  type="primary"
+                  link
+                  @click="openRecordResultDialog(row)"
+                >
+                  查看结果
+                </el-button>
+              </div>
             </template>
           </el-table-column>
           <el-table-column prop="detectionTime" label="流程时间" width="170" />
@@ -224,6 +137,115 @@
         />
       </div>
     </section>
+
+    <el-dialog
+      v-model="subflowDialogVisible"
+      class="detection-subflow-dialog"
+      title="检测项明细"
+      width="960px"
+      destroy-on-close
+      @closed="resetSubflowDialog"
+    >
+      <div v-if="currentSubflowRecord" class="subflow-panel subflow-panel--dialog">
+        <div class="result-dialog__summary">
+          <span class="binding-editor__chip">样品编号<strong>{{ currentSubflowRecord.sampleNo || '-' }}</strong></span>
+          <span class="binding-editor__chip">封签编号<strong>{{ currentSubflowRecord.sealNo || '-' }}</strong></span>
+          <span class="binding-editor__chip">检测套餐<strong>{{ currentSubflowRecord.detectionTypeName || '-' }}</strong></span>
+          <span class="binding-editor__chip">检测项数<strong>{{ currentSubflowItems.length }}</strong></span>
+        </div>
+
+        <div v-if="currentSubflowRecord.__sampleOnly" class="subflow-empty">
+          <strong>该样品为历史旧数据</strong>
+          <p>当前只保留了样品主信息，尚未生成正式的参数子流程分配数据。建议重新登录该样品后再进行参数级分配。</p>
+        </div>
+
+        <div v-else-if="currentSubflowLoading" class="subflow-empty">
+          正在加载参数子流程...
+        </div>
+
+        <div v-else-if="currentSubflowItems.length">
+          <div class="subflow-head">
+            <div class="subflow-summary">
+              <span class="status-chip info">参数 {{ currentSubflowItems.length }}</span>
+              <span class="status-chip success">已分配 {{ countAssignedItems(currentSubflowRecord.id) }}</span>
+              <span class="status-chip warning">待分配 {{ currentSubflowItems.length - countAssignedItems(currentSubflowRecord.id) }}</span>
+              <span class="status-chip success">已提交 {{ countSubmittedItems(currentSubflowRecord.id) }}</span>
+              <span class="status-chip info">待提交 {{ currentSubflowItems.length - countSubmittedItems(currentSubflowRecord.id) }}</span>
+            </div>
+            <el-button
+              v-if="canAssignRow(currentSubflowRecord)"
+              type="primary"
+              @click="saveAssignments(currentSubflowRecord)"
+            >
+              保存人员分配
+            </el-button>
+          </div>
+
+          <div class="subflow-list subflow-list--single">
+            <article
+              v-for="item in currentSubflowItems"
+              :key="item.id"
+              class="subflow-card"
+            >
+              <div class="subflow-card__head">
+                <div>
+                  <strong>{{ item.parameterName }}</strong>
+                  <p>{{ item.methodName || '未绑定检测方法' }}</p>
+                </div>
+                <span class="status-chip" :class="getItemStatusClass(item.itemStatus)">
+                  {{ getItemStatusLabel(item.itemStatus) }}
+                </span>
+              </div>
+
+              <div class="subflow-meta">
+                <span>标准范围：{{ formatStandardRange(item.standardMin, item.standardMax, item.unit) }}</span>
+                <span>参考范围：{{ item.referenceStandard || '-' }}</span>
+                <span>检测依据：{{ getMethodBasis(item) }}</span>
+              </div>
+
+              <div class="subflow-result">
+                <span class="subflow-result__label">当前结果</span>
+                <span class="status-chip" :class="getItemResultClass(item)">
+                  {{ getItemResultLabel(item) }}
+                </span>
+              </div>
+
+              <div class="subflow-assign">
+                <label>检测员分配</label>
+                <el-select
+                  :model-value="getAssignedDetectorId(currentSubflowRecord.id, item.id)"
+                  :disabled="!canAssignRow(currentSubflowRecord)"
+                  clearable
+                  filterable
+                  placeholder="请选择检测员"
+                  @update:model-value="updateAssignedDetectorId(currentSubflowRecord.id, item.id, $event)"
+                >
+                  <el-option
+                    v-for="option in detectorOptions"
+                    :key="option.id"
+                    :label="option.displayName || option.realName || option.username"
+                    :value="option.id"
+                  />
+                </el-select>
+              </div>
+              <div v-if="canOpenResultDialogItem(item)" class="subflow-card__action">
+                <el-button
+                  :type="isResultEditable(item) ? 'primary' : 'default'"
+                  plain
+                  @click="openResultDialog(currentSubflowRecord, item)"
+                >
+                  {{ getResultActionLabel(item) }}
+                </el-button>
+              </div>
+            </article>
+          </div>
+        </div>
+
+        <div v-else class="subflow-empty">
+          当前主流程下暂无参数子流程数据。
+        </div>
+      </div>
+    </el-dialog>
 
     <el-dialog
       v-model="resultDialogVisible"
@@ -362,6 +384,7 @@ import {
   exportDetectionsApi,
   fetchDetectionDetailApi,
   fetchDetectionDetectorsApi,
+  fetchDetectionMethodsApi,
   fetchDetectionsApi,
   fetchSamplesApi,
   submitDetectionApi
@@ -393,10 +416,13 @@ const query = reactive({ pageNum: 1, pageSize: DEFAULT_PAGE_SIZE })
 const records = ref([])
 const samplePool = ref([])
 const detectorOptions = ref([])
+const detectionMethodOptions = ref([])
 const activeStatKey = ref('all')
 const detailMap = reactive({})
 const detailLoadingMap = reactive({})
 const assignmentMap = reactive({})
+const subflowDialogVisible = ref(false)
+const currentSubflowRecord = ref(null)
 const resultDialogVisible = ref(false)
 const resultSubmitting = ref(false)
 const resultDialogItemId = ref(null)
@@ -457,7 +483,7 @@ const sceneMap = {
     title: '检测分析',
     subtitle: '样品登录后先进入待分配检测流程，再按套餐参数拆分为多个待分配的检测子流程。',
     tableTitle: '检测流程队列',
-    tableSubtitle: '展开每条主流程，即可查看套餐参数列表并逐条分配检测员。',
+    tableSubtitle: '点击每条主流程后的“查看检测项”，即可查看套餐参数列表并逐条分配检测员。',
     note: '当前页重点处理“待分配”和“待检测”两个阶段，分配完成后即可继续进入检测执行。',
     guide: '建议先在本页完成参数级人员分配，再由检测员按各自分工执行后续检测录入。',
     defaultStatKey: 'all',
@@ -618,6 +644,20 @@ const filteredRecords = computed(() => {
 
 const displayTotal = computed(() => filteredRecords.value.length)
 
+const currentSubflowItems = computed(() => {
+  if (!currentSubflowRecord.value || currentSubflowRecord.value.__sampleOnly) {
+    return []
+  }
+  return getDetailItems(currentSubflowRecord.value.id)
+})
+
+const currentSubflowLoading = computed(() => {
+  if (!currentSubflowRecord.value || currentSubflowRecord.value.__sampleOnly) {
+    return false
+  }
+  return !!detailLoadingMap[currentSubflowRecord.value.id]
+})
+
 const pagedRecords = computed(() => {
   const start = (query.pageNum - 1) * query.pageSize
   return filteredRecords.value.slice(start, start + query.pageSize)
@@ -739,6 +779,18 @@ function formatProgress(row) {
     return `${assigned}/${total} 已分配，${completed}/${total} 已提交，已全部完成`
   }
   return `${assigned}/${total} 已分配，${completed}/${total} 已提交`
+}
+
+function getMethodBasis(item) {
+  if (item?.methodBasis) {
+    return item.methodBasis
+  }
+  const methodId = item?.methodId == null ? '' : String(item.methodId)
+  if (!methodId) {
+    return '-'
+  }
+  const method = detectionMethodOptions.value.find((option) => String(option.id) === methodId)
+  return method?.methodBasis || '-'
 }
 
 function canAssignRow(row) {
@@ -866,6 +918,10 @@ function updateAssignedDetectorId(recordId, itemId, value) {
     assignmentMap[recordId] = {}
   }
   assignmentMap[recordId][itemId] = value ?? null
+}
+
+function resetSubflowDialog() {
+  currentSubflowRecord.value = null
 }
 
 function resetResultForm() {
@@ -1006,14 +1062,13 @@ async function openRecordResultDialog(row) {
   resultDialogVisible.value = true
 }
 
-async function handleExpandChange(row, expandedRows) {
-  if (row.__sampleOnly) {
+async function openSubflowDialog(row) {
+  currentSubflowRecord.value = row
+  subflowDialogVisible.value = true
+  if (row?.__sampleOnly) {
     return
   }
-  const expanded = expandedRows.some((item) => item.id === row.id)
-  if (expanded) {
-    await loadRecordDetail(row.id)
-  }
+  await loadRecordDetail(row.id)
 }
 
 async function saveAssignments(row) {
@@ -1076,10 +1131,11 @@ async function submitDetectionResult() {
 }
 
 async function loadData() {
-  const [detectionResult, sampleResult, detectorResult] = await Promise.all([
+  const [detectionResult, sampleResult, detectorResult, detectionMethodResult] = await Promise.all([
     fetchDetectionsApi({ pageNum: 1, pageSize: MAX_LOAD_SIZE }),
     fetchSamplesApi({ pageNum: 1, pageSize: MAX_LOAD_SIZE }),
-    fetchDetectionDetectorsApi()
+    fetchDetectionDetectorsApi(),
+    fetchDetectionMethodsApi({ pageNum: 1, pageSize: MAX_LOAD_SIZE })
   ])
 
   records.value = detectionResult.records || []
@@ -1088,6 +1144,7 @@ async function loadData() {
     ...item,
     id: item.userId ?? item.id
   }))
+  detectionMethodOptions.value = detectionMethodResult.records || []
 
   const maxPage = Math.max(1, Math.ceil(displayTotal.value / query.pageSize))
   if (query.pageNum > maxPage) {
@@ -1179,6 +1236,14 @@ watch(() => route.fullPath, () => {
   margin: 0;
 }
 
+.table-action-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
 .quick-links {
   display: grid;
   gap: 12px;
@@ -1228,6 +1293,10 @@ watch(() => route.fullPath, () => {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
+}
+
+.subflow-list--single {
+  grid-template-columns: 1fr;
 }
 
 .subflow-card {
@@ -1340,6 +1409,16 @@ watch(() => route.fullPath, () => {
 
 .result-dialog__form {
   margin-top: 4px;
+}
+
+:deep(.detection-subflow-dialog .el-dialog) {
+  max-width: min(960px, calc(100vw - 64px));
+}
+
+:deep(.detection-subflow-dialog .el-dialog__body) {
+  padding-top: 18px;
+  padding-left: 20px;
+  padding-right: 20px;
 }
 
 .subflow-empty {

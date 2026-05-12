@@ -17,10 +17,12 @@ import com.yx.lab.modules.detection.dto.DetectionItemCommand;
 import com.yx.lab.modules.detection.dto.DetectionRecordQuery;
 import com.yx.lab.modules.detection.dto.DetectionSubmitCommand;
 import com.yx.lab.modules.detection.entity.DetectionItem;
+import com.yx.lab.modules.detection.entity.DetectionMethod;
 import com.yx.lab.modules.detection.entity.DetectionParameter;
 import com.yx.lab.modules.detection.entity.DetectionRecord;
 import com.yx.lab.modules.detection.entity.DetectionType;
 import com.yx.lab.modules.detection.mapper.DetectionItemMapper;
+import com.yx.lab.modules.detection.mapper.DetectionMethodMapper;
 import com.yx.lab.modules.detection.mapper.DetectionParameterMapper;
 import com.yx.lab.modules.detection.mapper.DetectionRecordMapper;
 import com.yx.lab.modules.detection.mapper.DetectionTypeMapper;
@@ -55,6 +57,8 @@ public class DetectionWorkflowService {
     private final DetectionRecordMapper detectionRecordMapper;
 
     private final DetectionItemMapper detectionItemMapper;
+
+    private final DetectionMethodMapper detectionMethodMapper;
 
     private final DetectionTypeMapper detectionTypeMapper;
 
@@ -112,6 +116,7 @@ public class DetectionWorkflowService {
         List<DetectionItem> items = detectionItemMapper.selectList(new LambdaQueryWrapper<DetectionItem>()
                 .eq(DetectionItem::getRecordId, id)
                 .orderByAsc(DetectionItem::getCreatedTime));
+        fillMethodBasis(items);
         DetectionRecordDetailVO vo = new DetectionRecordDetailVO();
         vo.setRecord(record);
         vo.setItems(items);
@@ -611,6 +616,33 @@ public class DetectionWorkflowService {
         return items.stream().anyMatch(item -> Integer.valueOf(1).equals(item.getExceedFlag()))
                 ? LabWorkflowConstants.DetectionResult.ABNORMAL
                 : LabWorkflowConstants.DetectionResult.NORMAL;
+    }
+
+    private void fillMethodBasis(List<DetectionItem> items) {
+        if (items == null || items.isEmpty()) {
+            return;
+        }
+        List<Long> methodIds = items.stream()
+                .map(DetectionItem::getMethodId)
+                .filter(id -> id != null)
+                .distinct()
+                .collect(Collectors.toList());
+        if (methodIds.isEmpty()) {
+            return;
+        }
+        Map<Long, DetectionMethod> methodMap = detectionMethodMapper.selectList(new LambdaQueryWrapper<DetectionMethod>()
+                        .in(DetectionMethod::getId, methodIds))
+                .stream()
+                .collect(Collectors.toMap(DetectionMethod::getId, method -> method, (left, right) -> left));
+        for (DetectionItem item : items) {
+            if (item == null || item.getMethodId() == null) {
+                continue;
+            }
+            DetectionMethod method = methodMap.get(item.getMethodId());
+            if (method != null) {
+                item.setMethodBasis(method.getMethodBasis());
+            }
+        }
     }
 
     private boolean isExceeded(DetectionParameter parameter, BigDecimal resultValue) {

@@ -49,4 +49,9 @@ public class SampleDetectionConfigItem {
      * 选定的检测方法名称。
      */
     private String methodName;
+
+    /**
+     * 检测依据。
+     */
+    private String methodBasis;
 }

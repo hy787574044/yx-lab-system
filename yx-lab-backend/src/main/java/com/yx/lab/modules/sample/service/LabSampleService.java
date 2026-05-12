@@ -342,6 +342,7 @@ public class LabSampleService {
             normalizedItem.setReferenceStandard(StrUtil.trim(item.getReferenceStandard()));
             normalizedItem.setMethodId(method.getId());
             normalizedItem.setMethodName(method.getMethodName());
+            normalizedItem.setMethodBasis(method.getMethodBasis());
             normalizedItems.add(normalizedItem);
         }
         return normalizedItems;
