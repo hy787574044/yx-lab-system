@@ -222,10 +222,10 @@ public class DetectionPendingFlowService {
                 .map(DetectionItemAssignCommand::getDetectorId)
                 .filter(id -> id != null)
                 .distinct()
-        // 子流程支持逐项派人或清空人员，主流程状态会根据全部子流程重新汇总。
-        Map<Long, LabUser> detectorMap = loadDetectors(detectorIds);
+                .collect(Collectors.toList());
 
         // 子流程支持逐项派人或清空人员，主流程状态会根据全部子流程重新汇总。
+        Map<Long, LabUser> detectorMap = loadDetectors(detectorIds);
         for (DetectionItemAssignCommand itemCommand : command.getItems()) {
             DetectionItem item = itemMap.get(itemCommand.getItemId());
             if (item == null) {
