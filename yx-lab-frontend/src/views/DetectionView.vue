@@ -1,6 +1,6 @@
 <template>
-  <div class="content-grid detection-page">
-    <section class="glass-panel section-block">
+  <div class="content-grid detection-page fixed-table-page">
+    <section class="glass-panel section-block fixed-table-section">
       <div class="section-head">
         <div>
           <h3 class="section-title">{{ baseScene.tableTitle }}</h3>
@@ -83,13 +83,14 @@
         </div>
       </div>
 
-      <div class="table-card">
+      <div class="table-card table-card--fixed-scroll">
+        <div class="table-card__body">
         <el-table
           class="list-table"
           :data="pagedRecords"
           stripe
           row-key="id"
-          max-height="560"
+          height="100%"
           :empty-text="baseScene.emptyText"
         >
           <el-table-column prop="sampleNo" label="样品编号" min-width="170" />
@@ -147,6 +148,7 @@
             </template>
           </el-table-column>
         </el-table>
+        </div>
 
         <TablePagination
           v-model:current-page="query.pageNum"

@@ -1,6 +1,6 @@
 ﻿<template>
-  <div class="content-grid system-page" v-loading="loading">
-    <section class="glass-panel section-block">
+  <div class="content-grid system-page fixed-table-page" v-loading="loading">
+    <section class="glass-panel section-block fixed-table-section">
       <div class="section-head">
         <div>
           <h3 class="section-title">{{ currentScene.tableTitle }}</h3>
@@ -60,8 +60,9 @@
           </div>
         </div>
 
-        <div class="table-card">
-          <el-table class="list-table" :data="visibleUserRows" stripe max-height="460" empty-text="暂无用户数据">
+        <div class="table-card table-card--fixed-scroll">
+          <div class="table-card__body">
+          <el-table class="list-table" :data="visibleUserRows" stripe height="100%" empty-text="暂无用户数据">
             <el-table-column prop="username" label="用户名" min-width="140" />
             <el-table-column prop="realName" label="姓名" min-width="120" />
             <el-table-column prop="orgName" label="所属机构" min-width="160">
@@ -92,6 +93,7 @@
               </template>
             </el-table-column>
           </el-table>
+          </div>
           <TablePagination v-model:current-page="userQuery.pageNum" v-model:page-size="userQuery.pageSize" :total="userTotal" @change="loadUsers" />
         </div>
       </template>
@@ -133,8 +135,9 @@
           </div>
         </div>
 
-        <div class="table-card">
-          <el-table class="list-table" :data="visibleOrgRows" stripe max-height="460" empty-text="暂无机构数据">
+        <div class="table-card table-card--fixed-scroll">
+          <div class="table-card__body">
+          <el-table class="list-table" :data="visibleOrgRows" stripe height="100%" empty-text="暂无机构数据">
             <el-table-column prop="orgCode" label="机构编码" min-width="140" />
             <el-table-column prop="orgName" label="机构名称" min-width="150" />
             <el-table-column prop="parentName" label="上级机构" min-width="150"><template #default="{ row }">{{ row.parentName || '-' }}</template></el-table-column>
@@ -145,6 +148,7 @@
             <el-table-column prop="updatedTime" label="更新时间" min-width="170"><template #default="{ row }">{{ row.updatedTime || '-' }}</template></el-table-column>
             <el-table-column label="操作" width="170" fixed="right" class-name="cell-center"><template #default="{ row }"><el-button link type="primary" @click="openOrgDialog(row)">编辑</el-button><el-button link type="danger" @click="removeOrg(row)">删除</el-button></template></el-table-column>
           </el-table>
+          </div>
           <TablePagination v-model:current-page="orgQuery.pageNum" v-model:page-size="orgQuery.pageSize" :total="orgTotal" @change="loadOrgs" />
         </div>
       </template>
@@ -185,8 +189,9 @@
           </div>
         </div>
 
-        <div class="table-card">
-          <el-table class="list-table" :data="visibleDictRows" stripe max-height="460" empty-text="暂无数据字典">
+        <div class="table-card table-card--fixed-scroll">
+          <div class="table-card__body">
+          <el-table class="list-table" :data="visibleDictRows" stripe height="100%" empty-text="暂无数据字典">
             <el-table-column prop="dictCode" label="字典编码" min-width="160" />
             <el-table-column prop="dictName" label="字典名称" min-width="160" />
             <el-table-column prop="moduleName" label="所属模块" min-width="140" />
@@ -197,6 +202,7 @@
             <el-table-column prop="updatedTime" label="更新时间" min-width="170"><template #default="{ row }">{{ row.updatedTime || '-' }}</template></el-table-column>
             <el-table-column label="操作" width="170" fixed="right" class-name="cell-center"><template #default="{ row }"><el-button link type="primary" @click="openDictDialog(row)">编辑</el-button><el-button link type="danger" @click="removeDict(row)">删除</el-button></template></el-table-column>
           </el-table>
+          </div>
           <TablePagination v-model:current-page="dictQuery.pageNum" v-model:page-size="dictQuery.pageSize" :total="dictTotal" @change="loadDicts" />
         </div>
       </template>
@@ -237,8 +243,9 @@
           </div>
         </div>
 
-        <div class="table-card">
-          <el-table class="list-table" :data="visibleRoleRows" stripe max-height="460" empty-text="暂无角色数据">
+        <div class="table-card table-card--fixed-scroll">
+          <div class="table-card__body">
+          <el-table class="list-table" :data="visibleRoleRows" stripe height="100%" empty-text="暂无角色数据">
             <el-table-column prop="roleCode" label="角色编码" min-width="140" />
             <el-table-column prop="roleName" label="角色名称" min-width="140" />
             <el-table-column prop="roleScope" label="适用范围" min-width="150"><template #default="{ row }">{{ row.roleScope || '-' }}</template></el-table-column>
@@ -248,6 +255,7 @@
             <el-table-column prop="updatedTime" label="更新时间" min-width="170"><template #default="{ row }">{{ row.updatedTime || '-' }}</template></el-table-column>
             <el-table-column label="操作" width="170" fixed="right" class-name="cell-center"><template #default="{ row }"><el-button link type="primary" @click="openRoleDialog(row)">编辑</el-button><el-button link type="danger" @click="removeRole(row)">删除</el-button></template></el-table-column>
           </el-table>
+          </div>
           <TablePagination v-model:current-page="roleQuery.pageNum" v-model:page-size="roleQuery.pageSize" :total="roleTotal" @change="loadRoles" />
         </div>
       </template>
@@ -276,8 +284,9 @@
           </div>
         </div>
 
-        <div class="table-card">
-          <el-table class="list-table" :data="logPageRows" stripe max-height="460" empty-text="暂无系统日志">
+        <div class="table-card table-card--fixed-scroll">
+          <div class="table-card__body">
+          <el-table class="list-table" :data="logPageRows" stripe height="100%" empty-text="暂无系统日志">
             <el-table-column prop="occurTime" label="发生时间" min-width="170"><template #default="{ row }">{{ row.occurTime || '-' }}</template></el-table-column>
             <el-table-column prop="sourceName" label="日志来源" min-width="120" />
             <el-table-column prop="businessNo" label="业务编号" min-width="170" show-overflow-tooltip><template #default="{ row }">{{ row.businessNo || '-' }}</template></el-table-column>
@@ -285,6 +294,7 @@
             <el-table-column label="状态" width="120" header-cell-class-name="cell-center" class-name="cell-center"><template #default="{ row }"><span :class="['status-chip', getLogStatusClass(row.status)]">{{ row.status || '-' }}</span></template></el-table-column>
             <el-table-column prop="content" label="日志内容" min-width="320" show-overflow-tooltip><template #default="{ row }">{{ row.content || '-' }}</template></el-table-column>
           </el-table>
+          </div>
           <TablePagination v-model:current-page="logQuery.pageNum" v-model:page-size="logQuery.pageSize" :total="logPageTotal" @change="loadLogs" />
         </div>
       </template>
@@ -307,8 +317,9 @@
           </div>
         </div>
 
-        <div class="table-card">
-          <el-table class="list-table" :data="visibleSceneRows" stripe max-height="460" :empty-text="currentScene.emptyText">
+        <div class="table-card table-card--fixed-scroll">
+          <div class="table-card__body">
+          <el-table class="list-table" :data="visibleSceneRows" stripe height="100%" :empty-text="currentScene.emptyText">
             <el-table-column
               v-for="column in currentScene.columns"
               :key="column.key"
@@ -326,6 +337,7 @@
               </template>
             </el-table-column>
           </el-table>
+          </div>
         </div>
       </template>
     </section>

@@ -1,6 +1,6 @@
 ﻿<template>
-  <div :class="['content-grid', 'sampling-page', { 'sampling-page--plan': isPlanScene }]">
-    <section v-if="!isPlanScene" class="glass-panel section-block">
+  <div :class="['content-grid', 'sampling-page', 'fixed-table-page', { 'sampling-page--plan': isPlanScene }]">
+    <section v-if="!isPlanScene" class="glass-panel section-block fixed-table-section">
       <div class="section-head">
         <div>
           <h3 class="section-title">{{ currentScene.tableTitle }}</h3>
@@ -144,13 +144,14 @@
         </div>
       </div>
 
-      <div class="table-card">
+      <div class="table-card table-card--fixed-scroll">
+        <div class="table-card__body">
         <el-table
           v-if="isTaskScene"
           class="list-table"
           :data="visibleTasks"
           stripe
-          max-height="460"
+          height="100%"
           :empty-text="baseScene.emptyText"
         >
           <el-table-column prop="taskNo" label="任务编号" min-width="150" />
@@ -256,7 +257,7 @@
           class="list-table"
           :data="visibleSamples"
           stripe
-          max-height="460"
+          height="100%"
           :empty-text="baseScene.emptyText"
         >
           <el-table-column prop="sampleNo" label="样品编号" min-width="180" />
@@ -292,6 +293,7 @@
             </template>
           </el-table-column>
         </el-table>
+        </div>
 
         <TablePagination
           v-if="isTaskScene"

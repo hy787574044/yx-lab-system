@@ -340,6 +340,19 @@ textarea {
   background: #ffffff;
 }
 
+.fixed-table-page {
+  height: 100%;
+  min-height: 0;
+}
+
+.fixed-table-section {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
 .list-table {
   width: 100%;
   max-width: 100%;
@@ -362,6 +375,25 @@ textarea {
 .table-card:not(.table-card--fixed-scroll) .el-table__fixed,
 .table-card:not(.table-card--fixed-scroll) .el-table__fixed-right {
   height: auto !important;
+}
+
+.table-card--fixed-scroll {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.table-card--fixed-scroll .table-card__body {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+}
+
+.table-card--fixed-scroll .table-card__body .el-table,
+.table-card--fixed-scroll .table-card__body .list-table {
+  height: 100%;
 }
 
 .table-card .el-scrollbar__bar.is-vertical {

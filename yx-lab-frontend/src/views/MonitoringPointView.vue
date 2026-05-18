@@ -1,6 +1,6 @@
 ﻿<template>
-  <div class="content-grid">
-    <section class="glass-panel section-block">
+  <div class="content-grid fixed-table-page">
+    <section class="glass-panel section-block fixed-table-section">
       <div class="section-head">
         <div>
           <h3 class="section-title">监测点位</h3>
@@ -64,8 +64,9 @@
         </div>
       </div>
 
-      <div class="table-card">
-        <el-table class="list-table" :data="visibleRecords" stripe max-height="420" empty-text="暂无监测点位数据">
+      <div class="table-card table-card--fixed-scroll">
+        <div class="table-card__body">
+        <el-table class="list-table" :data="visibleRecords" stripe height="100%" empty-text="暂无监测点位数据">
           <el-table-column prop="pointName" label="点位名称" min-width="180" />
           <el-table-column prop="regionName" label="所属区域" min-width="160" />
           <el-table-column label="点位类型" width="120">
@@ -103,6 +104,7 @@
             </template>
           </el-table-column>
         </el-table>
+        </div>
 
         <TablePagination
           v-model:current-page="query.pageNum"

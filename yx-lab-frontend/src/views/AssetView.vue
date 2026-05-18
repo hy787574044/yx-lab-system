@@ -1,6 +1,6 @@
 ﻿<template>
-  <div class="content-grid asset-page">
-    <section class="glass-panel section-block">
+  <div class="content-grid asset-page fixed-table-page">
+    <section class="glass-panel section-block fixed-table-section">
       <el-tabs v-model="active" :class="{ 'asset-tabs--single': showSingleAssetView }">
         <el-tab-pane v-if="showInstrumentTab" label="设备台账" name="inst">
           <div class="section-head">
@@ -70,12 +70,13 @@
             </div>
           </div>
 
-          <div class="table-card">
+          <div class="table-card table-card--fixed-scroll">
+            <div class="table-card__body">
             <el-table
               class="list-table"
               :data="visibleInstruments"
               stripe
-              max-height="420"
+              height="100%"
               v-loading="instrumentLoading"
               empty-text="暂无设备台账数据"
             >
@@ -104,6 +105,7 @@
                 </template>
               </el-table-column>
             </el-table>
+            </div>
 
             <TablePagination
               v-model:current-page="instrumentQuery.pageNum"
@@ -168,12 +170,13 @@
             </div>
           </div>
 
-          <div class="table-card">
+          <div class="table-card table-card--fixed-scroll">
+            <div class="table-card__body">
             <el-table
               class="list-table"
               :data="visibleDocuments"
               stripe
-              max-height="420"
+              height="100%"
               v-loading="documentLoading"
               empty-text="暂无文档台账数据"
             >
@@ -200,6 +203,7 @@
                 </template>
               </el-table-column>
             </el-table>
+            </div>
 
             <TablePagination
               v-model:current-page="documentQuery.pageNum"
@@ -1063,6 +1067,23 @@ watch(() => route.fullPath, () => {
 <style scoped>
 .asset-page {
   gap: 16px;
+}
+
+.asset-page :deep(.el-tabs) {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.asset-page :deep(.el-tabs__content) {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.asset-page :deep(.el-tab-pane) {
+  height: 100%;
+  min-height: 0;
 }
 
 .asset-stats {

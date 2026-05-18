@@ -1,6 +1,6 @@
 ﻿<template>
-  <div class="content-grid detection-config-page">
-    <section class="glass-panel section-block">
+  <div class="content-grid detection-config-page fixed-table-page">
+    <section class="glass-panel section-block fixed-table-section">
       <div class="section-head">
         <div>
           <h3 class="section-title">{{ currentScene.tableTitle }}</h3>
@@ -65,12 +65,13 @@
           </div>
         </div>
 
-        <div class="table-card">
+        <div class="table-card table-card--fixed-scroll">
+          <div class="table-card__body">
           <el-table
             class="list-table"
             :data="visibleParameterRows"
             stripe
-            max-height="480"
+            height="100%"
             empty-text="暂无检测参数数据"
           >
             <el-table-column label="参数方法关系" min-width="360">
@@ -152,6 +153,7 @@
               </template>
             </el-table-column>
           </el-table>
+          </div>
 
           <TablePagination
             v-model:current-page="parameterQuery.pageNum"
@@ -222,12 +224,13 @@
           </div>
         </div>
 
-        <div class="table-card">
+        <div class="table-card table-card--fixed-scroll">
+          <div class="table-card__body">
           <el-table
             class="list-table"
             :data="visibleGroupRows"
             stripe
-            max-height="480"
+            height="100%"
             empty-text="暂无检测套餐数据"
           >
             <el-table-column prop="typeName" label="套餐名称" min-width="180" />
@@ -260,6 +263,7 @@
               </template>
             </el-table-column>
           </el-table>
+          </div>
 
           <TablePagination
             v-model:current-page="groupQuery.pageNum"

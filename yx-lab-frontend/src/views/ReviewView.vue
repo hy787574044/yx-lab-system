@@ -1,6 +1,6 @@
 <template>
-  <div class="content-grid review-page">
-    <section class="glass-panel section-block">
+  <div class="content-grid review-page fixed-table-page">
+    <section class="glass-panel section-block fixed-table-section">
       <div class="section-head">
         <div>
           <h3 class="section-title">{{ baseScene.tableTitle }}</h3>
@@ -75,8 +75,9 @@
         </div>
       </div>
 
-      <div class="table-card">
-        <el-table class="list-table" :data="visibleRecords" stripe max-height="520" :empty-text="baseScene.emptyText">
+      <div class="table-card table-card--fixed-scroll">
+        <div class="table-card__body">
+        <el-table class="list-table" :data="visibleRecords" stripe height="100%" :empty-text="baseScene.emptyText">
           <el-table-column prop="sampleNo" label="样品编号" min-width="160" />
           <el-table-column prop="sealNo" label="封签编号" min-width="160" />
           <el-table-column prop="detectionTypeName" label="检测套餐" min-width="160" />
@@ -125,6 +126,7 @@
             </template>
           </el-table-column>
         </el-table>
+        </div>
 
         <TablePagination
           v-if="baseScene.key !== 'review-result'"

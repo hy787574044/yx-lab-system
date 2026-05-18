@@ -1,6 +1,6 @@
 ﻿<template>
-  <div class="content-grid maintenance-page">
-    <section class="glass-panel section-block">
+  <div class="content-grid maintenance-page fixed-table-page">
+    <section class="glass-panel section-block fixed-table-section">
       <div class="section-head">
         <div>
           <h3 class="section-title">维修台账</h3>
@@ -71,12 +71,13 @@
         </div>
       </div>
 
-      <div class="table-card">
+      <div class="table-card table-card--fixed-scroll">
+        <div class="table-card__body">
         <el-table
           class="list-table"
           :data="visibleRecords"
           stripe
-          max-height="460"
+          height="100%"
           v-loading="loading"
           empty-text="暂无设备维修记录数据"
         >
@@ -99,6 +100,7 @@
             </template>
           </el-table-column>
         </el-table>
+        </div>
 
         <TablePagination
           v-model:current-page="query.pageNum"

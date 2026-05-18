@@ -1,6 +1,6 @@
 <template>
-  <div class="content-grid binding-page">
-    <section class="glass-panel section-block">
+  <div class="content-grid binding-page fixed-table-page">
+    <section class="glass-panel section-block fixed-table-section">
       <div class="section-head">
         <div>
           <h3 class="section-title">绑定配置列表</h3>
@@ -43,12 +43,13 @@
         </div>
       </div>
 
-      <div class="table-card">
+      <div class="table-card table-card--fixed-scroll">
+        <div class="table-card__body">
         <el-table
           class="list-table"
           :data="visibleRows"
           stripe
-          max-height="520"
+          height="100%"
           empty-text="暂无参数方法绑定数据"
         >
           <el-table-column label="参数方法关系" min-width="460">
@@ -120,6 +121,7 @@
             </template>
           </el-table-column>
         </el-table>
+        </div>
 
         <TablePagination
           v-model:current-page="query.pageNum"
