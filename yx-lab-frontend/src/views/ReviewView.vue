@@ -23,7 +23,44 @@
 
       <div class="toolbar-panel">
         <div class="toolbar-row">
+          <div class="toolbar-main">
+            <div class="toolbar-fields">
+              <label class="toolbar-field toolbar-field--medium">
+                <span>关键字</span>
+                <el-input
+                  v-model="query.keyword"
+                  clearable
+                  placeholder="请输入样品编号、封签号或检测套餐"
+                  @keyup.enter="handleSearch"
+                />
+              </label>
+              <label class="toolbar-field">
+                <span>审查结果</span>
+                <el-select v-model="query.reviewResult" clearable placeholder="请选择审查结果">
+                  <el-option
+                    v-for="option in reviewResultOptions"
+                    :key="option.value"
+                    :label="option.label"
+                    :value="option.value"
+                  />
+                </el-select>
+              </label>
+              <label class="toolbar-field">
+                <span>数据范围</span>
+                <el-select v-model="query.mine" clearable placeholder="请选择数据范围">
+                  <el-option
+                    v-for="option in mineOptions"
+                    :key="String(option.value)"
+                    :label="option.label"
+                    :value="option.value"
+                  />
+                </el-select>
+              </label>
+            </div>
+          </div>
           <div class="toolbar-actions">
+            <el-button type="primary" @click="handleSearch">查询</el-button>
+            <el-button @click="resetQuery">重置</el-button>
             <el-button type="primary" @click="loadData">刷新审查队列</el-button>
             <el-button @click="handleExport">导出</el-button>
             <el-button
@@ -246,6 +283,7 @@ import { ElDialog } from 'element-plus/es/components/dialog/index.mjs'
 import { ElForm, ElFormItem } from 'element-plus/es/components/form/index.mjs'
 import { ElInput } from 'element-plus/es/components/input/index.mjs'
 import { ElMessage } from 'element-plus/es/components/message/index.mjs'
+import { ElOption, ElSelect } from 'element-plus/es/components/select/index.mjs'
 import { ElTable, ElTableColumn } from 'element-plus/es/components/table/index.mjs'
 import {
   exportReviewsApi,
@@ -275,7 +313,13 @@ const router = useRouter()
 const WAIT_ASSIGN_STATUS = waitAssignDetectionStatus
 const WAIT_DETECT_STATUS = waitDetectDetectionStatus
 
-const query = reactive({ pageNum: 1, pageSize: DEFAULT_PAGE_SIZE })
+const query = reactive({
+  keyword: '',
+  reviewResult: '',
+  mine: '',
+  pageNum: 1,
+  pageSize: DEFAULT_PAGE_SIZE
+})
 const reviewRecords = ref([])
 const pendingDetections = ref([])
 const total = ref(0)
@@ -398,6 +442,12 @@ const currentScene = computed(() => ({
   ]
 }))
 
+const reviewResultOptions = computed(() => Object.entries(reviewResultLabelMap).map(([value, label]) => ({ value, label })))
+const mineOptions = [
+  { value: true, label: '仅看我的' },
+  { value: false, label: '查看全部' }
+]
+
 const currentStats = computed(() => [
   {
     key: 'all',
@@ -428,7 +478,11 @@ const currentStats = computed(() => [
 ])
 
 const visibleRecords = computed(() => {
+  const hasReviewResultFilter = Boolean(query.reviewResult)
   if (baseScene.value.key === 'review-result') {
+    if (hasReviewResultFilter) {
+      return reviewRecords.value
+    }
     if (activeStatKey.value === 'approved') {
       return approvedRows.value
     }
@@ -464,6 +518,19 @@ const reviewDialogNote = computed(() => (
 
 function handleStatClick(key) {
   activeStatKey.value = activeStatKey.value === key ? baseScene.value.defaultStatKey : key
+}
+
+function handleSearch() {
+  query.pageNum = 1
+  loadData()
+}
+
+function resetQuery() {
+  query.keyword = ''
+  query.reviewResult = ''
+  query.mine = ''
+  query.pageNum = 1
+  loadData()
 }
 
 function syncRouteState() {
@@ -708,9 +775,20 @@ async function submitReviewDecision() {
 }
 
 async function loadData() {
+  const reviewQuery = {
+    ...query,
+    mine: query.mine === '' ? undefined : query.mine
+  }
+  const detectionQuery = {
+    pageNum: 1,
+    pageSize: 500,
+    keyword: query.keyword,
+    detectionStatus: reviewPendingDetectionStatus,
+    mine: query.mine === '' ? undefined : query.mine
+  }
   const [reviewResult, detectionResult] = await Promise.all([
-    fetchReviewsApi(query),
-    fetchDetectionsApi({ pageNum: 1, pageSize: 500 })
+    fetchReviewsApi(reviewQuery),
+    fetchDetectionsApi(detectionQuery)
   ])
   const detectionRecords = detectionResult.records || []
   const detectionMap = detectionRecords.reduce((result, item) => {
@@ -727,14 +805,17 @@ async function loadData() {
     }
   })
   total.value = toSafeNumber(reviewResult.total)
-  pendingDetections.value = detectionRecords.filter(
-    (item) => item.detectionStatus === reviewPendingDetectionStatus
-  )
+  pendingDetections.value = query.reviewResult
+    ? []
+    : detectionRecords.filter((item) => item.detectionStatus === reviewPendingDetectionStatus)
 }
 
 async function handleExport() {
   try {
-    await exportReviewsApi(query)
+    await exportReviewsApi({
+      ...query,
+      mine: query.mine === '' ? undefined : query.mine
+    })
     ElMessage.success('结果审查导出成功')
   } catch (error) {
     ElMessage.error(error.message || '结果审查导出失败')

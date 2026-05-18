@@ -48,6 +48,7 @@ public class InstrumentAssetService {
                                 .or()
                                 .like(Instrument::getStorageLocation, query.getKeyword()))
                         .eq(StrUtil.isNotBlank(query.getInstrumentStatus()), Instrument::getInstrumentStatus, query.getInstrumentStatus())
+                        .like(StrUtil.isNotBlank(query.getManufacturer()), Instrument::getManufacturer, query.getManufacturer())
                         .orderByDesc(Instrument::getCreatedTime));
         return new PageResult<>(page.getTotal(), page.getRecords());
     }
@@ -108,6 +109,17 @@ public class InstrumentAssetService {
                 PageUtils.buildPage(query),
                 new LambdaQueryWrapper<InstrumentMaintenance>()
                         .eq(query.getInstrumentId() != null, InstrumentMaintenance::getInstrumentId, query.getInstrumentId())
+                        .and(StrUtil.isNotBlank(query.getKeyword()), wrapper -> wrapper
+                                .like(InstrumentMaintenance::getMaintenanceReason, query.getKeyword())
+                                .or()
+                                .like(InstrumentMaintenance::getMaintainerName, query.getKeyword())
+                                .or()
+                                .like(InstrumentMaintenance::getMaintenanceCompany, query.getKeyword())
+                                .or()
+                                .like(InstrumentMaintenance::getMaintenanceResult, query.getKeyword())
+                                .or()
+                                .like(InstrumentMaintenance::getRemark, query.getKeyword()))
+                        .like(StrUtil.isNotBlank(query.getMaintenanceCompany()), InstrumentMaintenance::getMaintenanceCompany, query.getMaintenanceCompany())
                         .orderByDesc(InstrumentMaintenance::getMaintenanceTime));
         return new PageResult<>(page.getTotal(), page.getRecords());
     }

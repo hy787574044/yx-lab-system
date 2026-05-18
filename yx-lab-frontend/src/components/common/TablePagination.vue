@@ -1,44 +1,46 @@
 <template>
-  <div class="table-pagination" v-if="showPagination">
+  <div v-if="showPagination" class="table-pagination">
     <div class="table-pagination__summary">
       共 {{ total }} 条，当前第 {{ currentPage }} / {{ pageCount }} 页
     </div>
 
     <div class="table-pagination__controls">
-      <span class="table-pagination__label">每页</span>
       <el-select
-        :model-value="pageSize"
-        class="table-pagination__size"
-        @update:model-value="handleSizeChange"
+        class="table-pagination__size-select"
+        style="width: 128px"
+        :model-value="normalizedPageSize"
+        @change="handleSizeChange"
       >
         <el-option
           v-for="size in pageSizes"
           :key="size"
-          :label="`${size} 条/页`"
-          :value="size"
+          :label="`${size}条/页`"
+          :value="Number(size)"
         />
       </el-select>
 
-      <el-button :disabled="currentPage <= 1" @click="changePage(currentPage - 1)">
-        上一页
-      </el-button>
-
-      <template v-for="item in visiblePages" :key="`page-${item}`">
-        <span v-if="item === '...'" class="table-pagination__ellipsis">...</span>
-        <el-button
-          v-else
-          :type="item === currentPage ? 'primary' : 'default'"
-          :plain="item !== currentPage"
-          class="table-pagination__page"
-          @click="changePage(item)"
-        >
-          {{ item }}
+      <div class="table-pagination__page-group">
+        <el-button :disabled="currentPage <= 1" @click="changePage(currentPage - 1)">
+          上一页
         </el-button>
-      </template>
 
-      <el-button :disabled="currentPage >= pageCount" @click="changePage(currentPage + 1)">
-        下一页
-      </el-button>
+        <template v-for="item in visiblePages" :key="`page-${item}`">
+          <span v-if="item === '...'" class="table-pagination__ellipsis">...</span>
+          <el-button
+            v-else
+            :type="item === currentPage ? 'primary' : 'default'"
+            :plain="item !== currentPage"
+            class="table-pagination__page"
+            @click="changePage(item)"
+          >
+            {{ item }}
+          </el-button>
+        </template>
+
+        <el-button :disabled="currentPage >= pageCount" @click="changePage(currentPage + 1)">
+          下一页
+        </el-button>
+      </div>
     </div>
   </div>
 </template>
@@ -55,7 +57,7 @@ const props = defineProps({
     default: 1
   },
   pageSize: {
-    type: Number,
+    type: [Number, String],
     default: DEFAULT_PAGE_SIZE
   },
   pageSizes: {
@@ -70,7 +72,16 @@ const props = defineProps({
 
 const emit = defineEmits(['update:currentPage', 'update:pageSize', 'change'])
 
-const pageCount = computed(() => Math.max(1, Math.ceil((props.total || 0) / (props.pageSize || 1))))
+const normalizedPageSize = computed(() => {
+  const currentSize = Number(props.pageSize)
+  if (Number.isFinite(currentSize) && currentSize > 0) {
+    return currentSize
+  }
+  const fallbackSize = Number(props.pageSizes?.[0] ?? DEFAULT_PAGE_SIZE)
+  return Number.isFinite(fallbackSize) && fallbackSize > 0 ? fallbackSize : DEFAULT_PAGE_SIZE
+})
+
+const pageCount = computed(() => Math.max(1, Math.ceil((props.total || 0) / normalizedPageSize.value)))
 const showPagination = computed(() => props.total > 0)
 
 const visiblePages = computed(() => {
@@ -101,7 +112,11 @@ function changePage(page) {
 }
 
 function handleSizeChange(size) {
-  emit('update:pageSize', size)
+  const nextSize = Number(size)
+  if (!Number.isFinite(nextSize) || nextSize <= 0) {
+    return
+  }
+  emit('update:pageSize', nextSize)
   emit('update:currentPage', 1)
   emit('change')
 }
@@ -112,34 +127,66 @@ function handleSizeChange(size) {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 12px;
   margin-top: 0;
-  padding: 12px 14px;
+  padding: 10px 14px;
   border-top: 1px solid var(--line-soft);
   background: #ffffff;
 }
 
 .table-pagination__summary {
+  flex: 0 0 auto;
   color: var(--text-sub);
   font-size: 12px;
+  line-height: 32px;
   white-space: nowrap;
 }
 
 .table-pagination__controls {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: flex-end;
-  flex-wrap: wrap;
+  gap: 10px;
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+}
+
+.table-pagination__size-select {
+  flex: 0 0 auto;
+  width: 128px;
+  min-width: 128px;
+}
+
+.table-pagination__size-select :deep(.el-select__wrapper) {
+  min-height: 34px;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 0 0 1px #cfd9e6 inset;
+}
+
+.table-pagination__size-select :deep(.el-select__wrapper:hover) {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--brand) 50%, #ffffff 50%) inset;
+}
+
+.table-pagination__size-select :deep(.el-select__wrapper.is-focused) {
+  box-shadow: 0 0 0 1px var(--brand) inset;
+}
+
+.table-pagination__size-select :deep(.el-select__selected-item),
+.table-pagination__size-select :deep(.el-select__placeholder) {
+  color: var(--text-main);
+  font-size: 13px;
+}
+
+.table-pagination__size-select :deep(.el-select__caret) {
+  color: var(--text-light);
+}
+
+.table-pagination__page-group {
+  display: inline-flex;
+  align-items: center;
   gap: 8px;
-}
-
-.table-pagination__label {
-  color: var(--text-sub);
-  font-size: 12px;
-}
-
-.table-pagination__size {
-  width: 112px;
+  flex-wrap: nowrap;
 }
 
 .table-pagination__page {
@@ -158,8 +205,9 @@ function handleSizeChange(size) {
     flex-direction: column;
   }
 
-  .table-pagination__controls {
-    justify-content: flex-start;
+  .table-pagination__controls,
+  .table-pagination__page-group {
+    flex-wrap: wrap;
   }
 }
 </style>

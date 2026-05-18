@@ -23,22 +23,36 @@
 
       <div class="toolbar-panel">
         <div class="toolbar-row">
-          <div class="toolbar-fields">
-            <label class="toolbar-field">
-              <span>点位名称</span>
-              <el-input v-model="query.keyword" placeholder="请输入点位名称查询" clearable />
-            </label>
-            <label class="toolbar-field">
-              <span>点位状态</span>
-              <el-select v-model="query.pointStatus" placeholder="请选择点位状态" clearable>
-                <el-option
-                  v-for="option in pointStatusOptions"
-                  :key="option.value"
-                  :label="option.label"
-                  :value="option.value"
-                />
-              </el-select>
-            </label>
+            <div class="toolbar-main">
+              <el-button type="primary" class="toolbar-primary-button" @click="openCreateDialog">新增点位</el-button>
+              <div class="toolbar-fields">
+                <label class="toolbar-field">
+                  <span>点位名称</span>
+                  <el-input v-model="query.keyword" placeholder="请输入点位名称查询" clearable />
+                </label>
+                <label class="toolbar-field">
+                  <span>点位类型</span>
+                  <el-select v-model="query.pointType" placeholder="请选择点位类型" clearable>
+                    <el-option
+                      v-for="option in pointTypeOptions"
+                      :key="option.value"
+                      :label="option.label"
+                      :value="option.value"
+                    />
+                  </el-select>
+                </label>
+                <label class="toolbar-field">
+                  <span>点位状态</span>
+                  <el-select v-model="query.pointStatus" placeholder="请选择点位状态" clearable>
+                    <el-option
+                      v-for="option in pointStatusOptions"
+                    :key="option.value"
+                    :label="option.label"
+                    :value="option.value"
+                  />
+                </el-select>
+              </label>
+            </div>
           </div>
 
           <div class="toolbar-actions">
@@ -46,7 +60,6 @@
             <el-button @click="resetQuery">重置</el-button>
             <el-button @click="loadData">刷新</el-button>
             <el-button @click="handleExport">导出</el-button>
-            <el-button type="primary" plain @click="openCreateDialog">新增点位</el-button>
           </div>
         </div>
       </div>
@@ -193,7 +206,7 @@ import {
   pointTypeLabelMap
 } from '../utils/labEnums'
 
-const query = reactive({ pageNum: 1, pageSize: DEFAULT_PAGE_SIZE, keyword: '', pointStatus: '' })
+const query = reactive({ pageNum: 1, pageSize: DEFAULT_PAGE_SIZE, keyword: '', pointType: '', pointStatus: '' })
 const records = ref([])
 const total = ref(0)
 const dialogVisible = ref(false)
@@ -282,6 +295,7 @@ function resetQuery() {
   query.pageNum = 1
   query.pageSize = DEFAULT_PAGE_SIZE
   query.keyword = ''
+  query.pointType = ''
   query.pointStatus = ''
   activeStatKey.value = 'all'
   loadData()

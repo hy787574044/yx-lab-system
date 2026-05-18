@@ -154,3 +154,195 @@
 [2m10:01:32[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/MobileWorkbenchView.vue, /src/views/DetectionMethodView.vue, /src/views/DetectionConfigView.vue, /src/views/LoginView.vue, /src/views/DashboardView.vue, /src/views/DetectionParameterMethodBindingView.vue, /src/views/SystemManagementView.vue, /src/views/SamplingView.vue, /src/views/MonitoringPointView.vue, /src/views/DetectionView.vue, /src/views/ReviewView.vue, /src/views/ReportView.vue, /src/views/AssetView.vue, /src/views/InstrumentMaintenanceView.vue, /src/views/StatisticsView.vue[22m
 [2m10:02:50[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/MobileWorkbenchView.vue, /src/views/DetectionMethodView.vue, /src/views/DetectionConfigView.vue, /src/views/LoginView.vue, /src/views/DashboardView.vue, /src/views/DetectionParameterMethodBindingView.vue, /src/views/SystemManagementView.vue, /src/views/SamplingView.vue, /src/views/MonitoringPointView.vue, /src/views/DetectionView.vue, /src/views/ReviewView.vue, /src/views/ReportView.vue, /src/views/AssetView.vue, /src/views/InstrumentMaintenanceView.vue, /src/views/StatisticsView.vue[22m
 [2m10:03:26[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/MobileWorkbenchView.vue, /src/views/DetectionMethodView.vue, /src/views/DetectionConfigView.vue, /src/views/LoginView.vue, /src/views/DashboardView.vue, /src/views/DetectionParameterMethodBindingView.vue, /src/views/SystemManagementView.vue, /src/views/SamplingView.vue, /src/views/MonitoringPointView.vue, /src/views/DetectionView.vue, /src/views/ReviewView.vue, /src/views/ReportView.vue, /src/views/AssetView.vue, /src/views/InstrumentMaintenanceView.vue, /src/views/StatisticsView.vue[22m
+[2m19:27:06[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionView.vue[22m
+[2m19:27:32[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionView.vue?vue&type=style&index=0&scoped=212bbd4a&lang.css[22m
+[2m19:29:11[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionView.vue?vue&type=style&index=0&scoped=212bbd4a&lang.css, /src/views/DetectionView.vue[22m
+[2m19:32:36[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionView.vue[22m
+[2m19:37:39[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionView.vue[22m
+[2m19:37:51[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionView.vue[22m
+[2m19:38:07[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionView.vue[22m
+[2m09:08:52[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/layout/AppLayout.vue?vue&type=style&index=0&scoped=b0d177fe&lang.css, /src/views/layout/AppLayout.vue[22m
+[2m09:10:50[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionConfigView.vue[22m
+[2m09:10:50[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionMethodView.vue[22m
+[2m09:10:50[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/SamplingView.vue[22m
+[2m09:10:50[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionView.vue[22m
+[2m09:10:50[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/ReviewView.vue[22m
+[2m09:10:50[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/SystemManagementView.vue[22m
+[2m09:10:50[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/StatisticsView.vue[22m
+[2m09:11:54[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionParameterMethodBindingView.vue[22m
+[2m09:11:54[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/InstrumentMaintenanceView.vue[22m
+[2m09:19:34[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/styles/theme.css[22m
+[2m09:19:34[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/SamplingView.vue?vue&type=style&index=0&scoped=3b8b650d&lang.css[22m
+[2m09:19:34[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionView.vue?vue&type=style&index=0&scoped=212bbd4a&lang.css[22m
+[2m09:19:34[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/ReviewView.vue?vue&type=style&index=0&scoped=cd5bb438&lang.css[22m
+[2m09:19:34[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionConfigView.vue?vue&type=style&index=0&scoped=da05f262&lang.css[22m
+[2m09:19:34[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionMethodView.vue?vue&type=style&index=0&scoped=b994a219&lang.css[22m
+[2m09:19:35[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionParameterMethodBindingView.vue?vue&type=style&index=0&scoped=0b9ac7f0&lang.css[22m
+[2m09:19:35[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/InstrumentMaintenanceView.vue?vue&type=style&index=0&scoped=4b97422d&lang.css[22m
+[2m09:19:35[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/StatisticsView.vue?vue&type=style&index=0&scoped=c88f21b0&lang.css[22m
+[2m09:19:35[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/SystemManagementView.vue?vue&type=style&index=0&scoped=25c467a4&lang.css[22m
+[2m09:20:38[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/layout/AppLayout.vue?vue&type=style&index=0&scoped=b0d177fe&lang.css[22m
+[2m09:41:02[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DashboardView.vue, /src/views/DashboardView.vue?vue&type=style&index=0&scoped=336c5134&lang.css[22m
+[2m09:46:07[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/router/menuConfig.js[22m
+[2m09:46:31[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/SamplingView.vue[22m
+[2m09:47:38[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/SamplingView.vue[22m
+[2m09:47:53[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/SamplingView.vue[22m
+[2m09:48:09[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/SamplingView.vue[22m
+[2m09:48:18[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/SamplingView.vue[22m
+[2m09:48:59[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/SamplingView.vue[22m
+[2m09:51:51[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/router/menuConfig.js[22m
+[2m09:54:13[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/router/menuConfig.js[22m
+[2m09:58:03[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/router/menuConfig.js[22m
+[2m09:58:03[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/SamplingView.vue[22m
+[2m09:58:28[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/SamplingView.vue[22m
+[2m10:03:28[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/SamplingView.vue[22m
+[2m10:16:04[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/SamplingView.vue?vue&type=style&index=0&scoped=3b8b650d&lang.css, /src/views/SamplingView.vue[22m
+[2m10:40:03[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/SamplingView.vue[22m
+[2m10:40:21[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionView.vue[22m
+[2m10:40:27[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/ReviewView.vue[22m
+[2m10:41:49[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionConfigView.vue[22m
+[2m10:41:49[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionMethodView.vue[22m
+[2m10:41:49[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionParameterMethodBindingView.vue[22m
+[2m10:41:50[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/SystemManagementView.vue[22m
+[2m10:43:02[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/MonitoringPointView.vue[22m
+[2m10:43:18[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/ReportView.vue[22m
+[2m10:43:18[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/InstrumentMaintenanceView.vue[22m
+[2m10:43:18[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/AssetView.vue[22m
+[2m10:44:31[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/StatisticsView.vue[22m
+[2m10:44:32[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/styles/theme.css[22m
+[2m10:44:41[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DashboardView.vue[22m
+[2m10:50:39[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/SamplingView.vue[22m
+[2m10:50:39[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionView.vue[22m
+[2m10:50:39[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/ReviewView.vue[22m
+[2m10:50:39[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionConfigView.vue[22m
+[2m10:50:39[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionMethodView.vue[22m
+[2m10:50:40[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionParameterMethodBindingView.vue[22m
+[2m10:50:40[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/SystemManagementView.vue[22m
+[2m10:50:40[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/InstrumentMaintenanceView.vue[22m
+[2m10:50:40[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DashboardView.vue[22m
+[2m10:50:40[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/StatisticsView.vue[22m
+[2m10:59:34[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/styles/theme.css[22m
+[2m10:59:34[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/SamplingView.vue[22m
+[2m10:59:34[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionView.vue[22m
+[2m10:59:34[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/ReviewView.vue[22m
+[2m10:59:34[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionConfigView.vue[22m
+[2m10:59:34[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionMethodView.vue[22m
+[2m10:59:34[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionParameterMethodBindingView.vue[22m
+[2m10:59:34[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/SystemManagementView.vue[22m
+[2m10:59:34[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/MonitoringPointView.vue[22m
+[2m10:59:34[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/ReportView.vue[22m
+[2m10:59:34[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/InstrumentMaintenanceView.vue[22m
+[2m10:59:34[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DashboardView.vue[22m
+[2m10:59:34[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/StatisticsView.vue[22m
+[2m11:00:01[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/AssetView.vue[22m
+[2m11:00:01[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/AssetView.vue[22m
+[2m11:18:27[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/styles/theme.css[22m
+[2m11:18:28[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/SamplingView.vue[22m
+[2m11:18:28[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionView.vue[22m
+[2m11:18:28[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/ReviewView.vue[22m
+[2m11:18:28[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/MonitoringPointView.vue[22m
+[2m11:18:28[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/ReportView.vue[22m
+[2m11:18:28[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionMethodView.vue[22m
+[2m11:18:28[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionParameterMethodBindingView.vue[22m
+[2m11:18:28[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionConfigView.vue[22m
+[2m11:18:28[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/SystemManagementView.vue[22m
+[2m11:18:28[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/InstrumentMaintenanceView.vue[22m
+[2m11:18:28[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DashboardView.vue[22m
+[2m11:18:28[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/StatisticsView.vue[22m
+[2m11:18:51[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/AssetView.vue[22m
+[2m11:21:55[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/styles/theme.css[22m
+[2m11:21:55[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/SamplingView.vue[22m
+[2m11:21:55[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionView.vue[22m
+[2m11:21:55[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/ReviewView.vue[22m
+[2m11:21:55[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/MonitoringPointView.vue[22m
+[2m11:21:55[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/ReportView.vue[22m
+[2m11:21:55[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionMethodView.vue[22m
+[2m11:21:55[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionParameterMethodBindingView.vue[22m
+[2m11:21:55[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionConfigView.vue[22m
+[2m11:21:55[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/SystemManagementView.vue[22m
+[2m11:21:55[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/InstrumentMaintenanceView.vue[22m
+[2m11:21:55[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DashboardView.vue[22m
+[2m11:21:56[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/StatisticsView.vue[22m
+[2m11:21:56[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/AssetView.vue[22m
+[2m11:24:47[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/styles/theme.css[22m
+[2m11:28:19[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/AssetView.vue?vue&type=style&index=0&scoped=63d5c0ad&lang.css[22m
+[2m11:38:37[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/styles/theme.css[22m
+[2m11:39:24[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/MonitoringPointView.vue[22m
+[2m11:39:24[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/ReportView.vue[22m
+[2m11:39:24[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/InstrumentMaintenanceView.vue[22m
+[2m11:40:14[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/AssetView.vue[22m
+[2m11:40:15[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/SystemManagementView.vue[22m
+[2m11:43:27[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/SystemManagementView.vue[22m
+[2m11:44:26[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionMethodView.vue[22m
+[2m11:44:26[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionConfigView.vue[22m
+[2m11:44:47[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/SamplingView.vue[22m
+[2m13:34:17[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/AssetView.vue[22m
+[2m13:34:18[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionConfigView.vue[22m
+[2m13:34:18[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionMethodView.vue[22m
+[2m13:34:18[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/InstrumentMaintenanceView.vue[22m
+[2m13:34:18[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/MonitoringPointView.vue[22m
+[2m13:34:18[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/ReportView.vue[22m
+[2m13:34:18[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/SamplingView.vue[22m
+[2m13:34:18[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/SystemManagementView.vue[22m
+[2m13:36:35[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/SamplingView.vue?vue&type=style&index=0&scoped=3b8b650d&lang.css, /src/views/SamplingView.vue[22m
+[2m13:38:09[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/styles/theme.css[22m
+[2m13:50:07[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/MonitoringPointView.vue[22m
+[2m13:50:07[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/AssetView.vue[22m
+[2m13:50:07[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/InstrumentMaintenanceView.vue[22m
+[2m13:50:07[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/ReportView.vue[22m
+[2m13:50:07[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/SystemManagementView.vue[22m
+[2m13:50:40[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/SystemManagementView.vue[22m
+[2m13:50:54[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionMethodView.vue[22m
+[2m13:52:01[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionMethodView.vue[22m
+[2m13:53:14[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionConfigView.vue[22m
+[2m13:54:18[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionConfigView.vue[22m
+[2m13:59:28[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/SamplingView.vue[22m
+[2m13:59:41[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/SamplingView.vue[22m
+[2m13:59:54[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/SamplingView.vue[22m
+[2m14:00:09[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionView.vue[22m
+[2m14:00:34[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionView.vue[22m
+[2m14:00:42[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionView.vue[22m
+[2m14:01:38[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionView.vue[22m
+[2m14:01:55[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/ReviewView.vue[22m
+[2m14:02:37[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/ReviewView.vue[22m
+[2m14:02:45[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/ReviewView.vue[22m
+[2m14:02:53[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/ReviewView.vue[22m
+[2m14:03:01[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/ReviewView.vue[22m
+[2m14:03:55[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/ReviewView.vue[22m
+[2m14:04:04[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/ReviewView.vue[22m
+[2m14:04:18[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/ReviewView.vue[22m
+[2m14:12:08[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionConfigView.vue[22m
+[2m14:19:18[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/styles/theme.css[22m
+[2m14:29:36[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionMethodView.vue[22m
+[2m14:38:08[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionMethodView.vue[22m
+[2m14:40:56[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionMethodView.vue[22m
+[2m14:41:32[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionConfigView.vue, /src/views/DetectionConfigView.vue?vue&type=style&index=0&scoped=da05f262&lang.css[22m
+[2m14:44:16[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionMethodView.vue?vue&type=style&index=0&scoped=b994a219&lang.css[22m
+[2m14:47:31[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/ReportView.vue[22m
+[2m14:48:49[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/SamplingView.vue?vue&type=style&index=0&scoped=3b8b650d&lang.css, /src/views/SamplingView.vue[22m
+[2m14:58:11[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/common/TablePagination.vue, /src/components/common/TablePagination.vue?vue&type=style&index=0&scoped=b3e16f4e&lang.css[22m
+[2m14:58:44[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/common/TablePagination.vue, /src/components/common/TablePagination.vue?vue&type=style&index=0&scoped=b3e16f4e&lang.css[22m
+[2m14:58:59[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/styles/theme.css[22m
+[2m15:03:28[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/styles/theme.css[22m
+[2m15:08:31[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/styles/theme.css[22m
+[2m15:14:28[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/styles/theme.css[22m
+[2m15:18:47[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/styles/theme.css[22m
+[2m15:22:07[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/common/TablePagination.vue, /src/components/common/TablePagination.vue?vue&type=style&index=0&scoped=b3e16f4e&lang.css[22m
+[2m15:22:42[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/common/TablePagination.vue, /src/components/common/TablePagination.vue?vue&type=style&index=0&scoped=b3e16f4e&lang.css[22m
+[2m15:26:13[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/common/TablePagination.vue, /src/components/common/TablePagination.vue?vue&type=style&index=0&scoped=b3e16f4e&lang.css[22m
+[2m15:26:49[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/common/TablePagination.vue, /src/components/common/TablePagination.vue?vue&type=style&index=0&scoped=b3e16f4e&lang.css[22m
+[2m15:29:50[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/common/TablePagination.vue, /src/components/common/TablePagination.vue?vue&type=style&index=0&scoped=b3e16f4e&lang.css[22m
+[2m15:30:23[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/common/TablePagination.vue, /src/components/common/TablePagination.vue?vue&type=style&index=0&scoped=b3e16f4e&lang.css[22m
+[2m15:33:22[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/common/TablePagination.vue, /src/components/common/TablePagination.vue?vue&type=style&index=0&scoped=b3e16f4e&lang.css[22m
+[2m15:34:03[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/common/TablePagination.vue, /src/components/common/TablePagination.vue?vue&type=style&index=0&scoped=b3e16f4e&lang.css[22m
+[2m15:34:04[22m [36m[1m[vite][22m[39m [32m✨ new dependencies optimized: [33melement-plus/es/components/dropdown/index.mjs[32m[39m
+[2m15:34:04[22m [36m[1m[vite][22m[39m [32m✨ optimized dependencies changed. reloading[39m
+[2m15:38:40[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/common/TablePagination.vue, /src/components/common/TablePagination.vue?vue&type=style&index=0&scoped=b3e16f4e&lang.css[22m
+[2m15:41:55[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/common/TablePagination.vue[22m
+[2m15:41:55[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/SystemManagementView.vue?vue&type=style&index=0&scoped=25c467a4&lang.css[22m
+[2m15:46:21[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/SamplingView.vue[22m
+[2m15:51:11[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/ReportView.vue?vue&type=style&index=0&scoped=95801e60&lang.css, /src/views/ReportView.vue[22m
+[2m15:51:11[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/SamplingView.vue?vue&type=style&index=0&scoped=3b8b650d&lang.css, /src/views/SamplingView.vue[22m
+[2m16:01:22[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/styles/theme.css[22m
+[2m16:01:22[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/ReportView.vue[22m
+[2m16:01:22[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/SamplingView.vue[22m

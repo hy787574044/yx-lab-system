@@ -24,22 +24,31 @@
       <template v-if="isUserScene">
         <div class="toolbar-panel">
           <div class="toolbar-row">
-            <div class="toolbar-fields">
-              <label class="toolbar-field toolbar-field--medium">
-                <span>关键字</span>
-                <el-input
-                  v-model="userQuery.keyword"
-                  clearable
-                  placeholder="请输入用户名、姓名、机构、手机号或角色编码"
-                  @keyup.enter="handleUserSearch"
-                />
-              </label>
-              <label class="toolbar-field">
-                <span>状态</span>
-                <el-select v-model="userQuery.status" clearable placeholder="请选择状态">
-                  <el-option v-for="item in statusOptions" :key="item.value" :label="item.label" :value="item.value" />
-                </el-select>
-              </label>
+            <div class="toolbar-main">
+              <el-button type="primary" class="toolbar-primary-button" @click="openUserDialog()">新增用户</el-button>
+              <div class="toolbar-fields">
+                <label class="toolbar-field toolbar-field--medium">
+                  <span>关键字</span>
+                  <el-input
+                    v-model="userQuery.keyword"
+                    clearable
+                    placeholder="请输入用户名、姓名、机构、手机号或角色编码"
+                    @keyup.enter="handleUserSearch"
+                  />
+                </label>
+                <label class="toolbar-field">
+                  <span>状态</span>
+                  <el-select v-model="userQuery.status" clearable placeholder="请选择状态">
+                    <el-option v-for="item in statusOptions" :key="item.value" :label="item.label" :value="item.value" />
+                  </el-select>
+                </label>
+                <label class="toolbar-field">
+                  <span>角色编码</span>
+                  <el-select v-model="userQuery.roleCode" clearable filterable placeholder="请选择角色编码">
+                    <el-option v-for="item in roleOptionsForUser" :key="item.value" :label="item.label" :value="item.value" />
+                  </el-select>
+                </label>
+              </div>
             </div>
 
             <div class="toolbar-actions">
@@ -47,7 +56,6 @@
               <el-button @click="resetUserQuery">重置</el-button>
               <el-button @click="reloadData">刷新</el-button>
               <el-button @click="handleExportCurrentScene">导出</el-button>
-              <el-button type="primary" plain @click="openUserDialog()">新增用户</el-button>
             </div>
           </div>
         </div>
@@ -91,22 +99,29 @@
       <template v-else-if="isOrgScene">
         <div class="toolbar-panel">
           <div class="toolbar-row">
-            <div class="toolbar-fields">
-              <label class="toolbar-field toolbar-field--medium">
-                <span>关键字</span>
-                <el-input
-                  v-model="orgQuery.keyword"
-                  clearable
-                  placeholder="请输入机构编码、机构名称、上级机构、机构类型或备注"
-                  @keyup.enter="handleOrgSearch"
-                />
-              </label>
-              <label class="toolbar-field">
-                <span>状态</span>
-                <el-select v-model="orgQuery.status" clearable placeholder="请选择状态">
-                  <el-option v-for="item in statusOptions" :key="item.value" :label="item.label" :value="item.value" />
-                </el-select>
-              </label>
+            <div class="toolbar-main">
+              <el-button type="primary" class="toolbar-primary-button" @click="openOrgDialog()">新增机构</el-button>
+              <div class="toolbar-fields">
+                <label class="toolbar-field toolbar-field--medium">
+                  <span>关键字</span>
+                  <el-input
+                    v-model="orgQuery.keyword"
+                    clearable
+                    placeholder="请输入机构编码、机构名称、上级机构、机构类型或备注"
+                    @keyup.enter="handleOrgSearch"
+                  />
+                </label>
+                <label class="toolbar-field">
+                  <span>状态</span>
+                  <el-select v-model="orgQuery.status" clearable placeholder="请选择状态">
+                    <el-option v-for="item in statusOptions" :key="item.value" :label="item.label" :value="item.value" />
+                  </el-select>
+                </label>
+                <label class="toolbar-field">
+                  <span>机构类型</span>
+                  <el-input v-model="orgQuery.orgType" clearable placeholder="请输入机构类型" @keyup.enter="handleOrgSearch" />
+                </label>
+              </div>
             </div>
 
             <div class="toolbar-actions">
@@ -114,7 +129,6 @@
               <el-button @click="resetOrgQuery">重置</el-button>
               <el-button @click="reloadData">刷新</el-button>
               <el-button @click="handleExportCurrentScene">导出</el-button>
-              <el-button type="primary" plain @click="openOrgDialog()">新增机构</el-button>
             </div>
           </div>
         </div>
@@ -138,29 +152,35 @@
       <template v-else-if="isDictScene">
         <div class="toolbar-panel">
           <div class="toolbar-row">
-            <div class="toolbar-fields">
-              <label class="toolbar-field toolbar-field--medium">
-                <span>关键字</span>
-                <el-input
-                  v-model="dictQuery.keyword"
-                  clearable
-                  placeholder="请输入字典编码、字典名称、所属模块、字典项或备注"
-                  @keyup.enter="handleDictSearch"
-                />
-              </label>
-              <label class="toolbar-field">
-                <span>状态</span>
-                <el-select v-model="dictQuery.status" clearable placeholder="请选择状态">
-                  <el-option v-for="item in statusOptions" :key="item.value" :label="item.label" :value="item.value" />
-                </el-select>
-              </label>
+            <div class="toolbar-main">
+              <el-button type="primary" class="toolbar-primary-button" @click="openDictDialog()">新增字典</el-button>
+              <div class="toolbar-fields">
+                <label class="toolbar-field toolbar-field--medium">
+                  <span>关键字</span>
+                  <el-input
+                    v-model="dictQuery.keyword"
+                    clearable
+                    placeholder="请输入字典编码、字典名称、所属模块、字典项或备注"
+                    @keyup.enter="handleDictSearch"
+                  />
+                </label>
+                <label class="toolbar-field">
+                  <span>状态</span>
+                  <el-select v-model="dictQuery.status" clearable placeholder="请选择状态">
+                    <el-option v-for="item in statusOptions" :key="item.value" :label="item.label" :value="item.value" />
+                  </el-select>
+                </label>
+                <label class="toolbar-field">
+                  <span>所属模块</span>
+                  <el-input v-model="dictQuery.moduleName" clearable placeholder="请输入所属模块" @keyup.enter="handleDictSearch" />
+                </label>
+              </div>
             </div>
             <div class="toolbar-actions">
               <el-button type="primary" @click="handleDictSearch">查询</el-button>
               <el-button @click="resetDictQuery">重置</el-button>
               <el-button @click="reloadData">刷新</el-button>
               <el-button @click="handleExportCurrentScene">导出</el-button>
-              <el-button type="primary" plain @click="openDictDialog()">新增字典</el-button>
             </div>
           </div>
         </div>
@@ -184,29 +204,35 @@
       <template v-else-if="isRoleScene">
         <div class="toolbar-panel">
           <div class="toolbar-row">
-            <div class="toolbar-fields">
-              <label class="toolbar-field toolbar-field--medium">
-                <span>关键字</span>
-                <el-input
-                  v-model="roleQuery.keyword"
-                  clearable
-                  placeholder="请输入角色编码、角色名称、适用范围或备注"
-                  @keyup.enter="handleRoleSearch"
-                />
-              </label>
-              <label class="toolbar-field">
-                <span>状态</span>
-                <el-select v-model="roleQuery.status" clearable placeholder="请选择状态">
-                  <el-option v-for="item in statusOptions" :key="item.value" :label="item.label" :value="item.value" />
-                </el-select>
-              </label>
+            <div class="toolbar-main">
+              <el-button type="primary" class="toolbar-primary-button" @click="openRoleDialog()">新增角色</el-button>
+              <div class="toolbar-fields">
+                <label class="toolbar-field toolbar-field--medium">
+                  <span>关键字</span>
+                  <el-input
+                    v-model="roleQuery.keyword"
+                    clearable
+                    placeholder="请输入角色编码、角色名称、适用范围或备注"
+                    @keyup.enter="handleRoleSearch"
+                  />
+                </label>
+                <label class="toolbar-field">
+                  <span>状态</span>
+                  <el-select v-model="roleQuery.status" clearable placeholder="请选择状态">
+                    <el-option v-for="item in statusOptions" :key="item.value" :label="item.label" :value="item.value" />
+                  </el-select>
+                </label>
+                <label class="toolbar-field">
+                  <span>适用范围</span>
+                  <el-input v-model="roleQuery.roleScope" clearable placeholder="请输入适用范围" @keyup.enter="handleRoleSearch" />
+                </label>
+              </div>
             </div>
             <div class="toolbar-actions">
               <el-button type="primary" @click="handleRoleSearch">查询</el-button>
               <el-button @click="resetRoleQuery">重置</el-button>
               <el-button @click="reloadData">刷新</el-button>
               <el-button @click="handleExportCurrentScene">导出</el-button>
-              <el-button type="primary" plain @click="openRoleDialog()">新增角色</el-button>
             </div>
           </div>
         </div>
@@ -442,28 +468,32 @@ const dictQuery = reactive({
   pageNum: 1,
   pageSize: DEFAULT_PAGE_SIZE,
   keyword: '',
-  status: ''
+  status: '',
+  moduleName: ''
 })
 
 const orgQuery = reactive({
   pageNum: 1,
   pageSize: DEFAULT_PAGE_SIZE,
   keyword: '',
-  status: ''
+  status: '',
+  orgType: ''
 })
 
 const userQuery = reactive({
   pageNum: 1,
   pageSize: DEFAULT_PAGE_SIZE,
   keyword: '',
-  status: ''
+  status: '',
+  roleCode: ''
 })
 
 const roleQuery = reactive({
   pageNum: 1,
   pageSize: DEFAULT_PAGE_SIZE,
   keyword: '',
-  status: ''
+  status: '',
+  roleScope: ''
 })
 
 const logQuery = reactive({
@@ -1090,6 +1120,7 @@ function resetDictQueryState() {
   dictQuery.pageSize = DEFAULT_PAGE_SIZE
   dictQuery.keyword = ''
   dictQuery.status = ''
+  dictQuery.moduleName = ''
 }
 
 function resetOrgQueryState() {
@@ -1097,6 +1128,7 @@ function resetOrgQueryState() {
   orgQuery.pageSize = DEFAULT_PAGE_SIZE
   orgQuery.keyword = ''
   orgQuery.status = ''
+  orgQuery.orgType = ''
 }
 
 function resetUserQueryState() {
@@ -1104,6 +1136,7 @@ function resetUserQueryState() {
   userQuery.pageSize = DEFAULT_PAGE_SIZE
   userQuery.keyword = ''
   userQuery.status = ''
+  userQuery.roleCode = ''
 }
 
 function resetRoleQueryState() {
@@ -1111,6 +1144,7 @@ function resetRoleQueryState() {
   roleQuery.pageSize = DEFAULT_PAGE_SIZE
   roleQuery.keyword = ''
   roleQuery.status = ''
+  roleQuery.roleScope = ''
 }
 
 function resetLogQueryState() {
@@ -1283,7 +1317,8 @@ async function loadDicts() {
       pageNum: dictQuery.pageNum,
       pageSize: dictQuery.pageSize,
       keyword: String(dictQuery.keyword || '').trim() || undefined,
-      status: dictQuery.status === '' ? undefined : dictQuery.status
+      status: dictQuery.status === '' ? undefined : dictQuery.status,
+      moduleName: String(dictQuery.moduleName || '').trim() || undefined
     })
     dictRows.value = Array.isArray(result.records) ? result.records : []
     dictTotal.value = Number(result.total || 0)
@@ -1305,7 +1340,8 @@ async function loadOrgs() {
       pageNum: orgQuery.pageNum,
       pageSize: orgQuery.pageSize,
       keyword: String(orgQuery.keyword || '').trim() || undefined,
-      status: orgQuery.status === '' ? undefined : orgQuery.status
+      status: orgQuery.status === '' ? undefined : orgQuery.status,
+      orgType: String(orgQuery.orgType || '').trim() || undefined
     })
     orgRows.value = Array.isArray(result.records) ? result.records : []
     orgTotal.value = Number(result.total || 0)
@@ -1327,7 +1363,8 @@ async function loadUsers() {
       pageNum: userQuery.pageNum,
       pageSize: userQuery.pageSize,
       keyword: String(userQuery.keyword || '').trim() || undefined,
-      status: userQuery.status === '' ? undefined : userQuery.status
+      status: userQuery.status === '' ? undefined : userQuery.status,
+      roleCode: String(userQuery.roleCode || '').trim() || undefined
     })
     userRows.value = Array.isArray(result.records) ? result.records : []
     userTotal.value = Number(result.total || 0)
@@ -1349,7 +1386,8 @@ async function loadRoles() {
       pageNum: roleQuery.pageNum,
       pageSize: roleQuery.pageSize,
       keyword: String(roleQuery.keyword || '').trim() || undefined,
-      status: roleQuery.status === '' ? undefined : roleQuery.status
+      status: roleQuery.status === '' ? undefined : roleQuery.status,
+      roleScope: String(roleQuery.roleScope || '').trim() || undefined
     })
     roleRows.value = Array.isArray(result.records) ? result.records : []
     roleTotal.value = Number(result.total || 0)
@@ -1892,8 +1930,10 @@ function getLogSourceFilterLabel(sourceType) {
   gap: 8px;
 }
 
-.system-page :deep(.el-select),
-.system-page :deep(.el-input) {
+.system-page .toolbar-field :deep(.el-select),
+.system-page .toolbar-field :deep(.el-input),
+.system-page .form-grid :deep(.el-select),
+.system-page .form-grid :deep(.el-input) {
   width: 100%;
 }
 

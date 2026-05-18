@@ -162,6 +162,7 @@ public class DetectionConfigService {
                                 .like(DetectionParameter::getReferenceStandard, keyword)
                                 .or()
                                 .like(DetectionParameter::getRemark, keyword))
+                        .eq(query.getEnabled() != null, DetectionParameter::getEnabled, query.getEnabled())
                         .orderByDesc(DetectionParameter::getCreatedTime));
         return new PageResult<>(page.getTotal(), page.getRecords());
     }
@@ -232,6 +233,8 @@ public class DetectionConfigService {
                                 .like(DetectionMethod::getApplyScope, keyword)
                                 .or()
                                 .like(DetectionMethod::getRemark, keyword))
+                        .eq(query.getParameterId() != null, DetectionMethod::getParameterId, query.getParameterId())
+                        .eq(query.getEnabled() != null, DetectionMethod::getEnabled, query.getEnabled())
                         .orderByDesc(DetectionMethod::getCreatedTime));
         return new PageResult<>(page.getTotal(), page.getRecords());
     }

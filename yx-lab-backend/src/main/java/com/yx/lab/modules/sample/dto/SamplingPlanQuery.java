@@ -11,4 +11,6 @@ public class SamplingPlanQuery extends PageQuery {
     private String keyword;
 
     private String planStatus;
+
+    private Long samplerId;
 }

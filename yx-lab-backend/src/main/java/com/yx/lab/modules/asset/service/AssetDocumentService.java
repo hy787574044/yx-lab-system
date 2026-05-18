@@ -85,6 +85,7 @@ public class AssetDocumentService {
         LambdaQueryWrapper<LabDocument> wrapper = new LambdaQueryWrapper<LabDocument>()
                 .like(StrUtil.isNotBlank(query.getKeyword()), LabDocument::getDocumentName, query.getKeyword())
                 .eq(StrUtil.isNotBlank(query.getDocumentCategory()), LabDocument::getDocumentCategory, query.getDocumentCategory())
+                .eq(StrUtil.isNotBlank(query.getFileType()), LabDocument::getFileType, query.getFileType())
                 .orderByDesc(LabDocument::getCreatedTime);
 
         if (!isAdmin(currentUser)) {

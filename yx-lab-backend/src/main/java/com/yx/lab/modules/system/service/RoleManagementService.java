@@ -50,6 +50,7 @@ public class RoleManagementService {
                                 .or()
                                 .like(LabRole::getRemark, StrUtil.trim(query.getKeyword())))
                         .eq(query.getStatus() != null, LabRole::getStatus, query.getStatus())
+                        .eq(StrUtil.isNotBlank(query.getRoleScope()), LabRole::getRoleScope, StrUtil.trim(query.getRoleScope()))
                         .orderByAsc(LabRole::getRoleCode)
                         .orderByDesc(LabRole::getCreatedTime));
         List<LabRoleVO> records = page.getRecords().stream()

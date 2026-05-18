@@ -11,4 +11,6 @@ public class InstrumentQuery extends PageQuery {
     private String keyword;
 
     private String instrumentStatus;
+
+    private String manufacturer;
 }

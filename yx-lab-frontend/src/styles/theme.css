@@ -166,20 +166,27 @@ textarea {
 
 .toolbar-row {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: space-between;
   gap: 10px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+}
+
+.toolbar-main {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex: 1 1 auto;
+  min-width: 0;
+  flex-wrap: nowrap;
 }
 
 .toolbar-fields {
-  flex: 0 1 auto;
-  width: fit-content;
-  max-width: 100%;
-  min-width: min(100%, 360px);
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(168px, 220px));
-  justify-content: flex-start;
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: flex-end;
   gap: 10px;
 }
 
@@ -187,10 +194,18 @@ textarea {
   display: grid;
   gap: 4px;
   min-width: 0;
+  flex: 0 0 172px;
+  width: 172px;
 }
 
+.toolbar-field--medium,
 .toolbar-field--wide {
-  grid-column: span 2;
+  flex-basis: 220px;
+  width: 220px;
+}
+
+.toolbar-field :is(.el-input, .el-select, .el-date-editor) {
+  width: 100%;
 }
 
 .toolbar-field > span {
@@ -204,13 +219,30 @@ textarea {
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   margin-left: auto;
+  flex: 0 0 auto;
 }
 
 .toolbar-actions--start {
   justify-content: flex-start;
   margin-left: 0;
+}
+
+.toolbar-primary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 112px;
+  height: 38px;
+  min-height: 38px;
+  padding: 8px 20px;
+  border-radius: 19px;
+  line-height: 20px;
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: 0 10px 22px rgba(22, 119, 255, 0.18);
 }
 
 .content-grid {
@@ -312,6 +344,28 @@ textarea {
   width: 100%;
   max-width: 100%;
   min-width: 0;
+}
+
+.table-card .el-table__inner-wrapper,
+.table-card .el-table__body-wrapper,
+.table-card .el-scrollbar__wrap,
+.table-card .el-scrollbar__view {
+  min-height: 0 !important;
+}
+
+.table-card:not(.table-card--fixed-scroll) .el-table__body-wrapper,
+.table-card:not(.table-card--fixed-scroll) .el-scrollbar__wrap,
+.table-card:not(.table-card--fixed-scroll) .el-table__fixed-body-wrapper {
+  height: auto !important;
+}
+
+.table-card:not(.table-card--fixed-scroll) .el-table__fixed,
+.table-card:not(.table-card--fixed-scroll) .el-table__fixed-right {
+  height: auto !important;
+}
+
+.table-card .el-scrollbar__bar.is-vertical {
+  right: 4px;
 }
 
 .pager-wrap {
@@ -984,6 +1038,28 @@ textarea {
     align-items: flex-start;
     flex-direction: column;
   }
+
+  .toolbar-row,
+  .toolbar-main {
+    align-items: stretch;
+    flex-wrap: wrap;
+  }
+
+  .toolbar-fields {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .toolbar-field,
+  .toolbar-field--medium,
+  .toolbar-field--wide {
+    flex: 1 1 200px;
+    width: auto;
+  }
+
+  .toolbar-actions {
+    flex-wrap: wrap;
+  }
 }
 
 @media (max-width: 768px) {
@@ -1008,16 +1084,21 @@ textarea {
   .toolbar-fields {
     width: 100%;
     min-width: 100%;
-    grid-template-columns: 1fr;
+    flex-direction: column;
+    flex-wrap: nowrap;
   }
 
+  .toolbar-field,
+  .toolbar-field--medium,
   .toolbar-field--wide {
-    grid-column: auto;
+    width: 100%;
+    flex: 1 1 auto;
   }
 
   .toolbar-actions {
     justify-content: flex-start;
     margin-left: 0;
+    flex-wrap: wrap;
   }
 
   .el-dialog {

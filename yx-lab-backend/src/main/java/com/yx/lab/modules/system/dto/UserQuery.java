@@ -18,4 +18,6 @@ public class UserQuery extends PageQuery {
 
     @Schema(description = "状态，1 启用，0 停用")
     private Integer status;
+    @Schema(description = "角色编码")
+    private String roleCode;
 }

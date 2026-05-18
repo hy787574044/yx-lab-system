@@ -23,7 +23,44 @@
 
       <div class="toolbar-panel">
         <div class="toolbar-row">
+          <div class="toolbar-main">
+            <div class="toolbar-fields">
+              <label class="toolbar-field toolbar-field--medium">
+                <span>关键字</span>
+                <el-input
+                  v-model="query.keyword"
+                  clearable
+                  placeholder="请输入样品编号、封签号或检测套餐"
+                  @keyup.enter="handleSearch"
+                />
+              </label>
+              <label class="toolbar-field">
+                <span>流程状态</span>
+                <el-select v-model="query.detectionStatus" clearable placeholder="请选择流程状态">
+                  <el-option
+                    v-for="option in detectionStatusOptions"
+                    :key="option.value"
+                    :label="option.label"
+                    :value="option.value"
+                  />
+                </el-select>
+              </label>
+              <label class="toolbar-field">
+                <span>数据范围</span>
+                <el-select v-model="query.mine" clearable placeholder="请选择数据范围">
+                  <el-option
+                    v-for="option in mineOptions"
+                    :key="String(option.value)"
+                    :label="option.label"
+                    :value="option.value"
+                  />
+                </el-select>
+              </label>
+            </div>
+          </div>
           <div class="toolbar-actions">
+            <el-button type="primary" @click="handleSearch">查询</el-button>
+            <el-button @click="resetQuery">重置</el-button>
             <el-button type="primary" @click="loadData">刷新检测流程</el-button>
             <el-button @click="handleExport">导出</el-button>
             <el-button
@@ -365,7 +402,13 @@ const WAIT_ASSIGN_STATUS = waitAssignDetectionStatus
 const WAIT_DETECT_STATUS = waitDetectDetectionStatus
 const MAX_LOAD_SIZE = 500
 
-const query = reactive({ pageNum: 1, pageSize: DEFAULT_PAGE_SIZE })
+const query = reactive({
+  keyword: '',
+  detectionStatus: '',
+  mine: '',
+  pageNum: 1,
+  pageSize: DEFAULT_PAGE_SIZE
+})
 const records = ref([])
 const samplePool = ref([])
 const detectorOptions = ref([])
@@ -498,6 +541,12 @@ const pendingSampleRecords = computed(() => {
   if (!baseScene.value.includePendingFallback) {
     return []
   }
+  if (query.mine === true) {
+    return []
+  }
+  if (query.detectionStatus && query.detectionStatus !== WAIT_ASSIGN_STATUS) {
+    return []
+  }
   const existingSampleIds = new Set(records.value.map((item) => item.sampleId))
   return samplePool.value
     .filter((item) => availableDetectionSampleStatuses.includes(item.sampleStatus))
@@ -536,6 +585,12 @@ const currentScene = computed(() => ({
     }
   ]
 }))
+
+const detectionStatusOptions = computed(() => Object.entries(detectionStatusLabelMap).map(([value, label]) => ({ value, label })))
+const mineOptions = [
+  { value: true, label: '仅看我的' },
+  { value: false, label: '查看全部' }
+]
 
 const currentStats = computed(() => [
   {
@@ -690,6 +745,19 @@ function getDetectionResultClass(row) {
 function handleStatClick(key) {
   activeStatKey.value = activeStatKey.value === key ? baseScene.value.defaultStatKey : key
   query.pageNum = 1
+}
+
+function handleSearch() {
+  query.pageNum = 1
+  loadData()
+}
+
+function resetQuery() {
+  query.keyword = ''
+  query.detectionStatus = ''
+  query.mine = ''
+  query.pageNum = 1
+  loadData()
 }
 
 function syncRouteState() {
@@ -1084,9 +1152,18 @@ async function submitDetectionResult() {
 }
 
 async function loadData() {
+  const detectionQuery = {
+    ...query,
+    mine: query.mine === '' ? undefined : query.mine
+  }
+  const sampleQuery = {
+    pageNum: 1,
+    pageSize: MAX_LOAD_SIZE,
+    keyword: query.keyword
+  }
   const [detectionResult, sampleResult, detectorResult, detectionMethodResult] = await Promise.all([
-    fetchDetectionsApi({ pageNum: 1, pageSize: MAX_LOAD_SIZE }),
-    fetchSamplesApi({ pageNum: 1, pageSize: MAX_LOAD_SIZE }),
+    fetchDetectionsApi({ ...detectionQuery, pageNum: 1, pageSize: MAX_LOAD_SIZE }),
+    fetchSamplesApi(sampleQuery),
     fetchDetectionDetectorsApi(),
     fetchDetectionMethodsApi({ pageNum: 1, pageSize: MAX_LOAD_SIZE })
   ])
@@ -1107,7 +1184,10 @@ async function loadData() {
 
 async function handleExport() {
   try {
-    await exportDetectionsApi(query)
+    await exportDetectionsApi({
+      ...query,
+      mine: query.mine === '' ? undefined : query.mine
+    })
     ElMessage.success('检测流程导出成功')
   } catch (error) {
     ElMessage.error(error.message || '检测流程导出失败')

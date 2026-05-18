@@ -56,6 +56,7 @@ public class UserManagementService {
                                 .or()
                                 .like(LabUser::getRoleCode, keyword))
                         .eq(query.getStatus() != null, LabUser::getStatus, query.getStatus())
+                        .eq(StrUtil.isNotBlank(query.getRoleCode()), LabUser::getRoleCode, StrUtil.trim(query.getRoleCode()))
                         .orderByDesc(LabUser::getCreatedTime));
         List<LabUserVO> records = page.getRecords().stream()
                 .map(this::toVO)

@@ -51,6 +51,7 @@ public class SamplingPlanService {
                 new LambdaQueryWrapper<SamplingPlan>()
                         .like(StrUtil.isNotBlank(query.getKeyword()), SamplingPlan::getPlanName, query.getKeyword())
                         .eq(StrUtil.isNotBlank(query.getPlanStatus()), SamplingPlan::getPlanStatus, query.getPlanStatus())
+                        .eq(query.getSamplerId() != null, SamplingPlan::getSamplerId, query.getSamplerId())
                         .orderByDesc(SamplingPlan::getCreatedTime));
         return new PageResult<>(page.getTotal(), page.getRecords());
     }

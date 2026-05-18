@@ -25,36 +25,47 @@
 
           <div class="toolbar-panel">
             <div class="toolbar-row">
-              <div class="toolbar-fields">
-                <label class="toolbar-field toolbar-field--wide">
-                  <span>关键字</span>
-                  <el-input
-                    v-model="instrumentQuery.keyword"
-                    placeholder="请输入设备名称、型号、厂家或存放位置"
-                    clearable
-                    @keyup.enter="handleInstrumentSearch"
-                  />
-                </label>
-                <label class="toolbar-field">
-                  <span>设备状态</span>
-                  <el-select v-model="instrumentQuery.instrumentStatus" placeholder="请选择设备状态" clearable>
-                    <el-option
-                      v-for="option in instrumentStatusOptions"
-                      :key="option.value"
-                      :label="option.label"
-                      :value="option.value"
+              <div class="toolbar-main">
+                <el-button type="primary" class="toolbar-primary-button" @click="openInstrumentDialog()">新增设备</el-button>
+                <div class="toolbar-fields">
+                  <label class="toolbar-field toolbar-field--wide">
+                    <span>关键字</span>
+                    <el-input
+                      v-model="instrumentQuery.keyword"
+                      placeholder="请输入设备名称、型号、厂家或存放位置"
+                      clearable
+                      @keyup.enter="handleInstrumentSearch"
                     />
-                  </el-select>
-                </label>
+                  </label>
+                  <label class="toolbar-field">
+                    <span>设备状态</span>
+                    <el-select v-model="instrumentQuery.instrumentStatus" placeholder="请选择设备状态" clearable>
+                      <el-option
+                        v-for="option in instrumentStatusOptions"
+                        :key="option.value"
+                        :label="option.label"
+                        :value="option.value"
+                      />
+                    </el-select>
+                  </label>
+                  <label class="toolbar-field">
+                    <span>生产厂家</span>
+                    <el-input
+                      v-model="instrumentQuery.manufacturer"
+                      placeholder="请输入生产厂家"
+                      clearable
+                      @keyup.enter="handleInstrumentSearch"
+                    />
+                  </label>
+                </div>
               </div>
 
               <div class="toolbar-actions">
                 <el-button type="primary" @click="handleInstrumentSearch">查询</el-button>
                 <el-button @click="resetInstrumentQuery">重置</el-button>
-                <el-button @click="handleExportInstruments">导出</el-button>
                 <el-button @click="handleDownloadTemplate" :loading="templateDownloading">下载导入模板</el-button>
                 <el-button type="warning" plain @click="openImportDialog">导入设备</el-button>
-                <el-button type="primary" plain @click="openInstrumentDialog()">新增设备</el-button>
+                <el-button @click="handleExportInstruments">导出</el-button>
               </div>
             </div>
           </div>
@@ -126,27 +137,33 @@
 
           <div class="toolbar-panel">
             <div class="toolbar-row">
-              <div class="toolbar-fields">
-                <label class="toolbar-field toolbar-field--wide">
-                  <span>关键字</span>
-                  <el-input
-                    v-model="documentQuery.keyword"
-                    placeholder="请输入文档名称"
-                    clearable
-                    @keyup.enter="handleDocumentSearch"
-                  />
-                </label>
-                <label class="toolbar-field">
-                  <span>文档分类</span>
-                  <el-input v-model="documentQuery.documentCategory" placeholder="请输入文档分类" clearable />
-                </label>
+              <div class="toolbar-main">
+                <el-button type="primary" class="toolbar-primary-button" @click="openDocumentDialog()">新增文档</el-button>
+                <div class="toolbar-fields">
+                  <label class="toolbar-field toolbar-field--wide">
+                    <span>关键字</span>
+                    <el-input
+                      v-model="documentQuery.keyword"
+                      placeholder="请输入文档名称"
+                      clearable
+                      @keyup.enter="handleDocumentSearch"
+                    />
+                  </label>
+                  <label class="toolbar-field">
+                    <span>文档分类</span>
+                    <el-input v-model="documentQuery.documentCategory" placeholder="请输入文档分类" clearable />
+                  </label>
+                  <label class="toolbar-field">
+                    <span>文件类型</span>
+                    <el-input v-model="documentQuery.fileType" placeholder="如 pdf、docx" clearable />
+                  </label>
+                </div>
               </div>
 
               <div class="toolbar-actions">
                 <el-button type="primary" @click="handleDocumentSearch">查询</el-button>
                 <el-button @click="resetDocumentQuery">重置</el-button>
                 <el-button @click="handleExportDocuments">导出</el-button>
-                <el-button type="primary" plain @click="openDocumentDialog()">新增文档</el-button>
               </div>
             </div>
           </div>
@@ -590,14 +607,16 @@ const instrumentQuery = reactive({
   pageNum: 1,
   pageSize: DEFAULT_PAGE_SIZE,
   keyword: '',
-  instrumentStatus: ''
+  instrumentStatus: '',
+  manufacturer: ''
 })
 
 const documentQuery = reactive({
   pageNum: 1,
   pageSize: DEFAULT_PAGE_SIZE,
   keyword: '',
-  documentCategory: ''
+  documentCategory: '',
+  fileType: ''
 })
 
 const emptyInstrumentForm = () => ({
@@ -653,6 +672,7 @@ function resetInstrumentQuery() {
   instrumentQuery.pageSize = DEFAULT_PAGE_SIZE
   instrumentQuery.keyword = ''
   instrumentQuery.instrumentStatus = ''
+  instrumentQuery.manufacturer = ''
   activeStatKey.value = '设备总数'
   loadInstruments()
 }
@@ -662,6 +682,7 @@ function resetDocumentQuery() {
   documentQuery.pageSize = DEFAULT_PAGE_SIZE
   documentQuery.keyword = ''
   documentQuery.documentCategory = ''
+  documentQuery.fileType = ''
   activeStatKey.value = '文档总数'
   loadDocuments()
 }

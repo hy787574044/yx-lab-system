@@ -52,6 +52,7 @@ public class OrgManagementService {
                                 .or()
                                 .like(LabOrg::getRemark, StrUtil.trim(query.getKeyword())))
                         .eq(query.getStatus() != null, LabOrg::getStatus, query.getStatus())
+                        .eq(StrUtil.isNotBlank(query.getOrgType()), LabOrg::getOrgType, StrUtil.trim(query.getOrgType()))
                         .orderByAsc(LabOrg::getOrgCode)
                         .orderByDesc(LabOrg::getCreatedTime));
         List<LabOrgVO> records = page.getRecords().stream()

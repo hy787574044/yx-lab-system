@@ -55,6 +55,7 @@ public class DictManagementService {
                                 .or()
                                 .like(LabDict::getRemark, keyword))
                         .eq(query.getStatus() != null, LabDict::getStatus, query.getStatus())
+                        .eq(StrUtil.isNotBlank(query.getModuleName()), LabDict::getModuleName, StrUtil.trim(query.getModuleName()))
                         .orderByAsc(LabDict::getModuleName)
                         .orderByAsc(LabDict::getDictCode)
                         .orderByDesc(LabDict::getUpdatedTime));

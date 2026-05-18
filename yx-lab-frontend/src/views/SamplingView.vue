@@ -1,5 +1,5 @@
 ﻿<template>
-  <div class="content-grid sampling-page">
+  <div :class="['content-grid', 'sampling-page', { 'sampling-page--plan': isPlanScene }]">
     <section v-if="!isPlanScene" class="glass-panel section-block">
       <div class="section-head">
         <div>
@@ -23,9 +23,89 @@
 
       <div class="toolbar-panel">
         <div class="toolbar-row">
+          <div class="toolbar-main">
+            <el-button
+              v-if="baseScene.key === 'sample-login'"
+              type="primary"
+              class="toolbar-primary-button"
+              :disabled="!pendingLoggableTasks.length"
+              @click="openLoginDialog()"
+            >
+              样品登录
+            </el-button>
+            <div class="toolbar-fields">
+              <template v-if="isTaskScene">
+                <label class="toolbar-field toolbar-field--medium">
+                  <span>关键字</span>
+                  <el-input
+                    v-model="taskQuery.keyword"
+                    clearable
+                    placeholder="请输入任务编号、点位名称或封签号"
+                    @keyup.enter="handleCurrentSceneSearch"
+                  />
+                </label>
+                <label class="toolbar-field">
+                  <span>任务状态</span>
+                  <el-select v-model="taskQuery.taskStatus" clearable placeholder="请选择任务状态">
+                    <el-option
+                      v-for="option in taskStatusOptions"
+                      :key="option.value"
+                      :label="option.label"
+                      :value="option.value"
+                    />
+                  </el-select>
+                </label>
+                <label class="toolbar-field">
+                  <span>采样人员</span>
+                  <el-select v-model="taskQuery.samplerId" clearable filterable placeholder="请选择采样人员">
+                    <el-option
+                      v-for="item in samplerOptions"
+                      :key="item.id"
+                      :label="item.realName || item.username"
+                      :value="item.id"
+                    />
+                  </el-select>
+                </label>
+              </template>
+              <template v-else>
+                <label class="toolbar-field toolbar-field--medium">
+                  <span>关键字</span>
+                  <el-input
+                    v-model="sampleQuery.keyword"
+                    clearable
+                    placeholder="请输入样品编号、点位名称或封签号"
+                    @keyup.enter="handleCurrentSceneSearch"
+                  />
+                </label>
+                <label class="toolbar-field">
+                  <span>样品状态</span>
+                  <el-select v-model="sampleQuery.sampleStatus" clearable placeholder="请选择样品状态">
+                    <el-option
+                      v-for="option in sampleStatusOptions"
+                      :key="option.value"
+                      :label="option.label"
+                      :value="option.value"
+                    />
+                  </el-select>
+                </label>
+                <label class="toolbar-field">
+                  <span>样品类型</span>
+                  <el-select v-model="sampleQuery.sampleType" clearable placeholder="请选择样品类型">
+                    <el-option
+                      v-for="option in sampleTypeOptions"
+                      :key="option.value"
+                      :label="option.label"
+                      :value="option.value"
+                    />
+                  </el-select>
+                </label>
+              </template>
+            </div>
+          </div>
           <div class="toolbar-actions">
+            <el-button type="primary" @click="handleCurrentSceneSearch">查询</el-button>
+            <el-button @click="resetCurrentSceneQuery">重置</el-button>
             <el-button @click="refreshCurrentScene">刷新</el-button>
-            <el-button @click="handleExportCurrentScene">导出</el-button>
             <el-button
               v-if="baseScene.key === 'task-assign'"
               type="primary"
@@ -34,15 +114,6 @@
               @click="completeFirstPendingTask"
             >
               完成首条任务
-            </el-button>
-            <el-button
-              v-if="baseScene.key === 'sample-login'"
-              type="primary"
-              plain
-              :disabled="!pendingLoggableTasks.length"
-              @click="openLoginDialog()"
-            >
-              样品登录
             </el-button>
             <el-button
               v-if="baseScene.key === 'task-history'"
@@ -68,6 +139,7 @@
             >
               前往结果审查
             </el-button>
+            <el-button @click="handleExportCurrentScene">导出</el-button>
           </div>
         </div>
       </div>
@@ -238,7 +310,10 @@
       </div>
     </section>
 
-    <section v-if="baseScene.showPlanSection || isPlanScene" class="glass-panel section-block">
+    <section
+      v-if="baseScene.showPlanSection || isPlanScene"
+      :class="['glass-panel', 'section-block', { 'sampling-plan-section': isPlanScene }]"
+    >
       <div class="section-head">
         <div>
           <h3 class="section-title">周期采样计划</h3>
@@ -255,10 +330,45 @@
 
       <div class="toolbar-panel">
         <div class="toolbar-row">
-          <div class="plan-toolbar-left">
-            <el-button type="primary" class="plan-create-button" @click="createPlan">新增计划</el-button>
+          <div class="toolbar-main">
+            <el-button type="primary" class="toolbar-primary-button" @click="createPlan">新增计划</el-button>
+            <div class="toolbar-fields">
+              <label class="toolbar-field toolbar-field--medium">
+                <span>关键字</span>
+                <el-input
+                  v-model="planQuery.keyword"
+                  clearable
+                  placeholder="请输入计划名称或点位名称"
+                  @keyup.enter="handlePlanSearch"
+                />
+              </label>
+              <label class="toolbar-field">
+                <span>计划状态</span>
+                <el-select v-model="planQuery.planStatus" clearable placeholder="请选择计划状态">
+                  <el-option
+                    v-for="option in planStatusOptions"
+                    :key="option.value"
+                    :label="option.label"
+                    :value="option.value"
+                  />
+                </el-select>
+              </label>
+              <label class="toolbar-field">
+                <span>采样人员</span>
+                <el-select v-model="planQuery.samplerId" clearable filterable placeholder="请选择采样人员">
+                  <el-option
+                    v-for="item in samplerOptions"
+                    :key="item.id"
+                    :label="item.realName || item.username"
+                    :value="item.id"
+                  />
+                </el-select>
+              </label>
+            </div>
           </div>
           <div class="toolbar-actions">
+            <el-button type="primary" @click="handlePlanSearch">查询</el-button>
+            <el-button @click="resetPlanQuery">重置</el-button>
             <el-button @click="loadPlans">刷新计划</el-button>
             <el-button @click="handleExportPlans">导出</el-button>
           </div>
@@ -269,62 +379,64 @@
         {{ planDispatchNotice }}
       </div>
 
-      <div class="table-card">
-        <el-table class="list-table" :data="visiblePlans" stripe max-height="380" empty-text="暂无采样计划数据">
-          <el-table-column prop="planName" label="计划名称" min-width="180" />
-          <el-table-column prop="pointName" label="采样点位" min-width="160" />
-          <el-table-column prop="samplerName" label="采样人员" width="120" />
-          <el-table-column label="周期类型" width="120" header-cell-class-name="cell-center" class-name="cell-center">
-            <template #default="{ row }">
-              {{ getEnumLabel(cycleTypeLabelMap, row.cycleType) }}
-            </template>
-          </el-table-column>
-          <el-table-column prop="startTime" label="开始时间" width="170" />
-          <el-table-column prop="endTime" label="结束时间" width="170" />
-          <el-table-column label="计划状态" width="120" header-cell-class-name="cell-center" class-name="cell-center">
-            <template #default="{ row }">
-              <span class="status-chip" :class="getStatusClass('planStatus', row.planStatus)">
-                {{ getEnumLabel(planStatusLabelMap, row.planStatus) }}
-              </span>
-            </template>
-          </el-table-column>
-          <el-table-column label="操作" min-width="300" fixed="right" class-name="cell-center">
-            <template #default="{ row }">
-              <div class="action-row">
-                <el-button
-                  size="small"
-                  @click="openPlanEditDialog(row)"
-                  :disabled="isRowActionLoading('plan', 'pause', row.id) || isRowActionLoading('plan', 'resume', row.id) || !actionablePlanStatuses.includes(row.planStatus)"
-                >
-                  编辑
-                </el-button>
-                <el-button
-                  size="small"
-                  @click="openDispatchDialog(row)"
-                  :disabled="dispatchSubmitting || !actionablePlanStatuses.includes(row.planStatus)"
-                >
-                  派发
-                </el-button>
-                <el-button
-                  size="small"
-                  :loading="isRowActionLoading('plan', 'pause', row.id)"
-                  @click="pausePlan(row)"
-                  :disabled="isRowActionLoading('plan', 'resume', row.id) || !actionablePlanStatuses.includes(row.planStatus)"
-                >
-                  暂停
-                </el-button>
-                <el-button
-                  size="small"
-                  :loading="isRowActionLoading('plan', 'resume', row.id)"
-                  @click="resumePlan(row)"
-                  :disabled="isRowActionLoading('plan', 'pause', row.id) || row.planStatus !== pausedPlanStatus"
-                >
-                  恢复
-                </el-button>
-              </div>
-            </template>
-          </el-table-column>
-        </el-table>
+      <div :class="['table-card', { 'table-card--fixed-scroll': isPlanScene }, 'plan-table-card', { 'plan-table-card--fullscreen': isPlanScene }]">
+        <div class="plan-table-card__body">
+          <el-table class="list-table" :data="visiblePlans" stripe :height="isPlanScene ? '100%' : undefined" empty-text="暂无采样计划数据">
+            <el-table-column prop="planName" label="计划名称" min-width="180" />
+            <el-table-column prop="pointName" label="采样点位" min-width="160" />
+            <el-table-column prop="samplerName" label="采样人员" width="120" />
+            <el-table-column label="周期类型" width="120" header-cell-class-name="cell-center" class-name="cell-center">
+              <template #default="{ row }">
+                {{ getEnumLabel(cycleTypeLabelMap, row.cycleType) }}
+              </template>
+            </el-table-column>
+            <el-table-column prop="startTime" label="开始时间" width="170" />
+            <el-table-column prop="endTime" label="结束时间" width="170" />
+            <el-table-column label="计划状态" width="120" header-cell-class-name="cell-center" class-name="cell-center">
+              <template #default="{ row }">
+                <span class="status-chip" :class="getStatusClass('planStatus', row.planStatus)">
+                  {{ getEnumLabel(planStatusLabelMap, row.planStatus) }}
+                </span>
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" min-width="300" fixed="right" class-name="cell-center">
+              <template #default="{ row }">
+                <div class="action-row">
+                  <el-button
+                    size="small"
+                    @click="openPlanEditDialog(row)"
+                    :disabled="isRowActionLoading('plan', 'pause', row.id) || isRowActionLoading('plan', 'resume', row.id) || !actionablePlanStatuses.includes(row.planStatus)"
+                  >
+                    编辑
+                  </el-button>
+                  <el-button
+                    size="small"
+                    @click="openDispatchDialog(row)"
+                    :disabled="dispatchSubmitting || !actionablePlanStatuses.includes(row.planStatus)"
+                  >
+                    派发
+                  </el-button>
+                  <el-button
+                    size="small"
+                    :loading="isRowActionLoading('plan', 'pause', row.id)"
+                    @click="pausePlan(row)"
+                    :disabled="isRowActionLoading('plan', 'resume', row.id) || !actionablePlanStatuses.includes(row.planStatus)"
+                  >
+                    暂停
+                  </el-button>
+                  <el-button
+                    size="small"
+                    :loading="isRowActionLoading('plan', 'resume', row.id)"
+                    @click="resumePlan(row)"
+                    :disabled="isRowActionLoading('plan', 'pause', row.id) || row.planStatus !== pausedPlanStatus"
+                  >
+                    恢复
+                  </el-button>
+                </div>
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
 
         <TablePagination
           v-model:current-page="planQuery.pageNum"
@@ -755,9 +867,27 @@ import {
 const route = useRoute()
 const router = useRouter()
 
-const planQuery = reactive({ pageNum: 1, pageSize: DEFAULT_PAGE_SIZE })
-const taskQuery = reactive({ pageNum: 1, pageSize: DEFAULT_PAGE_SIZE })
-const sampleQuery = reactive({ pageNum: 1, pageSize: DEFAULT_PAGE_SIZE })
+const planQuery = reactive({
+  keyword: '',
+  planStatus: '',
+  samplerId: '',
+  pageNum: 1,
+  pageSize: DEFAULT_PAGE_SIZE
+})
+const taskQuery = reactive({
+  keyword: '',
+  taskStatus: '',
+  samplerId: '',
+  pageNum: 1,
+  pageSize: DEFAULT_PAGE_SIZE
+})
+const sampleQuery = reactive({
+  keyword: '',
+  sampleStatus: '',
+  sampleType: '',
+  pageNum: 1,
+  pageSize: DEFAULT_PAGE_SIZE
+})
 
 const plans = ref([])
 const tasks = ref([])
@@ -992,6 +1122,9 @@ const isTaskScene = computed(() => baseScene.value.mode === 'task')
 const isPlanScene = computed(() => baseScene.value.mode === 'plan')
 const taskSceneRecords = computed(() => tasks.value.filter((item) => baseScene.value.taskFilter(item)))
 const sampleSceneRecords = computed(() => samples.value.filter((item) => baseScene.value.sampleFilter(item)))
+const planStatusOptions = computed(() => Object.entries(planStatusLabelMap).map(([value, label]) => ({ value, label })))
+const taskStatusOptions = computed(() => Object.entries(taskStatusLabelMap).map(([value, label]) => ({ value, label })))
+const sampleStatusOptions = computed(() => Object.entries(sampleStatusLabelMap).map(([value, label]) => ({ value, label })))
 
 function isTaskRegistered(task) {
   if (!task) {
@@ -1341,6 +1474,45 @@ async function handleExportPlans() {
   } catch (error) {
     ElMessage.error(error.message || '采样计划导出失败')
   }
+}
+
+function handlePlanSearch() {
+  planQuery.pageNum = 1
+  loadPlans()
+}
+
+function resetPlanQuery() {
+  planQuery.keyword = ''
+  planQuery.planStatus = ''
+  planQuery.samplerId = ''
+  planQuery.pageNum = 1
+  loadPlans()
+}
+
+function handleCurrentSceneSearch() {
+  if (isTaskScene.value) {
+    taskQuery.pageNum = 1
+    loadTasks()
+    return
+  }
+  sampleQuery.pageNum = 1
+  loadSamples()
+}
+
+function resetCurrentSceneQuery() {
+  if (isTaskScene.value) {
+    taskQuery.keyword = ''
+    taskQuery.taskStatus = ''
+    taskQuery.samplerId = ''
+    taskQuery.pageNum = 1
+    loadTasks()
+    return
+  }
+  sampleQuery.keyword = ''
+  sampleQuery.sampleStatus = ''
+  sampleQuery.sampleType = ''
+  sampleQuery.pageNum = 1
+  loadSamples()
 }
 
 async function refreshCurrentScene() {
@@ -2128,6 +2300,11 @@ watch(() => route.fullPath, () => {
   gap: 12px;
 }
 
+.sampling-page--plan {
+  height: 100%;
+  min-height: 0;
+}
+
 .page-hero,
 .scene-grid {
   display: grid;
@@ -2198,19 +2375,37 @@ watch(() => route.fullPath, () => {
   color: #9a6700;
 }
 
-.plan-toolbar-left {
-  display: grid;
-  gap: 8px;
-  justify-items: flex-start;
+.sampling-plan-section {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
 }
 
-.plan-create-button {
-  min-height: 38px;
-  padding: 8px 20px;
-  border-radius: 19px;
-  font-size: 14px;
-  font-weight: 700;
-  box-shadow: 0 10px 22px rgba(22, 119, 255, 0.18);
+.plan-table-card {
+  min-width: 0;
+}
+
+.plan-table-card--fullscreen {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.plan-table-card__body {
+  min-width: 0;
+}
+
+.plan-table-card--fullscreen .plan-table-card__body {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.plan-table-card--fullscreen .plan-table-card__body :deep(.el-table) {
+  height: 100%;
 }
 
 .scene-grid {

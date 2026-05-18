@@ -1,5 +1,5 @@
 ﻿<template>
-  <div class="content-grid">
+  <div class="content-grid report-page">
     <section class="glass-panel section-block">
       <div class="section-head">
         <div>
@@ -23,29 +23,41 @@
 
       <div class="toolbar-panel">
         <div class="toolbar-row">
-          <div class="toolbar-fields">
-            <label class="toolbar-field">
-              <span>报告类型</span>
-              <el-select v-model="query.reportType" placeholder="请选择报告类型" clearable>
-                <el-option
-                  v-for="option in reportTypeOptions"
-                  :key="option.value"
-                  :label="option.label"
-                  :value="option.value"
+          <div class="toolbar-main">
+            <el-button type="primary" class="toolbar-primary-button" @click="createTemplate">新增模板</el-button>
+            <div class="toolbar-fields">
+              <label class="toolbar-field toolbar-field--wide">
+                <span>关键字</span>
+                <el-input
+                  v-model="query.keyword"
+                  clearable
+                  placeholder="请输入报告名称、样品编号或封签编号"
+                  @keyup.enter="handleSearch"
                 />
-              </el-select>
-            </label>
-            <label class="toolbar-field">
-              <span>报告状态</span>
-              <el-select v-model="query.reportStatus" placeholder="请选择报告状态" clearable>
-                <el-option
-                  v-for="option in reportStatusOptions"
-                  :key="option.value"
-                  :label="option.label"
-                  :value="option.value"
-                />
-              </el-select>
-            </label>
+              </label>
+              <label class="toolbar-field">
+                <span>报告类型</span>
+                <el-select v-model="query.reportType" placeholder="请选择报告类型" clearable>
+                  <el-option
+                    v-for="option in reportTypeOptions"
+                    :key="option.value"
+                    :label="option.label"
+                    :value="option.value"
+                  />
+                </el-select>
+              </label>
+              <label class="toolbar-field">
+                <span>报告状态</span>
+                <el-select v-model="query.reportStatus" placeholder="请选择报告状态" clearable>
+                  <el-option
+                    v-for="option in reportStatusOptions"
+                    :key="option.value"
+                    :label="option.label"
+                    :value="option.value"
+                  />
+                </el-select>
+              </label>
+            </div>
           </div>
 
           <div class="toolbar-actions">
@@ -53,20 +65,20 @@
             <el-button @click="resetQuery">重置</el-button>
             <el-button @click="loadReports" :loading="loading">刷新报告</el-button>
             <el-button @click="handleExport" :loading="loading">导出</el-button>
-            <el-button type="primary" plain @click="createTemplate">新增模板</el-button>
           </div>
         </div>
       </div>
 
-      <div class="table-card">
-        <el-table
-          class="list-table"
-          :data="visibleReports"
-          stripe
-          max-height="460"
-          v-loading="loading"
-          empty-text="暂无报告台账数据"
-        >
+      <div class="table-card table-card--fixed-scroll ledger-table-card">
+        <div class="ledger-table-card__body">
+          <el-table
+            class="list-table"
+            :data="visibleReports"
+            stripe
+            height="100%"
+            v-loading="loading"
+            empty-text="暂无报告台账数据"
+          >
           <el-table-column prop="reportName" label="报告名称" min-width="200" />
           <el-table-column prop="sampleNo" label="样品编号" width="150" />
           <el-table-column prop="sealNo" label="封签编号" width="160" />
@@ -133,7 +145,8 @@
               </div>
             </template>
           </el-table-column>
-        </el-table>
+          </el-table>
+        </div>
 
         <TablePagination
           v-model:current-page="query.pageNum"
@@ -172,6 +185,7 @@
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { ElButton } from 'element-plus/es/components/button/index.mjs'
 import { ElDialog } from 'element-plus/es/components/dialog/index.mjs'
+import { ElInput } from 'element-plus/es/components/input/index.mjs'
 import { ElLoadingDirective } from 'element-plus/es/components/loading/index.mjs'
 import { ElMessage } from 'element-plus/es/components/message/index.mjs'
 import { ElOption, ElSelect } from 'element-plus/es/components/select/index.mjs'
@@ -205,6 +219,7 @@ import {
 const query = reactive({
   pageNum: 1,
   pageSize: DEFAULT_PAGE_SIZE,
+  keyword: '',
   reportType: '',
   reportStatus: ''
 })
@@ -278,6 +293,7 @@ function handleSearch() {
 function resetQuery() {
   query.pageNum = 1
   query.pageSize = DEFAULT_PAGE_SIZE
+  query.keyword = ''
   query.reportType = ''
   query.reportStatus = ''
   activeStatKey.value = 'all'
@@ -358,6 +374,19 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+.report-page {
+  height: 100%;
+  min-height: 0;
+}
+
+.report-page > .section-block {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
 .section-head {
   margin-bottom: 16px;
 }
@@ -395,6 +424,23 @@ onBeforeUnmount(() => {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.ledger-table-card {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.ledger-table-card__body {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.ledger-table-card__body :deep(.el-table) {
+  height: 100%;
 }
 
 .report-preview-dialog :deep(.el-dialog__body) {

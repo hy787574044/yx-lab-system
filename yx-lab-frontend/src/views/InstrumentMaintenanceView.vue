@@ -23,39 +23,50 @@
 
       <div class="toolbar-panel">
         <div class="toolbar-row">
-          <div class="toolbar-fields">
-            <label class="toolbar-field">
-              <span>设备名称</span>
-              <el-select
-                v-model="query.instrumentId"
-                clearable
-                filterable
-                placeholder="请选择设备"
-              >
-                <el-option
-                  v-for="item in instrumentOptions"
-                  :key="item.id"
-                  :label="item.instrumentName"
-                  :value="item.id"
+          <div class="toolbar-main">
+            <el-button type="primary" class="toolbar-primary-button" @click="openDialog()">新增维修</el-button>
+            <div class="toolbar-fields">
+              <label class="toolbar-field">
+                <span>设备名称</span>
+                <el-select
+                  v-model="query.instrumentId"
+                  clearable
+                  filterable
+                  placeholder="请选择设备"
+                >
+                  <el-option
+                    v-for="item in instrumentOptions"
+                    :key="item.id"
+                    :label="item.instrumentName"
+                    :value="item.id"
+                  />
+                </el-select>
+              </label>
+              <label class="toolbar-field toolbar-field--wide">
+                <span>关键词</span>
+                <el-input
+                  v-model="query.keyword"
+                  clearable
+                  placeholder="可按维修原因、维修人、维修公司、维修结果或备注筛选当前页"
                 />
-              </el-select>
-            </label>
-            <label class="toolbar-field toolbar-field--wide">
-              <span>关键词</span>
-              <el-input
-                v-model="query.keyword"
-                clearable
-                placeholder="可按维修原因、维修人、维修公司、维修结果或备注筛选当前页"
-              />
-            </label>
+              </label>
+              <label class="toolbar-field">
+                <span>维修公司</span>
+                <el-input
+                  v-model="query.maintenanceCompany"
+                  clearable
+                  placeholder="请输入维修公司"
+                  @keyup.enter="handleSearch"
+                />
+              </label>
+            </div>
           </div>
 
           <div class="toolbar-actions">
             <el-button type="primary" @click="handleSearch">查询</el-button>
             <el-button @click="resetQuery">重置</el-button>
-            <el-button @click="handleExport">导出</el-button>
             <el-button @click="goRoute('/instrument-ledger')">查看设备台账</el-button>
-            <el-button type="primary" plain @click="openDialog()">新增维修</el-button>
+            <el-button @click="handleExport">导出</el-button>
           </div>
         </div>
       </div>
@@ -223,7 +234,8 @@ const query = reactive({
   pageNum: 1,
   pageSize: DEFAULT_PAGE_SIZE,
   instrumentId: '',
-  keyword: ''
+  keyword: '',
+  maintenanceCompany: ''
 })
 
 const records = ref([])
@@ -373,6 +385,7 @@ function resetQuery() {
   query.pageSize = DEFAULT_PAGE_SIZE
   query.instrumentId = ''
   query.keyword = ''
+  query.maintenanceCompany = ''
   activeStatKey.value = '全部记录'
   loadData()
 }
@@ -391,7 +404,9 @@ async function loadData() {
     const result = await fetchInstrumentMaintenancesApi({
       pageNum: query.pageNum,
       pageSize: query.pageSize,
-      instrumentId: query.instrumentId || undefined
+      instrumentId: query.instrumentId || undefined,
+      keyword: String(query.keyword || '').trim() || undefined,
+      maintenanceCompany: String(query.maintenanceCompany || '').trim() || undefined
     })
     records.value = result.records || []
     total.value = toSafeNumber(result.total)

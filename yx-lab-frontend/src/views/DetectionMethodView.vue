@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="content-grid detection-method-page">
     <section class="glass-panel section-block">
       <div class="section-head">
@@ -23,16 +23,52 @@
 
       <div class="toolbar-panel">
         <div class="toolbar-row">
-          <div class="toolbar-fields">
-            <label class="toolbar-field toolbar-field--medium">
-              <span>关键字</span>
-              <el-input
-                v-model="query.keyword"
-                clearable
-                placeholder="请输入检测方法名称、编码、标准编号、检测依据或备注"
-                @keyup.enter="handleSearch"
-              />
-            </label>
+          <div class="toolbar-main">
+            <el-button
+              type="primary"
+              class="toolbar-primary-button"
+              @click="openDialog()"
+            >
+              新增检测方法
+            </el-button>
+            <div class="toolbar-fields">
+              <label class="toolbar-field">
+                <span>绑定参数</span>
+                <el-select
+                  v-model="query.parameterId"
+                  clearable
+                  filterable
+                  placeholder="请选择检测参数"
+                >
+                  <el-option
+                    v-for="item in parameterOptions"
+                    :key="item.id"
+                    :label="item.parameterName"
+                    :value="item.id"
+                  />
+                </el-select>
+              </label>
+              <label class="toolbar-field">
+                <span>状态</span>
+                <el-select
+                  v-model="query.enabled"
+                  clearable
+                  placeholder="请选择状态"
+                >
+                  <el-option label="启用" :value="1" />
+                  <el-option label="停用" :value="0" />
+                </el-select>
+              </label>
+              <label class="toolbar-field toolbar-field--medium">
+                <span>关键字</span>
+                <el-input
+                  v-model="query.keyword"
+                  clearable
+                  placeholder="请输入检测方法名称、编码、标准编号、检测依据或备注"
+                  @keyup.enter="handleSearch"
+                />
+              </label>
+            </div>
           </div>
 
           <div class="toolbar-actions">
@@ -40,7 +76,6 @@
             <el-button @click="resetQuery">重置</el-button>
             <el-button @click="reloadData">刷新</el-button>
             <el-button @click="handleExport">导出</el-button>
-            <el-button type="primary" plain @click="openDialog()">新增检测方法</el-button>
           </div>
         </div>
       </div>
@@ -167,12 +202,14 @@ import { ElInput } from 'element-plus/es/components/input/index.mjs'
 import { ElMessage } from 'element-plus/es/components/message/index.mjs'
 import { ElMessageBox } from 'element-plus/es/components/message-box/index.mjs'
 import { ElRadioButton, ElRadioGroup } from 'element-plus/es/components/radio/index.mjs'
+import { ElOption, ElSelect } from 'element-plus/es/components/select/index.mjs'
 import { ElTable, ElTableColumn } from 'element-plus/es/components/table/index.mjs'
 import TablePagination from '../components/common/TablePagination.vue'
 import {
   createDetectionMethodApi,
   deleteDetectionMethodApi,
   exportDetectionMethodsApi,
+  fetchDetectionParametersApi,
   fetchDetectionMethodsApi,
   updateDetectionMethodApi
 } from '../api/lab'
@@ -197,10 +234,13 @@ const currentScene = {
 const activeStatKey = ref('all')
 const rows = ref([])
 const total = ref(0)
+const parameterOptions = ref([])
 const dialogVisible = ref(false)
 const saving = ref(false)
 
 const query = reactive({
+  parameterId: '',
+  enabled: '',
   keyword: '',
   pageNum: 1,
   pageSize: DEFAULT_PAGE_SIZE
@@ -321,9 +361,16 @@ function handleSearch() {
 }
 
 function resetQuery() {
+  query.parameterId = ''
+  query.enabled = ''
   query.keyword = ''
   query.pageNum = 1
   loadRows()
+}
+
+async function loadParameterOptions() {
+  const result = await fetchDetectionParametersApi({ pageNum: 1, pageSize: 500, enabled: 1 })
+  parameterOptions.value = result.records || []
 }
 
 async function loadRows() {
@@ -347,7 +394,7 @@ async function reloadData() {
 }
 
 onMounted(async () => {
-  await loadRows()
+  await Promise.all([loadRows(), loadParameterOptions()])
 })
 </script>
 
@@ -374,6 +421,32 @@ onMounted(async () => {
   justify-content: flex-end;
 }
 
+.metric-card--action,
+.quick-link {
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.metric-card--action:hover,
+.metric-card--action:focus-visible,
+.metric-card--action.is-active,
+.quick-link:hover,
+.quick-link:focus-visible {
+  border-color: color-mix(in srgb, var(--brand) 48%, #ffffff 52%);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+  outline: none;
+}
+
+.metric-card p {
+  margin: 8px 0 0;
+  color: var(--text-sub);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
 .scene-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
@@ -381,9 +454,13 @@ onMounted(async () => {
 .scene-copy {
   display: grid;
   gap: 8px;
-  color: var(--text-secondary);
-  font-size: 13px;
+  color: var(--text-sub);
+  font-size: 14px;
   line-height: 1.7;
+}
+
+.scene-copy p {
+  margin: 0;
 }
 
 .quick-links {
@@ -392,21 +469,24 @@ onMounted(async () => {
 }
 
 .quick-link {
-  border: 1px solid var(--panel-border);
-  border-radius: 16px;
-  padding: 12px 14px;
-  background: rgba(255, 255, 255, 0.78);
   display: grid;
   gap: 4px;
-  text-align: left;
-  color: var(--text-primary);
-  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+  padding: 12px;
+  border: 1px solid var(--line-soft);
+  border-radius: 12px;
+  background: var(--bg-panel-soft);
 }
 
-.quick-link:hover {
-  transform: translateY(-1px);
-  border-color: rgba(var(--theme-primary-rgb), 0.4);
-  box-shadow: 0 14px 28px rgba(var(--theme-primary-rgb), 0.12);
+.quick-link strong {
+  color: var(--text-main);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.quick-link span {
+  color: var(--text-sub);
+  font-size: 13px;
+  line-height: 1.6;
 }
 
 @media (max-width: 1080px) {

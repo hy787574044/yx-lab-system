@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="content-grid detection-config-page">
     <section class="glass-panel section-block">
       <div class="section-head">
@@ -24,16 +24,36 @@
       <template v-if="isParameterScene">
         <div class="toolbar-panel">
           <div class="toolbar-row">
-            <div class="toolbar-fields">
-              <label class="toolbar-field toolbar-field--medium">
-                <span>关键字</span>
-                <el-input
-                  v-model="parameterQuery.keyword"
-                  clearable
-                  placeholder="请输入参数名称、单位、标准或备注"
-                  @keyup.enter="handleParameterSearch"
-                />
-              </label>
+            <div class="toolbar-main">
+              <el-button
+                type="primary"
+                class="toolbar-primary-button"
+                @click="openParameterDialog()"
+              >
+                新增检测参数
+              </el-button>
+              <div class="toolbar-fields">
+                <label class="toolbar-field">
+                  <span>状态</span>
+                  <el-select
+                    v-model="parameterQuery.enabled"
+                    clearable
+                    placeholder="请选择状态"
+                  >
+                    <el-option label="启用" :value="1" />
+                    <el-option label="停用" :value="0" />
+                  </el-select>
+                </label>
+                <label class="toolbar-field toolbar-field--medium">
+                  <span>关键字</span>
+                  <el-input
+                    v-model="parameterQuery.keyword"
+                    clearable
+                    placeholder="请输入参数名称、单位、标准或备注"
+                    @keyup.enter="handleParameterSearch"
+                  />
+                </label>
+              </div>
             </div>
 
             <div class="toolbar-actions">
@@ -41,7 +61,6 @@
               <el-button @click="resetParameterQuery">重置</el-button>
               <el-button @click="reloadData">刷新</el-button>
               <el-button @click="handleExportCurrentScene">导出</el-button>
-              <el-button type="primary" plain @click="openParameterDialog()">新增检测参数</el-button>
             </div>
           </div>
         </div>
@@ -146,16 +165,52 @@
       <template v-else>
         <div class="toolbar-panel">
           <div class="toolbar-row">
-            <div class="toolbar-fields">
-              <label class="toolbar-field toolbar-field--medium">
-                <span>关键字</span>
-                <el-input
-                  v-model="groupQuery.keyword"
-                  clearable
-                  placeholder="请输入项目组名称、参数名称或备注"
-                  @keyup.enter="handleGroupSearch"
-                />
-              </label>
+            <div class="toolbar-main">
+              <el-button
+                type="primary"
+                class="toolbar-primary-button"
+                @click="openGroupDialog()"
+              >
+                新增检测套餐
+              </el-button>
+              <div class="toolbar-fields">
+                <label class="toolbar-field toolbar-field--medium">
+                  <span>关键字</span>
+                  <el-input
+                    v-model="groupQuery.keyword"
+                    clearable
+                    placeholder="请输入套餐名称、参数名称或备注"
+                    @keyup.enter="handleGroupSearch"
+                  />
+                </label>
+                <label class="toolbar-field">
+                  <span>检测人员</span>
+                  <el-select
+                    v-model="groupQuery.detectorId"
+                    clearable
+                    filterable
+                    placeholder="请选择检测人员"
+                  >
+                    <el-option
+                      v-for="item in detectorOptions"
+                      :key="item.id"
+                      :label="item.realName || item.username"
+                      :value="item.id"
+                    />
+                  </el-select>
+                </label>
+                <label class="toolbar-field">
+                  <span>状态</span>
+                  <el-select
+                    v-model="groupQuery.enabled"
+                    clearable
+                    placeholder="请选择状态"
+                  >
+                    <el-option label="启用" :value="1" />
+                    <el-option label="停用" :value="0" />
+                  </el-select>
+                </label>
+              </div>
             </div>
 
             <div class="toolbar-actions">
@@ -163,7 +218,6 @@
               <el-button @click="resetGroupQuery">重置</el-button>
               <el-button @click="reloadData">刷新</el-button>
               <el-button @click="handleExportCurrentScene">导出</el-button>
-              <el-button type="primary" plain @click="openGroupDialog()">新增检测套餐</el-button>
             </div>
           </div>
         </div>
@@ -591,6 +645,7 @@ import { ElInput } from 'element-plus/es/components/input/index.mjs'
 import { ElMessage } from 'element-plus/es/components/message/index.mjs'
 import { ElMessageBox } from 'element-plus/es/components/message-box/index.mjs'
 import { ElRadioButton, ElRadioGroup } from 'element-plus/es/components/radio/index.mjs'
+import { ElOption, ElSelect } from 'element-plus/es/components/select/index.mjs'
 import { ElTable, ElTableColumn } from 'element-plus/es/components/table/index.mjs'
 import TablePagination from '../components/common/TablePagination.vue'
 import {
@@ -600,6 +655,7 @@ import {
   deleteDetectionTypeApi,
   exportDetectionParametersApi,
   exportDetectionTypesApi,
+  fetchDetectionDetectorsApi,
   fetchDetectionMethodOptionsApi,
   fetchDetectionParameterMethodBindingsApi,
   fetchDetectionParametersApi,
@@ -618,6 +674,7 @@ const parameterRows = ref([])
 const parameterTotal = ref(0)
 const allParameters = ref([])
 const detectionMethodOptions = ref([])
+const detectorOptions = ref([])
 const groupRows = ref([])
 const groupTotal = ref(0)
 
@@ -634,12 +691,15 @@ const parameterBindingKeyword = ref('')
 const parameterBindingFilter = ref('all')
 
 const parameterQuery = reactive({
+  enabled: '',
   keyword: '',
   pageNum: 1,
   pageSize: DEFAULT_PAGE_SIZE
 })
 
 const groupQuery = reactive({
+  detectorId: '',
+  enabled: '',
   keyword: '',
   pageNum: 1,
   pageSize: DEFAULT_PAGE_SIZE
@@ -1459,15 +1519,26 @@ function handleGroupSearch() {
 }
 
 function resetParameterQuery() {
+  parameterQuery.enabled = ''
   parameterQuery.keyword = ''
   parameterQuery.pageNum = 1
   loadParameters()
 }
 
 function resetGroupQuery() {
+  groupQuery.detectorId = ''
+  groupQuery.enabled = ''
   groupQuery.keyword = ''
   groupQuery.pageNum = 1
   loadGroups()
+}
+
+async function loadDetectorOptions() {
+  const result = await fetchDetectionDetectorsApi()
+  detectorOptions.value = (result || []).map((item) => ({
+    ...item,
+    id: item.userId ?? item.id
+  }))
 }
 
 async function loadParameterOptions() {
@@ -1507,7 +1578,7 @@ async function handleExportCurrentScene() {
 }
 
 async function refreshAll() {
-  await Promise.all([loadParameterOptions(), loadMethodOptions()])
+  await Promise.all([loadParameterOptions(), loadMethodOptions(), loadDetectorOptions()])
   await Promise.all([loadParameters(), loadGroups()])
 }
 

@@ -9,4 +9,6 @@ import lombok.EqualsAndHashCode;
 public class DetectionParameterQuery extends PageQuery {
 
     private String keyword;
+
+    private Integer enabled;
 }

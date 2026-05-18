@@ -11,4 +11,6 @@ public class DocumentQuery extends PageQuery {
     private String keyword;
 
     private String documentCategory;
+
+    private String fileType;
 }
