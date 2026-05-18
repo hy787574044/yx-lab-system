@@ -77,6 +77,11 @@
               {{ formatItemProgress(row) }}
             </template>
           </el-table-column>
+          <el-table-column label="检测人员" min-width="180" show-overflow-tooltip>
+            <template #default="{ row }">
+              {{ row.detectorName || '-' }}
+            </template>
+          </el-table-column>
           <el-table-column prop="reviewerName" label="审核人" width="120" />
           <el-table-column label="审查状态" width="120" header-cell-class-name="cell-center" class-name="cell-center">
             <template #default="{ row }">
@@ -397,6 +402,7 @@ const mappedPendingRows = computed(() =>
     sampleNo: item.sampleNo,
     sealNo: item.sealNo,
     detectionTypeName: item.detectionTypeName || '-',
+    detectorName: item.detectorName || '-',
     reviewerName: '待审核',
     reviewResult: null,
     reviewTime: item.detectionTime,
@@ -786,9 +792,10 @@ async function loadData() {
     const related = detectionMap[item.detectionRecordId] || {}
     return {
       ...item,
-      detectionTypeName: related.detectionTypeName || item.detectionTypeName || '-',
-      parameterCount: related.parameterCount || 0,
-      completedCount: related.completedCount || 0
+      detectionTypeName: item.detectionTypeName || related.detectionTypeName || '-',
+      detectorName: item.detectorName || related.detectorName || '-',
+      parameterCount: item.parameterCount ?? related.parameterCount ?? 0,
+      completedCount: item.completedCount ?? related.completedCount ?? 0
     }
   })
   total.value = toSafeNumber(reviewResult.total)

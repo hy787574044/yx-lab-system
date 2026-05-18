@@ -213,7 +213,7 @@
             <span>标准：{{ item.standardCode || '-' }}</span>
           </div>
           <div class="method-option-meta">
-            <span>依据：{{ item.methodBasis || '-' }}</span>
+            <span>检测步骤：{{ item.methodBasis || '-' }}</span>
           </div>
           <div class="method-option-footer">
             <span v-if="item.parameterId && item.parameterId !== currentParameter?.id" class="binding-tip binding-tip--locked">

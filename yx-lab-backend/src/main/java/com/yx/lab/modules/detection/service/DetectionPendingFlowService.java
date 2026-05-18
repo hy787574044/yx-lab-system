@@ -279,6 +279,7 @@ public class DetectionPendingFlowService {
             record.setParameterCount(recordItems.size());
             record.setAssignedCount(countAssignedItems(recordItems));
             record.setCompletedCount(countCompletedItems(recordItems));
+            record.setDetectorName(resolveDetectorSummary(recordItems, record.getDetectorName()));
         }
     }
 
@@ -382,6 +383,21 @@ public class DetectionPendingFlowService {
                 .filter(item -> LabWorkflowConstants.DetectionStatus.SUBMITTED.equals(item.getItemStatus())
                         || LabWorkflowConstants.DetectionStatus.APPROVED.equals(item.getItemStatus()))
                 .count());
+    }
+
+    private String resolveDetectorSummary(List<DetectionItem> items, String fallbackDetectorName) {
+        if (items == null || items.isEmpty()) {
+            return fallbackDetectorName;
+        }
+        Set<String> detectorNames = items.stream()
+                .map(DetectionItem::getDetectorName)
+                .map(StrUtil::trim)
+                .filter(StrUtil::isNotBlank)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        if (!detectorNames.isEmpty()) {
+            return String.join("、", detectorNames);
+        }
+        return StrUtil.trim(fallbackDetectorName);
     }
 
     private void softDeleteRecord(DetectionRecord record, List<DetectionItem> items) {

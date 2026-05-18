@@ -1,11 +1,14 @@
 <template>
   <div ref="printRootRef" class="report-print-root">
-    <div class="report-preview-shell">
+    <div :class="['report-preview-shell', { 'report-preview-shell--measure': singlePage }]">
       <section
         v-for="page in pages"
         :key="page.pageNo"
         class="report-paper"
-        :class="{ 'report-paper--last': page.pageNo === totalPages }"
+        :class="{
+          'report-paper--last': page.pageNo === totalPages,
+          'report-paper--measure': singlePage
+        }"
       >
         <header class="paper-header">
           <div class="paper-header__side">
@@ -225,6 +228,10 @@ const props = defineProps({
   previewData: {
     type: Object,
     default: () => ({})
+  },
+  singlePage: {
+    type: Boolean,
+    default: false
   }
 })
 
@@ -237,6 +244,9 @@ const previewItems = computed(() => Array.isArray(props.previewData?.items) ? pr
 
 const pages = computed(() => {
   const items = previewItems.value
+  if (props.singlePage) {
+    return [{ pageNo: 1, startIndex: 0, items }]
+  }
   if (!items.length) {
     return [{ pageNo: 1, startIndex: 0, items: [] }]
   }
@@ -286,8 +296,14 @@ async function printDocument() {
   }, 300)
 }
 
+function measureHeightPx() {
+  const paper = printRootRef.value?.querySelector('.report-paper')
+  return paper?.scrollHeight || paper?.offsetHeight || printRootRef.value?.scrollHeight || 0
+}
+
 defineExpose({
-  printDocument
+  printDocument,
+  measureHeightPx
 })
 </script>
 
@@ -313,6 +329,17 @@ defineExpose({
 .report-paper--last {
   break-after: auto;
   page-break-after: auto;
+}
+
+.report-preview-shell--measure {
+  padding: 0;
+  background: transparent;
+}
+
+.report-paper--measure {
+  min-height: 0;
+  margin: 0;
+  box-shadow: none;
 }
 
 .paper-header {

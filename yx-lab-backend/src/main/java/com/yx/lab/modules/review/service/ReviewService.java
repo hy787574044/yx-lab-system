@@ -27,7 +27,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -69,6 +71,7 @@ public class ReviewService {
                         .eq(StrUtil.isNotBlank(query.getReviewResult()), ReviewRecord::getReviewResult, query.getReviewResult())
                         .eq(Boolean.TRUE.equals(query.getMine()), ReviewRecord::getReviewerId, currentUser.getUserId())
                         .orderByDesc(ReviewRecord::getReviewTime));
+        fillReviewRecordSummaries(page.getRecords());
         return new PageResult<>(page.getTotal(), page.getRecords());
     }
 
@@ -224,6 +227,63 @@ public class ReviewService {
         boolean hasUnassigned = items.stream().anyMatch(item -> item.getDetectorId() == null
                 || LabWorkflowConstants.DetectionStatus.WAIT_ASSIGN.equals(item.getItemStatus()));
         return hasUnassigned ? LabWorkflowConstants.DetectionStatus.WAIT_ASSIGN : LabWorkflowConstants.DetectionStatus.WAIT_DETECT;
+    }
+
+    private void fillReviewRecordSummaries(List<ReviewRecord> records) {
+        if (records == null || records.isEmpty()) {
+            return;
+        }
+        List<Long> detectionRecordIds = records.stream()
+                .map(ReviewRecord::getDetectionRecordId)
+                .filter(id -> id != null)
+                .distinct()
+                .collect(Collectors.toList());
+        if (detectionRecordIds.isEmpty()) {
+            return;
+        }
+
+        Map<Long, DetectionRecord> detectionRecordMap = detectionRecordMapper.selectList(new LambdaQueryWrapper<DetectionRecord>()
+                        .in(DetectionRecord::getId, detectionRecordIds))
+                .stream()
+                .collect(Collectors.toMap(DetectionRecord::getId, item -> item, (left, right) -> left));
+        Map<Long, List<DetectionItem>> itemGroup = detectionItemMapper.selectList(new LambdaQueryWrapper<DetectionItem>()
+                        .in(DetectionItem::getRecordId, detectionRecordIds))
+                .stream()
+                .collect(Collectors.groupingBy(DetectionItem::getRecordId));
+
+        for (ReviewRecord record : records) {
+            Long detectionRecordId = record.getDetectionRecordId();
+            if (detectionRecordId == null) {
+                continue;
+            }
+            DetectionRecord detectionRecord = detectionRecordMap.get(detectionRecordId);
+            List<DetectionItem> items = itemGroup.getOrDefault(detectionRecordId, Collections.emptyList());
+            if (detectionRecord != null) {
+                record.setDetectionTypeName(detectionRecord.getDetectionTypeName());
+            }
+            record.setDetectorName(resolveDetectorSummary(items, detectionRecord == null ? null : detectionRecord.getDetectorName()));
+            record.setParameterCount(items.size());
+            record.setCompletedCount(countCompletedItems(items));
+        }
+    }
+
+    private String resolveDetectorSummary(List<DetectionItem> items, String fallbackDetectorName) {
+        LinkedHashSet<String> detectorNames = items.stream()
+                .map(DetectionItem::getDetectorName)
+                .map(StrUtil::trim)
+                .filter(StrUtil::isNotBlank)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        if (!detectorNames.isEmpty()) {
+            return String.join("、", detectorNames);
+        }
+        return StrUtil.trim(fallbackDetectorName);
+    }
+
+    private int countCompletedItems(List<DetectionItem> items) {
+        return (int) items.stream()
+                .filter(item -> LabWorkflowConstants.DetectionStatus.SUBMITTED.equals(item.getItemStatus())
+                        || LabWorkflowConstants.DetectionStatus.APPROVED.equals(item.getItemStatus()))
+                .count();
     }
 
     private String buildRetestSummary(String rejectReason, String reviewRemark) {

@@ -204,7 +204,7 @@
               <div class="subflow-meta">
                 <span>标准范围：{{ formatStandardRange(item.standardMin, item.standardMax, item.unit) }}</span>
                 <span>参考范围：{{ item.referenceStandard || '-' }}</span>
-                <span>检测依据：{{ getMethodBasis(item) }}</span>
+                <span>检测步骤：{{ getMethodBasis(item) }}</span>
               </div>
 
               <div class="subflow-result">

@@ -324,3 +324,11 @@ AggregateError [ECONNREFUSED]:
       at Object.parse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-dom\dist\compiler-dom.cjs.js:910:23)
       at Object.parse$1 [as parse] (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-sfc\dist\compiler-sfc.cjs.js:1824:24)
       at createDescriptor (file:///E:/share/yx-lab-system/yx-lab-frontend/node_modules/@vitejs/plugin-vue/dist/index.mjs:71:43)
+[2m17:02:31[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/reports?pageNum=1&pageSize=30&keyword=&reportType=&reportStatus=[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+[2m17:02:32[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/reports?pageNum=1&pageSize=30&keyword=&reportType=&reportStatus=[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)

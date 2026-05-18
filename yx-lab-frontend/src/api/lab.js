@@ -402,6 +402,17 @@ export const unpublishReportApi = (id) => request.post(`/api/reports/${id}/unpub
  * @returns {Promise<any>} 报告预览结构化数据。
  */
 export const fetchReportPreviewDataApi = (id) => request.get(`/api/reports/${id}/previewData`)
+/**
+ * 下载正式报告 PDF。
+ *
+ * @param {number} id 报告主键。
+ * @returns {Promise<import('axios').AxiosResponse<Blob>>} 报告 PDF 响应。
+ */
+export const downloadReportPdfApi = (id, pageHeightMm) => axios.get(`/api/reports/${id}/downloadPdf`, {
+  params: pageHeightMm ? { pageHeightMm } : undefined,
+  responseType: 'blob',
+  headers: getToken() ? { Authorization: `Bearer ${getToken()}` } : {}
+})
 // 预览类接口返回二进制流，需要单独保留鉴权头和 blob 处理方式。
 /**
  * 预览正式报告文件流。

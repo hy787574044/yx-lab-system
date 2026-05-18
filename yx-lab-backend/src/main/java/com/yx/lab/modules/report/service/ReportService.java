@@ -32,8 +32,11 @@ import com.yx.lab.modules.storage.service.StorageService;
 import com.yx.lab.modules.system.entity.LabUser;
 import com.yx.lab.modules.system.mapper.LabUserMapper;
 import lombok.RequiredArgsConstructor;
+import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;
 import org.springframework.stereotype.Service;
 
+import java.io.File;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
@@ -47,6 +50,10 @@ import java.util.Map;
 @Service
 @RequiredArgsConstructor
 public class ReportService {
+
+    private static final int PDF_FIRST_PAGE_ITEM_COUNT = 4;
+
+    private static final int PDF_OTHER_PAGE_ITEM_COUNT = 6;
 
     private final LabReportMapper labReportMapper;
 
@@ -264,6 +271,44 @@ public class ReportService {
     }
 
     /**
+     * 下载正式报告 PDF。
+     *
+     * @param id 报告ID
+     * @return PDF 二进制
+     */
+    public byte[] downloadPdf(Long id, Long requestedPageHeightMm) {
+        ReportPreviewVO previewData = previewData(id);
+        String html = buildPreviewStyledHtml(previewData, requestedPageHeightMm);
+        try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+            PdfRendererBuilder builder = new PdfRendererBuilder();
+            builder.useFastMode();
+            registerPdfFonts(builder);
+            builder.withHtmlContent(html, null);
+            builder.toStream(outputStream);
+            builder.run();
+            return outputStream.toByteArray();
+        } catch (Exception ex) {
+            throw new BusinessException("报告 PDF 生成失败：" + ex.getMessage());
+        }
+    }
+
+    public String resolvePdfFileName(Long id) {
+        LabReport report = requireReport(id);
+        String rawName = StrUtil.blankToDefault(report.getReportName(), "报告");
+        String safeName = rawName
+                .replace("\\", "_")
+                .replace("/", "_")
+                .replace(":", "_")
+                .replace("*", "_")
+                .replace("?", "_")
+                .replace("\"", "_")
+                .replace("<", "_")
+                .replace(">", "_")
+                .replace("|", "_");
+        return safeName + ".pdf";
+    }
+
+    /**
      * 查询报告预览所需的结构化数据。
      *
      * @param id 报告ID
@@ -371,7 +416,7 @@ public class ReportService {
         int normalCount = Math.max(0, items.size() - abnormalCount);
 
         StringBuilder html = new StringBuilder(16384);
-        html.append("<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><title>")
+        html.append("<!DOCTYPE html><html xmlns=\"http://www.w3.org/1999/xhtml\"><head><meta charset=\"UTF-8\" /><title>")
                 .append(reportName)
                 .append("</title>")
                 .append("<style>")
@@ -387,7 +432,7 @@ public class ReportService {
                 .append(".section{margin-top:26px;}")
                 .append(".section-title{font-size:18px;font-weight:700;margin:0 0 14px;padding-left:12px;border-left:4px solid #3b82f6;}")
                 .append(".info-table,.result-table{width:100%;border-collapse:collapse;table-layout:fixed;}")
-                .append(".info-table td,.result-table th,.result-table td{border:1px solid #d9e2f1;padding:10px 12px;vertical-align:top;word-break:break-word;}")
+                .append(".info-table td,.result-table th,.result-table td{border:1px solid #d9e2f1;padding:10px 12px;vertical-align:top;white-space:normal;word-wrap:break-word;}")
                 .append(".info-table td.label{width:13%;background:#f7faff;color:#50617c;font-weight:700;}")
                 .append(".result-table th{background:#eef4ff;color:#334155;font-weight:700;}")
                 .append(".tag{display:inline-block;padding:4px 12px;border-radius:999px;font-size:12px;font-weight:700;}")
@@ -543,6 +588,306 @@ public class ReportService {
         vo.setNormalCount(Math.max(0, items.size() - abnormalCount));
         vo.setItems(items.stream().map(this::toPreviewItem).collect(java.util.stream.Collectors.toList()));
         return vo;
+    }
+
+    private String buildPreviewStyledHtml(ReportPreviewVO previewData, Long requestedPageHeightMm) {
+        List<ReportPreviewItemVO> allItems = previewData == null || previewData.getItems() == null
+                ? Collections.emptyList()
+                : previewData.getItems();
+        List<ReportPreviewPage> pages = Collections.singletonList(new ReportPreviewPage(1, 0, new ArrayList<>(allItems)));
+        int totalPages = 1;
+        int longTextLength = safeLength(previewData == null ? null : previewData.getTraceLog())
+                + safeLength(previewData == null ? null : previewData.getLastPushMessage())
+                + safeLength(previewData == null ? null : previewData.getReviewRemark())
+                + safeLength(previewData == null ? null : previewData.getRejectReason())
+                + safeLength(previewData == null ? null : previewData.getSampleRemark())
+                + safeLength(previewData == null ? null : previewData.getResultSummary())
+                + safeLength(previewData == null ? null : previewData.getRecordRemark());
+        long estimatedTextHeightMm = ((longTextLength / 28L) + 1L) * 4L;
+        long pageHeightMm = normalizePdfPageHeight(requestedPageHeightMm,
+                Math.min(5000L, Math.max(360L, 240L + (long) allItems.size() * 22L + estimatedTextHeightMm)));
+        StringBuilder html = new StringBuilder(32768);
+        html.append("<!DOCTYPE html>")
+                .append("<html xmlns=\"http://www.w3.org/1999/xhtml\">")
+                .append("<head><meta charset=\"UTF-8\" /><title>")
+                .append(safeText(StrUtil.blankToDefault(previewData.getReportName(), "化验报告")))
+                .append("</title><style>")
+                .append("@page{size:210mm ").append(pageHeightMm).append("mm;margin:0;}")
+                .append("body{margin:0;background:#ffffff;font-family:'DengXian','Microsoft YaHei','SimSun','SimHei',sans-serif;color:#0f172a;}")
+                .append(".report-preview-shell{padding:0;background:#ffffff;}")
+                .append(".report-paper{width:210mm;min-height:").append(pageHeightMm).append("mm;margin:0;padding:10mm 11mm 10mm;box-sizing:border-box;overflow:hidden;background:#ffffff;color:#0f172a;page-break-after:auto;}")
+                .append(".report-paper--last{page-break-after:auto;}")
+                .append(".paper-header{display:table;width:100%;padding-bottom:10px;border-bottom:2px solid #1d4ed8;}")
+                .append(".paper-header__side,.paper-header__title{display:table-cell;vertical-align:top;}")
+                .append(".paper-header__side{width:28%;font-size:12px;color:#475569;line-height:1.6;}")
+                .append(".paper-header__title{width:44%;text-align:center;}")
+                .append(".paper-header__title h1{margin:0;font-size:24px;line-height:1.25;letter-spacing:1px;}")
+                .append(".paper-header__title p{margin:6px 0 0;font-size:12px;color:#64748b;}")
+                .append(".paper-header__side--right{text-align:right;}")
+                .append(".paper-section{margin-top:12px;}")
+                .append(".paper-section h2{margin:0 0 8px;font-size:15px;color:#0f172a;}")
+                .append(".paper-summary{width:100%;font-size:0;}")
+                .append(".summary-card{display:inline-block;vertical-align:top;width:24%;min-height:76px;margin-right:1.333%;padding:10px 12px;border:1px solid #d8e2f1;border-radius:10px;background:linear-gradient(180deg,#f9fbff 0%,#f4f8ff 100%);box-sizing:border-box;}")
+                .append(".summary-card--last{margin-right:0;}")
+                .append(".summary-card span{display:block;font-size:12px;color:#64748b;}")
+                .append(".summary-card strong{display:block;margin-top:10px;font-size:22px;color:#0f172a;}")
+                .append(".summary-card .is-success{color:#047857;}")
+                .append(".summary-card .is-danger{color:#dc2626;}")
+                .append(".summary-card .is-text{font-size:13px;line-height:1.55;}")
+                .append(".info-table,.result-table{width:100%;border-collapse:collapse;table-layout:fixed;}")
+                .append(".info-table td,.result-table th,.result-table td{border:1px solid #d9e2f1;padding:7px 8px;font-size:11px;line-height:1.5;vertical-align:top;white-space:normal;word-wrap:break-word;}")
+                .append(".info-table td{vertical-align:middle;}")
+                .append(".info-table td.label{width:11%;background:#f5f9ff;text-align:center;font-weight:700;color:#334155;}")
+                .append(".label--wide{width:12%;}")
+                .append(".result-table th{background:#eef4ff;text-align:center;font-weight:700;color:#1e3a5f;vertical-align:middle;}")
+                .append(".result-main-row--alt td{background:#fbfdff;}")
+                .append(".result-compare-row td{background:#f8fbff;}")
+                .append(".col-index{width:6%;}.col-parameter{width:13%;}.col-unit{width:8%;}.col-method{width:18%;}.col-standard{width:13%;}.col-reference{width:14%;}.col-value{width:8%;}.col-judge{width:10%;}.col-status{width:10%;}")
+                .append(".cell-center{text-align:center;vertical-align:middle !important;}")
+                .append(".compare-label{text-align:center;color:#475569;font-weight:700;vertical-align:middle !important;}")
+                .append(".state-tag{display:inline-block;min-height:24px;padding:2px 10px;border-radius:999px;font-size:11px;font-weight:700;line-height:20px;}")
+                .append(".state-tag--success{color:#047857;background:rgba(4,120,87,0.12);}")
+                .append(".state-tag--danger{color:#dc2626;background:rgba(220,38,38,0.12);}")
+                .append(".state-tag--warning{color:#b45309;background:rgba(245,158,11,0.16);}")
+                .append(".state-tag--plain{color:#475569;background:#e2e8f0;}")
+                .append(".text-success{color:#047857;font-weight:700;}")
+                .append(".text-danger{color:#dc2626;font-weight:700;}")
+                .append(".trace-text{white-space:pre-wrap;}")
+                .append(".empty-box{min-height:120px;display:block;padding-top:48px;text-align:center;border:1px dashed #cbd5e1;border-radius:12px;color:#64748b;font-size:13px;}")
+                .append(".paper-footer{width:100%;margin-top:12px;font-size:11px;color:#64748b;}")
+                .append(".paper-footer__left{float:left;}")
+                .append(".paper-footer__right{float:right;}")
+                .append(".clearfix::after{content:'';display:block;clear:both;}")
+                .append("</style></head><body><div class=\"report-preview-shell\">");
+
+        for (ReportPreviewPage page : pages) {
+            boolean isLastPage = page.getPageNo() == totalPages;
+            html.append("<section class=\"report-paper")
+                    .append(isLastPage ? " report-paper--last" : "")
+                    .append("\">");
+            html.append("<header class=\"paper-header\">")
+                    .append("<div class=\"paper-header__side\">")
+                    .append("<div>样品编号：").append(safeText(previewData.getSampleNo())).append("</div>")
+                    .append("<div>封签编号：").append(safeText(previewData.getSealNo())).append("</div>")
+                    .append("</div>")
+                    .append("<div class=\"paper-header__title\">")
+                    .append("<h1>").append(safeText(StrUtil.blankToDefault(previewData.getReportName(), "化验报告"))).append("</h1>")
+                    .append("<p>").append(page.getPageNo() == 1 ? "A4 通用打印模板" : "A4 通用打印模板（续页）").append("</p>")
+                    .append("</div>")
+                    .append("<div class=\"paper-header__side paper-header__side--right\">")
+                    .append("<div>第 ").append(page.getPageNo()).append(" / ").append(totalPages).append(" 页</div>")
+                    .append("<div>生成时间：").append(safeText(previewData.getGeneratedTime())).append("</div>")
+                    .append("</div>")
+                    .append("</header>");
+
+            if (page.getPageNo() == 1) {
+                html.append("<section class=\"paper-section\"><h2>一、样品基础信息</h2><table class=\"info-table\"><tbody>")
+                        .append("<tr><td class=\"label\">报告名称</td><td>").append(safeText(previewData.getReportName())).append("</td><td class=\"label\">报告类型</td><td>")
+                        .append(safeText(previewData.getReportTypeLabel())).append("</td><td class=\"label\">报告状态</td><td>").append(safeText(previewData.getReportStatusLabel())).append("</td></tr>")
+                        .append("<tr><td class=\"label\">样品编号</td><td>").append(safeText(previewData.getSampleNo())).append("</td><td class=\"label\">封签编号</td><td>")
+                        .append(safeText(previewData.getSealNo())).append("</td><td class=\"label\">点位名称</td><td>").append(safeText(previewData.getPointName())).append("</td></tr>")
+                        .append("<tr><td class=\"label\">样品类型</td><td>").append(safeText(previewData.getSampleTypeLabel())).append("</td><td class=\"label\">样品状态</td><td>")
+                        .append(safeText(previewData.getSampleStatusLabel())).append("</td><td class=\"label\">结果摘要</td><td>").append(safeText(previewData.getResultSummary())).append("</td></tr>")
+                        .append("<tr><td class=\"label\">采样时间</td><td>").append(safeText(previewData.getSamplingTime())).append("</td><td class=\"label\">封签时间</td><td>")
+                        .append(safeText(previewData.getSealTime())).append("</td><td class=\"label\">采样人员</td><td>").append(safeText(previewData.getSamplerName())).append("</td></tr>")
+                        .append("<tr><td class=\"label\">天气情况</td><td>").append(safeText(previewData.getWeather())).append("</td><td class=\"label\">保存条件</td><td>")
+                        .append(safeText(previewData.getStorageCondition())).append("</td><td class=\"label\">样品备注</td><td>").append(safeText(previewData.getSampleRemark())).append("</td></tr>")
+                        .append("</tbody></table></section>");
+
+                html.append("<section class=\"paper-section\"><h2>二、流程与审查信息</h2><table class=\"info-table\"><tbody>")
+                        .append("<tr><td class=\"label\">化验时间</td><td>").append(safeText(previewData.getDetectionTime())).append("</td><td class=\"label\">化验人员</td><td>")
+                        .append(safeText(previewData.getDetectorName())).append("</td><td class=\"label\">化验结论</td><td>").append(safeText(previewData.getDetectionResultLabel())).append("</td></tr>")
+                        .append("<tr><td class=\"label\">审查时间</td><td>").append(safeText(previewData.getReviewTime())).append("</td><td class=\"label\">审查人员</td><td>")
+                        .append(safeText(previewData.getReviewerName())).append("</td><td class=\"label\">审查结论</td><td>").append(safeText(previewData.getReviewResultLabel())).append("</td></tr>")
+                        .append("<tr><td class=\"label\">发布时间</td><td>").append(safeText(previewData.getPublishedTime())).append("</td><td class=\"label\">发布人</td><td>")
+                        .append(safeText(previewData.getPublishedByName())).append("</td><td class=\"label\">推送状态</td><td>").append(safeText(previewData.getPushStatusLabel())).append("</td></tr>")
+                        .append("<tr><td class=\"label\">最近推送时间</td><td>").append(safeText(previewData.getLastPushTime())).append("</td><td class=\"label label--wide\">推送结果说明</td><td colspan=\"3\">")
+                        .append(safeText(previewData.getLastPushMessage())).append("</td></tr>")
+                        .append("</tbody></table></section>");
+
+                html.append("<section class=\"paper-section paper-summary\">")
+                        .append(buildSummaryCard("参数总数", String.valueOf(defaultInteger(previewData.getParameterCount())), "", false))
+                        .append(buildSummaryCard("正常项", String.valueOf(defaultInteger(previewData.getNormalCount())), "is-success", false))
+                        .append(buildSummaryCard("异常项", String.valueOf(defaultInteger(previewData.getAbnormalCount())), "is-danger", false))
+                        .append(buildSummaryCard("流程说明", safeText(previewData.getRecordRemark()), "is-text", true))
+                        .append("</section>");
+            }
+
+            html.append("<section class=\"paper-section\"><h2>")
+                    .append(page.getPageNo() == 1 ? "三、化验结果明细" : "化验结果明细（续页）")
+                    .append("</h2>");
+            if (page.getItems().isEmpty()) {
+                html.append("<div class=\"empty-box\">当前报告暂无化验结果明细。</div>");
+            } else {
+                html.append("<table class=\"result-table\"><thead><tr>")
+                        .append("<th class=\"col-index\">序号</th>")
+                        .append("<th class=\"col-parameter\">检测参数</th>")
+                        .append("<th class=\"col-unit\">单位</th>")
+                        .append("<th class=\"col-method\">检测方法</th>")
+                        .append("<th class=\"col-standard\">标准范围</th>")
+                        .append("<th class=\"col-reference\">参考范围</th>")
+                        .append("<th class=\"col-value\">检测值</th>")
+                        .append("<th class=\"col-judge\">单项判定</th>")
+                        .append("<th class=\"col-status\">子流程状态</th>")
+                        .append("</tr></thead><tbody>");
+                for (int i = 0; i < page.getItems().size(); i++) {
+                    ReportPreviewItemVO item = page.getItems().get(i);
+                    boolean alt = i % 2 == 0;
+                    String judgmentClass = containsText(item.getJudgmentLabel(), "异常") ? "state-tag--danger" : "state-tag--success";
+                    String compareClass = containsText(item.getJudgmentLabel(), "异常") ? "text-danger" : "text-success";
+                    html.append("<tr class=\"result-main-row")
+                            .append(alt ? " result-main-row--alt" : "")
+                            .append("\">")
+                            .append("<td class=\"cell-center\">").append(page.getStartIndex() + i + 1).append("</td>")
+                            .append("<td>").append(safeText(item.getParameterName())).append("</td>")
+                            .append("<td class=\"cell-center\">").append(safeText(item.getUnit())).append("</td>")
+                            .append("<td>").append(safeText(item.getMethodName())).append("</td>")
+                            .append("<td>").append(safeText(item.getStandardRange())).append("</td>")
+                            .append("<td>").append(safeText(item.getReferenceStandard())).append("</td>")
+                            .append("<td class=\"cell-center\">").append(safeText(item.getResultValue())).append("</td>")
+                            .append("<td class=\"cell-center\"><span class=\"state-tag ").append(judgmentClass).append("\">").append(safeText(item.getJudgmentLabel())).append("</span></td>")
+                            .append("<td class=\"cell-center\"><span class=\"state-tag ").append(resolvePreviewStatusClass(item.getItemStatusLabel())).append("\">").append(safeText(item.getItemStatusLabel())).append("</span></td>")
+                            .append("</tr>")
+                            .append("<tr class=\"result-compare-row\"><td class=\"compare-label\">结果对比</td><td colspan=\"8\" class=\"")
+                            .append(compareClass).append("\">").append(safeText(item.getCompareText())).append("</td></tr>");
+                }
+                html.append("</tbody></table>");
+            }
+            html.append("</section>");
+
+            if (isLastPage) {
+                html.append("<section class=\"paper-section\"><h2>四、补充说明与签字</h2><table class=\"info-table\"><tbody>")
+                        .append("<tr><td class=\"label label--wide\">审查意见</td><td colspan=\"5\">").append(safeText(previewData.getReviewRemark())).append("</td></tr>")
+                        .append("<tr><td class=\"label label--wide\">驳回原因</td><td colspan=\"5\">").append(safeText(previewData.getRejectReason())).append("</td></tr>")
+                        .append("<tr><td class=\"label label--wide\">流程留痕</td><td colspan=\"5\" class=\"trace-text\">").append(safeText(StrUtil.blankToDefault(previewData.getTraceLog(), "当前样品暂无额外流程留痕。"))).append("</td></tr>")
+                        .append("<tr><td class=\"label\">化验人员</td><td>").append(safeText(StrUtil.blankToDefault(previewData.getDetectorName(), "________________"))).append("</td>")
+                        .append("<td class=\"label\">审查人员</td><td>").append(safeText(StrUtil.blankToDefault(previewData.getReviewerName(), "________________"))).append("</td>")
+                        .append("<td class=\"label\">签字日期</td><td>________________</td></tr>")
+                        .append("</tbody></table></section>");
+            }
+
+            html.append("<footer class=\"paper-footer clearfix\"><span class=\"paper-footer__left\">阳新化验室管理系统通用报告模板</span><span class=\"paper-footer__right\">适配 A4 纵向打印，内容超出自动续页</span></footer>")
+                    .append("</section>");
+        }
+
+        html.append("</div></body></html>");
+        return html.toString();
+    }
+
+    private List<ReportPreviewPage> splitPreviewPages(ReportPreviewVO previewData) {
+        List<ReportPreviewItemVO> items = previewData == null || previewData.getItems() == null
+                ? Collections.emptyList()
+                : previewData.getItems();
+        if (items.isEmpty()) {
+            return Collections.singletonList(new ReportPreviewPage(1, 0, Collections.emptyList()));
+        }
+        List<ReportPreviewPage> pages = new ArrayList<>();
+        int pageNo = 1;
+        int cursor = 0;
+        while (cursor < items.size()) {
+            int pageSize = pageNo == 1 ? PDF_FIRST_PAGE_ITEM_COUNT : PDF_OTHER_PAGE_ITEM_COUNT;
+            int endIndex = Math.min(cursor + pageSize, items.size());
+            pages.add(new ReportPreviewPage(pageNo, cursor, new ArrayList<>(items.subList(cursor, endIndex))));
+            cursor = endIndex;
+            pageNo += 1;
+        }
+        return pages;
+    }
+
+    private String buildSummaryCard(String label, String value, String valueClass, boolean last) {
+        StringBuilder card = new StringBuilder();
+        card.append("<article class=\"summary-card")
+                .append(last ? " summary-card--last" : "")
+                .append("\"><span>")
+                .append(escapeHtml(StrUtil.blankToDefault(label, "-")))
+                .append("</span><strong");
+        if (StrUtil.isNotBlank(valueClass)) {
+            card.append(" class=\"").append(valueClass).append("\"");
+        }
+        card.append(">")
+                .append(value)
+                .append("</strong></article>");
+        return card.toString();
+    }
+
+    private String resolvePreviewStatusClass(String statusLabel) {
+        if (StrUtil.isBlank(statusLabel)) {
+            return "state-tag--plain";
+        }
+        if (containsText(statusLabel, "驳回") || containsText(statusLabel, "异常")) {
+            return "state-tag--danger";
+        }
+        if (containsText(statusLabel, "待") || containsText(statusLabel, "提交")) {
+            return "state-tag--warning";
+        }
+        if (containsText(statusLabel, "完成") || containsText(statusLabel, "通过") || containsText(statusLabel, "正常")) {
+            return "state-tag--success";
+        }
+        return "state-tag--plain";
+    }
+
+    private boolean containsText(String source, String text) {
+        return StrUtil.isNotBlank(source) && source.contains(text);
+    }
+
+    private String safeText(String value) {
+        return escapeHtml(StrUtil.blankToDefault(value, "-"));
+    }
+
+    private int defaultInteger(Integer value) {
+        return value == null ? 0 : value;
+    }
+
+    private int safeLength(String value) {
+        return value == null ? 0 : value.length();
+    }
+
+    private long normalizePdfPageHeight(Long requestedPageHeightMm, long fallbackHeightMm) {
+        if (requestedPageHeightMm == null) {
+            return fallbackHeightMm;
+        }
+        return Math.max(180L, Math.min(5000L, requestedPageHeightMm));
+    }
+
+    private void registerPdfFonts(PdfRendererBuilder builder) {
+        registerPdfFont(builder, "C:/Windows/Fonts/Deng.ttf", "DengXian");
+        registerPdfFont(builder, "C:/Windows/Fonts/simfang.ttf", "FangSong");
+        registerPdfFont(builder, "C:/Windows/Fonts/simhei.ttf", "SimHei");
+        registerPdfFont(builder, "C:/Windows/Fonts/simsunb.ttf", "SimSun");
+    }
+
+    private void registerPdfFont(PdfRendererBuilder builder, String fontPath, String family) {
+        File file = new File(fontPath);
+        if (file.exists() && file.isFile()) {
+            builder.useFont(file, family);
+        }
+    }
+
+    private static class ReportPreviewPage {
+
+        private final int pageNo;
+
+        private final int startIndex;
+
+        private final List<ReportPreviewItemVO> items;
+
+        private ReportPreviewPage(int pageNo, int startIndex, List<ReportPreviewItemVO> items) {
+            this.pageNo = pageNo;
+            this.startIndex = startIndex;
+            this.items = items;
+        }
+
+        public int getPageNo() {
+            return pageNo;
+        }
+
+        public int getStartIndex() {
+            return startIndex;
+        }
+
+        public List<ReportPreviewItemVO> getItems() {
+            return items;
+        }
     }
 
     private ReportPreviewItemVO toPreviewItem(DetectionItem item) {

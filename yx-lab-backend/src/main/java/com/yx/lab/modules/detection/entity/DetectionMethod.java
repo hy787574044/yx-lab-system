@@ -1,14 +1,14 @@
 package com.yx.lab.modules.detection.entity;
 
-import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableName;
 import com.yx.lab.common.model.BaseEntity;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /**
- * 检测方法实体，维护参数可选的标准方法、依据和适用范围。
+ * 检测方法实体，维护参数可选的标准方法、检测步骤和适用范围。
  */
 @Data
 @TableName("lab_detection_method")
@@ -35,7 +35,7 @@ public class DetectionMethod extends BaseEntity {
     @TableField("standard_code")
     private String standardCode;
 
-    @Schema(description = "方法依据")
+    @Schema(description = "检测步骤")
     @TableField("method_basis")
     private String methodBasis;
 
@@ -43,7 +43,7 @@ public class DetectionMethod extends BaseEntity {
     @TableField("apply_scope")
     private String applyScope;
 
-    @Schema(description = "启用状态，1启用，0禁用")
+    @Schema(description = "启用状态，1启用，0停用")
     @TableField("enabled")
     private Integer enabled;
 

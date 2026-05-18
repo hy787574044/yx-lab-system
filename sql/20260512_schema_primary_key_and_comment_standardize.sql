@@ -260,7 +260,7 @@ ALTER TABLE lab_detection_method
     MODIFY COLUMN parameter_id BIGINT NULL COMMENT '绑定检测参数ID',
     MODIFY COLUMN parameter_name VARCHAR(100) NULL COMMENT '绑定检测参数名称',
     MODIFY COLUMN standard_code VARCHAR(100) NULL COMMENT '标准编号',
-    MODIFY COLUMN method_basis VARCHAR(1000) NULL COMMENT '方法依据',
+    MODIFY COLUMN method_basis VARCHAR(1000) NULL COMMENT '检测步骤',
     MODIFY COLUMN apply_scope VARCHAR(1000) NULL COMMENT '适用范围',
     MODIFY COLUMN enabled TINYINT NOT NULL DEFAULT 1 COMMENT '启用状态，1启用，0停用',
     MODIFY COLUMN remark VARCHAR(500) NULL COMMENT '备注',

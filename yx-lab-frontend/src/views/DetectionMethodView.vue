@@ -64,7 +64,7 @@
                 <el-input
                   v-model="query.keyword"
                   clearable
-                  placeholder="请输入检测方法名称、编码、标准编号、检测依据或备注"
+                  placeholder="请输入检测方法名称、编码、标准编号、检测步骤或备注"
                   @keyup.enter="handleSearch"
                 />
               </label>
@@ -98,7 +98,7 @@
           <el-table-column prop="parameterName" label="已绑定参数" min-width="150">
             <template #default="{ row }">{{ row.parameterName || '未绑定' }}</template>
           </el-table-column>
-          <el-table-column prop="methodBasis" label="检测依据" min-width="220" show-overflow-tooltip>
+          <el-table-column prop="methodBasis" label="检测步骤" min-width="220" show-overflow-tooltip>
             <template #default="{ row }">{{ row.methodBasis || '-' }}</template>
           </el-table-column>
           <el-table-column prop="applyScope" label="适用范围" min-width="180" show-overflow-tooltip>
@@ -161,12 +161,12 @@
               <el-radio-button :label="0">停用</el-radio-button>
             </el-radio-group>
           </el-form-item>
-          <el-form-item class="form-span-2" label="检测依据">
+          <el-form-item class="form-span-2" label="检测步骤">
             <el-input
               v-model="form.methodBasis"
               type="textarea"
               :rows="3"
-              placeholder="请输入检测依据、方法说明或执行标准"
+              placeholder="请输入检测步骤、方法说明或执行标准"
             />
           </el-form-item>
           <el-form-item class="form-span-2" label="适用范围">

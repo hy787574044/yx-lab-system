@@ -5,7 +5,7 @@ import lombok.Data;
 import java.math.BigDecimal;
 
 /**
- * 样品登录时选定的检测参数与检测方法快照项。
+ * 样品登记时选定的检测参数与检测方法快照项。
  */
 @Data
 public class SampleDetectionConfigItem {
@@ -51,7 +51,7 @@ public class SampleDetectionConfigItem {
     private String methodName;
 
     /**
-     * 检测依据。
+     * 检测步骤。
      */
     private String methodBasis;
 }

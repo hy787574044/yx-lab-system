@@ -128,6 +128,14 @@
                 <el-button size="small" @click="previewReport(row)">预览</el-button>
                 <el-button
                   size="small"
+                  :loading="String(downloadingReportId) === String(row.id)"
+                  @click="downloadPdf(row)"
+                >
+                  下载PDF
+                </el-button>
+                <!-- 报告发布、取消发布功能暂时停用
+                <el-button
+                  size="small"
                   type="primary"
                   @click="publish(row.id)"
                   :disabled="row.reportStatus === publishedReportStatus"
@@ -141,6 +149,7 @@
                 >
                   取消发布
                 </el-button>
+                -->
               </div>
             </template>
           </el-table-column>
@@ -177,11 +186,20 @@
         <el-button @click="closePreviewDialog">关闭</el-button>
       </template>
     </el-dialog>
+
+    <div class="report-measure-shell" aria-hidden="true">
+      <ReportPrintDocument
+        v-if="measurePreviewData"
+        ref="measureReportPrintRef"
+        :preview-data="measurePreviewData"
+        single-page
+      />
+    </div>
   </div>
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { ElButton } from 'element-plus/es/components/button/index.mjs'
 import { ElDialog } from 'element-plus/es/components/dialog/index.mjs'
 import { ElInput } from 'element-plus/es/components/input/index.mjs'
@@ -191,11 +209,10 @@ import { ElOption, ElSelect } from 'element-plus/es/components/select/index.mjs'
 import { ElTable, ElTableColumn } from 'element-plus/es/components/table/index.mjs'
 import {
   createTemplateApi,
+  downloadReportPdfApi,
   exportReportsApi,
   fetchReportsApi,
   fetchReportPreviewDataApi,
-  publishReportApi,
-  unpublishReportApi
 } from '../api/lab'
 import TablePagination from '../components/common/TablePagination.vue'
 import ReportPrintDocument from '../components/report/ReportPrintDocument.vue'
@@ -234,6 +251,9 @@ const previewData = ref(null)
 const previewTitle = ref('')
 const previewError = ref('')
 const reportPrintRef = ref(null)
+const measureReportPrintRef = ref(null)
+const measurePreviewData = ref(null)
+const downloadingReportId = ref('')
 
 const stats = computed(() => [
   { key: 'all', label: '报告总数', value: total.value, desc: '报告台账记录总量' },
@@ -329,6 +349,7 @@ async function createTemplate() {
   ElMessage.success('模板已创建。')
 }
 
+/*
 async function publish(id) {
   await publishReportApi(id)
   ElMessage.success('报告已发布。')
@@ -342,6 +363,7 @@ async function unpublish(id) {
   query.pageNum = 1
   await loadReports()
 }
+*/
 
 async function previewReport(row) {
   previewData.value = null
@@ -357,6 +379,49 @@ async function previewReport(row) {
 
 function printPreview() {
   reportPrintRef.value?.printDocument?.()
+}
+
+async function downloadPdf(row) {
+  downloadingReportId.value = row.id
+  try {
+    const preview = await fetchReportPreviewDataApi(row.id)
+    measurePreviewData.value = preview
+    await nextTick()
+    await waitForMeasureRender()
+    const measuredHeightPx = measureReportPrintRef.value?.measureHeightPx?.() || 0
+    const pageHeightMm = measuredHeightPx > 0 ? Math.ceil((measuredHeightPx * 25.4) / 96) + 2 : undefined
+    const response = await downloadReportPdfApi(row.id, pageHeightMm)
+    const blobUrl = window.URL.createObjectURL(response.data)
+    const disposition = response.headers['content-disposition'] || ''
+    const utf8Match = disposition.match(/filename\*=UTF-8''([^;]+)/i)
+    const normalMatch = disposition.match(/filename="?([^";]+)"?/i)
+    const fileName = utf8Match?.[1]
+      ? decodeURIComponent(utf8Match[1])
+      : normalMatch?.[1]
+        ? decodeURIComponent(normalMatch[1])
+        : `${row.reportName || '报告'}.pdf`
+    const link = document.createElement('a')
+    link.href = blobUrl
+    link.download = fileName
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(blobUrl)
+    ElMessage.success('PDF 已开始下载')
+  } catch (error) {
+    ElMessage.error(error?.message || '下载 PDF 失败')
+  } finally {
+    measurePreviewData.value = null
+    downloadingReportId.value = ''
+  }
+}
+
+function waitForMeasureRender() {
+  return new Promise((resolve) => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(resolve)
+    })
+  })
 }
 
 function closePreviewDialog() {
@@ -424,6 +489,15 @@ onBeforeUnmount(() => {
   flex-wrap: nowrap;
   gap: 8px;
   white-space: nowrap;
+}
+
+.report-measure-shell {
+  position: fixed;
+  left: -100000px;
+  top: 0;
+  z-index: -1;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .ledger-table-card {

@@ -24,9 +24,11 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.Valid;
+import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
 
 /**
@@ -100,6 +102,27 @@ public class ReportController {
                                 .toString())
                 .contentType(MediaType.TEXT_HTML)
                 .body(reportService.preview(id));
+    }
+
+    /**
+     * 下载正式报告 PDF。
+     *
+     * @param id 报告主键。
+     * @return PDF 文件流。
+     */
+    @GetMapping("/{id}/downloadPdf")
+    @Operation(summary = "下载正式报告PDF")
+    public ResponseEntity<byte[]> downloadPdf(@PathVariable Long id,
+                                              @RequestParam(required = false) Long pageHeightMm) throws UnsupportedEncodingException {
+        String fileName = reportService.resolvePdfFileName(id);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        ContentDisposition.attachment()
+                                .filename(fileName, StandardCharsets.UTF_8)
+                                .build()
+                                .toString())
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(reportService.downloadPdf(id, pageHeightMm));
     }
 
     /**

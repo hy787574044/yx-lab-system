@@ -325,7 +325,7 @@ public class DetectionConfigController {
                         ExcelExportUtil.column("方法编码", DetectionMethod::getMethodCode),
                         ExcelExportUtil.column("标准编号", DetectionMethod::getStandardCode),
                         ExcelExportUtil.column("已绑定参数", DetectionMethod::getParameterName),
-                        ExcelExportUtil.column("检测依据", DetectionMethod::getMethodBasis),
+                        ExcelExportUtil.column("检测步骤", DetectionMethod::getMethodBasis),
                         ExcelExportUtil.column("适用范围", DetectionMethod::getApplyScope),
                         ExcelExportUtil.column("状态", item -> item.getEnabled() != null && item.getEnabled() == 1 ? "启用" : "停用"),
                         ExcelExportUtil.column("备注", DetectionMethod::getRemark),

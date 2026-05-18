@@ -57,7 +57,7 @@ public class DetectionItem extends BaseEntity {
     @TableField("method_name")
     private String methodName;
 
-    @Schema(description = "检测依据")
+    @Schema(description = "检测步骤")
     @TableField(exist = false)
     private String methodBasis;
 

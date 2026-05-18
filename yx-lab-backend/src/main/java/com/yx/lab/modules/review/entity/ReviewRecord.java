@@ -11,7 +11,7 @@ import lombok.EqualsAndHashCode;
 import java.time.LocalDateTime;
 
 /**
- * 结果审查实体，记录检测流程的审核结论和驳回原因。
+ * 结果审核实体，记录检测流程的审核结论和驳回原因。
  */
 @Data
 @TableName("lab_review_record")
@@ -33,6 +33,22 @@ public class ReviewRecord extends BaseEntity {
     @Schema(description = "封签编号")
     @TableField("seal_no")
     private String sealNo;
+
+    @Schema(description = "检测套餐名称")
+    @TableField(exist = false)
+    private String detectionTypeName;
+
+    @Schema(description = "检测人员")
+    @TableField(exist = false)
+    private String detectorName;
+
+    @Schema(description = "参数总数")
+    @TableField(exist = false)
+    private Integer parameterCount;
+
+    @Schema(description = "已完成数量")
+    @TableField(exist = false)
+    private Integer completedCount;
 
     @Schema(description = "审核人ID")
     @TableField("reviewer_id")

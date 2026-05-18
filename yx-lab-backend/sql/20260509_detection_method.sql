@@ -5,7 +5,7 @@ CREATE TABLE `lab_detection_method` (
     `parameter_id` BIGINT NULL COMMENT '绑定检测参数ID',
     `parameter_name` VARCHAR(100) NULL COMMENT '绑定检测参数名称',
     `standard_code` VARCHAR(100) NULL COMMENT '标准编号',
-    `method_basis` VARCHAR(200) NULL COMMENT '检测依据',
+    `method_basis` VARCHAR(200) NULL COMMENT '检测步骤',
     `apply_scope` VARCHAR(200) NULL COMMENT '适用范围',
     `enabled` TINYINT NOT NULL DEFAULT 1 COMMENT '启用状态：1启用 0停用',
     `remark` VARCHAR(500) NULL COMMENT '备注',
