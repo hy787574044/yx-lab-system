@@ -1,42 +1,25 @@
 ﻿<template>
   <div class="content-grid system-page" v-loading="loading">
-    <section class="glass-panel section-block page-hero">
-      <div>
-        <h2 class="page-title">{{ currentScene.title }}</h2>
-        <p class="page-subtitle">{{ currentScene.subtitle }}</p>
-      </div>
-      <div class="hero-tags">
-        <span
-          v-for="tag in currentTags"
-          :key="tag.label"
-          :class="['status-chip', tag.type || 'info']"
-        >
-          {{ tag.label }} {{ tag.value }}
-        </span>
-      </div>
-    </section>
-
-    <section class="stats-grid">
-      <button
-        v-for="item in currentStats"
-        :key="item.key"
-        type="button"
-        :class="['metric-card', 'metric-card--action', { 'is-active': activeStatKey === item.key }]"
-        @click="handleStatClick(item.key)"
-      >
-        <span>{{ item.label }}</span>
-        <strong>{{ item.value }}</strong>
-        <p>{{ item.desc }}</p>
-      </button>
-    </section>
-
     <section class="glass-panel section-block">
       <div class="section-head">
         <div>
           <h3 class="section-title">{{ currentScene.tableTitle }}</h3>
-          <p class="page-subtitle">{{ currentScene.tableSubtitle }}</p>
         </div>
       </div>
+
+      <section class="stats-grid section-stats">
+        <button
+          v-for="item in currentStats"
+          :key="item.key"
+          type="button"
+          :class="['metric-card', 'metric-card--action', { 'is-active': activeStatKey === item.key }]"
+          @click="handleStatClick(item.key)"
+        >
+          <span>{{ item.label }}</span>
+          <strong>{{ item.value }}</strong>
+          <p>{{ item.desc }}</p>
+        </button>
+      </section>
 
       <template v-if="isUserScene">
         <div class="toolbar-panel">
@@ -66,9 +49,6 @@
               <el-button @click="handleExportCurrentScene">导出</el-button>
               <el-button type="primary" plain @click="openUserDialog()">新增用户</el-button>
             </div>
-          </div>
-          <div class="panel-note">
-            用户管理已接入真实接口，新增和编辑时必须绑定有效机构与启用角色，且不允许删除当前登录用户。
           </div>
         </div>
 
@@ -137,7 +117,6 @@
               <el-button type="primary" plain @click="openOrgDialog()">新增机构</el-button>
             </div>
           </div>
-          <div class="panel-note">机构管理已升级为正式台账。删除机构时会校验下级机构和已绑定用户，用户保存时也会校验机构是否存在且启用。</div>
         </div>
 
         <div class="table-card">
@@ -184,7 +163,6 @@
               <el-button type="primary" plain @click="openDictDialog()">新增字典</el-button>
             </div>
           </div>
-          <div class="panel-note">数据字典管理已接入真实接口，支持正式维护字典编码、所属模块、字典项文本与启停状态；系统内置状态字典会自动补齐，建议按“码值=中文名称”格式维护。</div>
         </div>
 
         <div class="table-card">
@@ -231,7 +209,6 @@
               <el-button type="primary" plain @click="openRoleDialog()">新增角色</el-button>
             </div>
           </div>
-          <div class="panel-note">角色管理已接入真实接口，支持角色编码唯一、角色名称唯一，以及“角色被用户引用时不可删除”的业务约束。</div>
         </div>
 
         <div class="table-card">
@@ -271,7 +248,6 @@
               <el-button @click="handleExportCurrentScene">导出</el-button>
             </div>
           </div>
-          <div class="panel-note">日志管理已切换为真实业务留痕查询，统一汇总登录认证、样品留痕、检测记录、审核记录与报告推送日志。</div>
         </div>
 
         <div class="table-card">
@@ -303,7 +279,6 @@
               </el-button>
             </div>
           </div>
-          <div class="panel-note">{{ currentScene.note }}</div>
         </div>
 
         <div class="table-card">
@@ -327,26 +302,6 @@
           </el-table>
         </div>
       </template>
-    </section>
-
-    <section class="scene-grid">
-      <div class="glass-panel section-block">
-        <div class="section-head"><h3 class="section-title">页面说明</h3></div>
-        <div class="scene-copy">
-          <p>{{ currentScene.guide }}</p>
-          <p>{{ currentScene.constraint }}</p>
-        </div>
-      </div>
-
-      <div class="glass-panel section-block">
-        <div class="section-head"><h3 class="section-title">关联入口</h3></div>
-        <div class="quick-links">
-          <button v-for="item in currentScene.quickLinks" :key="item.path" type="button" class="quick-link" @click="goRoute(item.path)">
-            <strong>{{ item.label }}</strong>
-            <span>{{ item.desc }}</span>
-          </button>
-        </div>
-      </div>
     </section>
 
     <el-dialog v-model="dictDialogVisible" :title="dictForm.id ? '编辑字典' : '新增字典'" width="760px" destroy-on-close @closed="resetDictForm">
@@ -1833,7 +1788,7 @@ function getLogSourceFilterLabel(sourceType) {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 20px;
+  gap: 14px;
 }
 
 .hero-tags {
@@ -1868,7 +1823,7 @@ function getLogSourceFilterLabel(sourceType) {
 .scene-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 18px;
+  gap: 12px;
 }
 
 .scene-copy p {
@@ -1878,20 +1833,20 @@ function getLogSourceFilterLabel(sourceType) {
 }
 
 .scene-copy p + p {
-  margin-top: 10px;
+  margin-top: 8px;
 }
 
 .quick-links {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
+  gap: 10px;
 }
 
 .quick-link {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 16px 18px;
+  gap: 8px;
+  padding: 13px 14px;
   border: 1px solid var(--line-soft);
   border-radius: 14px;
   background: linear-gradient(180deg, #ffffff, #f7fbff);
@@ -1920,7 +1875,7 @@ function getLogSourceFilterLabel(sourceType) {
 .form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px 18px;
+  gap: 6px 14px;
 }
 
 .form-span-2 {
@@ -1928,7 +1883,7 @@ function getLogSourceFilterLabel(sourceType) {
 }
 
 .system-page :deep(.el-form-item) {
-  margin-bottom: 18px;
+  margin-bottom: 14px;
 }
 
 .system-page :deep(.el-radio-group) {

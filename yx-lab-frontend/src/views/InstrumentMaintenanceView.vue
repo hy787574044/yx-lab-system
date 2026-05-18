@@ -1,40 +1,25 @@
-<template>
+﻿<template>
   <div class="content-grid maintenance-page">
-    <section class="glass-panel section-block page-hero">
-      <div>
-        <h2 class="page-title">设备维修</h2>
-        <p class="page-subtitle">
-          统一登记仪器设备维修时间、维修原因、维修结果、维修费用与留痕说明，形成正式维修台账。
-        </p>
-      </div>
-      <div class="hero-tags">
-        <span class="status-chip info">当前设备 {{ instrumentOptions.length }}</span>
-        <span :class="['status-chip', recentCount ? 'warning' : 'success']">近 7 天 {{ recentCount }}</span>
-        <span :class="['status-chip', highCostCount ? 'danger' : 'success']">高成本 {{ highCostCount }}</span>
-      </div>
-    </section>
-
-    <section class="stats-grid">
-      <button
-        v-for="item in stats"
-        :key="item.label"
-        type="button"
-        :class="['metric-card', 'metric-card--action', { 'is-active': activeStatKey === item.label }]"
-        @click="handleStatClick(item.label)"
-      >
-        <span>{{ item.label }}</span>
-        <strong>{{ item.value }}</strong>
-        <p>{{ item.desc }}</p>
-      </button>
-    </section>
-
     <section class="glass-panel section-block">
       <div class="section-head">
         <div>
           <h3 class="section-title">维修台账</h3>
-          <p class="page-subtitle">支持按设备查看维修记录，并对当前分页数据按时间、费用和维修类型做快速筛选。</p>
         </div>
       </div>
+
+      <section class="stats-grid section-stats">
+        <button
+          v-for="item in stats"
+          :key="item.label"
+          type="button"
+          :class="['metric-card', 'metric-card--action', { 'is-active': activeStatKey === item.label }]"
+          @click="handleStatClick(item.label)"
+        >
+          <span>{{ item.label }}</span>
+          <strong>{{ item.value }}</strong>
+          <p>{{ item.desc }}</p>
+        </button>
+      </section>
 
       <div class="toolbar-panel">
         <div class="toolbar-row">
@@ -110,38 +95,6 @@
           :total="total"
           @change="loadData"
         />
-      </div>
-    </section>
-
-    <section class="scene-grid">
-      <div class="glass-panel section-block">
-        <div class="section-head">
-          <h3 class="section-title">页面说明</h3>
-        </div>
-        <div class="scene-copy">
-          <p>设备维修页已从占位页升级为正式业务页，直接接入后端维修接口。</p>
-          <p>当前支持维修记录分页、设备筛选、新增、编辑、删除，能够与设备台账形成闭环。</p>
-        </div>
-      </div>
-
-      <div class="glass-panel section-block">
-        <div class="section-head">
-          <h3 class="section-title">关联入口</h3>
-        </div>
-        <div class="quick-links">
-          <button type="button" class="quick-link" @click="goRoute('/instrument-ledger')">
-            <strong>设备台账</strong>
-            <span>查看设备基础档案、设备状态与校准周期</span>
-          </button>
-          <button type="button" class="quick-link" @click="goRoute('/document-ledger')">
-            <strong>文档台账</strong>
-            <span>管理维修报告、说明附件与制度文档</span>
-          </button>
-          <button type="button" class="quick-link" @click="goRoute('/dashboard')">
-            <strong>运行总览</strong>
-            <span>回到主看板继续查看整体化验室运行情况</span>
-          </button>
-        </div>
       </div>
     </section>
 
@@ -537,7 +490,7 @@ onMounted(async () => {
 .page-hero,
 .scene-grid {
   display: grid;
-  gap: 16px;
+  gap: 12px;
 }
 
 .page-hero {
@@ -548,7 +501,7 @@ onMounted(async () => {
 .hero-tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 10px;
   justify-content: flex-end;
 }
 
@@ -572,7 +525,7 @@ onMounted(async () => {
 }
 
 .metric-card p {
-  margin: 10px 0 0;
+  margin: 8px 0 0;
   color: var(--text-sub);
   font-size: 14px;
   line-height: 1.6;
@@ -594,7 +547,7 @@ onMounted(async () => {
 
 .scene-copy {
   display: grid;
-  gap: 10px;
+  gap: 8px;
   color: var(--text-sub);
   font-size: 14px;
   line-height: 1.7;
@@ -606,13 +559,13 @@ onMounted(async () => {
 
 .quick-links {
   display: grid;
-  gap: 12px;
+  gap: 10px;
 }
 
 .quick-link {
   display: grid;
   gap: 4px;
-  padding: 14px;
+  padding: 12px;
   border: 1px solid var(--line-soft);
   border-radius: 12px;
   background: var(--bg-panel-soft);
@@ -646,3 +599,4 @@ onMounted(async () => {
   }
 }
 </style>
+

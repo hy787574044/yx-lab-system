@@ -1,30 +1,27 @@
-<template>
+﻿<template>
   <div class="content-grid asset-page">
-    <section class="stats-grid asset-stats">
-      <button
-        v-for="item in currentStats"
-        :key="item.label"
-        type="button"
-        :class="['metric-card', 'asset-metric', 'metric-card--action', { 'is-active': activeStatKey === item.label }]"
-        @click="handleStatClick(item)"
-      >
-        <span>{{ item.label }}</span>
-        <strong>{{ item.value }}</strong>
-        <p>{{ item.desc }}</p>
-      </button>
-    </section>
-
     <section class="glass-panel section-block">
       <el-tabs v-model="active" :class="{ 'asset-tabs--single': showSingleAssetView }">
         <el-tab-pane v-if="showInstrumentTab" label="设备台账" name="inst">
           <div class="section-head">
             <div>
               <h3 class="section-title">设备台账</h3>
-              <p class="page-subtitle">
-                统一维护化验室设备基础档案、状态信息和校准周期，支持模板下载与批量导入。
-              </p>
             </div>
           </div>
+
+          <section class="stats-grid asset-stats section-stats">
+            <button
+              v-for="item in instrumentStats"
+              :key="item.label"
+              type="button"
+              :class="['metric-card', 'asset-metric', 'metric-card--action', { 'is-active': activeStatKey === item.label }]"
+              @click="handleStatClick(item)"
+            >
+              <span>{{ item.label }}</span>
+              <strong>{{ item.value }}</strong>
+              <p>{{ item.desc }}</p>
+            </button>
+          </section>
 
           <div class="toolbar-panel">
             <div class="toolbar-row">
@@ -110,11 +107,22 @@
           <div class="section-head">
             <div>
               <h3 class="section-title">文档台账</h3>
-              <p class="page-subtitle">
-                管理制度文件、规范文档和附件资料，支持查看权限控制、上传替换和在线预览。
-              </p>
             </div>
           </div>
+
+          <section class="stats-grid asset-stats section-stats">
+            <button
+              v-for="item in documentStats"
+              :key="item.label"
+              type="button"
+              :class="['metric-card', 'asset-metric', 'metric-card--action', { 'is-active': activeStatKey === item.label }]"
+              @click="handleStatClick(item)"
+            >
+              <span>{{ item.label }}</span>
+              <strong>{{ item.value }}</strong>
+              <p>{{ item.desc }}</p>
+            </button>
+          </section>
 
           <div class="toolbar-panel">
             <div class="toolbar-row">
@@ -457,6 +465,7 @@ const vLoading = ElLoadingDirective
 const showSingleAssetView = computed(() => route.path === '/instrument-ledger' || route.path === '/document-ledger')
 const showInstrumentTab = computed(() => route.path !== '/document-ledger')
 const showDocumentTab = computed(() => route.path !== '/instrument-ledger')
+const currentLedgerTitle = computed(() => (active.value === 'doc' ? '文档台账' : '设备台账'))
 const instrumentLoading = ref(false)
 const savingInstrument = ref(false)
 const templateDownloading = ref(false)
@@ -1036,7 +1045,7 @@ watch(() => route.fullPath, () => {
 }
 
 .asset-stats {
-  margin-bottom: 0;
+  margin-bottom: 10px;
 }
 
 .asset-metric p {
@@ -1170,3 +1179,4 @@ watch(() => route.fullPath, () => {
   }
 }
 </style>
+

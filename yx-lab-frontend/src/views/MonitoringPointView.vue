@@ -1,26 +1,25 @@
-<template>
+﻿<template>
   <div class="content-grid">
-    <section class="stats-grid">
-      <button
-        v-for="item in stats"
-        :key="item.label"
-        type="button"
-        :class="['metric-card', 'metric-card--action', { 'is-active': activeStatKey === item.key }]"
-        @click="handleStatClick(item.key)"
-      >
-        <span>{{ item.label }}</span>
-        <strong>{{ item.value }}</strong>
-        <p>{{ item.desc }}</p>
-      </button>
-    </section>
-
     <section class="glass-panel section-block">
       <div class="section-head">
         <div>
           <h3 class="section-title">监测点位</h3>
-          <p class="page-subtitle">统一维护监测点位基础信息，支持状态切换和点位资料调整。</p>
         </div>
       </div>
+
+      <section class="stats-grid section-stats">
+        <button
+          v-for="item in stats"
+          :key="item.label"
+          type="button"
+          :class="['metric-card', 'metric-card--action', { 'is-active': activeStatKey === item.key }]"
+          @click="handleStatClick(item.key)"
+        >
+          <span>{{ item.label }}</span>
+          <strong>{{ item.value }}</strong>
+          <p>{{ item.desc }}</p>
+        </button>
+      </section>
 
       <div class="toolbar-panel">
         <div class="toolbar-row">
@@ -423,3 +422,4 @@ onMounted(loadData)
   }
 }
 </style>
+

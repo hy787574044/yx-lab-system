@@ -1,26 +1,25 @@
-<template>
+﻿<template>
   <div class="content-grid">
-    <section class="stats-grid">
-      <button
-        v-for="item in stats"
-        :key="item.label"
-        type="button"
-        :class="['metric-card', 'metric-card--action', { 'is-active': activeStatKey === item.key }]"
-        @click="handleStatClick(item.key)"
-      >
-        <span>{{ item.label }}</span>
-        <strong>{{ item.value }}</strong>
-        <p>{{ item.desc }}</p>
-      </button>
-    </section>
-
     <section class="glass-panel section-block">
       <div class="section-head">
         <div>
           <h3 class="section-title">报告台账</h3>
-          <p class="page-subtitle">统一查看正式报告产物、发布状态、推送结果与留痕信息，并支持在线预览正式报告。</p>
         </div>
       </div>
+
+      <section class="stats-grid section-stats">
+        <button
+          v-for="item in stats"
+          :key="item.label"
+          type="button"
+          :class="['metric-card', 'metric-card--action', { 'is-active': activeStatKey === item.key }]"
+          @click="handleStatClick(item.key)"
+        >
+          <span>{{ item.label }}</span>
+          <strong>{{ item.value }}</strong>
+          <p>{{ item.desc }}</p>
+        </button>
+      </section>
 
       <div class="toolbar-panel">
         <div class="toolbar-row">
@@ -419,3 +418,4 @@ onBeforeUnmount(() => {
   line-height: 1.8;
 }
 </style>
+

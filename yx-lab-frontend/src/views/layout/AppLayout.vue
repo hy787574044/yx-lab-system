@@ -136,41 +136,6 @@
       </aside>
 
       <main class="workspace">
-        <section class="workspace-head">
-          <div class="breadcrumb-row">
-            <div class="breadcrumb">
-              <button type="button" class="home-trigger" @click="goRoute('/dashboard')">
-                <el-icon><House /></el-icon>
-              </button>
-              <span>首页</span>
-              <el-icon class="breadcrumb-separator"><ArrowRight /></el-icon>
-              <span>水质管理</span>
-              <el-icon class="breadcrumb-separator"><ArrowRight /></el-icon>
-              <span>{{ currentPrimaryMenu.title }}</span>
-              <el-icon class="breadcrumb-separator"><ArrowRight /></el-icon>
-              <span class="is-current">{{ currentSecondaryMenu.title }}</span>
-            </div>
-
-            <div class="workspace-meta">
-              <span>{{ todayText }}</span>
-              <span class="workspace-meta__dot"></span>
-              <span>{{ currentSubtitle }}</span>
-            </div>
-          </div>
-
-          <div class="route-tabs">
-            <button
-              v-for="item in currentSecondaryMenus"
-              :key="`tab-${item.path}`"
-              type="button"
-              :class="['route-tab', { 'is-active': currentRoutePath === item.path }]"
-              @click="goRoute(item.path)"
-            >
-              {{ item.shortTitle || item.title }}
-            </button>
-          </div>
-        </section>
-
         <section class="view-body">
           <router-view />
         </section>
@@ -673,15 +638,7 @@ onMounted(() => {
   min-width: 0;
   margin-left: var(--layout-sidebar-width);
   overflow: hidden;
-  padding: 14px 16px 18px;
-}
-
-.workspace-head {
-  padding: 12px 16px 14px;
-  background: #ffffff;
-  border: 1px solid var(--line-soft);
-  border-radius: 12px;
-  overflow: hidden;
+  padding: 10px 14px 14px;
 }
 
 .breadcrumb-row {
@@ -773,7 +730,7 @@ onMounted(() => {
   min-height: 0;
   min-width: 0;
   overflow: auto;
-  padding-top: 14px;
+  padding-top: 0;
 }
 
 :deep(.skin-popover) {
@@ -954,8 +911,5 @@ onMounted(() => {
     padding: 10px;
   }
 
-  .workspace-head {
-    padding: 10px 12px;
-  }
 }
 </style>

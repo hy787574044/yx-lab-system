@@ -1,42 +1,25 @@
 <template>
   <div class="content-grid detection-config-page">
-    <section class="glass-panel section-block page-hero">
-      <div>
-        <h2 class="page-title">{{ currentScene.title }}</h2>
-        <p class="page-subtitle">{{ currentScene.subtitle }}</p>
-      </div>
-      <div class="hero-tags">
-        <span
-          v-for="tag in currentTags"
-          :key="tag.label"
-          :class="['status-chip', tag.type || 'info']"
-        >
-          {{ tag.label }} {{ tag.value }}
-        </span>
-      </div>
-    </section>
-
-    <section class="stats-grid">
-      <button
-        v-for="item in currentStats"
-        :key="item.key"
-        type="button"
-        :class="['metric-card', 'metric-card--action', { 'is-active': activeStatKey === item.key }]"
-        @click="handleStatClick(item.key)"
-      >
-        <span>{{ item.label }}</span>
-        <strong>{{ item.value }}</strong>
-        <p>{{ item.desc }}</p>
-      </button>
-    </section>
-
     <section class="glass-panel section-block">
       <div class="section-head">
         <div>
           <h3 class="section-title">{{ currentScene.tableTitle }}</h3>
-          <p class="page-subtitle">{{ currentScene.tableSubtitle }}</p>
         </div>
       </div>
+
+      <section class="stats-grid section-stats">
+        <button
+          v-for="item in currentStats"
+          :key="item.key"
+          type="button"
+          :class="['metric-card', 'metric-card--action', { 'is-active': activeStatKey === item.key }]"
+          @click="handleStatClick(item.key)"
+        >
+          <span>{{ item.label }}</span>
+          <strong>{{ item.value }}</strong>
+          <p>{{ item.desc }}</p>
+        </button>
+      </section>
 
       <template v-if="isParameterScene">
         <div class="toolbar-panel">
@@ -60,9 +43,6 @@
               <el-button @click="handleExportCurrentScene">导出</el-button>
               <el-button type="primary" plain @click="openParameterDialog()">新增检测参数</el-button>
             </div>
-          </div>
-          <div class="panel-note">
-            这里维护的是最基础的检测参数，例如 pH、浊度、余氯、氨氮等。后续检测项目组只能从这里选择多个不重复参数进行组合。
           </div>
         </div>
 
@@ -186,9 +166,6 @@
               <el-button type="primary" plain @click="openGroupDialog()">新增检测套餐</el-button>
             </div>
           </div>
-          <div class="panel-note">
-            检测套餐由多个检测参数组成，并要求为每个参数选定可用检测方法。样品登录时只能单选一个检测套餐，后续检测时会按该套餐自动带出参数清单。
-          </div>
         </div>
 
         <div class="table-card">
@@ -238,36 +215,6 @@
           />
         </div>
       </template>
-    </section>
-
-    <section class="scene-grid">
-      <div class="glass-panel section-block">
-        <div class="section-head">
-          <h3 class="section-title">页面说明</h3>
-        </div>
-        <div class="scene-copy">
-          <p>{{ currentScene.guide }}</p>
-          <p>{{ currentScene.constraint }}</p>
-        </div>
-      </div>
-
-      <div class="glass-panel section-block">
-        <div class="section-head">
-          <h3 class="section-title">关联入口</h3>
-        </div>
-        <div class="quick-links">
-          <button
-            v-for="item in currentScene.quickLinks"
-            :key="item.path"
-            type="button"
-            class="quick-link"
-            @click="goRoute(item.path)"
-          >
-            <strong>{{ item.label }}</strong>
-            <span>{{ item.desc }}</span>
-          </button>
-        </div>
-      </div>
     </section>
 
     <el-dialog
@@ -1591,13 +1538,13 @@ watch(() => route.fullPath, async () => {
 
 <style scoped>
 .detection-config-page {
-  gap: 16px;
+  gap: 12px;
 }
 
 .page-hero,
 .scene-grid {
   display: grid;
-  gap: 16px;
+  gap: 12px;
 }
 
 .page-hero {
@@ -1608,7 +1555,7 @@ watch(() => route.fullPath, async () => {
 .hero-tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 10px;
   justify-content: flex-end;
 }
 
@@ -1632,7 +1579,7 @@ watch(() => route.fullPath, async () => {
 }
 
 .metric-card p {
-  margin: 10px 0 0;
+  margin: 8px 0 0;
   color: var(--text-sub);
   font-size: 14px;
   line-height: 1.6;
@@ -1644,7 +1591,7 @@ watch(() => route.fullPath, async () => {
 
 .scene-copy {
   display: grid;
-  gap: 10px;
+  gap: 8px;
   color: var(--text-sub);
   font-size: 14px;
   line-height: 1.7;
@@ -1656,13 +1603,13 @@ watch(() => route.fullPath, async () => {
 
 .quick-links {
   display: grid;
-  gap: 12px;
+  gap: 10px;
 }
 
 .quick-link {
   display: grid;
   gap: 4px;
-  padding: 14px;
+  padding: 12px;
   border: 1px solid var(--line-soft);
   border-radius: 12px;
   background: var(--bg-panel-soft);

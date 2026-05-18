@@ -1,46 +1,28 @@
 <template>
   <div class="content-grid detection-page">
-    <section class="glass-panel section-block page-hero">
-      <div>
-        <h2 class="page-title">{{ currentScene.title }}</h2>
-        <p class="page-subtitle">{{ currentScene.subtitle }}</p>
-      </div>
-      <div class="hero-tags">
-        <span
-          v-for="tag in currentScene.tags"
-          :key="tag.label"
-          :class="['status-chip', tag.type]"
-        >
-          {{ tag.label }} {{ tag.value }}
-        </span>
-      </div>
-    </section>
-
-    <section class="stats-grid">
-      <button
-        v-for="item in currentStats"
-        :key="item.key"
-        type="button"
-        :class="['metric-card', 'metric-card--action', { 'is-active': activeStatKey === item.key }]"
-        @click="handleStatClick(item.key)"
-      >
-        <span>{{ item.label }}</span>
-        <strong>{{ item.value }}</strong>
-        <p>{{ item.desc }}</p>
-      </button>
-    </section>
-
     <section class="glass-panel section-block">
       <div class="section-head">
         <div>
           <h3 class="section-title">{{ baseScene.tableTitle }}</h3>
-          <p class="page-subtitle">{{ baseScene.tableSubtitle }}</p>
         </div>
       </div>
 
+      <section class="stats-grid section-stats">
+        <button
+          v-for="item in currentStats"
+          :key="item.key"
+          type="button"
+          :class="['metric-card', 'metric-card--action', { 'is-active': activeStatKey === item.key }]"
+          @click="handleStatClick(item.key)"
+        >
+          <span>{{ item.label }}</span>
+          <strong>{{ item.value }}</strong>
+          <p>{{ item.desc }}</p>
+        </button>
+      </section>
+
       <div class="toolbar-panel">
         <div class="toolbar-row">
-          <div class="panel-note">{{ baseScene.note }}</div>
           <div class="toolbar-actions">
             <el-button type="primary" @click="loadData">刷新检测流程</el-button>
             <el-button @click="handleExport">导出</el-button>
@@ -335,35 +317,6 @@
       </template>
     </el-dialog>
 
-    <section class="scene-grid">
-      <div class="glass-panel section-block">
-        <div class="section-head">
-          <h3 class="section-title">页面说明</h3>
-        </div>
-        <div class="scene-copy">
-          <p>{{ baseScene.guide }}</p>
-          <p>当前页面已经按“检测主流程 + 参数子流程”展开，样品登录后会先进入待分配，再按参数逐条分配检测员。</p>
-        </div>
-      </div>
-
-      <div class="glass-panel section-block">
-        <div class="section-head">
-          <h3 class="section-title">关联入口</h3>
-        </div>
-        <div class="quick-links">
-          <button
-            v-for="item in baseScene.quickLinks"
-            :key="item.path"
-            type="button"
-            class="quick-link"
-            @click="goRoute(item.path)"
-          >
-            <strong>{{ item.label }}</strong>
-            <span>{{ item.desc }}</span>
-          </button>
-        </div>
-      </div>
-    </section>
   </div>
 </template>
 
@@ -1173,13 +1126,13 @@ watch(() => route.fullPath, () => {
 
 <style scoped>
 .detection-page {
-  gap: 16px;
+  gap: 12px;
 }
 
 .page-hero,
 .scene-grid {
   display: grid;
-  gap: 16px;
+  gap: 12px;
 }
 
 .page-hero {
@@ -1190,7 +1143,7 @@ watch(() => route.fullPath, () => {
 .hero-tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 10px;
   justify-content: flex-end;
 }
 
@@ -1214,7 +1167,7 @@ watch(() => route.fullPath, () => {
 }
 
 .metric-card p {
-  margin: 10px 0 0;
+  margin: 8px 0 0;
   color: var(--text-sub);
   font-size: 14px;
   line-height: 1.6;
@@ -1226,7 +1179,7 @@ watch(() => route.fullPath, () => {
 
 .scene-copy {
   display: grid;
-  gap: 10px;
+  gap: 8px;
   color: var(--text-sub);
   font-size: 14px;
   line-height: 1.7;
@@ -1239,20 +1192,20 @@ watch(() => route.fullPath, () => {
 .table-action-group {
   display: inline-flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   justify-content: center;
   flex-wrap: wrap;
 }
 
 .quick-links {
   display: grid;
-  gap: 12px;
+  gap: 10px;
 }
 
 .quick-link {
   display: grid;
   gap: 4px;
-  padding: 14px;
+  padding: 12px;
   border: 1px solid var(--line-soft);
   border-radius: 12px;
   background: var(--bg-panel-soft);
@@ -1272,7 +1225,7 @@ watch(() => route.fullPath, () => {
 
 .subflow-panel {
   display: grid;
-  gap: 16px;
+  gap: 12px;
   padding: 8px 6px;
 }
 
@@ -1280,19 +1233,19 @@ watch(() => route.fullPath, () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 .subflow-summary {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
 }
 
 .subflow-list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
+  gap: 12px;
 }
 
 .subflow-list--single {
@@ -1301,10 +1254,10 @@ watch(() => route.fullPath, () => {
 
 .subflow-card {
   display: grid;
-  gap: 12px;
-  padding: 16px;
+  gap: 10px;
+  padding: 14px;
   border: 1px solid var(--line-soft);
-  border-radius: 18px;
+  border-radius: 16px;
   background: linear-gradient(180deg, rgba(250, 252, 255, 0.98), rgba(244, 248, 255, 0.92));
 }
 
@@ -1390,7 +1343,7 @@ watch(() => route.fullPath, () => {
 
 .result-dialog {
   display: grid;
-  gap: 14px;
+  gap: 12px;
 }
 
 .result-dialog__summary {

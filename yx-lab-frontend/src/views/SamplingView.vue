@@ -1,46 +1,28 @@
 ﻿<template>
   <div class="content-grid sampling-page">
-    <section class="glass-panel section-block page-hero">
-      <div>
-        <h2 class="page-title">{{ currentScene.title }}</h2>
-        <p class="page-subtitle">{{ currentScene.subtitle }}</p>
-      </div>
-      <div class="hero-tags">
-        <span
-          v-for="tag in currentScene.tags"
-          :key="tag.label"
-          :class="['status-chip', tag.type]"
-        >
-          {{ tag.label }} {{ tag.value }}
-        </span>
-      </div>
-    </section>
-
-    <section class="stats-grid">
-      <button
-        v-for="item in currentStats"
-        :key="item.key"
-        type="button"
-        :class="['metric-card', 'metric-card--action', { 'is-active': activeStatKey === item.key }]"
-        @click="handleStatClick(item.key)"
-      >
-        <span>{{ item.label }}</span>
-        <strong>{{ item.value }}</strong>
-        <p>{{ item.desc }}</p>
-      </button>
-    </section>
-
-    <section class="glass-panel section-block">
+    <section v-if="!isPlanScene" class="glass-panel section-block">
       <div class="section-head">
         <div>
           <h3 class="section-title">{{ currentScene.tableTitle }}</h3>
-          <p class="page-subtitle">{{ currentScene.tableSubtitle }}</p>
         </div>
       </div>
 
+      <section class="stats-grid section-stats">
+        <button
+          v-for="item in currentStats"
+          :key="item.key"
+          type="button"
+          :class="['metric-card', 'metric-card--action', { 'is-active': activeStatKey === item.key }]"
+          @click="handleStatClick(item.key)"
+        >
+          <span>{{ item.label }}</span>
+          <strong>{{ item.value }}</strong>
+          <p>{{ item.desc }}</p>
+        </button>
+      </section>
+
       <div class="toolbar-panel">
         <div class="toolbar-row">
-          <div class="panel-note">{{ currentScene.note }}</div>
           <div class="toolbar-actions">
             <el-button @click="refreshCurrentScene">刷新</el-button>
             <el-button @click="handleExportCurrentScene">导出</el-button>
@@ -88,10 +70,6 @@
             </el-button>
           </div>
         </div>
-      </div>
-
-      <div v-if="baseScene.showPlanSection && activeMissingSamplerPlans.length" class="panel-note plan-panel-warning">
-        {{ planDispatchNotice }}
       </div>
 
       <div class="table-card">
@@ -260,11 +238,10 @@
       </div>
     </section>
 
-    <section v-if="baseScene.showPlanSection" class="glass-panel section-block">
+    <section v-if="baseScene.showPlanSection || isPlanScene" class="glass-panel section-block">
       <div class="section-head">
         <div>
           <h3 class="section-title">周期采样计划</h3>
-          <p class="page-subtitle">任务分配页保留周期计划入口，支持自动派发前的创建、暂停与恢复。</p>
         </div>
       </div>
 
@@ -278,17 +255,22 @@
 
       <div class="toolbar-panel">
         <div class="toolbar-row">
-          <div class="panel-note">这里用于承接周期计划与自动任务能力，当前与任务分配场景联动展示。</div>
+          <div class="plan-toolbar-left">
+            <el-button type="primary" class="plan-create-button" @click="createPlan">新增计划</el-button>
+          </div>
           <div class="toolbar-actions">
             <el-button @click="loadPlans">刷新计划</el-button>
             <el-button @click="handleExportPlans">导出</el-button>
-            <el-button type="primary" plain @click="createPlan">新增计划</el-button>
           </div>
         </div>
       </div>
 
+      <div v-if="activeMissingSamplerPlans.length" class="panel-note plan-panel-warning">
+        {{ planDispatchNotice }}
+      </div>
+
       <div class="table-card">
-        <el-table class="list-table" :data="plans" stripe max-height="380" empty-text="暂无采样计划数据">
+        <el-table class="list-table" :data="visiblePlans" stripe max-height="380" empty-text="暂无采样计划数据">
           <el-table-column prop="planName" label="计划名称" min-width="180" />
           <el-table-column prop="pointName" label="采样点位" min-width="160" />
           <el-table-column prop="samplerName" label="采样人员" width="120" />
@@ -420,10 +402,9 @@
           <el-form-item label="采样人员">
             <el-select
               v-model="planForm.samplerId"
-              clearable
               filterable
               style="width: 100%"
-              placeholder="请选择采样员，可不填"
+              placeholder="请选择采样员"
               :loading="samplerLoading"
               @change="handlePlanSamplerChange"
             >
@@ -505,36 +486,6 @@
         <el-button type="primary" :loading="dispatchSubmitting" :disabled="dispatchSubmitting" @click="submitDispatchForm">确认派发</el-button>
       </template>
     </el-dialog>
-
-    <section class="scene-grid">
-      <div class="glass-panel section-block">
-        <div class="section-head">
-          <h3 class="section-title">页面说明</h3>
-        </div>
-        <div class="scene-copy">
-          <p>{{ baseScene.guide }}</p>
-          <p>当前页面已按菜单语义拆分，避免“同一页面换标题”的空转体验。</p>
-        </div>
-      </div>
-
-      <div class="glass-panel section-block">
-        <div class="section-head">
-          <h3 class="section-title">关联入口</h3>
-        </div>
-        <div class="quick-links">
-          <button
-            v-for="item in baseScene.quickLinks"
-            :key="item.path"
-            type="button"
-            class="quick-link"
-            @click="goRoute(item.path)"
-          >
-            <strong>{{ item.label }}</strong>
-            <span>{{ item.desc }}</span>
-          </button>
-        </div>
-      </div>
-    </section>
 
     <el-dialog
       v-model="loginDialogVisible"
@@ -909,23 +860,45 @@ function endRowAction(scope, action, id) {
 const sceneMap = {
   '/task-assign': {
     key: 'task-assign',
-    title: '任务分配',
-    subtitle: '聚焦待处理采样任务与周期计划派发，适合班组长或调度人员快速推进采样执行。',
+    title: '采样任务',
+    subtitle: '聚焦待处理采样任务，适合班组长或调度人员快速推进采样执行。',
     tableTitle: '待办采样任务',
     tableSubtitle: '默认聚焦待处理任务，并保留开始、废弃、恢复、完成等现场执行动作。',
-    note: '任务分配页强调今天要做什么，开始采样前必须先录入封签号，上方统计卡可切换到进行中、已完成、已废弃视角。',
-    guide: '如需安排周期计划，可直接在本页下方创建并派发；任务完成后再进入样品登录。',
+    note: '采样任务页强调今天要做什么，开始采样前必须先录入封签号，上方统计卡可切换到进行中、已完成、已废弃视角。',
+    guide: '如需安排周期计划，请进入独立的采样计划页面；任务完成后再进入样品登录。',
     mode: 'task',
     defaultStatKey: 'tasks:pending',
     allowTaskActions: true,
-    showPlanSection: true,
+    showPlanSection: false,
     emptyText: '暂无待处理采样任务数据',
     taskFilter: () => true,
     sampleFilter: () => true,
     quickLinks: [
+      { path: '/sampling-plan', label: '采样计划', desc: '独立维护周期计划并执行手动派发' },
       { path: '/sample-login', label: '样品登录', desc: '将已完成采样任务登记为正式样品' },
       { path: '/task-history', label: '历史任务', desc: '查看已完成或已废弃的采样执行记录' },
       { path: '/sample-ledger', label: '样品台账', desc: '查看样品封签、状态与流程留痕' }
+    ]
+  },
+  '/sampling-plan': {
+    key: 'sampling-plan',
+    title: '采样计划',
+    subtitle: '独立维护周期采样计划，支持新增、编辑、暂停、恢复与手动派发，便于和采样任务分离管理。',
+    tableTitle: '周期采样计划',
+    tableSubtitle: '延续原采样任务页中的计划能力，保留计划台账、派发动作与计划维护表单。',
+    note: '采样计划页只处理计划本身，不再混合展示采样任务，便于单独维护周期配置和派发节奏。',
+    guide: '计划派发生成任务后，再回到采样任务或样品登录继续推进现场与样品闭环。',
+    mode: 'plan',
+    defaultStatKey: 'plans:all',
+    allowTaskActions: false,
+    showPlanSection: true,
+    emptyText: '暂无采样计划数据',
+    taskFilter: () => true,
+    sampleFilter: () => true,
+    quickLinks: [
+      { path: '/task-assign', label: '采样任务', desc: '查看计划派发后生成的待执行采样任务' },
+      { path: '/sample-login', label: '样品登录', desc: '承接完成采样后的样品登记流程' },
+      { path: '/task-ledger', label: '任务台账', desc: '追踪计划转任务后的全量执行记录' }
     ]
   },
   '/task-history': {
@@ -977,7 +950,7 @@ const sceneMap = {
     tableTitle: '已登记样品',
     tableSubtitle: '默认展示已登记样品，并通过统计卡切换到待审核、退回重检、闭环完成等状态。',
     note: '样品登录页优先解决未登记任务，支持封签号识别后自动带出任务，且不再自动生成封签号。',
-    guide: '如本页没有可登录样品，请先回到任务分配完成采样任务；若样品已登记，可继续前往检测分析。',
+    guide: '如本页没有可登录样品，请先回到采样任务完成采样任务；若样品已登记，可继续前往检测分析。',
     mode: 'sample',
     defaultStatKey: 'samples:logged',
     allowTaskActions: false,
@@ -986,7 +959,7 @@ const sceneMap = {
     taskFilter: () => true,
     sampleFilter: () => true,
     quickLinks: [
-      { path: '/task-assign', label: '任务分配', desc: '先完成现场采样任务，再进行样品登录' },
+      { path: '/task-assign', label: '采样任务', desc: '先完成现场采样任务，再进行样品登录' },
       { path: '/detection-analysis', label: '检测分析', desc: '样品登录完成后进入化验室检测流程' },
       { path: '/sample-ledger', label: '样品台账', desc: '查看全量样品、封签与流程留痕' }
     ]
@@ -1016,6 +989,7 @@ const sceneMap = {
 
 const baseScene = computed(() => sceneMap[route.path] || sceneMap['/task-assign'])
 const isTaskScene = computed(() => baseScene.value.mode === 'task')
+const isPlanScene = computed(() => baseScene.value.mode === 'plan')
 const taskSceneRecords = computed(() => tasks.value.filter((item) => baseScene.value.taskFilter(item)))
 const sampleSceneRecords = computed(() => samples.value.filter((item) => baseScene.value.sampleFilter(item)))
 
@@ -1066,7 +1040,25 @@ const planDispatchNotice = computed(() => {
 
 const currentScene = computed(() => ({
   ...baseScene.value,
-  tags: isTaskScene.value
+  tags: isPlanScene.value
+    ? [
+        {
+          label: '启用中',
+          value: plans.value.filter((item) => item.planStatus === activePlanStatus).length,
+          type: 'info'
+        },
+        {
+          label: '待补采样员',
+          value: activeMissingSamplerPlans.value.length,
+          type: activeMissingSamplerPlans.value.length ? 'warning' : 'success'
+        },
+        {
+          label: '已派发',
+          value: plans.value.filter((item) => dispatchedPlanStatuses.includes(item.planStatus)).length,
+          type: 'success'
+        }
+      ]
+    : isTaskScene.value
     ? [
         {
           label: '待处理',
@@ -1104,6 +1096,10 @@ const currentScene = computed(() => ({
 }))
 
 const currentStats = computed(() => {
+  if (isPlanScene.value) {
+    return []
+  }
+
   if (isTaskScene.value) {
     return [
       {
@@ -1224,33 +1220,58 @@ const visibleSamples = computed(() => {
   return records
 })
 
+const visiblePlans = computed(() => {
+  if (activeStatKey.value === 'plans:active') {
+    return plans.value.filter((item) => item.planStatus === activePlanStatus)
+  }
+  if (activeStatKey.value === 'plans:missing-sampler') {
+    return activeMissingSamplerPlans.value
+  }
+  if (activeStatKey.value === 'plans:paused') {
+    return plans.value.filter((item) => item.planStatus === pausedPlanStatus)
+  }
+  if (activeStatKey.value === 'plans:dispatched') {
+    return plans.value.filter((item) => dispatchedPlanStatuses.includes(item.planStatus))
+  }
+  if (activeStatKey.value === 'plans:completed') {
+    return plans.value.filter((item) => item.planStatus === completedPlanStatus)
+  }
+  return plans.value
+})
+
 const planStats = computed(() => [
   {
+    key: 'plans:all',
     label: '计划总量',
     value: toSafeNumber(planTotal.value),
     desc: '周期采样计划台账总量'
   },
   {
+    key: 'plans:active',
     label: '启用中',
     value: plans.value.filter((item) => item.planStatus === activePlanStatus).length,
     desc: '当前处于启用状态的采样计划'
   },
   {
+    key: 'plans:missing-sampler',
     label: '待补采样员',
     value: activeMissingSamplerPlans.value.length,
     desc: '已启用但未指定采样员，自动派发会跳过'
   },
   {
+    key: 'plans:paused',
     label: '已暂停',
     value: plans.value.filter((item) => item.planStatus === pausedPlanStatus).length,
     desc: '临时暂停执行的采样计划'
   },
   {
+    key: 'plans:dispatched',
     label: '已派发',
     value: plans.value.filter((item) => dispatchedPlanStatuses.includes(item.planStatus)).length,
     desc: '已经生成采样任务的采样计划'
   },
   {
+    key: 'plans:completed',
     label: '已完成',
     value: plans.value.filter((item) => item.planStatus === completedPlanStatus).length,
     desc: '已完成闭环的周期计划'
@@ -1296,6 +1317,11 @@ async function loadSamples() {
 
 async function handleExportCurrentScene() {
   try {
+    if (isPlanScene.value) {
+      await exportSamplingPlansApi({ ...planQuery })
+      ElMessage.success('采样计划导出成功')
+      return
+    }
     if (isTaskScene.value) {
       await exportSamplingTasksApi({ ...taskQuery })
       ElMessage.success('采样任务导出成功')
@@ -1318,10 +1344,11 @@ async function handleExportPlans() {
 }
 
 async function refreshCurrentScene() {
-  const requests = [loadTasks(), loadSamples()]
-  if (baseScene.value.showPlanSection) {
-    requests.push(loadPlans())
+  if (isPlanScene.value) {
+    await loadPlans()
+    return
   }
+  const requests = [loadTasks(), loadSamples()]
   await Promise.all(requests)
 }
 
@@ -1471,6 +1498,10 @@ async function submitPlanForm() {
   const payload = buildPlanPayload()
   if (!payload.planName || !payload.pointName || !payload.startTime || !payload.sampleType || !payload.cycleType) {
     ElMessage.warning('请完整填写采样计划信息')
+    return
+  }
+  if (!payload.samplerId || !payload.samplerName) {
+    ElMessage.warning('请选择采样人员')
     return
   }
   if (planForm.pointSource === 'EXISTING' && !payload.pointId) {
@@ -2094,13 +2125,13 @@ watch(() => route.fullPath, () => {
 
 <style scoped>
 .sampling-page {
-  gap: 16px;
+  gap: 12px;
 }
 
 .page-hero,
 .scene-grid {
   display: grid;
-  gap: 16px;
+  gap: 12px;
 }
 
 .page-hero {
@@ -2111,7 +2142,7 @@ watch(() => route.fullPath, () => {
 .hero-tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 10px;
   justify-content: flex-end;
 }
 
@@ -2136,7 +2167,7 @@ watch(() => route.fullPath, () => {
 
 .metric-card--static p,
 .metric-card p {
-  margin: 10px 0 0;
+  margin: 8px 0 0;
   color: var(--text-sub);
   font-size: 14px;
   line-height: 1.6;
@@ -2159,12 +2190,27 @@ watch(() => route.fullPath, () => {
 }
 
 .plan-stats {
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
 .plan-panel-warning {
-  margin-bottom: 12px;
+  margin-bottom: 10px;
   color: #9a6700;
+}
+
+.plan-toolbar-left {
+  display: grid;
+  gap: 8px;
+  justify-items: flex-start;
+}
+
+.plan-create-button {
+  min-height: 38px;
+  padding: 8px 20px;
+  border-radius: 19px;
+  font-size: 14px;
+  font-weight: 700;
+  box-shadow: 0 10px 22px rgba(22, 119, 255, 0.18);
 }
 
 .scene-grid {
@@ -2173,7 +2219,7 @@ watch(() => route.fullPath, () => {
 
 .scene-copy {
   display: grid;
-  gap: 10px;
+  gap: 8px;
   color: var(--text-sub);
   font-size: 14px;
   line-height: 1.7;
@@ -2206,11 +2252,11 @@ watch(() => route.fullPath, () => {
 
 .login-config-panel {
   display: grid;
-  gap: 12px;
+  gap: 10px;
   width: 100%;
-  padding: 16px;
+  padding: 14px;
   border: 1px solid var(--line-soft);
-  border-radius: 18px;
+  border-radius: 16px;
   background: linear-gradient(180deg, color-mix(in srgb, var(--brand) 4%, #ffffff 96%) 0%, #ffffff 100%);
 }
 
@@ -2254,7 +2300,7 @@ watch(() => route.fullPath, () => {
 }
 
 .empty-block {
-  padding: 18px 16px;
+  padding: 16px 14px;
   border: 1px dashed var(--line-strong);
   border-radius: 14px;
   background: color-mix(in srgb, var(--brand) 3%, #ffffff 97%);
@@ -2279,13 +2325,13 @@ watch(() => route.fullPath, () => {
 
 .quick-links {
   display: grid;
-  gap: 12px;
+  gap: 10px;
 }
 
 .quick-link {
   display: grid;
   gap: 4px;
-  padding: 14px;
+  padding: 12px;
   border: 1px solid var(--line-soft);
   border-radius: 12px;
   background: var(--bg-panel-soft);

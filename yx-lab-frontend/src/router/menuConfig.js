@@ -10,7 +10,7 @@ export const labMenuGroups = [
         path: '/dashboard',
         title: '运行总览',
         shortTitle: '总览',
-        subtitle: '统一查看样品、检测、审查与报告发布状态。',
+        subtitle: '统一查看样品、检测、审查与报告发布状态，便于快速识别当前业务处理进度。',
         componentKey: 'DashboardView'
       }
     ]
@@ -51,7 +51,7 @@ export const labMenuGroups = [
         path: '/sample-ledger',
         title: '样品台账',
         shortTitle: '样品台账',
-        subtitle: '展示所有样品数据，并支持状态流程查询。',
+        subtitle: '展示全部样品数据，并支持状态流转查询。',
         componentKey: 'SamplingView',
         defaultTab: 'samples',
         defaultStatKey: 'samples:all'
@@ -66,10 +66,19 @@ export const labMenuGroups = [
     defaultPath: '/task-assign',
     children: [
       {
+        path: '/sampling-plan',
+        title: '采样计划',
+        shortTitle: '采样计划',
+        subtitle: '独立维护周期采样计划，支持新增、编辑、暂停、恢复与手动派发。',
+        componentKey: 'SamplingView',
+        defaultTab: 'plans',
+        defaultStatKey: 'plans:all'
+      },
+      {
         path: '/task-assign',
-        title: '任务分配',
-        shortTitle: '任务分配',
-        subtitle: '对采样检测任务进行分配与派发。',
+        title: '采样任务',
+        shortTitle: '采样任务',
+        subtitle: '对采样任务进行分配、执行与现场推进。',
         componentKey: 'SamplingView',
         defaultTab: 'tasks',
         defaultStatKey: 'tasks:pending'
@@ -78,7 +87,7 @@ export const labMenuGroups = [
         path: '/task-history',
         title: '历史任务',
         shortTitle: '历史任务',
-        subtitle: '展示当前登记人分配或执行过的历史任务。',
+        subtitle: '展示当前登记人分配或执行过的历史采样任务。',
         componentKey: 'SamplingView',
         defaultTab: 'tasks',
         defaultStatKey: 'tasks:completed'
@@ -87,7 +96,7 @@ export const labMenuGroups = [
         path: '/task-ledger',
         title: '任务台账',
         shortTitle: '任务台账',
-        subtitle: '展示所有任务记录，包括进行中与历史任务。',
+        subtitle: '展示全部采样任务记录，包括进行中与历史任务。',
         componentKey: 'SamplingView',
         defaultTab: 'tasks',
         defaultStatKey: 'tasks:all'
@@ -124,8 +133,7 @@ export const labMenuGroups = [
         subtitle: '展示全部检测分析样品数据，包括检测中与历史数据。',
         componentKey: 'DetectionView',
         defaultStatKey: 'all'
-      },
-      
+      }
     ]
   },
   {
@@ -172,7 +180,7 @@ export const labMenuGroups = [
         path: '/report-ledger',
         title: '报告台账',
         shortTitle: '报告台账',
-        subtitle: '展示所有检测报告数据，支持溯源、预览与下载等操作。',
+        subtitle: '展示全部检测报告数据，支持溯源、预览与下载等操作。',
         componentKey: 'ReportView'
       }
     ]
@@ -188,7 +196,7 @@ export const labMenuGroups = [
         path: '/instrument-ledger',
         title: '仪器设备台账',
         shortTitle: '设备台账',
-        subtitle: '展示系统中仪器设备列表数据，支持增删改查操作。',
+        subtitle: '展示系统中的仪器设备列表数据，支持增删改查操作。',
         componentKey: 'AssetView',
         defaultTab: 'inst',
         defaultStatLabel: '设备总数'
@@ -296,7 +304,7 @@ export const labMenuGroups = [
         path: '/system-dicts',
         title: '数据字典管理',
         shortTitle: '数据字典',
-        subtitle: '对系统中数据字典进行管理。',
+        subtitle: '对系统中的数据字典进行管理。',
         componentKey: 'SystemManagementView'
       },
       {
@@ -315,52 +323,21 @@ export const labMenuGroups = [
       },
       {
         path: '/detection-methods',
-        title: '检测套餐',
-        shortTitle: '检测套餐',
-        subtitle: '将多个检测参数组合为可供样品登录选择的检测套餐。',
+        title: '检测方法',
+        shortTitle: '检测方法',
+        subtitle: '维护化验室检测方法基础台账，支持增删改查。',
         componentKey: 'DetectionMethodView'
       },
       {
         path: '/detection-project-groups',
-        title: '检测方法',
-        shortTitle: '检测方法',
-        subtitle: '维护化验室检测方法基础台账，支持增删改查。',
+        title: '检测套餐',
+        shortTitle: '检测套餐',
+        subtitle: '将多个检测参数组合为可供样品登录选择的检测套餐。',
         componentKey: 'DetectionConfigView'
       }
     ]
   }
 ]
-
-const systemMenuGroup = labMenuGroups.find((item) => item.id === 'system')
-if (systemMenuGroup?.children) {
-  const detectionMethodMenu = systemMenuGroup.children.find((item) => item.path === '/detection-methods')
-  const detectionPackageMenu = systemMenuGroup.children.find((item) => item.path === '/detection-project-groups')
-
-  if (detectionMethodMenu) {
-    detectionMethodMenu.title = '检测方法'
-    detectionMethodMenu.shortTitle = '检测方法'
-    detectionMethodMenu.subtitle = '维护化验室检测方法基础台账，支持增删改查。'
-  }
-
-  if (detectionPackageMenu) {
-    detectionPackageMenu.title = '检测套餐'
-    detectionPackageMenu.shortTitle = '检测套餐'
-    detectionPackageMenu.subtitle = '将多个检测参数组合为可供样品登录选择的检测套餐。'
-  }
-
-  if (detectionMethodMenu && detectionPackageMenu) {
-    const filteredChildren = systemMenuGroup.children.filter(
-      (item) => item.path !== '/detection-methods' && item.path !== '/detection-project-groups'
-    )
-    const insertIndex = filteredChildren.findIndex((item) => item.path === '/detection-projects')
-    if (insertIndex >= 0) {
-      filteredChildren.splice(insertIndex + 1, 0, detectionMethodMenu, detectionPackageMenu)
-    } else {
-      filteredChildren.push(detectionMethodMenu, detectionPackageMenu)
-    }
-    systemMenuGroup.children = filteredChildren
-  }
-}
 
 export const legacyRedirects = [
   { path: '/monitoring', redirect: '/monitoring-ledger' },

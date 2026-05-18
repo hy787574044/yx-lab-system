@@ -1,40 +1,25 @@
 <template>
   <div class="content-grid binding-page">
-    <section class="glass-panel section-block page-hero">
-      <div>
-        <h2 class="page-title">参数方法绑定</h2>
-        <p class="page-subtitle">
-          以检测参数为主维度统一配置检测方法。一个检测参数可绑定多个检测方法，但一个检测方法同一时间只能归属一个检测参数。
-        </p>
-      </div>
-      <div class="hero-tags">
-        <span class="status-chip info">参数总数 {{ total }}</span>
-        <span class="status-chip success">已绑定参数 {{ boundParameterCount }}</span>
-        <span class="status-chip warning">已分配方法 {{ assignedMethodCount }}</span>
-      </div>
-    </section>
-
-    <section class="stats-grid">
-      <button
-        v-for="item in statCards"
-        :key="item.key"
-        type="button"
-        :class="['metric-card', 'metric-card--action', { 'is-active': activeStatKey === item.key }]"
-        @click="handleStatClick(item.key)"
-      >
-        <span>{{ item.label }}</span>
-        <strong>{{ item.value }}</strong>
-        <p>{{ item.desc }}</p>
-      </button>
-    </section>
-
     <section class="glass-panel section-block">
       <div class="section-head">
         <div>
           <h3 class="section-title">绑定配置列表</h3>
-          <p class="page-subtitle">按“检测参数 → 检测方法”的层级关系展示当前绑定情况。</p>
         </div>
       </div>
+
+      <section class="stats-grid section-stats">
+        <button
+          v-for="item in statCards"
+          :key="item.key"
+          type="button"
+          :class="['metric-card', 'metric-card--action', { 'is-active': activeStatKey === item.key }]"
+          @click="handleStatClick(item.key)"
+        >
+          <span>{{ item.label }}</span>
+          <strong>{{ item.value }}</strong>
+          <p>{{ item.desc }}</p>
+        </button>
+      </section>
 
       <div class="toolbar-panel">
         <div class="toolbar-row">
@@ -55,9 +40,6 @@
             <el-button @click="resetQuery">重置</el-button>
             <el-button @click="reloadData">刷新</el-button>
           </div>
-        </div>
-        <div class="panel-note">
-          绑定保存时会自动覆盖当前参数原有方法；已绑定到其他参数的方法会锁定不可选，必须先解除原绑定后才能重新分配。
         </div>
       </div>
 
@@ -145,38 +127,6 @@
           :total="total"
           @change="loadRows"
         />
-      </div>
-    </section>
-
-    <section class="scene-grid">
-      <div class="glass-panel section-block">
-        <div class="section-head">
-          <h3 class="section-title">配置说明</h3>
-        </div>
-        <div class="scene-copy">
-          <p>检测参数用于定义结果录入项，检测方法用于定义执行标准，两者拆开维护后再做正式绑定。</p>
-          <p>如果后续需要改绑，请先在本页解除旧绑定，再重新绑定到新的检测参数，避免一个方法被多个参数同时占用。</p>
-        </div>
-      </div>
-
-      <div class="glass-panel section-block">
-        <div class="section-head">
-          <h3 class="section-title">关联入口</h3>
-        </div>
-        <div class="quick-links">
-          <button type="button" class="quick-link" @click="goRoute('/detection-projects')">
-            <strong>检测参数</strong>
-            <span>维护 pH、浊度、余氯、氨氮等基础检测参数。</span>
-          </button>
-          <button type="button" class="quick-link" @click="goRoute('/detection-methods')">
-            <strong>检测方法</strong>
-            <span>维护标准方法台账，并查看每个方法当前绑定到哪个参数。</span>
-          </button>
-          <button type="button" class="quick-link" @click="goRoute('/detection-project-groups')">
-            <strong>检测套餐</strong>
-            <span>将多个检测参数组合为样品登录时可选的检测套餐。</span>
-          </button>
-        </div>
       </div>
     </section>
 
@@ -629,13 +579,13 @@ onMounted(async () => {
 
 <style scoped>
 .binding-page {
-  gap: 16px;
+  gap: 12px;
 }
 
 .page-hero,
 .scene-grid {
   display: grid;
-  gap: 16px;
+  gap: 12px;
 }
 
 .page-hero {
@@ -646,7 +596,7 @@ onMounted(async () => {
 .hero-tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 10px;
   justify-content: flex-end;
 }
 
@@ -670,7 +620,7 @@ onMounted(async () => {
 }
 
 .metric-card p {
-  margin: 10px 0 0;
+  margin: 8px 0 0;
   color: var(--text-sub);
   font-size: 14px;
   line-height: 1.6;
@@ -682,7 +632,7 @@ onMounted(async () => {
 
 .scene-copy {
   display: grid;
-  gap: 10px;
+  gap: 8px;
   color: var(--text-sub);
   font-size: 14px;
   line-height: 1.7;
@@ -694,13 +644,13 @@ onMounted(async () => {
 
 .quick-links {
   display: grid;
-  gap: 12px;
+  gap: 10px;
 }
 
 .quick-link {
   display: grid;
   gap: 4px;
-  padding: 14px;
+  padding: 12px;
   border: 1px solid var(--line-soft);
   border-radius: 12px;
   background: var(--bg-panel-soft);

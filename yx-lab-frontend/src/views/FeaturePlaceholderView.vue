@@ -3,7 +3,6 @@
     <section class="glass-panel section-block placeholder-panel">
       <div class="placeholder-badge">功能预留</div>
       <h2 class="section-title">{{ pageTitle }}</h2>
-      <p class="page-subtitle">{{ pageSubtitle }}</p>
 
       <div class="placeholder-copy">
         <p>{{ pageNote }}</p>

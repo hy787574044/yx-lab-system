@@ -1,28 +1,25 @@
 <template>
   <div class="content-grid statistics-page" v-loading="loading">
-    <section class="glass-panel section-block statistics-hero">
-      <div>
-        <h2 class="page-title">{{ currentScene.title }}</h2>
-        <p class="page-subtitle">{{ currentScene.subtitle }}</p>
+    <section class="glass-panel section-block">
+      <div class="section-head">
+        <div>
+          <h3 class="section-title">{{ currentScene.title }}</h3>
+        </div>
       </div>
-      <div class="hero-value">
-        <strong>{{ currentScene.heroValue }}</strong>
-        <span>{{ currentScene.heroLabel }}</span>
-      </div>
-    </section>
 
-    <section class="stats-grid">
-      <button
-        v-for="item in currentCards"
-        :key="item.label"
-        type="button"
-        class="metric-card metric-card--link"
-        @click="goRoute(item.path)"
-      >
-        <span>{{ item.label }}</span>
-        <strong>{{ item.value }}</strong>
-        <p>{{ item.desc }}</p>
-      </button>
+      <section class="stats-grid section-stats">
+        <button
+          v-for="item in currentCards"
+          :key="item.label"
+          type="button"
+          class="metric-card metric-card--link"
+          @click="goRoute(item.path)"
+        >
+          <span>{{ item.label }}</span>
+          <strong>{{ item.value }}</strong>
+          <p>{{ item.desc }}</p>
+        </button>
+      </section>
     </section>
 
     <section class="statistics-lower">
@@ -35,7 +32,6 @@
       >
         <div class="panel-head">
           <h3 class="section-title">{{ panel.title }}</h3>
-          <span class="panel-note">{{ panel.note }}</span>
         </div>
         <div class="progress-stack">
           <div v-for="row in panel.rows" :key="row.label" class="progress-row">
@@ -49,35 +45,6 @@
       </button>
     </section>
 
-    <section class="scene-grid">
-      <div class="glass-panel section-block">
-        <div class="section-head">
-          <h3 class="section-title">页面说明</h3>
-        </div>
-        <div class="scene-copy">
-          <p>{{ currentScene.guide }}</p>
-          <p>当前统计页已按数量、结果、质量拆分，不再复用一张总览页承接三张菜单。</p>
-        </div>
-      </div>
-
-      <div class="glass-panel section-block">
-        <div class="section-head">
-          <h3 class="section-title">关联入口</h3>
-        </div>
-        <div class="quick-links">
-          <button
-            v-for="item in currentScene.quickLinks"
-            :key="item.path"
-            type="button"
-            class="quick-link"
-            @click="goRoute(item.path)"
-          >
-            <strong>{{ item.label }}</strong>
-            <span>{{ item.desc }}</span>
-          </button>
-        </div>
-      </div>
-    </section>
   </div>
 </template>
 
@@ -370,14 +337,14 @@ watch(() => route.fullPath, () => {
 <style scoped>
 .statistics-page,
 .scene-grid {
-  gap: 16px;
+  gap: 12px;
 }
 
 .statistics-hero,
 .statistics-lower,
 .scene-grid {
   display: grid;
-  gap: 16px;
+  gap: 12px;
 }
 
 .statistics-hero {
@@ -387,7 +354,7 @@ watch(() => route.fullPath, () => {
 
 .hero-value {
   min-width: 180px;
-  padding: 16px;
+  padding: 14px;
   border-radius: 14px;
   background: var(--brand-soft);
   text-align: center;
@@ -429,7 +396,7 @@ watch(() => route.fullPath, () => {
 }
 
 .metric-card p {
-  margin: 10px 0 0;
+  margin: 8px 0 0;
   line-height: 1.6;
 }
 
@@ -442,19 +409,19 @@ watch(() => route.fullPath, () => {
 .scene-copy,
 .quick-links {
   display: grid;
-  gap: 12px;
+  gap: 10px;
 }
 
 .progress-row {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .progress-meta {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
 }
 
 .progress-meta strong {
@@ -474,7 +441,7 @@ watch(() => route.fullPath, () => {
 .quick-link {
   display: grid;
   gap: 4px;
-  padding: 14px;
+  padding: 12px;
   border: 1px solid var(--line-soft);
   border-radius: 12px;
   background: var(--bg-panel-soft);

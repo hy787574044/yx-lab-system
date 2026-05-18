@@ -1,42 +1,25 @@
 <template>
   <div class="content-grid detection-method-page">
-    <section class="glass-panel section-block page-hero">
-      <div>
-        <h2 class="page-title">{{ currentScene.title }}</h2>
-        <p class="page-subtitle">{{ currentScene.subtitle }}</p>
-      </div>
-      <div class="hero-tags">
-        <span
-          v-for="tag in currentTags"
-          :key="tag.label"
-          :class="['status-chip', tag.type || 'info']"
-        >
-          {{ tag.label }} {{ tag.value }}
-        </span>
-      </div>
-    </section>
-
-    <section class="stats-grid">
-      <button
-        v-for="item in currentStats"
-        :key="item.key"
-        type="button"
-        :class="['metric-card', 'metric-card--action', { 'is-active': activeStatKey === item.key }]"
-        @click="handleStatClick(item.key)"
-      >
-        <span>{{ item.label }}</span>
-        <strong>{{ item.value }}</strong>
-        <p>{{ item.desc }}</p>
-      </button>
-    </section>
-
     <section class="glass-panel section-block">
       <div class="section-head">
         <div>
           <h3 class="section-title">{{ currentScene.tableTitle }}</h3>
-          <p class="page-subtitle">{{ currentScene.tableSubtitle }}</p>
         </div>
       </div>
+
+      <section class="stats-grid section-stats">
+        <button
+          v-for="item in currentStats"
+          :key="item.key"
+          type="button"
+          :class="['metric-card', 'metric-card--action', { 'is-active': activeStatKey === item.key }]"
+          @click="handleStatClick(item.key)"
+        >
+          <span>{{ item.label }}</span>
+          <strong>{{ item.value }}</strong>
+          <p>{{ item.desc }}</p>
+        </button>
+      </section>
 
       <div class="toolbar-panel">
         <div class="toolbar-row">
@@ -59,9 +42,6 @@
             <el-button @click="handleExport">导出</el-button>
             <el-button type="primary" plain @click="openDialog()">新增检测方法</el-button>
           </div>
-        </div>
-        <div class="panel-note">
-          检测方法用于维护化验室采用的标准方法台账，可按名称、编码和标准编号管理，为后续检测流程留出正式引用入口。
         </div>
       </div>
 
@@ -116,36 +96,6 @@
           :total="total"
           @change="loadRows"
         />
-      </div>
-    </section>
-
-    <section class="scene-grid">
-      <div class="glass-panel section-block">
-        <div class="section-head">
-          <h3 class="section-title">页面说明</h3>
-        </div>
-        <div class="scene-copy">
-          <p>{{ currentScene.guide }}</p>
-          <p>{{ currentScene.constraint }}</p>
-        </div>
-      </div>
-
-      <div class="glass-panel section-block">
-        <div class="section-head">
-          <h3 class="section-title">关联入口</h3>
-        </div>
-        <div class="quick-links">
-          <button
-            v-for="item in currentScene.quickLinks"
-            :key="item.path"
-            type="button"
-            class="quick-link"
-            @click="goRoute(item.path)"
-          >
-            <strong>{{ item.label }}</strong>
-            <span>{{ item.desc }}</span>
-          </button>
-        </div>
       </div>
     </section>
 
@@ -403,13 +353,13 @@ onMounted(async () => {
 
 <style scoped>
 .detection-method-page {
-  gap: 16px;
+  gap: 12px;
 }
 
 .page-hero,
 .scene-grid {
   display: grid;
-  gap: 16px;
+  gap: 12px;
 }
 
 .page-hero {
@@ -420,7 +370,7 @@ onMounted(async () => {
 .hero-tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 10px;
   justify-content: flex-end;
 }
 
@@ -430,7 +380,7 @@ onMounted(async () => {
 
 .scene-copy {
   display: grid;
-  gap: 10px;
+  gap: 8px;
   color: var(--text-secondary);
   font-size: 13px;
   line-height: 1.7;
@@ -438,16 +388,16 @@ onMounted(async () => {
 
 .quick-links {
   display: grid;
-  gap: 12px;
+  gap: 10px;
 }
 
 .quick-link {
   border: 1px solid var(--panel-border);
   border-radius: 16px;
-  padding: 14px 16px;
+  padding: 12px 14px;
   background: rgba(255, 255, 255, 0.78);
   display: grid;
-  gap: 6px;
+  gap: 4px;
   text-align: left;
   color: var(--text-primary);
   transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
