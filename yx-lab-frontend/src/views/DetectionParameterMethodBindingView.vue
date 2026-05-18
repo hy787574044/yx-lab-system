@@ -38,7 +38,6 @@
           <div class="toolbar-actions">
             <el-button type="primary" @click="handleSearch">查询</el-button>
             <el-button @click="resetQuery">重置</el-button>
-            <el-button @click="reloadData">刷新</el-button>
           </div>
         </div>
       </div>
@@ -107,17 +106,19 @@
           <el-table-column prop="updatedTime" label="更新时间" min-width="170">
             <template #default="{ row }">{{ row.updatedTime || '-' }}</template>
           </el-table-column>
-          <el-table-column label="操作" width="190" fixed="right" class-name="cell-center">
+          <el-table-column label="操作" width="190" fixed="right" header-cell-class-name="cell-center" class-name="cell-center">
             <template #default="{ row }">
-              <el-button link type="primary" @click="openBindDialog(row)">配置绑定</el-button>
-              <el-button
-                link
-                type="danger"
-                :disabled="Number(row.methodCount || 0) === 0"
-                @click="clearBindings(row)"
-              >
-                清空绑定
-              </el-button>
+              <div class="table-action-row">
+                <el-button link type="primary" @click="openBindDialog(row)">配置绑定</el-button>
+                <el-button
+                  link
+                  type="danger"
+                  :disabled="Number(row.methodCount || 0) === 0"
+                  @click="clearBindings(row)"
+                >
+                  清空绑定
+                </el-button>
+              </div>
             </template>
           </el-table-column>
         </el-table>
@@ -240,7 +241,6 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
 import { ElButton } from 'element-plus/es/components/button/index.mjs'
 import { ElCheckbox } from 'element-plus/es/components/checkbox/index.mjs'
 import { ElDialog } from 'element-plus/es/components/dialog/index.mjs'
@@ -255,8 +255,6 @@ import {
   saveDetectionParameterMethodBindingsApi
 } from '../api/lab'
 import { DEFAULT_PAGE_SIZE } from '../utils/labEnums'
-
-const router = useRouter()
 
 const activeStatKey = ref('all')
 const rows = ref([])
@@ -486,12 +484,6 @@ function resetQuery() {
   query.pageNum = 1
   activeStatKey.value = 'all'
   loadRows()
-}
-
-function goRoute(path) {
-  if (path) {
-    router.push(path)
-  }
 }
 
 async function loadRows() {

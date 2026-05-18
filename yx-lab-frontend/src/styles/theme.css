@@ -974,6 +974,58 @@ textarea {
   display: none;
 }
 
+.action-row,
+.table-action-row,
+.table-action-group,
+.table-actions {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.action-row .el-button,
+.table-action-row .el-button,
+.table-action-group .el-button,
+.table-actions .el-button {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  min-width: 64px;
+  height: 30px;
+  margin-left: 0 !important;
+  padding: 0 14px;
+  border: 1px solid #d7e3f5;
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--text-main);
+  font-weight: 400;
+  line-height: 1;
+  box-shadow: none;
+}
+
+.action-row .el-button:not(.is-disabled):hover,
+.table-action-row .el-button:not(.is-disabled):hover,
+.table-action-group .el-button:not(.is-disabled):hover,
+.table-actions .el-button:not(.is-disabled):hover {
+  border-color: color-mix(in srgb, var(--brand) 44%, #ffffff 56%);
+  background: var(--brand-soft);
+  color: var(--text-main);
+}
+
+.action-row .el-button.is-disabled,
+.table-action-row .el-button.is-disabled,
+.table-action-group .el-button.is-disabled,
+.table-actions .el-button.is-disabled {
+  opacity: 1;
+  border-color: #e5ebf4;
+  background: #ffffff;
+  color: #a3b1c6;
+}
+
 .el-dialog {
   min-width: 240px;
   min-height: 392px;

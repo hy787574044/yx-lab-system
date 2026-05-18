@@ -63,7 +63,6 @@
           <div class="toolbar-actions">
             <el-button type="primary" @click="handleSearch">查询</el-button>
             <el-button @click="resetQuery">重置</el-button>
-            <el-button @click="loadReports" :loading="loading">刷新报告</el-button>
             <el-button @click="handleExport" :loading="loading">导出</el-button>
           </div>
         </div>
@@ -123,7 +122,7 @@
               {{ translateWorkflowText(row.contentSnapshot) || '-' }}
             </template>
           </el-table-column>
-          <el-table-column label="操作" min-width="220" fixed="right">
+          <el-table-column label="操作" min-width="240" fixed="right" header-cell-class-name="cell-center" class-name="cell-center">
             <template #default="{ row }">
               <div class="action-row">
                 <el-button size="small" @click="previewReport(row)">预览</el-button>
@@ -422,8 +421,9 @@ onBeforeUnmount(() => {
 
 .action-row {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 8px;
+  white-space: nowrap;
 }
 
 .ledger-table-card {

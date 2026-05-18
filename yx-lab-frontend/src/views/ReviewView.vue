@@ -61,16 +61,7 @@
           <div class="toolbar-actions">
             <el-button type="primary" @click="handleSearch">查询</el-button>
             <el-button @click="resetQuery">重置</el-button>
-            <el-button type="primary" @click="loadData">刷新审查队列</el-button>
             <el-button @click="handleExport">导出</el-button>
-            <el-button
-              v-if="baseScene.key === 'review-history'"
-              type="primary"
-              plain
-              @click="goRoute('/report-ledger')"
-            >
-              查看报告台账
-            </el-button>
           </div>
         </div>
       </div>
@@ -105,24 +96,26 @@
               {{ row.rejectReason || '-' }}
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="120" header-cell-class-name="cell-center" class-name="cell-center">
+          <el-table-column label="操作" width="140" fixed="right" header-cell-class-name="cell-center" class-name="cell-center">
             <template #default="{ row }">
-              <el-button
-                v-if="isPendingRow(row)"
-                type="primary"
-                link
-                @click="openReviewDialog(row)"
-              >
-                审核
-              </el-button>
-              <el-button
-                v-else
-                type="primary"
-                link
-                @click="openReviewDialog(row, true)"
-              >
-                查看明细
-              </el-button>
+              <div class="table-action-row">
+                <el-button
+                  v-if="isPendingRow(row)"
+                  type="primary"
+                  link
+                  @click="openReviewDialog(row)"
+                >
+                  审核
+                </el-button>
+                <el-button
+                  v-else
+                  type="primary"
+                  link
+                  @click="openReviewDialog(row, true)"
+                >
+                  查看明细
+                </el-button>
+              </div>
             </template>
           </el-table-column>
         </el-table>
@@ -279,7 +272,7 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { ElButton } from 'element-plus/es/components/button/index.mjs'
 import { ElDialog } from 'element-plus/es/components/dialog/index.mjs'
 import { ElForm, ElFormItem } from 'element-plus/es/components/form/index.mjs'
@@ -310,7 +303,6 @@ import {
 } from '../utils/labEnums'
 
 const route = useRoute()
-const router = useRouter()
 
 const WAIT_ASSIGN_STATUS = waitAssignDetectionStatus
 const WAIT_DETECT_STATUS = waitDetectDetectionStatus
@@ -537,13 +529,6 @@ function resetQuery() {
 
 function syncRouteState() {
   activeStatKey.value = baseScene.value.defaultStatKey
-}
-
-function goRoute(path) {
-  if (!path) {
-    return
-  }
-  router.push(path)
 }
 
 function isPendingRow(row) {

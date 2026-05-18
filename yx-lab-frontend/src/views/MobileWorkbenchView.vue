@@ -13,7 +13,6 @@
           <p>{{ currentUser.roleCode || 'LAB_USER' }}</p>
         </div>
         <div class="hero-actions">
-          <el-button size="small" @click="refreshAll" :loading="refreshing">刷新</el-button>
           <el-button size="small" type="danger" plain @click="logout">退出</el-button>
         </div>
       </div>

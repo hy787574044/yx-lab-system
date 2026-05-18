@@ -58,7 +58,6 @@
           <div class="toolbar-actions">
             <el-button type="primary" @click="handleSearch">查询</el-button>
             <el-button @click="resetQuery">重置</el-button>
-            <el-button @click="loadData">刷新</el-button>
             <el-button @click="handleExport">导出</el-button>
           </div>
         </div>
@@ -88,9 +87,9 @@
               </span>
             </template>
           </el-table-column>
-          <el-table-column label="操作" min-width="220" fixed="right">
+          <el-table-column label="操作" min-width="220" fixed="right" header-cell-class-name="cell-center" class-name="cell-center">
             <template #default="{ row }">
-              <div class="table-actions">
+              <div class="table-action-row">
                 <el-button link type="primary" @click="openEditDialog(row)">编辑资料</el-button>
                 <el-button
                   link

@@ -59,7 +59,6 @@
             <div class="toolbar-actions">
               <el-button type="primary" @click="handleParameterSearch">查询</el-button>
               <el-button @click="resetParameterQuery">重置</el-button>
-              <el-button @click="reloadData">刷新</el-button>
               <el-button @click="handleExportCurrentScene">导出</el-button>
             </div>
           </div>
@@ -138,18 +137,20 @@
             <el-table-column prop="updatedTime" label="更新时间" min-width="170">
               <template #default="{ row }">{{ row.updatedTime || '-' }}</template>
             </el-table-column>
-            <el-table-column label="操作" width="260" fixed="right" class-name="cell-center">
+            <el-table-column label="操作" width="320" fixed="right" header-cell-class-name="cell-center" class-name="cell-center">
               <template #default="{ row }">
-                <el-button link type="primary" @click="openParameterDialog(row)">编辑</el-button>
-                <el-button link type="primary" @click="openParameterBindingDialog(row)">配置绑定</el-button>
-                <el-button
-                  link
-                  :disabled="Number(row.methodCount || 0) === 0"
-                  @click="clearParameterBindings(row)"
-                >
-                  清空绑定
-                </el-button>
-                <el-button link type="danger" @click="removeParameter(row)">删除</el-button>
+                <div class="table-action-row">
+                  <el-button link type="primary" @click="openParameterDialog(row)">编辑</el-button>
+                  <el-button link type="primary" @click="openParameterBindingDialog(row)">配置绑定</el-button>
+                  <el-button
+                    link
+                    :disabled="Number(row.methodCount || 0) === 0"
+                    @click="clearParameterBindings(row)"
+                  >
+                    清空绑定
+                  </el-button>
+                  <el-button link type="danger" @click="removeParameter(row)">删除</el-button>
+                </div>
               </template>
             </el-table-column>
           </el-table>
@@ -218,7 +219,6 @@
             <div class="toolbar-actions">
               <el-button type="primary" @click="handleGroupSearch">查询</el-button>
               <el-button @click="resetGroupQuery">重置</el-button>
-              <el-button @click="reloadData">刷新</el-button>
               <el-button @click="handleExportCurrentScene">导出</el-button>
             </div>
           </div>
@@ -256,10 +256,12 @@
             <el-table-column prop="updatedTime" label="更新时间" min-width="170">
               <template #default="{ row }">{{ row.updatedTime || '-' }}</template>
             </el-table-column>
-            <el-table-column label="操作" width="170" fixed="right" class-name="cell-center">
+            <el-table-column label="操作" width="170" fixed="right" header-cell-class-name="cell-center" class-name="cell-center">
               <template #default="{ row }">
-                <el-button link type="primary" @click="openGroupDialog(row)">编辑</el-button>
-                <el-button link type="danger" @click="removeGroup(row)">删除</el-button>
+                <div class="table-action-row">
+                  <el-button link type="primary" @click="openGroupDialog(row)">编辑</el-button>
+                  <el-button link type="danger" @click="removeGroup(row)">删除</el-button>
+                </div>
               </template>
             </el-table-column>
           </el-table>
@@ -640,7 +642,7 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { ElButton } from 'element-plus/es/components/button/index.mjs'
 import { ElCheckbox } from 'element-plus/es/components/checkbox/index.mjs'
 import { ElDialog } from 'element-plus/es/components/dialog/index.mjs'
@@ -671,7 +673,6 @@ import {
 import { DEFAULT_PAGE_SIZE } from '../utils/labEnums'
 
 const route = useRoute()
-const router = useRouter()
 
 const activeStatKey = ref('all')
 const parameterRows = ref([])
@@ -933,12 +934,6 @@ const currentStats = computed(() => (
 
 function handleStatClick(key) {
   activeStatKey.value = activeStatKey.value === key ? 'all' : key
-}
-
-function goRoute(path) {
-  if (path && route.path !== path) {
-    router.push(path)
-  }
 }
 
 function parseParameterIds(value) {
@@ -1584,10 +1579,6 @@ async function handleExportCurrentScene() {
 async function refreshAll() {
   await Promise.all([loadParameterOptions(), loadMethodOptions(), loadDetectorOptions()])
   await Promise.all([loadParameters(), loadGroups()])
-}
-
-async function reloadData() {
-  await refreshAll()
 }
 
 function syncRouteState() {

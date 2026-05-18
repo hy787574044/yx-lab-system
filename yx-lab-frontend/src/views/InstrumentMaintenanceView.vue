@@ -65,7 +65,6 @@
           <div class="toolbar-actions">
             <el-button type="primary" @click="handleSearch">查询</el-button>
             <el-button @click="resetQuery">重置</el-button>
-            <el-button @click="goRoute('/instrument-ledger')">查看设备台账</el-button>
             <el-button @click="handleExport">导出</el-button>
           </div>
         </div>
@@ -93,10 +92,12 @@
             </template>
           </el-table-column>
           <el-table-column prop="remark" label="备注" min-width="180" show-overflow-tooltip />
-          <el-table-column label="操作" width="170" fixed="right" class-name="cell-center">
+          <el-table-column label="操作" width="170" fixed="right" header-cell-class-name="cell-center" class-name="cell-center">
             <template #default="{ row }">
-              <el-button link type="primary" @click="openDialog(row)">编辑</el-button>
-              <el-button link type="danger" @click="removeRow(row)">删除</el-button>
+              <div class="table-action-row">
+                <el-button link type="primary" @click="openDialog(row)">编辑</el-button>
+                <el-button link type="danger" @click="removeRow(row)">删除</el-button>
+              </div>
             </template>
           </el-table-column>
         </el-table>
@@ -202,7 +203,6 @@
 <script setup>
 import dayjs from 'dayjs'
 import { computed, onMounted, reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
 import { ElButton } from 'element-plus/es/components/button/index.mjs'
 import { ElDatePicker } from 'element-plus/es/components/date-picker/index.mjs'
 import { ElDialog } from 'element-plus/es/components/dialog/index.mjs'
@@ -225,7 +225,6 @@ import {
 } from '../api/lab'
 import { DEFAULT_PAGE_SIZE } from '../utils/labEnums'
 
-const router = useRouter()
 const loading = ref(false)
 const saving = ref(false)
 const dialogVisible = ref(false)
@@ -276,13 +275,6 @@ function toSafeNumber(value) {
 function formatMoney(value) {
   const amount = toSafeNumber(value)
   return amount ? `¥${amount.toFixed(2)}` : '¥0.00'
-}
-
-function goRoute(path) {
-  if (!path) {
-    return
-  }
-  router.push(path)
 }
 
 const keywordFilteredRecords = computed(() => {

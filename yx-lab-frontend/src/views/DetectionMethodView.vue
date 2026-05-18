@@ -74,7 +74,6 @@
           <div class="toolbar-actions">
             <el-button type="primary" @click="handleSearch">查询</el-button>
             <el-button @click="resetQuery">重置</el-button>
-            <el-button @click="reloadData">刷新</el-button>
             <el-button @click="handleExport">导出</el-button>
           </div>
         </div>
@@ -118,10 +117,12 @@
           <el-table-column prop="updatedTime" label="更新时间" min-width="170">
             <template #default="{ row }">{{ row.updatedTime || '-' }}</template>
           </el-table-column>
-          <el-table-column label="操作" width="170" fixed="right" class-name="cell-center">
+          <el-table-column label="操作" width="170" fixed="right" header-cell-class-name="cell-center" class-name="cell-center">
             <template #default="{ row }">
-              <el-button link type="primary" @click="openDialog(row)">编辑</el-button>
-              <el-button link type="danger" @click="removeRow(row)">删除</el-button>
+              <div class="table-action-row">
+                <el-button link type="primary" @click="openDialog(row)">编辑</el-button>
+                <el-button link type="danger" @click="removeRow(row)">删除</el-button>
+              </div>
             </template>
           </el-table-column>
         </el-table>
@@ -196,7 +197,6 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
 import { ElButton } from 'element-plus/es/components/button/index.mjs'
 import { ElDialog } from 'element-plus/es/components/dialog/index.mjs'
 import { ElForm, ElFormItem } from 'element-plus/es/components/form/index.mjs'
@@ -216,8 +216,6 @@ import {
   updateDetectionMethodApi
 } from '../api/lab'
 import { DEFAULT_PAGE_SIZE } from '../utils/labEnums'
-
-const router = useRouter()
 
 const currentScene = {
   title: '检测方法',
@@ -283,12 +281,6 @@ const currentStats = computed(() => [
 
 function handleStatClick(key) {
   activeStatKey.value = activeStatKey.value === key ? 'all' : key
-}
-
-function goRoute(path) {
-  if (path) {
-    router.push(path)
-  }
 }
 
 function resetForm() {
@@ -388,11 +380,6 @@ async function handleExport() {
   } catch (error) {
     ElMessage.error(error.message || '检测方法导出失败')
   }
-}
-
-async function reloadData() {
-  activeStatKey.value = 'all'
-  await loadRows()
 }
 
 onMounted(async () => {

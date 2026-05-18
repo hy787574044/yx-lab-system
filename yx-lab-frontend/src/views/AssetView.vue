@@ -98,10 +98,12 @@
                   {{ row.remark || '-' }}
                 </template>
               </el-table-column>
-              <el-table-column label="操作" width="170" fixed="right" class-name="cell-center">
+              <el-table-column label="操作" width="170" fixed="right" header-cell-class-name="cell-center" class-name="cell-center">
                 <template #default="{ row }">
-                  <el-button link type="primary" @click="openInstrumentDialog(row.id)">编辑</el-button>
-                  <el-button link type="danger" @click="removeInstrument(row)">删除</el-button>
+                  <div class="table-action-row">
+                    <el-button link type="primary" @click="openInstrumentDialog(row.id)">编辑</el-button>
+                    <el-button link type="danger" @click="removeInstrument(row)">删除</el-button>
+                  </div>
                 </template>
               </el-table-column>
             </el-table>
@@ -195,11 +197,13 @@
                   {{ row.remark || '-' }}
                 </template>
               </el-table-column>
-              <el-table-column label="操作" width="220" fixed="right" class-name="cell-center">
+              <el-table-column label="操作" width="220" fixed="right" header-cell-class-name="cell-center" class-name="cell-center">
                 <template #default="{ row }">
-                  <el-button link type="primary" @click="previewDocument(row)">查看</el-button>
-                  <el-button v-if="row.canManage" link type="primary" @click="openDocumentDialog(row.id)">编辑</el-button>
-                  <el-button v-if="row.canManage" link type="danger" @click="removeDocument(row)">删除</el-button>
+                  <div class="table-action-row">
+                    <el-button link type="primary" @click="previewDocument(row)">查看</el-button>
+                    <el-button v-if="row.canManage" link type="primary" @click="openDocumentDialog(row.id)">编辑</el-button>
+                    <el-button v-if="row.canManage" link type="danger" @click="removeDocument(row)">删除</el-button>
+                  </div>
                 </template>
               </el-table-column>
             </el-table>

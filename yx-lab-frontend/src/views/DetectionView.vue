@@ -61,24 +61,7 @@
           <div class="toolbar-actions">
             <el-button type="primary" @click="handleSearch">查询</el-button>
             <el-button @click="resetQuery">重置</el-button>
-            <el-button type="primary" @click="loadData">刷新检测流程</el-button>
             <el-button @click="handleExport">导出</el-button>
-            <el-button
-              v-if="baseScene.key === 'detection-history'"
-              type="primary"
-              plain
-              @click="goRoute('/review-history')"
-            >
-              查看历史审查
-            </el-button>
-            <el-button
-              v-if="baseScene.key === 'detection-ledger'"
-              type="primary"
-              plain
-              @click="goRoute('/review-result')"
-            >
-              前往结果审查
-            </el-button>
           </div>
         </div>
       </div>
@@ -120,9 +103,15 @@
               </span>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="190" header-cell-class-name="cell-center" class-name="cell-center">
+          <el-table-column prop="detectionTime" label="流程时间" width="170" />
+          <el-table-column label="说明" min-width="260" show-overflow-tooltip>
             <template #default="{ row }">
-              <div class="table-action-group">
+              {{ getRecordRemark(row) }}
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" min-width="220" fixed="right" header-cell-class-name="cell-center" class-name="cell-center">
+            <template #default="{ row }">
+              <div class="table-action-row">
                 <el-button
                   type="primary"
                   link
@@ -139,12 +128,6 @@
                   查看结果
                 </el-button>
               </div>
-            </template>
-          </el-table-column>
-          <el-table-column prop="detectionTime" label="流程时间" width="170" />
-          <el-table-column label="说明" min-width="260" show-overflow-tooltip>
-            <template #default="{ row }">
-              {{ getRecordRemark(row) }}
             </template>
           </el-table-column>
         </el-table>
@@ -361,7 +344,7 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { ElButton } from 'element-plus/es/components/button/index.mjs'
 import { ElDialog } from 'element-plus/es/components/dialog/index.mjs'
 import { ElForm, ElFormItem } from 'element-plus/es/components/form/index.mjs'
@@ -398,7 +381,6 @@ import {
 } from '../utils/labEnums'
 
 const route = useRoute()
-const router = useRouter()
 
 const WAIT_ASSIGN_STATUS = waitAssignDetectionStatus
 const WAIT_DETECT_STATUS = waitDetectDetectionStatus
@@ -765,13 +747,6 @@ function resetQuery() {
 function syncRouteState() {
   activeStatKey.value = baseScene.value.defaultStatKey
   query.pageNum = 1
-}
-
-function goRoute(path) {
-  if (!path) {
-    return
-  }
-  router.push(path)
 }
 
 function formatStandardRange(min, max, unit) {
@@ -1276,7 +1251,8 @@ watch(() => route.fullPath, () => {
   align-items: center;
   gap: 10px;
   justify-content: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  white-space: nowrap;
 }
 
 .quick-links {

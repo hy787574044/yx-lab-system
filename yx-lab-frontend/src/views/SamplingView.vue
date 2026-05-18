@@ -105,40 +105,6 @@
           <div class="toolbar-actions">
             <el-button type="primary" @click="handleCurrentSceneSearch">查询</el-button>
             <el-button @click="resetCurrentSceneQuery">重置</el-button>
-            <el-button @click="refreshCurrentScene">刷新</el-button>
-            <el-button
-              v-if="baseScene.key === 'task-assign'"
-              type="primary"
-              plain
-              :disabled="!firstCompletableTask"
-              @click="completeFirstPendingTask"
-            >
-              完成首条任务
-            </el-button>
-            <el-button
-              v-if="baseScene.key === 'task-history'"
-              type="primary"
-              plain
-              @click="goRoute('/sample-ledger')"
-            >
-              查看样品台账
-            </el-button>
-            <el-button
-              v-if="baseScene.key === 'task-ledger'"
-              type="primary"
-              plain
-              @click="goRoute('/sample-login')"
-            >
-              前往样品登录
-            </el-button>
-            <el-button
-              v-if="baseScene.key === 'sample-ledger'"
-              type="primary"
-              plain
-              @click="goRoute('/review-result')"
-            >
-              前往结果审查
-            </el-button>
             <el-button @click="handleExportCurrentScene">导出</el-button>
           </div>
         </div>
@@ -289,7 +255,9 @@
           </el-table-column>
           <el-table-column label="操作" width="140" fixed="right" class-name="cell-center" header-cell-class-name="cell-center">
             <template #default="{ row }">
-              <el-button link type="primary" @click="openSampleDetailDialog(row)">查看登记明细</el-button>
+              <div class="table-action-row">
+                <el-button link type="primary" @click="openSampleDetailDialog(row)">查看登记明细</el-button>
+              </div>
             </template>
           </el-table-column>
         </el-table>
@@ -371,7 +339,6 @@
           <div class="toolbar-actions">
             <el-button type="primary" @click="handlePlanSearch">查询</el-button>
             <el-button @click="resetPlanQuery">重置</el-button>
-            <el-button @click="loadPlans">刷新计划</el-button>
             <el-button @click="handleExportPlans">导出</el-button>
           </div>
         </div>
@@ -401,7 +368,7 @@
                 </span>
               </template>
             </el-table-column>
-            <el-table-column label="操作" min-width="300" fixed="right" class-name="cell-center">
+            <el-table-column label="操作" min-width="300" fixed="right" header-cell-class-name="cell-center" class-name="cell-center">
               <template #default="{ row }">
                 <div class="action-row">
                   <el-button
@@ -755,7 +722,9 @@
                 </el-table-column>
                 <el-table-column v-if="!isLoginReadonly" label="操作" width="90" class-name="cell-center" header-cell-class-name="cell-center">
                   <template #default="{ $index }">
-                    <el-button link type="danger" @click="removeLoginConfigRow($index)">删除</el-button>
+                    <div class="table-action-row">
+                      <el-button link type="danger" @click="removeLoginConfigRow($index)">删除</el-button>
+                    </div>
                   </template>
                 </el-table-column>
               </el-table>
@@ -797,7 +766,7 @@
 <script setup>
 import dayjs from 'dayjs'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { ElButton } from 'element-plus/es/components/button/index.mjs'
 import { ElDatePicker } from 'element-plus/es/components/date-picker/index.mjs'
 import { ElDialog } from 'element-plus/es/components/dialog/index.mjs'
@@ -867,7 +836,6 @@ import {
 } from '../utils/labEnums'
 
 const route = useRoute()
-const router = useRouter()
 
 const planQuery = reactive({
   keyword: '',
@@ -1425,13 +1393,6 @@ function isTaskLogged(taskId) {
   return isTaskRegistered(tasks.value.find((item) => item.id === taskId))
 }
 
-function goRoute(path) {
-  if (!path) {
-    return
-  }
-  router.push(path)
-}
-
 async function loadPlans() {
   const result = await fetchSamplingPlansApi(planQuery)
   plans.value = result.records || []
@@ -1515,15 +1476,6 @@ function resetCurrentSceneQuery() {
   sampleQuery.sampleType = ''
   sampleQuery.pageNum = 1
   loadSamples()
-}
-
-async function refreshCurrentScene() {
-  if (isPlanScene.value) {
-    await loadPlans()
-    return
-  }
-  const requests = [loadTasks(), loadSamples()]
-  await Promise.all(requests)
 }
 
 async function loadMonitoringPoints() {
@@ -2094,14 +2046,6 @@ async function completeTask(row) {
   }
 }
 
-async function completeFirstPendingTask() {
-  if (!firstCompletableTask.value) {
-    ElMessage.warning('当前没有可完成的采样任务。')
-    return
-  }
-  await completeTask(firstCompletableTask.value)
-}
-
 async function legacyLoginSampleDoNotUse() {
   return null
 }
@@ -2354,9 +2298,10 @@ watch(() => route.fullPath, () => {
 
 .action-row {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 8px;
   justify-content: center;
+  white-space: nowrap;
 }
 
 .plan-sampler {

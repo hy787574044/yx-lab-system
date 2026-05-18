@@ -54,7 +54,6 @@
             <div class="toolbar-actions">
               <el-button type="primary" @click="handleUserSearch">查询</el-button>
               <el-button @click="resetUserQuery">重置</el-button>
-              <el-button @click="reloadData">刷新</el-button>
               <el-button @click="handleExportCurrentScene">导出</el-button>
             </div>
           </div>
@@ -86,10 +85,12 @@
             <el-table-column prop="updatedTime" label="更新时间" min-width="170">
               <template #default="{ row }">{{ row.updatedTime || '-' }}</template>
             </el-table-column>
-            <el-table-column label="操作" width="180" fixed="right" class-name="cell-center">
+            <el-table-column label="操作" width="180" fixed="right" header-cell-class-name="cell-center" class-name="cell-center">
               <template #default="{ row }">
-                <el-button link type="primary" @click="openUserDialog(row)">编辑</el-button>
-                <el-button link type="danger" :disabled="String(row.id) === String(currentLoginUser.userId || '')" @click="removeUser(row)">删除</el-button>
+                <div class="table-action-row">
+                  <el-button link type="primary" @click="openUserDialog(row)">编辑</el-button>
+                  <el-button link type="danger" :disabled="String(row.id) === String(currentLoginUser.userId || '')" @click="removeUser(row)">删除</el-button>
+                </div>
               </template>
             </el-table-column>
           </el-table>
@@ -129,7 +130,6 @@
             <div class="toolbar-actions">
               <el-button type="primary" @click="handleOrgSearch">查询</el-button>
               <el-button @click="resetOrgQuery">重置</el-button>
-              <el-button @click="reloadData">刷新</el-button>
               <el-button @click="handleExportCurrentScene">导出</el-button>
             </div>
           </div>
@@ -146,7 +146,7 @@
             <el-table-column label="状态" width="110" header-cell-class-name="cell-center" class-name="cell-center"><template #default="{ row }"><span :class="['status-chip', getStatusClassByValue(row.status)]">{{ getStatusLabelByValue(row.status) }}</span></template></el-table-column>
             <el-table-column prop="remark" label="备注" min-width="220" show-overflow-tooltip><template #default="{ row }">{{ row.remark || '-' }}</template></el-table-column>
             <el-table-column prop="updatedTime" label="更新时间" min-width="170"><template #default="{ row }">{{ row.updatedTime || '-' }}</template></el-table-column>
-            <el-table-column label="操作" width="170" fixed="right" class-name="cell-center"><template #default="{ row }"><el-button link type="primary" @click="openOrgDialog(row)">编辑</el-button><el-button link type="danger" @click="removeOrg(row)">删除</el-button></template></el-table-column>
+            <el-table-column label="操作" width="170" fixed="right" header-cell-class-name="cell-center" class-name="cell-center"><template #default="{ row }"><div class="table-action-row"><el-button link type="primary" @click="openOrgDialog(row)">编辑</el-button><el-button link type="danger" @click="removeOrg(row)">删除</el-button></div></template></el-table-column>
           </el-table>
           </div>
           <TablePagination v-model:current-page="orgQuery.pageNum" v-model:page-size="orgQuery.pageSize" :total="orgTotal" @change="loadOrgs" />
@@ -183,7 +183,6 @@
             <div class="toolbar-actions">
               <el-button type="primary" @click="handleDictSearch">查询</el-button>
               <el-button @click="resetDictQuery">重置</el-button>
-              <el-button @click="reloadData">刷新</el-button>
               <el-button @click="handleExportCurrentScene">导出</el-button>
             </div>
           </div>
@@ -200,7 +199,7 @@
             <el-table-column label="状态" width="110" header-cell-class-name="cell-center" class-name="cell-center"><template #default="{ row }"><span :class="['status-chip', getStatusClassByValue(row.status)]">{{ getStatusLabelByValue(row.status) }}</span></template></el-table-column>
             <el-table-column prop="remark" label="备注" min-width="220" show-overflow-tooltip><template #default="{ row }">{{ row.remark || '-' }}</template></el-table-column>
             <el-table-column prop="updatedTime" label="更新时间" min-width="170"><template #default="{ row }">{{ row.updatedTime || '-' }}</template></el-table-column>
-            <el-table-column label="操作" width="170" fixed="right" class-name="cell-center"><template #default="{ row }"><el-button link type="primary" @click="openDictDialog(row)">编辑</el-button><el-button link type="danger" @click="removeDict(row)">删除</el-button></template></el-table-column>
+            <el-table-column label="操作" width="170" fixed="right" header-cell-class-name="cell-center" class-name="cell-center"><template #default="{ row }"><div class="table-action-row"><el-button link type="primary" @click="openDictDialog(row)">编辑</el-button><el-button link type="danger" @click="removeDict(row)">删除</el-button></div></template></el-table-column>
           </el-table>
           </div>
           <TablePagination v-model:current-page="dictQuery.pageNum" v-model:page-size="dictQuery.pageSize" :total="dictTotal" @change="loadDicts" />
@@ -237,7 +236,6 @@
             <div class="toolbar-actions">
               <el-button type="primary" @click="handleRoleSearch">查询</el-button>
               <el-button @click="resetRoleQuery">重置</el-button>
-              <el-button @click="reloadData">刷新</el-button>
               <el-button @click="handleExportCurrentScene">导出</el-button>
             </div>
           </div>
@@ -253,7 +251,7 @@
             <el-table-column label="状态" width="110" header-cell-class-name="cell-center" class-name="cell-center"><template #default="{ row }"><span :class="['status-chip', getStatusClassByValue(row.status)]">{{ getStatusLabelByValue(row.status) }}</span></template></el-table-column>
             <el-table-column prop="remark" label="备注" min-width="220" show-overflow-tooltip><template #default="{ row }">{{ row.remark || '-' }}</template></el-table-column>
             <el-table-column prop="updatedTime" label="更新时间" min-width="170"><template #default="{ row }">{{ row.updatedTime || '-' }}</template></el-table-column>
-            <el-table-column label="操作" width="170" fixed="right" class-name="cell-center"><template #default="{ row }"><el-button link type="primary" @click="openRoleDialog(row)">编辑</el-button><el-button link type="danger" @click="removeRole(row)">删除</el-button></template></el-table-column>
+            <el-table-column label="操作" width="170" fixed="right" header-cell-class-name="cell-center" class-name="cell-center"><template #default="{ row }"><div class="table-action-row"><el-button link type="primary" @click="openRoleDialog(row)">编辑</el-button><el-button link type="danger" @click="removeRole(row)">删除</el-button></div></template></el-table-column>
           </el-table>
           </div>
           <TablePagination v-model:current-page="roleQuery.pageNum" v-model:page-size="roleQuery.pageSize" :total="roleTotal" @change="loadRoles" />
@@ -278,7 +276,6 @@
             <div class="toolbar-actions">
               <el-button type="primary" @click="handleLogSearch">查询</el-button>
               <el-button @click="resetLogQuery">重置</el-button>
-              <el-button @click="reloadData">刷新</el-button>
               <el-button @click="handleExportCurrentScene">导出</el-button>
             </div>
           </div>
@@ -309,10 +306,6 @@
               </label>
             </div>
             <div class="toolbar-actions">
-              <el-button type="primary" @click="reloadData">刷新</el-button>
-              <el-button v-for="item in currentScene.actions" :key="item.label" :type="item.type || 'default'" :plain="item.plain !== false" @click="goRoute(item.path)">
-                {{ item.label }}
-              </el-button>
             </div>
           </div>
         </div>
@@ -401,7 +394,7 @@
 </template>
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { ElButton } from 'element-plus/es/components/button/index.mjs'
 import { ElDialog } from 'element-plus/es/components/dialog/index.mjs'
 import { ElForm, ElFormItem } from 'element-plus/es/components/form/index.mjs'
@@ -444,7 +437,6 @@ import { labMenuGroups } from '../router/menuConfig'
 import { DEFAULT_PAGE_SIZE } from '../utils/labEnums'
 
 const route = useRoute()
-const router = useRouter()
 
 const loading = ref(false)
 const savingDict = ref(false)
@@ -1234,13 +1226,6 @@ function handleStatClick(key) {
   }
 }
 
-function goRoute(path) {
-  if (!path) {
-    return
-  }
-  router.push(path)
-}
-
 async function loadPageData() {
   await Promise.all([
     loadUserSummary(),
@@ -1750,37 +1735,6 @@ async function removeRole(row) {
   }
   await loadRoles()
   await loadRoleOptions()
-}
-
-function reloadData() {
-  activeStatKey.value = 'all'
-  if (isLogScene.value) {
-    logQuery.sourceType = ''
-    loadLogs()
-    return
-  }
-  if (isDictScene.value) {
-    dictQuery.status = ''
-    loadDicts()
-    return
-  }
-  if (isOrgScene.value) {
-    orgQuery.status = ''
-    loadOrgOptions()
-    loadOrgs()
-    return
-  }
-  if (isUserScene.value) {
-    userQuery.status = ''
-    loadUsers()
-    loadUserSummary()
-    return
-  }
-  if (isRoleScene.value) {
-    roleQuery.status = ''
-    loadRoles()
-    loadRoleOptions()
-  }
 }
 
 function syncLogActiveStatKey() {
