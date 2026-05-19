@@ -31,6 +31,8 @@ import com.yx.lab.modules.sample.service.LabSampleService;
 import com.yx.lab.modules.storage.service.StorageService;
 import com.yx.lab.modules.system.entity.LabUser;
 import com.yx.lab.modules.system.mapper.LabUserMapper;
+import com.yx.lab.modules.system.service.FlowConfigManagementService;
+import com.yx.lab.modules.system.service.FlowNodeGateService;
 import lombok.RequiredArgsConstructor;
 import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;
 import org.springframework.stereotype.Service;
@@ -70,6 +72,8 @@ public class ReportService {
     private final ReviewRecordMapper reviewRecordMapper;
 
     private final LabUserMapper labUserMapper;
+
+    private final FlowNodeGateService flowNodeGateService;
 
     private final ReportPushRecordMapper reportPushRecordMapper;
 
@@ -157,6 +161,12 @@ public class ReportService {
         ensureReportArtifact(existing);
 
         CurrentUser currentUser = requireCurrentUser();
+        LabSample sample = existing.getSampleId() == null ? null : labSampleMapper.selectById(existing.getSampleId());
+        flowNodeGateService.assertCanHandle(
+                sample == null ? null : sample.getPublishFlowId(),
+                FlowConfigManagementService.FLOW_TYPE_PUBLISH,
+                currentUser,
+                "发布");
         LocalDateTime now = LocalDateTime.now();
 
         LabReport report = new LabReport();

@@ -34,6 +34,9 @@ public class LabUserVO {
     @Schema(description = "手机号")
     private String phone;
 
+    @Schema(description = "头像地址")
+    private String avatarUrl;
+
     @Schema(description = "状态，1 启用，0 停用")
     private Integer status;
 

@@ -70,6 +70,7 @@ CREATE TABLE lab_user (
     org_name VARCHAR(64),
     role_code VARCHAR(32) NOT NULL,
     phone VARCHAR(32),
+    avatar_url VARCHAR(500),
     status TINYINT DEFAULT 1,
     deleted TINYINT DEFAULT 0,
     created_by BIGINT,

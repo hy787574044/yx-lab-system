@@ -1,6 +1,7 @@
 package com.yx.lab.modules.system.service;
 
 import cn.hutool.core.util.IdUtil;
+import cn.hutool.core.util.StrUtil;
 import cn.hutool.crypto.SecureUtil;
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -9,6 +10,8 @@ import com.yx.lab.common.exception.BusinessException;
 import com.yx.lab.common.security.CurrentUser;
 import com.yx.lab.common.security.SecurityContext;
 import com.yx.lab.modules.system.dto.LoginRequest;
+import com.yx.lab.modules.system.dto.PasswordChangeCommand;
+import com.yx.lab.modules.system.dto.UserProfileUpdateCommand;
 import com.yx.lab.modules.system.entity.LabLoginLog;
 import com.yx.lab.modules.system.entity.LabUser;
 import com.yx.lab.modules.system.mapper.LabLoginLogMapper;
@@ -96,7 +99,11 @@ public class AuthService {
                 .userId(user.getId())
                 .username(user.getUsername())
                 .realName(user.getRealName())
+                .orgId(user.getOrgId())
+                .orgName(user.getOrgName())
                 .roleCode(user.getRoleCode())
+                .phone(user.getPhone())
+                .avatarUrl(user.getAvatarUrl())
                 .build();
     }
 
@@ -106,16 +113,105 @@ public class AuthService {
      * @return 当前登录人信息
      */
     public UserProfileVO me() {
+        return buildProfile(requireCurrentUserEntity());
+    }
+
+    /**
+     * 修改当前登录人基础资料。
+     *
+     * @param command 资料修改命令
+     * @param token 当前登录令牌
+     * @return 修改后的当前登录人信息
+     */
+    public UserProfileVO updateProfile(UserProfileUpdateCommand command, String token) {
+        LabUser user = requireCurrentUserEntity();
+        user.setRealName(StrUtil.trim(command.getRealName()));
+        user.setPhone(StrUtil.trim(command.getPhone()));
+        user.setAvatarUrl(StrUtil.trim(command.getAvatarUrl()));
+        labUserMapper.updateById(user);
+        refreshTokenUser(token, user);
+        return buildProfile(user);
+    }
+
+    /**
+     * 修改当前登录人密码。
+     *
+     * @param command 密码修改命令
+     */
+    public void changePassword(PasswordChangeCommand command) {
+        LabUser user = requireCurrentUserEntity();
+        String oldPassword = StrUtil.trim(command.getOldPassword());
+        if (!SecureUtil.sha256(oldPassword).equals(user.getPassword())) {
+            throw new BusinessException("原密码不正确");
+        }
+        String newPassword = StrUtil.trim(command.getNewPassword());
+        if (StrUtil.isBlank(newPassword)) {
+            throw new BusinessException("新密码不能为空");
+        }
+        if (SecureUtil.sha256(newPassword).equals(user.getPassword())) {
+            throw new BusinessException("新密码不能与原密码一致");
+        }
+        user.setPassword(SecureUtil.sha256(newPassword));
+        labUserMapper.updateById(user);
+    }
+
+    /**
+     * 退出登录，清理当前令牌。
+     *
+     * @param token 当前登录令牌
+     */
+    public void logout(String token) {
+        if (StrUtil.isNotBlank(token)) {
+            stringRedisTemplate.delete("lab:token:" + token);
+        }
+    }
+
+    private LabUser requireCurrentUserEntity() {
         CurrentUser currentUser = SecurityContext.getCurrentUser();
-        if (currentUser == null) {
+        if (currentUser == null || currentUser.getUserId() == null) {
             throw new BusinessException("请先登录");
         }
+        LabUser user = labUserMapper.selectById(currentUser.getUserId());
+        if (user == null || user.getStatus() == null || user.getStatus() != 1) {
+            throw new BusinessException("用户不存在或已停用");
+        }
+        return user;
+    }
+
+    private UserProfileVO buildProfile(LabUser user) {
         return UserProfileVO.builder()
-                .userId(currentUser.getUserId())
-                .username(currentUser.getUsername())
-                .realName(currentUser.getRealName())
-                .roleCode(currentUser.getRoleCode())
+                .userId(user.getId())
+                .username(user.getUsername())
+                .realName(user.getRealName())
+                .orgId(user.getOrgId())
+                .orgName(user.getOrgName())
+                .roleCode(user.getRoleCode())
+                .phone(user.getPhone())
+                .avatarUrl(user.getAvatarUrl())
+                .status(user.getStatus())
                 .build();
+    }
+
+    private void refreshTokenUser(String token, LabUser user) {
+        if (StrUtil.isBlank(token)) {
+            return;
+        }
+        String redisKey = "lab:token:" + token;
+        Long ttl = stringRedisTemplate.getExpire(redisKey, TimeUnit.SECONDS);
+        CurrentUser currentUser = new CurrentUser();
+        currentUser.setUserId(user.getId());
+        currentUser.setUsername(user.getUsername());
+        currentUser.setRealName(user.getRealName());
+        currentUser.setRoleCode(user.getRoleCode());
+        if (ttl != null && ttl > 0L) {
+            stringRedisTemplate.opsForValue().set(redisKey, JSONUtil.toJsonStr(currentUser), ttl, TimeUnit.SECONDS);
+        } else {
+            stringRedisTemplate.opsForValue().set(
+                    redisKey,
+                    JSONUtil.toJsonStr(currentUser),
+                    securityProperties.getTokenExpireHours(),
+                    TimeUnit.HOURS);
+        }
     }
 
     /**

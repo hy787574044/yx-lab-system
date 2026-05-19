@@ -64,6 +64,13 @@ export const mobileLoginApi = (data) => request.post('/api/auth/mobileLogin', da
  * @returns {Promise<any>} 当前用户信息。
  */
 export const getMeApi = () => request.get('/api/auth/me')
+export const updateMyProfileApi = (data) => request.post('/api/auth/profile', data)
+export const changeMyPasswordApi = (data) => request.post('/api/auth/changePassword', data)
+export const logoutApi = () => request.post('/api/auth/logout')
+export const fetchMobileProfileApi = () => request.get('/api/mobile/profile')
+export const updateMobileProfileApi = (data) => request.post('/api/mobile/profile', data)
+export const changeMobilePasswordApi = (data) => request.post('/api/mobile/changePassword', data)
+export const mobileLogoutApi = () => request.post('/api/mobile/logout')
 /**
  * 获取驾驶舱首页总览。
  *
@@ -659,6 +666,11 @@ export const uploadStorageFileApi = (file) => {
     }
   })
 }
+export const previewStorageFileApi = (path) => axios.get('/api/storage/file', {
+  params: { path },
+  responseType: 'blob',
+  headers: getToken() ? { Authorization: `Bearer ${getToken()}` } : {}
+})
 /**
  * 预览化验室文档文件流。
  *

@@ -41,6 +41,10 @@ public class UserSaveCommand {
     @Schema(description = "手机号")
     private String phone;
 
+    @Size(max = 500, message = "头像地址长度不能超过500个字符")
+    @Schema(description = "头像地址")
+    private String avatarUrl;
+
     @NotNull(message = "状态不能为空")
     @Schema(description = "状态，1 启用，0 停用", required = true)
     private Integer status;

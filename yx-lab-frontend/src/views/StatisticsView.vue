@@ -23,17 +23,20 @@
     </section>
 
     <section class="statistics-lower">
-      <button
+      <section
         v-for="panel in currentPanels"
         :key="panel.title"
-        type="button"
-        class="glass-panel section-block statistics-panel statistics-panel--link"
-        @click="goRoute(panel.path)"
+        class="glass-panel section-block statistics-panel"
       >
         <div class="panel-head">
-          <h3 class="section-title">{{ panel.title }}</h3>
+          <div>
+            <h3 class="section-title">{{ panel.title }}</h3>
+            <p>{{ panel.note }}</p>
+          </div>
+          <el-button v-if="panel.path" link type="primary" @click="goRoute(panel.path)">查看明细</el-button>
         </div>
-        <div class="progress-stack">
+        <MiniCharts v-if="panel.chart" :type="panel.chart" :items="panel.items" :colors="panel.colors" />
+        <div v-else class="progress-stack">
           <div v-for="row in panel.rows" :key="row.label" class="progress-row">
             <div class="progress-meta">
               <span>{{ row.label }}</span>
@@ -42,7 +45,7 @@
             <el-progress :percentage="row.percent" :color="row.color" :stroke-width="12" />
           </div>
         </div>
-      </button>
+      </section>
     </section>
 
   </div>
@@ -53,7 +56,18 @@ import { computed, onMounted, ref, unref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElLoadingDirective } from 'element-plus/es/components/loading/index.mjs'
 import { ElProgress } from 'element-plus/es/components/progress/index.mjs'
+import { ElButton } from 'element-plus/es/components/button/index.mjs'
 import { dashboardApi, statisticsApi } from '../api/lab'
+import MiniCharts from '../components/common/MiniCharts.vue'
+import {
+  detectionResultLabelMap,
+  detectionStatusLabelMap,
+  getEnumLabel,
+  reportStatusLabelMap,
+  reviewResultLabelMap,
+  sampleStatusLabelMap,
+  sampleTypeLabelMap
+} from '../utils/labEnums'
 
 const route = useRoute()
 const router = useRouter()
@@ -111,6 +125,17 @@ const approvalRate = computed(() => formatPercent(summary.value.approvalRate))
 
 const resultTotal = computed(() => normalTotal.value + abnormalTotal.value)
 const reviewTotal = computed(() => approvedTotal.value + rejectedTotal.value)
+const timeBucketItems = computed(() => (summary.value.timeBuckets || []).map((item) => ({
+  label: item.label,
+  value: toSafeNumber(item.sampleTotal) + toSafeNumber(item.detectionTotal) + toSafeNumber(item.reviewTotal) + toSafeNumber(item.reportTotal)
+})))
+const sampleTypeItems = computed(() => normalizeDimension(summary.value.sampleTypeDistribution, sampleTypeLabelMap))
+const sampleStatusItems = computed(() => normalizeDimension(summary.value.sampleStatusDistribution, sampleStatusLabelMap))
+const detectionStatusItems = computed(() => normalizeDimension(summary.value.detectionStatusDistribution, detectionStatusLabelMap))
+const detectionResultItems = computed(() => normalizeDimension(summary.value.detectionResultDistribution, detectionResultLabelMap))
+const reviewResultItems = computed(() => normalizeDimension(summary.value.reviewResultDistribution, reviewResultLabelMap))
+const reportStatusItems = computed(() => normalizeDimension(summary.value.reportStatusDistribution, reportStatusLabelMap))
+const detectionTypeItems = computed(() => normalizeDimension(summary.value.detectionTypeRanking))
 
 const sceneMap = {
   '/statistics-count': {
@@ -189,42 +214,35 @@ const currentPanels = computed(() => {
   if (route.path === '/statistics-result') {
     return [
       {
-        title: '样品结果分布',
-        note: '点击进入样品台账查看来源明细',
+        title: '检测结果占比',
+        note: '用饼图查看正常、异常结果结构',
         path: '/sample-ledger',
-        rows: [
-          {
-            label: '正常样品',
-            value: normalTotal.value,
-            percent: calcPercent(normalTotal.value, resultTotal.value),
-            color: '#16a34a'
-          },
-          {
-            label: '异常样品',
-            value: abnormalTotal.value,
-            percent: calcPercent(abnormalTotal.value, resultTotal.value),
-            color: '#dc2626'
-          }
-        ]
+        chart: 'pie',
+        colors: ['#16a34a', '#dc2626'],
+        items: detectionResultItems.value
       },
       {
-        title: '审核结果分布',
-        note: '点击进入审查台账查看审核明细',
+        title: '审核结果结构',
+        note: '审核通过与驳回情况对比',
         path: '/review-ledger',
-        rows: [
-          {
-            label: '审核通过',
-            value: approvedTotal.value,
-            percent: calcPercent(approvedTotal.value, reviewTotal.value),
-            color: '#1677ff'
-          },
-          {
-            label: '审核驳回',
-            value: rejectedTotal.value,
-            percent: calcPercent(rejectedTotal.value, reviewTotal.value),
-            color: '#d97706'
-          }
-        ]
+        chart: 'bar',
+        colors: ['#1677ff', '#d97706'],
+        items: reviewResultItems.value
+      },
+      {
+        title: '检测状态分布',
+        note: '观察结果在流程中的流转状态',
+        path: '/detection-ledger',
+        chart: 'bar',
+        items: detectionStatusItems.value
+      },
+      {
+        title: '检测套餐结果量排行',
+        note: '定位产生结果最多的检测套餐',
+        path: '/detection-ledger',
+        chart: 'bar',
+        colors: ['#0f766e', '#1677ff', '#d97706'],
+        items: detectionTypeItems.value
       }
     ]
   }
@@ -232,87 +250,87 @@ const currentPanels = computed(() => {
   if (route.path === '/statistics-quality') {
     return [
       {
-        title: '检测质量闭环',
-        note: '点击进入检测台账查看质量来源',
+        title: '质量核心占比',
+        note: '合格率与异常风险占比',
         path: '/detection-ledger',
-        rows: [
-          {
-            label: '样品合格率',
-            value: passRate.value,
-            percent: toSafeNumber(summary.value.passRate),
-            color: '#16a34a'
-          },
-          {
-            label: '异常风险占比',
-            value: `${calcPercent(abnormalTotal.value, resultTotal.value)}%`,
-            percent: calcPercent(abnormalTotal.value, resultTotal.value),
-            color: '#dc2626'
-          }
+        chart: 'pie',
+        colors: ['#16a34a', '#dc2626'],
+        items: [
+          { label: '正常', value: normalTotal.value },
+          { label: '异常', value: abnormalTotal.value }
         ]
       },
       {
-        title: '审核质量闭环',
-        note: '点击进入结果审查查看待办',
+        title: '审核闭环效率',
+        note: '通过、驳回、待审核多维对比',
         path: '/review-result',
-        rows: [
-          {
-            label: '审核通过率',
-            value: approvalRate.value,
-            percent: toSafeNumber(summary.value.approvalRate),
-            color: '#1677ff'
-          },
-          {
-            label: '待审核积压',
-            value: pendingReviewTotal.value,
-            percent: calcPercent(pendingReviewTotal.value, pendingReviewTotal.value + reviewTotal.value),
-            color: '#d97706'
-          }
+        chart: 'bar',
+        colors: ['#1677ff', '#d97706', '#dc2626'],
+        items: [
+          { label: '审核通过', value: approvedTotal.value },
+          { label: '审核驳回', value: rejectedTotal.value },
+          { label: '待审核', value: pendingReviewTotal.value }
         ]
+      },
+      {
+        title: '报告发布质量',
+        note: '正式报告各状态分布',
+        path: '/report-ledger',
+        chart: 'pie',
+        items: reportStatusItems.value
+      },
+      {
+        title: '质量时间趋势',
+        note: '不同时间跨度的业务处理量变化',
+        chart: 'line',
+        items: timeBucketItems.value
       }
     ]
   }
 
   return [
     {
-      title: '样品数量结构',
-      note: '点击进入样品台账查看数量来源',
+      title: '多时间跨度数量趋势',
+      note: '今日、近7日、近30日、全部的处理量变化',
+      chart: 'line',
+      items: timeBucketItems.value
+    },
+    {
+      title: '样品类型结构',
+      note: '按样品类型展示数量结构',
       path: '/sample-ledger',
-      rows: [
-        {
-          label: '样品总量',
-          value: sampleTotal.value,
-          percent: sampleTotal.value ? 100 : 0,
-          color: '#1677ff'
-        },
-        {
-          label: '已形成结果',
-          value: resultTotal.value,
-          percent: calcPercent(resultTotal.value, sampleTotal.value),
-          color: '#16a34a'
-        }
-      ]
+      chart: 'pie',
+      items: sampleTypeItems.value
+    },
+    {
+      title: '样品状态分布',
+      note: '样品在登录、审核、重检、完成中的分布',
+      path: '/sample-ledger',
+      chart: 'bar',
+      items: sampleStatusItems.value
     },
     {
       title: '业务流转数量',
-      note: '点击进入审查与报告台账查看闭环数量',
+      note: '检测、审核、报告产物关键节点数量',
       path: '/review-ledger',
-      rows: [
-        {
-          label: '待审核数量',
-          value: pendingReviewTotal.value,
-          percent: calcPercent(pendingReviewTotal.value, pendingReviewTotal.value + reviewTotal.value),
-          color: '#d97706'
-        },
-        {
-          label: '已发布报告',
-          value: publishedReportTotal.value,
-          percent: calcPercent(publishedReportTotal.value, reviewTotal.value || sampleTotal.value),
-          color: '#0f766e'
-        }
+      chart: 'bar',
+      colors: ['#1677ff', '#d97706', '#16a34a', '#0f766e'],
+      items: [
+        { label: '检测结果', value: resultTotal.value },
+        { label: '待审核', value: pendingReviewTotal.value },
+        { label: '已审核', value: reviewTotal.value },
+        { label: '已发布', value: publishedReportTotal.value }
       ]
     }
   ]
 })
+
+function normalizeDimension(items, labelMap = {}) {
+  return (items || []).map((item) => ({
+    label: getEnumLabel(labelMap, item.name),
+    value: item.value
+  }))
+}
 
 async function loadData() {
   loading.value = true
@@ -375,7 +393,6 @@ watch(() => route.fullPath, () => {
 }
 
 .metric-card--link,
-.statistics-panel--link,
 .quick-link {
   width: 100%;
   text-align: left;
@@ -385,8 +402,6 @@ watch(() => route.fullPath, () => {
 
 .metric-card--link:hover,
 .metric-card--link:focus-visible,
-.statistics-panel--link:hover,
-.statistics-panel--link:focus-visible,
 .quick-link:hover,
 .quick-link:focus-visible {
   border-color: color-mix(in srgb, var(--brand) 48%, #ffffff 52%);
@@ -403,6 +418,24 @@ watch(() => route.fullPath, () => {
 .statistics-lower,
 .scene-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.statistics-panel {
+  min-height: 260px;
+}
+
+.statistics-panel .panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.statistics-panel .panel-head p {
+  margin: 4px 0 0;
+  color: var(--text-sub);
+  font-size: 13px;
 }
 
 .progress-stack,

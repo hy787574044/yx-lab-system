@@ -53,6 +53,46 @@
           </div>
         </div>
       </button>
+
+      <section class="glass-panel section-block chart-panel">
+        <div class="panel-head">
+          <div>
+            <h3 class="section-title">时间跨度趋势</h3>
+            <p>按今日、近7日、近30日、全部对比业务流量</p>
+          </div>
+        </div>
+        <MiniCharts type="line" :items="timeTrendItems" />
+      </section>
+
+      <section class="glass-panel section-block chart-panel">
+        <div class="panel-head">
+          <div>
+            <h3 class="section-title">结果占比</h3>
+            <p>正常与异常检测结果占比</p>
+          </div>
+        </div>
+        <MiniCharts type="pie" :items="resultChartItems" :colors="['#16a34a', '#dc2626']" />
+      </section>
+
+      <section class="glass-panel section-block chart-panel">
+        <div class="panel-head">
+          <div>
+            <h3 class="section-title">流程处理量</h3>
+            <p>样品、检测、审核、报告关键节点总量</p>
+          </div>
+        </div>
+        <MiniCharts type="bar" :items="flowChartItems" />
+      </section>
+
+      <section class="glass-panel section-block chart-panel">
+        <div class="panel-head">
+          <div>
+            <h3 class="section-title">检测套餐排行</h3>
+            <p>按检测主流程数量排序</p>
+          </div>
+        </div>
+        <MiniCharts type="bar" :items="detectionTypeRankingItems" :colors="['#0f766e', '#1677ff', '#d97706']" />
+      </section>
     </section>
   </div>
 </template>
@@ -69,11 +109,13 @@ import {
   Files,
   WarningFilled
 } from '@element-plus/icons-vue'
-import { dashboardApi } from '../api/lab'
+import { dashboardApi, statisticsApi } from '../api/lab'
+import MiniCharts from '../components/common/MiniCharts.vue'
 
 const router = useRouter()
 const loading = ref(false)
 const overview = ref({})
+const statistics = ref({})
 const vLoading = ElLoadingDirective
 
 function toSafeNumber(value) {
@@ -138,10 +180,31 @@ const cards = computed(() => [
   }
 ])
 
+const timeTrendItems = computed(() => (statistics.value.timeBuckets || []).map((item) => ({
+  label: item.label,
+  value: toSafeNumber(item.sampleTotal) + toSafeNumber(item.detectionTotal) + toSafeNumber(item.reviewTotal) + toSafeNumber(item.reportTotal)
+})))
+const resultChartItems = computed(() => [
+  { label: '正常', value: normalCount.value, color: '#16a34a' },
+  { label: '异常', value: abnormalCount.value, color: '#dc2626' }
+])
+const flowChartItems = computed(() => [
+  { label: '样品', value: toSafeNumber(overview.value.sampleTotal), color: '#1677ff' },
+  { label: '待审核', value: toSafeNumber(overview.value.pendingReviewTotal), color: '#d97706' },
+  { label: '已通过', value: toSafeNumber(overview.value.approvedTotal), color: '#16a34a' },
+  { label: '已发布', value: toSafeNumber(overview.value.publishedReportTotal), color: '#0f766e' }
+])
+const detectionTypeRankingItems = computed(() => (statistics.value.detectionTypeRanking || []).map((item) => ({
+  label: item.name,
+  value: item.value
+})))
+
 onMounted(async () => {
   loading.value = true
   try {
-    overview.value = await dashboardApi()
+    const [overviewResult, statisticsResult] = await Promise.all([dashboardApi(), statisticsApi()])
+    overview.value = overviewResult || {}
+    statistics.value = statisticsResult || {}
   } finally {
     loading.value = false
   }
@@ -237,7 +300,7 @@ onMounted(async () => {
 }
 
 .dashboard-lower {
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .panel-head {
@@ -246,6 +309,12 @@ onMounted(async () => {
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 16px;
+}
+
+.panel-head p {
+  margin: 4px 0 0;
+  color: var(--text-sub);
+  font-size: 13px;
 }
 
 .panel-note {

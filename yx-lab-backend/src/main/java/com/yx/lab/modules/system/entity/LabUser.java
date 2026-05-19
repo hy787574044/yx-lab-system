@@ -43,6 +43,10 @@ public class LabUser extends BaseEntity {
     @TableField("phone")
     private String phone;
 
+    @Schema(description = "头像地址")
+    @TableField("avatar_url")
+    private String avatarUrl;
+
     @Schema(description = "状态，1启用，0停用")
     @TableField("status")
     private Integer status;

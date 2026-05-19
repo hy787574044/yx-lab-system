@@ -149,6 +149,7 @@ public class UserManagementService {
         entity.setOrgName(org.getOrgName());
         entity.setRoleCode(StrUtil.trim(command.getRoleCode()));
         entity.setPhone(StrUtil.trim(command.getPhone()));
+        entity.setAvatarUrl(StrUtil.trim(command.getAvatarUrl()));
         entity.setStatus(command.getStatus());
     }
 
@@ -161,6 +162,7 @@ public class UserManagementService {
         vo.setOrgName(entity.getOrgName());
         vo.setRoleCode(entity.getRoleCode());
         vo.setPhone(entity.getPhone());
+        vo.setAvatarUrl(entity.getAvatarUrl());
         vo.setStatus(entity.getStatus());
         vo.setCreatedName(entity.getCreatedName());
         vo.setCreatedTime(entity.getCreatedTime());

@@ -13,5 +13,15 @@ public class UserProfileVO {
 
     private String realName;
 
+    private Long orgId;
+
+    private String orgName;
+
     private String roleCode;
+
+    private String phone;
+
+    private String avatarUrl;
+
+    private Integer status;
 }

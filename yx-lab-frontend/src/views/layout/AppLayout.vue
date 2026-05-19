@@ -77,14 +77,25 @@
           <el-icon><FullScreen /></el-icon>
         </button>
 
-        <div class="user-box">
-          <div class="user-avatar">{{ userInitial }}</div>
-          <div class="user-copy">
-            <strong>{{ user.realName || user.username || '管理员' }}</strong>
-            <p>{{ user.roleCode || 'ADMIN' }}</p>
-          </div>
-          <el-button text class="logout-button" @click="logout">退出</el-button>
-        </div>
+        <el-dropdown trigger="click" popper-class="user-dropdown-popper" @command="handleUserCommand">
+          <button type="button" class="user-box">
+            <div class="user-avatar">
+              <img v-if="userAvatarSrc" :src="userAvatarSrc" alt="用户头像" />
+              <span v-else>{{ userInitial }}</span>
+            </div>
+            <div class="user-copy">
+              <strong>{{ user.realName || user.username || '管理员' }}</strong>
+              <p>{{ user.roleCode || 'ADMIN' }}</p>
+            </div>
+          </button>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item command="profile">修改资料</el-dropdown-item>
+              <el-dropdown-item command="password">修改密码</el-dropdown-item>
+              <el-dropdown-item divided command="logout">退出登录</el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
       </div>
     </header>
 
@@ -141,19 +152,79 @@
         </section>
       </main>
     </div>
+
+    <el-dialog v-model="profileDialogVisible" title="修改资料" width="520px" destroy-on-close @closed="resetProfileForm">
+      <el-form ref="profileFormRef" :model="profileForm" :rules="profileRules" label-width="90px">
+        <el-form-item label="头像">
+          <div class="profile-avatar-editor">
+            <div class="profile-avatar-preview">
+              <img v-if="profileAvatarSrc" :src="profileAvatarSrc" alt="头像预览" />
+              <span v-else>{{ userInitial }}</span>
+            </div>
+            <div class="profile-avatar-actions">
+              <el-upload
+                :auto-upload="false"
+                :show-file-list="false"
+                accept="image/png,image/jpeg,image/jpg,image/webp"
+                :on-change="handleAvatarChange"
+              >
+                <el-button>选择头像</el-button>
+              </el-upload>
+              <el-button v-if="profileForm.avatarUrl || avatarPreviewUrl" text @click="clearAvatar">移除头像</el-button>
+              <p>支持 JPG、PNG、WEBP，建议使用正方形图片。</p>
+            </div>
+          </div>
+        </el-form-item>
+        <el-form-item label="用户名">
+          <el-input :model-value="user.username || '-'" disabled />
+        </el-form-item>
+        <el-form-item label="姓名" prop="realName">
+          <el-input v-model="profileForm.realName" placeholder="请输入姓名" />
+        </el-form-item>
+        <el-form-item label="手机号" prop="phone">
+          <el-input v-model="profileForm.phone" placeholder="请输入手机号" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="profileDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="savingProfile" @click="submitProfileForm">保存</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog v-model="passwordDialogVisible" title="修改密码" width="520px" destroy-on-close @closed="resetPasswordForm">
+      <el-form ref="passwordFormRef" :model="passwordForm" :rules="passwordRules" label-width="100px">
+        <el-form-item label="原密码" prop="oldPassword">
+          <el-input v-model="passwordForm.oldPassword" type="password" show-password placeholder="请输入原密码" />
+        </el-form-item>
+        <el-form-item label="新密码" prop="newPassword">
+          <el-input v-model="passwordForm.newPassword" type="password" show-password placeholder="请输入新密码" />
+        </el-form-item>
+        <el-form-item label="确认密码" prop="confirmPassword">
+          <el-input v-model="passwordForm.confirmPassword" type="password" show-password placeholder="请再次输入新密码" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="passwordDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="savingPassword" @click="submitPasswordForm">确认修改</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import dayjs from 'dayjs'
+import { ElDialog } from 'element-plus/es/components/dialog/index.mjs'
+import { ElDropdown, ElDropdownItem, ElDropdownMenu } from 'element-plus/es/components/dropdown/index.mjs'
 import { ElButton } from 'element-plus/es/components/button/index.mjs'
+import { ElForm, ElFormItem } from 'element-plus/es/components/form/index.mjs'
 import { ElIcon } from 'element-plus/es/components/icon/index.mjs'
 import { ElInput } from 'element-plus/es/components/input/index.mjs'
 import { ElMenu, ElMenuItem, ElSubMenu } from 'element-plus/es/components/menu/index.mjs'
 import { ElMessage } from 'element-plus/es/components/message/index.mjs'
 import { ElPopover } from 'element-plus/es/components/popover/index.mjs'
+import { ElUpload } from 'element-plus/es/components/upload/index.mjs'
 import {
   ArrowRight,
   Bell,
@@ -173,7 +244,8 @@ import {
   SetUp,
   Tickets
 } from '@element-plus/icons-vue'
-import { clearToken, getUser } from '../../utils/auth'
+import { changeMyPasswordApi, logoutApi, previewStorageFileApi, updateMyProfileApi, uploadStorageFileApi } from '../../api/lab'
+import { clearToken, getToken, getUser, setUser } from '../../utils/auth'
 import { labMenuGroups } from '../../router/menuConfig'
 
 const THEME_STORAGE_KEY = 'yx-lab-theme'
@@ -205,6 +277,28 @@ const route = useRoute()
 const menuRef = ref()
 const menuKeyword = ref('')
 const currentThemeId = ref(themeOptions[0].id)
+const user = ref(getUser() || {})
+const profileDialogVisible = ref(false)
+const passwordDialogVisible = ref(false)
+const savingProfile = ref(false)
+const savingPassword = ref(false)
+const profileFormRef = ref()
+const passwordFormRef = ref()
+const selectedAvatarFile = ref(null)
+const avatarPreviewUrl = ref('')
+const userAvatarSrc = ref('')
+
+const profileForm = reactive({
+  realName: '',
+  phone: '',
+  avatarUrl: ''
+})
+
+const passwordForm = reactive({
+  oldPassword: '',
+  newPassword: '',
+  confirmPassword: ''
+})
 
 const primaryMenus = labMenuGroups
 const allSearchItems = labMenuGroups.flatMap((group) => ([
@@ -218,9 +312,35 @@ const allSearchItems = labMenuGroups.flatMap((group) => ([
   }))
 ]))
 
-const user = computed(() => getUser() || {})
 const userInitial = computed(() => (user.value.realName || user.value.username || '管').slice(0, 1))
 const currentRoutePath = computed(() => route.path)
+const profileAvatarSrc = computed(() => avatarPreviewUrl.value || (profileForm.avatarUrl ? userAvatarSrc.value : ''))
+
+const profileRules = {
+  realName: [{ required: true, message: '请输入姓名', trigger: 'blur' }],
+  phone: [{ max: 32, message: '手机号长度不能超过32个字符', trigger: 'blur' }]
+}
+
+const passwordRules = {
+  oldPassword: [{ required: true, message: '请输入原密码', trigger: 'blur' }],
+  newPassword: [
+    { required: true, message: '请输入新密码', trigger: 'blur' },
+    { min: 6, message: '新密码至少6位', trigger: 'blur' }
+  ],
+  confirmPassword: [
+    { required: true, message: '请再次输入新密码', trigger: 'blur' },
+    {
+      validator: (_rule, value, callback) => {
+        if (value !== passwordForm.newPassword) {
+          callback(new Error('两次输入的新密码不一致'))
+          return
+        }
+        callback()
+      },
+      trigger: 'blur'
+    }
+  ]
+}
 
 const currentPrimaryMenu = computed(() => (
   primaryMenus.find((item) => item.id === route.meta?.primaryId)
@@ -291,9 +411,151 @@ function toggleFullscreen() {
   document.exitFullscreen?.()
 }
 
-function logout() {
+function handleUserCommand(command) {
+  if (command === 'profile') {
+    openProfileDialog()
+    return
+  }
+  if (command === 'password') {
+    openPasswordDialog()
+    return
+  }
+  if (command === 'logout') {
+    logout()
+  }
+}
+
+function openProfileDialog() {
+  profileForm.realName = user.value.realName || ''
+  profileForm.phone = user.value.phone || ''
+  profileForm.avatarUrl = user.value.avatarUrl || ''
+  selectedAvatarFile.value = null
+  clearAvatarPreview()
+  profileDialogVisible.value = true
+}
+
+function openPasswordDialog() {
+  resetPasswordForm()
+  passwordDialogVisible.value = true
+}
+
+function resetProfileForm() {
+  profileForm.realName = ''
+  profileForm.phone = ''
+  profileForm.avatarUrl = ''
+  selectedAvatarFile.value = null
+  clearAvatarPreview()
+  profileFormRef.value?.clearValidate?.()
+}
+
+function resetPasswordForm() {
+  passwordForm.oldPassword = ''
+  passwordForm.newPassword = ''
+  passwordForm.confirmPassword = ''
+  passwordFormRef.value?.clearValidate?.()
+}
+
+async function submitProfileForm() {
+  await profileFormRef.value.validate()
+  savingProfile.value = true
+  try {
+    let avatarUrl = profileForm.avatarUrl
+    if (selectedAvatarFile.value) {
+      const uploadResult = await uploadStorageFileApi(selectedAvatarFile.value)
+      avatarUrl = uploadResult.filePath || ''
+    }
+    const nextUser = await updateMyProfileApi({
+      realName: String(profileForm.realName || '').trim(),
+      phone: String(profileForm.phone || '').trim(),
+      avatarUrl
+    })
+    setUser(nextUser)
+    profileDialogVisible.value = false
+    ElMessage.success('资料修改成功')
+  } finally {
+    savingProfile.value = false
+  }
+}
+
+function handleAvatarChange(file) {
+  const rawFile = file.raw
+  if (!rawFile) {
+    return
+  }
+  if (!rawFile.type?.startsWith('image/')) {
+    ElMessage.warning('请选择图片文件作为头像')
+    return
+  }
+  if (rawFile.size > 2 * 1024 * 1024) {
+    ElMessage.warning('头像图片不能超过 2MB')
+    return
+  }
+  selectedAvatarFile.value = rawFile
+  clearAvatarPreview()
+  avatarPreviewUrl.value = URL.createObjectURL(rawFile)
+}
+
+function clearAvatar() {
+  profileForm.avatarUrl = ''
+  selectedAvatarFile.value = null
+  clearAvatarPreview()
+}
+
+function clearAvatarPreview() {
+  if (avatarPreviewUrl.value) {
+    URL.revokeObjectURL(avatarPreviewUrl.value)
+    avatarPreviewUrl.value = ''
+  }
+}
+
+function clearUserAvatarSrc() {
+  if (userAvatarSrc.value) {
+    URL.revokeObjectURL(userAvatarSrc.value)
+    userAvatarSrc.value = ''
+  }
+}
+
+async function loadUserAvatar() {
+  clearUserAvatarSrc()
+  if (!user.value.avatarUrl || !getToken()) {
+    return
+  }
+  try {
+    const response = await previewStorageFileApi(user.value.avatarUrl)
+    userAvatarSrc.value = URL.createObjectURL(response.data)
+  } catch {
+    userAvatarSrc.value = ''
+  }
+}
+
+async function submitPasswordForm() {
+  await passwordFormRef.value.validate()
+  savingPassword.value = true
+  try {
+    await changeMyPasswordApi({
+      oldPassword: passwordForm.oldPassword,
+      newPassword: passwordForm.newPassword
+    })
+    passwordDialogVisible.value = false
+    ElMessage.success('密码修改成功，请牢记新密码')
+  } finally {
+    savingPassword.value = false
+  }
+}
+
+async function logout() {
+  try {
+    await logoutApi()
+  } catch {
+    // 即使服务端令牌已经失效，也要清理本地登录状态。
+  }
   clearToken()
   router.push('/login')
+}
+
+function syncUserFromStorage(event) {
+  user.value = event?.detail || getUser() || {}
+  loadUserAvatar()
 }
 
 watch(
@@ -310,6 +572,14 @@ watch(
 
 onMounted(() => {
   initTheme()
+  window.addEventListener('yx-lab-user-updated', syncUserFromStorage)
+  loadUserAvatar()
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('yx-lab-user-updated', syncUserFromStorage)
+  clearAvatarPreview()
+  clearUserAvatarSrc()
 })
 </script>
 
@@ -542,7 +812,12 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 10px;
+  padding: 0;
+  border: none;
+  background: transparent;
   color: #ffffff;
+  cursor: pointer;
+  text-align: left;
 }
 
 .user-avatar {
@@ -554,14 +829,102 @@ onMounted(() => {
   background: rgba(255, 255, 255, 0.22);
   border: 1px solid rgba(255, 255, 255, 0.28);
   font-weight: 700;
+  overflow: hidden;
+}
+
+.user-avatar img,
+.profile-avatar-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .user-copy p {
   color: rgba(255, 255, 255, 0.72);
 }
 
-.logout-button {
-  color: rgba(255, 255, 255, 0.92);
+.user-box:hover .user-avatar {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+:global(.user-dropdown-popper) {
+  min-width: 128px;
+  padding: 6px;
+  border: 1px solid rgba(217, 226, 245, 0.95);
+  border-radius: 12px;
+  box-shadow: 0 16px 38px rgba(22, 38, 73, 0.16);
+}
+
+:global(.user-dropdown-popper .el-dropdown-menu) {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+:global(.user-dropdown-popper .el-dropdown-menu__item) {
+  display: flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 14px;
+  margin: 0;
+  border-radius: 8px;
+  color: var(--text-main);
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.4;
+  letter-spacing: 0;
+  list-style: none;
+}
+
+:global(.user-dropdown-popper .el-dropdown-menu__item::marker) {
+  content: "";
+}
+
+:global(.user-dropdown-popper .el-dropdown-menu__item:hover) {
+  background: color-mix(in srgb, var(--brand) 7%, #ffffff 93%);
+  color: var(--text-main);
+}
+
+:global(.user-dropdown-popper .el-dropdown-menu__item--divided) {
+  margin-top: 4px;
+  border-top: 1px solid var(--line-soft);
+}
+
+:global(.user-dropdown-popper .el-dropdown-menu__item--divided::before) {
+  display: none;
+}
+
+.profile-avatar-editor {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.profile-avatar-preview {
+  width: 72px;
+  height: 72px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  overflow: hidden;
+  color: #ffffff;
+  font-size: 24px;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--brand-gradient-start), var(--brand-gradient-end));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.34);
+}
+
+.profile-avatar-actions {
+  display: grid;
+  gap: 8px;
+}
+
+.profile-avatar-actions p {
+  margin: 0;
+  color: var(--text-sub);
+  font-size: 12px;
+  line-height: 1.6;
 }
 
 .layout-main {

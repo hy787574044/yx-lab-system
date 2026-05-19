@@ -22,6 +22,8 @@ import com.yx.lab.modules.review.mapper.ReviewRecordMapper;
 import com.yx.lab.modules.sample.entity.LabSample;
 import com.yx.lab.modules.sample.mapper.LabSampleMapper;
 import com.yx.lab.modules.sample.service.LabSampleService;
+import com.yx.lab.modules.system.service.FlowConfigManagementService;
+import com.yx.lab.modules.system.service.FlowNodeGateService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -52,6 +54,8 @@ public class ReviewService {
     private final LabSampleService labSampleService;
 
     private final ReportService reportService;
+
+    private final FlowNodeGateService flowNodeGateService;
 
     /**
      * 分页查询审查记录列表。
@@ -96,6 +100,11 @@ public class ReviewService {
         }
 
         CurrentUser currentUser = SecurityContext.getCurrentUser();
+        flowNodeGateService.assertCanHandle(
+                sample.getReviewFlowId(),
+                FlowConfigManagementService.FLOW_TYPE_REVIEW,
+                currentUser,
+                "审核");
         List<DetectionItem> recordItems = detectionItemMapper.selectList(new LambdaQueryWrapper<DetectionItem>()
                 .eq(DetectionItem::getRecordId, record.getId())
                 .orderByAsc(DetectionItem::getCreatedTime));

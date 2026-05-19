@@ -332,3 +332,19 @@ AggregateError [ECONNREFUSED]:
 AggregateError [ECONNREFUSED]: 
     at internalConnectMultiple (node:net:1142:49)
     at afterConnectMultiple (node:net:1723:7)
+[2m14:27:26[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/detections?keyword=&detectionStatus=&pageNum=1&pageSize=500[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+[2m14:27:26[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/samples?pageNum=1&pageSize=500&keyword=[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+[2m14:27:26[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/detectionConfig/detectors[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+[2m14:27:26[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/detectionConfig/methods?pageNum=1&pageSize=500[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)

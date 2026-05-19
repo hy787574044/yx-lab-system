@@ -12,13 +12,23 @@ export function setToken(token) {
 export function clearToken() {
   localStorage.removeItem(TOKEN_KEY)
   localStorage.removeItem(USER_KEY)
+  window.dispatchEvent(new CustomEvent('yx-lab-user-updated', { detail: {} }))
 }
 
 export function setUser(user) {
-  localStorage.setItem(USER_KEY, JSON.stringify(user || {}))
+  const nextUser = user || {}
+  localStorage.setItem(USER_KEY, JSON.stringify(nextUser))
+  window.dispatchEvent(new CustomEvent('yx-lab-user-updated', { detail: nextUser }))
 }
 
 export function getUser() {
   const value = localStorage.getItem(USER_KEY)
-  return value ? JSON.parse(value) : {}
+  if (!value) {
+    return {}
+  }
+  try {
+    return JSON.parse(value)
+  } catch {
+    return {}
+  }
 }

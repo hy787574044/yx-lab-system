@@ -352,6 +352,26 @@
     <el-dialog v-model="userDialogVisible" :title="userForm.id ? '编辑用户' : '新增用户'" width="760px" destroy-on-close @closed="resetUserForm">
       <el-form ref="userFormRef" :model="userForm" :rules="userRules" label-width="100px">
         <div class="form-grid">
+          <el-form-item class="form-span-2" label="头像">
+            <div class="user-avatar-editor">
+              <div class="user-avatar-preview">
+                <img v-if="userFormAvatarSrc" :src="userFormAvatarSrc" alt="用户头像" />
+                <span v-else>{{ userFormInitial }}</span>
+              </div>
+              <div class="user-avatar-actions">
+                <el-upload
+                  :auto-upload="false"
+                  :show-file-list="false"
+                  accept="image/png,image/jpeg,image/jpg,image/webp"
+                  :on-change="handleUserAvatarChange"
+                >
+                  <el-button>选择头像</el-button>
+                </el-upload>
+                <el-button v-if="userForm.avatarUrl || userAvatarPreviewUrl" text @click="clearUserAvatar">移除头像</el-button>
+                <p>支持 JPG、PNG、WEBP，建议使用正方形图片，大小不超过 2MB。</p>
+              </div>
+            </div>
+          </el-form-item>
           <el-form-item label="用户名" prop="username"><el-input v-model="userForm.username" placeholder="请输入用户名" /></el-form-item>
           <el-form-item label="姓名" prop="realName"><el-input v-model="userForm.realName" placeholder="请输入姓名" /></el-form-item>
           <el-form-item label="所属机构" prop="orgId"><el-select v-model="userForm.orgId" filterable placeholder="请选择所属机构" style="width: 100%"><el-option v-for="item in orgOptionsForUser" :key="item.value" :label="item.label" :value="item.value" /></el-select></el-form-item>
@@ -393,7 +413,7 @@
   </div>
 </template>
 <script setup>
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElButton } from 'element-plus/es/components/button/index.mjs'
 import { ElDialog } from 'element-plus/es/components/dialog/index.mjs'
@@ -405,6 +425,7 @@ import { ElMessageBox } from 'element-plus/es/components/message-box/index.mjs'
 import { ElOption, ElSelect } from 'element-plus/es/components/select/index.mjs'
 import { ElRadioButton, ElRadioGroup } from 'element-plus/es/components/radio/index.mjs'
 import { ElTable, ElTableColumn } from 'element-plus/es/components/table/index.mjs'
+import { ElUpload } from 'element-plus/es/components/upload/index.mjs'
 import TablePagination from '../components/common/TablePagination.vue'
 import {
   createSystemDictApi,
@@ -427,12 +448,14 @@ import {
   fetchSystemRoleOptionsApi,
   fetchSystemRolesApi,
   fetchSystemUsersApi,
+  previewStorageFileApi,
   updateSystemDictApi,
   updateSystemOrgApi,
   updateSystemRoleApi,
-  updateSystemUserApi
+  updateSystemUserApi,
+  uploadStorageFileApi
 } from '../api/lab'
-import { getUser } from '../utils/auth'
+import { getUser, setUser } from '../utils/auth'
 import { labMenuGroups } from '../router/menuConfig'
 import { DEFAULT_PAGE_SIZE } from '../utils/labEnums'
 
@@ -456,6 +479,9 @@ const dictFormRef = ref()
 const orgFormRef = ref()
 const userFormRef = ref()
 const roleFormRef = ref()
+const selectedUserAvatarFile = ref(null)
+const userAvatarPreviewUrl = ref('')
+const userExistingAvatarPreviewUrl = ref('')
 
 const isDictScene = computed(() => route.path === '/system-dicts')
 const isOrgScene = computed(() => route.path === '/system-orgs')
@@ -835,6 +861,9 @@ const visibleUserRows = computed(() => {
   return userRows.value
 })
 
+const userFormInitial = computed(() => (userForm.realName || userForm.username || '用').slice(0, 1))
+const userFormAvatarSrc = computed(() => userAvatarPreviewUrl.value || userExistingAvatarPreviewUrl.value)
+
 const visibleOrgRows = computed(() => {
   if (activeStatKey.value === 'inuse') {
     return orgRows.value.filter((item) => Number(item.memberCount || 0) > 0)
@@ -1025,8 +1054,19 @@ watch(
 )
 
 onMounted(async () => {
+  window.addEventListener('yx-lab-user-updated', syncCurrentLoginUserFromEvent)
   await loadPageData()
 })
+
+onBeforeUnmount(() => {
+  window.removeEventListener('yx-lab-user-updated', syncCurrentLoginUserFromEvent)
+  clearUserAvatarPreview()
+  clearExistingUserAvatarPreview()
+})
+
+function syncCurrentLoginUserFromEvent(event) {
+  Object.assign(currentLoginUser, event?.detail || getUser() || {})
+}
 
 function createDefaultDictForm() {
   return {
@@ -1061,6 +1101,7 @@ function createDefaultUserForm() {
     orgId: '',
     roleCode: '',
     phone: '',
+    avatarUrl: '',
     status: 1
   }
 }
@@ -1533,7 +1574,9 @@ function openUserDialog(row) {
     userForm.orgId = row.orgId || ''
     userForm.roleCode = row.roleCode || ''
     userForm.phone = row.phone || ''
+    userForm.avatarUrl = row.avatarUrl || ''
     userForm.status = Number(row.status) === 0 ? 0 : 1
+    loadUserFormAvatar(row.avatarUrl)
   }
   userDialogVisible.value = true
 }
@@ -1563,6 +1606,9 @@ function resetOrgForm() {
 
 function resetUserForm() {
   Object.assign(userForm, createDefaultUserForm())
+  selectedUserAvatarFile.value = null
+  clearUserAvatarPreview()
+  clearExistingUserAvatarPreview()
   userFormRef.value?.clearValidate?.()
 }
 
@@ -1632,6 +1678,11 @@ async function submitUserForm() {
   await userFormRef.value.validate()
   savingUser.value = true
   try {
+    let avatarUrl = String(userForm.avatarUrl || '').trim()
+    if (selectedUserAvatarFile.value) {
+      const uploadResult = await uploadStorageFileApi(selectedUserAvatarFile.value)
+      avatarUrl = uploadResult.filePath || ''
+    }
     const payload = {
       username: String(userForm.username || '').trim(),
       password: String(userForm.password || '').trim(),
@@ -1639,12 +1690,14 @@ async function submitUserForm() {
       orgId: Number(userForm.orgId),
       roleCode: String(userForm.roleCode || '').trim(),
       phone: String(userForm.phone || '').trim(),
+      avatarUrl,
       status: Number(userForm.status) === 0 ? 0 : 1
     }
 
     if (userForm.id) {
       await updateSystemUserApi(userForm.id, payload)
       ElMessage.success('用户更新成功')
+      syncCurrentLoginUserAfterSave(userForm.id, payload)
     } else {
       await createSystemUserApi(payload)
       ElMessage.success('用户新增成功')
@@ -1656,6 +1709,80 @@ async function submitUserForm() {
   } finally {
     savingUser.value = false
   }
+}
+
+function handleUserAvatarChange(file) {
+  const rawFile = file.raw
+  if (!rawFile) {
+    return
+  }
+  if (!rawFile.type?.startsWith('image/')) {
+    ElMessage.warning('请选择图片文件作为头像')
+    return
+  }
+  if (rawFile.size > 2 * 1024 * 1024) {
+    ElMessage.warning('头像图片不能超过 2MB')
+    return
+  }
+  selectedUserAvatarFile.value = rawFile
+  clearUserAvatarPreview()
+  userAvatarPreviewUrl.value = URL.createObjectURL(rawFile)
+}
+
+function clearUserAvatar() {
+  userForm.avatarUrl = ''
+  selectedUserAvatarFile.value = null
+  clearUserAvatarPreview()
+  clearExistingUserAvatarPreview()
+}
+
+function clearUserAvatarPreview() {
+  if (userAvatarPreviewUrl.value) {
+    URL.revokeObjectURL(userAvatarPreviewUrl.value)
+    userAvatarPreviewUrl.value = ''
+  }
+}
+
+function clearExistingUserAvatarPreview() {
+  if (userExistingAvatarPreviewUrl.value) {
+    URL.revokeObjectURL(userExistingAvatarPreviewUrl.value)
+    userExistingAvatarPreviewUrl.value = ''
+  }
+}
+
+async function loadUserFormAvatar(avatarUrl) {
+  clearExistingUserAvatarPreview()
+  if (!avatarUrl) {
+    return
+  }
+  try {
+    const response = await previewStorageFileApi(avatarUrl)
+    if (String(userForm.avatarUrl || '') === String(avatarUrl || '')) {
+      userExistingAvatarPreviewUrl.value = URL.createObjectURL(response.data)
+    }
+  } catch {
+    userExistingAvatarPreviewUrl.value = ''
+  }
+}
+
+function syncCurrentLoginUserAfterSave(userId, payload) {
+  if (String(userId) !== String(currentLoginUser.userId || '')) {
+    return
+  }
+  const nextUser = {
+    ...getUser(),
+    userId: currentLoginUser.userId,
+    username: payload.username,
+    realName: payload.realName,
+    orgId: payload.orgId,
+    orgName: orgOptionsForUser.value.find((item) => String(item.value) === String(payload.orgId))?.label || currentLoginUser.orgName || '',
+    roleCode: payload.roleCode,
+    phone: payload.phone,
+    avatarUrl: payload.avatarUrl,
+    status: payload.status
+  }
+  Object.assign(currentLoginUser, nextUser)
+  setUser(nextUser)
 }
 
 async function submitRoleForm() {
@@ -1884,6 +2011,45 @@ function getLogSourceFilterLabel(sourceType) {
 
 .form-span-2 {
   grid-column: span 2;
+}
+
+.user-avatar-editor {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.user-avatar-preview {
+  width: 68px;
+  height: 68px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  overflow: hidden;
+  color: #ffffff;
+  font-size: 22px;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--brand-gradient-start), var(--brand-gradient-end));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.34);
+}
+
+.user-avatar-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.user-avatar-actions {
+  display: grid;
+  gap: 8px;
+}
+
+.user-avatar-actions p {
+  margin: 0;
+  color: var(--text-sub);
+  font-size: 12px;
+  line-height: 1.6;
 }
 
 .system-page :deep(.el-form-item) {

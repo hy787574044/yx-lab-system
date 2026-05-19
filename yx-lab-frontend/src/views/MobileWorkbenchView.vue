@@ -8,11 +8,18 @@
       </div>
 
       <div class="hero-user">
-        <div>
-          <strong>{{ currentUser.realName || currentUser.username || '未登录用户' }}</strong>
-          <p>{{ currentUser.roleCode || 'LAB_USER' }}</p>
+        <div class="hero-user__main">
+          <div class="hero-avatar">
+            <img v-if="currentUserAvatarSrc" :src="currentUserAvatarSrc" alt="用户头像" />
+            <span v-else>{{ currentUserInitial }}</span>
+          </div>
+          <div>
+            <strong>{{ currentUser.realName || currentUser.username || '未登录用户' }}</strong>
+            <p>{{ currentUser.roleCode || 'LAB_USER' }}</p>
+          </div>
         </div>
         <div class="hero-actions">
+          <el-button size="small" plain @click="openProfileDialog">修改资料</el-button>
           <el-button size="small" type="danger" plain @click="logout">退出</el-button>
         </div>
       </div>
@@ -453,12 +460,57 @@
         <el-button @click="closePreviewDialog">关闭</el-button>
       </template>
     </el-dialog>
+
+    <el-dialog
+      v-model="profileDialogVisible"
+      title="修改资料"
+      width="92%"
+      class="mobile-dialog"
+      destroy-on-close
+      @closed="resetProfileForm"
+    >
+      <el-form ref="profileFormRef" :model="profileForm" :rules="profileRules" label-position="top">
+        <el-form-item label="头像">
+          <div class="mobile-avatar-editor">
+            <div class="mobile-avatar-preview">
+              <img v-if="profileAvatarSrc" :src="profileAvatarSrc" alt="头像预览" />
+              <span v-else>{{ currentUserInitial }}</span>
+            </div>
+            <div class="mobile-avatar-actions">
+              <el-upload
+                :auto-upload="false"
+                :show-file-list="false"
+                accept="image/png,image/jpeg,image/jpg,image/webp"
+                :on-change="handleProfileAvatarChange"
+              >
+                <el-button>选择头像</el-button>
+              </el-upload>
+              <el-button v-if="profileForm.avatarUrl || profileAvatarPreviewUrl" text @click="clearProfileAvatar">移除头像</el-button>
+              <p>支持 JPG、PNG、WEBP，图片不超过 2MB。</p>
+            </div>
+          </div>
+        </el-form-item>
+        <el-form-item label="用户名">
+          <el-input :model-value="currentUser.username || '-'" disabled />
+        </el-form-item>
+        <el-form-item label="姓名" prop="realName">
+          <el-input v-model="profileForm.realName" placeholder="请输入姓名" />
+        </el-form-item>
+        <el-form-item label="手机号" prop="phone">
+          <el-input v-model="profileForm.phone" placeholder="请输入手机号" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="profileDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="savingProfile" @click="submitProfileForm">保存</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
 import dayjs from 'dayjs'
-import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElButton } from 'element-plus/es/components/button/index.mjs'
 import { ElDatePicker } from 'element-plus/es/components/date-picker/index.mjs'
@@ -470,6 +522,7 @@ import { ElInputNumber } from 'element-plus/es/components/input-number/index.mjs
 import { ElMessage } from 'element-plus/es/components/message/index.mjs'
 import { ElMessageBox } from 'element-plus/es/components/message-box/index.mjs'
 import { ElOption, ElSelect } from 'element-plus/es/components/select/index.mjs'
+import { ElUpload } from 'element-plus/es/components/upload/index.mjs'
 import {
   fetchDetectionParametersApi,
   fetchDetectionTypesApi,
@@ -479,14 +532,18 @@ import {
   fetchMobileReviewHistoryApi,
   fetchMobileReviewTodoApi,
   fetchMobileSamplingTodoApi,
+  fetchMobileProfileApi,
   fetchReportPreviewDataApi,
-  getMeApi,
   loginSampleApi,
+  mobileLogoutApi,
+  previewStorageFileApi,
   startSamplingTaskApi,
   abandonSamplingTaskApi,
   completeSamplingTaskApi,
   submitDetectionApi,
-  submitReviewApi
+  submitReviewApi,
+  updateMobileProfileApi,
+  uploadStorageFileApi
 } from '../api/lab'
 import ReportPrintDocument from '../components/report/ReportPrintDocument.vue'
 import { clearToken, getUser, setUser } from '../utils/auth'
@@ -515,8 +572,10 @@ const router = useRouter()
 const activeTab = ref('overview')
 const refreshing = ref(false)
 const submitting = ref(false)
+const savingProfile = ref(false)
 
 const currentUser = ref(getUser())
+const currentUserAvatarSrc = ref('')
 const samplingTodos = ref([])
 const detectionTodos = ref([])
 const detectionHistory = ref([])
@@ -533,6 +592,10 @@ const loginDialogVisible = ref(false)
 const detectionDialogVisible = ref(false)
 const reviewDialogVisible = ref(false)
 const previewDialogVisible = ref(false)
+const profileDialogVisible = ref(false)
+const profileFormRef = ref()
+const selectedProfileAvatarFile = ref(null)
+const profileAvatarPreviewUrl = ref('')
 
 const previewData = ref(null)
 const previewTitle = ref('')
@@ -575,7 +638,20 @@ const reviewForm = reactive({
   reviewRemark: ''
 })
 
+const profileForm = reactive({
+  realName: '',
+  phone: '',
+  avatarUrl: ''
+})
+
+const profileRules = {
+  realName: [{ required: true, message: '请输入姓名', trigger: 'blur' }],
+  phone: [{ max: 32, message: '手机号长度不能超过32个字符', trigger: 'blur' }]
+}
+
 const enabledDetectionTypes = computed(() => detectionTypes.value.filter((item) => item.enabled === 1))
+const currentUserInitial = computed(() => (currentUser.value.realName || currentUser.value.username || '用').slice(0, 1))
+const profileAvatarSrc = computed(() => profileAvatarPreviewUrl.value || (profileForm.avatarUrl ? currentUserAvatarSrc.value : ''))
 
 const stats = computed(() => [
   { label: '采样待办', value: samplingTodos.value.length, desc: '待执行和待样品登录任务' },
@@ -613,9 +689,101 @@ function getPushStatusLabel(status) {
 }
 
 async function refreshCurrentUser() {
-  const user = await getMeApi()
+  const user = await fetchMobileProfileApi()
   setUser(user)
   currentUser.value = user
+}
+
+function openProfileDialog() {
+  profileForm.realName = currentUser.value.realName || ''
+  profileForm.phone = currentUser.value.phone || ''
+  profileForm.avatarUrl = currentUser.value.avatarUrl || ''
+  selectedProfileAvatarFile.value = null
+  clearProfileAvatarPreview()
+  profileDialogVisible.value = true
+}
+
+function resetProfileForm() {
+  profileForm.realName = ''
+  profileForm.phone = ''
+  profileForm.avatarUrl = ''
+  selectedProfileAvatarFile.value = null
+  clearProfileAvatarPreview()
+  profileFormRef.value?.clearValidate?.()
+}
+
+async function submitProfileForm() {
+  await profileFormRef.value.validate()
+  savingProfile.value = true
+  try {
+    let avatarUrl = String(profileForm.avatarUrl || '').trim()
+    if (selectedProfileAvatarFile.value) {
+      const uploadResult = await uploadStorageFileApi(selectedProfileAvatarFile.value)
+      avatarUrl = uploadResult.filePath || ''
+    }
+    const nextUser = await updateMobileProfileApi({
+      realName: String(profileForm.realName || '').trim(),
+      phone: String(profileForm.phone || '').trim(),
+      avatarUrl
+    })
+    setUser(nextUser)
+    currentUser.value = nextUser
+    profileDialogVisible.value = false
+    ElMessage.success('资料修改成功')
+  } finally {
+    savingProfile.value = false
+  }
+}
+
+function handleProfileAvatarChange(file) {
+  const rawFile = file.raw
+  if (!rawFile) {
+    return
+  }
+  if (!rawFile.type?.startsWith('image/')) {
+    ElMessage.warning('请选择图片文件作为头像')
+    return
+  }
+  if (rawFile.size > 2 * 1024 * 1024) {
+    ElMessage.warning('头像图片不能超过 2MB')
+    return
+  }
+  selectedProfileAvatarFile.value = rawFile
+  clearProfileAvatarPreview()
+  profileAvatarPreviewUrl.value = URL.createObjectURL(rawFile)
+}
+
+function clearProfileAvatar() {
+  profileForm.avatarUrl = ''
+  selectedProfileAvatarFile.value = null
+  clearProfileAvatarPreview()
+}
+
+function clearProfileAvatarPreview() {
+  if (profileAvatarPreviewUrl.value) {
+    URL.revokeObjectURL(profileAvatarPreviewUrl.value)
+    profileAvatarPreviewUrl.value = ''
+  }
+}
+
+function clearCurrentUserAvatarSrc() {
+  if (currentUserAvatarSrc.value) {
+    URL.revokeObjectURL(currentUserAvatarSrc.value)
+    currentUserAvatarSrc.value = ''
+  }
+}
+
+async function loadCurrentUserAvatar() {
+  clearCurrentUserAvatarSrc()
+  if (!currentUser.value?.avatarUrl) {
+    return
+  }
+  try {
+    const response = await previewStorageFileApi(currentUser.value.avatarUrl)
+    currentUserAvatarSrc.value = URL.createObjectURL(response.data)
+  } catch {
+    currentUserAvatarSrc.value = ''
+  }
 }
 
 async function refreshAll() {
@@ -961,10 +1129,23 @@ function formatStandardRange(min, max, unit) {
   return `无范围${suffix}`
 }
 
-function logout() {
+async function logout() {
+  try {
+    await mobileLogoutApi()
+  } catch {
+    // 令牌过期时也要清理本地状态。
+  }
   clearToken()
   router.push('/mobile/login')
 }
+
+watch(
+  () => currentUser.value?.avatarUrl,
+  () => {
+    loadCurrentUserAvatar()
+  },
+  { immediate: true }
+)
 
 onMounted(async () => {
   await refreshAll()
@@ -972,6 +1153,8 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   previewData.value = null
+  clearProfileAvatarPreview()
+  clearCurrentUserAvatarSrc()
 })
 </script>
 
@@ -1027,6 +1210,34 @@ onBeforeUnmount(() => {
   border-top: 1px solid rgba(255, 255, 255, 0.18);
 }
 
+.hero-user__main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.hero-avatar {
+  width: 42px;
+  height: 42px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  overflow: hidden;
+  color: #ffffff;
+  font-weight: 800;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.34);
+}
+
+.hero-avatar img,
+.mobile-avatar-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 .hero-user strong {
   display: block;
   font-size: 16px;
@@ -1042,6 +1253,40 @@ onBeforeUnmount(() => {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.mobile-avatar-editor {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.mobile-avatar-preview {
+  width: 72px;
+  height: 72px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  overflow: hidden;
+  color: #ffffff;
+  font-size: 24px;
+  font-weight: 800;
+  background: linear-gradient(135deg, #1677ff, #36a3ff);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.34);
+}
+
+.mobile-avatar-actions {
+  display: grid;
+  gap: 8px;
+}
+
+.mobile-avatar-actions p {
+  margin: 0;
+  color: var(--text-sub);
+  font-size: 12px;
+  line-height: 1.6;
 }
 
 .mobile-stats {
@@ -1322,6 +1567,10 @@ onBeforeUnmount(() => {
   .section-headline {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .hero-actions {
+    justify-content: flex-start;
   }
 
   .section-tip {
