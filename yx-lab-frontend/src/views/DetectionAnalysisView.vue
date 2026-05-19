@@ -165,16 +165,16 @@
             <strong>{{ resultForm.methodName || '-' }}</strong>
           </div>
           <div class="result-meta-card">
-            <span>检测步骤</span>
-            <strong>{{ resultForm.methodBasis || '-' }}</strong>
+            <span>参考范围</span>
+            <strong>{{ resultForm.referenceStandard || '-' }}</strong>
           </div>
           <div class="result-meta-card">
             <span>标准范围</span>
-            <strong>{{ formatStandardRange(resultForm.standardMin, resultForm.standardMax, resultForm.unit) }}</strong>
+            <strong>{{ formatStandardRange(resultForm.standardMin, resultForm.standardMax) }}</strong>
           </div>
           <div class="result-meta-card">
-            <span>参考范围</span>
-            <strong>{{ resultForm.referenceStandard || '-' }}</strong>
+            <span>单位</span>
+            <strong>{{ resultForm.unit || '-' }}</strong>
           </div>
           <div class="result-meta-card">
             <span>子流程状态</span>
@@ -187,22 +187,29 @@
         </div>
 
         <el-form label-position="top" class="result-dialog__form">
+          <div class="result-step-panel">
+            <span>检测步骤</span>
+            <strong>{{ resultForm.methodBasis || '-' }}</strong>
+          </div>
           <el-form-item label="检测值">
-            <span v-if="resultDialogReadonly" class="result-fixed-value">{{ resultForm.resultValue ?? '-' }}</span>
-            <el-input-number
-              v-else
-              v-model="resultForm.resultValue"
-              :precision="4"
-              :step="0.01"
-              controls-position="right"
-              style="width: 100%"
-            />
+            <div class="result-value-field">
+              <span v-if="resultDialogReadonly" class="result-fixed-value">{{ resultForm.resultValue ?? '-' }}</span>
+              <el-input-number
+                v-else
+                v-model="resultForm.resultValue"
+                :precision="4"
+                :step="0.01"
+                controls-position="right"
+                class="result-value-input"
+              />
+              <span v-if="resultUnitVisible" class="result-value-unit">{{ resultForm.unit }}</span>
+            </div>
           </el-form-item>
-          <el-form-item label="异常说明">
+          <el-form-item label="异常说明" class="result-remark-item">
             <el-input
               v-model="resultForm.abnormalRemark"
               type="textarea"
-              :rows="4"
+              :rows="1"
               :readonly="resultDialogReadonly"
               placeholder="如有异常项，可补充现场化验情况、复核说明或异常原因"
             />
@@ -363,6 +370,11 @@ const itemStatusOptions = computed(() => Object.entries(detectionStatusLabelMap)
 const resultDialogReadonly = computed(() => ![WAIT_DETECT_STATUS, rejectedDetectionStatus].includes(resultForm.itemStatus))
 
 const resultDialogTitle = computed(() => resultDialogReadonly.value ? '检测结果查看' : '检测结果录入')
+
+const resultUnitVisible = computed(() => {
+  const unit = String(resultForm.unit || '').trim()
+  return Boolean(unit && unit !== '-')
+})
 
 function handleStatClick(key) {
   const nextStatus = statusKeyMap[key] ?? ''
@@ -648,8 +660,59 @@ onMounted(async () => {
   font-weight: 600;
 }
 
+.result-step-panel {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 12px;
+  padding: 14px 16px;
+  border: 1px solid;
+  border-radius: 12px;
+  border-color: color-mix(in srgb, var(--brand) 28%, #ffffff 72%);
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--brand) 10%, #ffffff 90%), #ffffff 58%),
+    var(--bg-panel-soft);
+}
+
+.result-step-panel span {
+  color: color-mix(in srgb, var(--brand) 70%, var(--text-sub) 30%);
+  font-size: 13px;
+}
+
+.result-step-panel strong {
+  color: var(--text-main);
+  font-size: 15px;
+  line-height: 1.75;
+  font-weight: 600;
+}
+
 .result-dialog__form {
   margin-top: 2px;
+}
+
+.result-value-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.result-value-input {
+  width: 220px;
+  max-width: 100%;
+}
+
+.result-value-unit {
+  color: var(--text-main);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 32px;
+  white-space: nowrap;
+}
+
+.result-remark-item :deep(.el-textarea__inner) {
+  min-height: 34px !important;
+  padding-top: 6px;
+  padding-bottom: 6px;
+  resize: none;
 }
 
 .result-fixed-value {

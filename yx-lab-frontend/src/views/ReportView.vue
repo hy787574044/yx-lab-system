@@ -104,19 +104,6 @@
               {{ row.publishedTime || '-' }}
             </template>
           </el-table-column>
-          <el-table-column label="推送状态" width="120">
-            <template #default="{ row }">
-              <span class="status-chip" :class="getPushStatusClass(row.pushStatus)">
-                {{ getPushStatusLabel(row.pushStatus) }}
-              </span>
-            </template>
-          </el-table-column>
-          <el-table-column prop="lastPushTime" label="最近推送时间" width="170" />
-          <el-table-column prop="lastPushMessage" label="推送结果" min-width="240" show-overflow-tooltip>
-            <template #default="{ row }">
-              {{ row.lastPushMessage || '-' }}
-            </template>
-          </el-table-column>
           <el-table-column label="内容摘要" min-width="220" show-overflow-tooltip>
             <template #default="{ row }">
               {{ translateWorkflowText(row.contentSnapshot) || '-' }}
@@ -222,13 +209,11 @@ import {
   getEnumLabel,
   getStatusClass,
   monthlyReportType,
-  pushStatusLabelMap,
   publishedReportStatus,
   reportStatusLabelMap,
   reportStatusOptions,
   reportTypeLabelMap,
   reportTypeOptions,
-  successPushStatus,
   translateWorkflowText
 } from '../utils/labEnums'
 
@@ -269,12 +254,6 @@ const stats = computed(() => [
     label: '已发布',
     value: reports.value.filter((item) => item.reportStatus === publishedReportStatus).length,
     desc: '当前页已进入正式发布状态的报告'
-  },
-  {
-    key: 'pushed',
-    label: '已推送',
-    value: reports.value.filter((item) => item.pushStatus === successPushStatus).length,
-    desc: '当前页已完成推送留痕的报告'
   }
 ])
 
@@ -285,22 +264,11 @@ const visibleReports = computed(() => {
   if (activeStatKey.value === 'published') {
     return reports.value.filter((item) => item.reportStatus === publishedReportStatus)
   }
-  if (activeStatKey.value === 'pushed') {
-    return reports.value.filter((item) => item.pushStatus === successPushStatus)
-  }
   return reports.value
 })
 
 function handleStatClick(key) {
   activeStatKey.value = key === activeStatKey.value ? 'all' : key
-}
-
-function getPushStatusLabel(status) {
-  return getEnumLabel(pushStatusLabelMap, status)
-}
-
-function getPushStatusClass(status) {
-  return getStatusClass('pushStatus', status)
 }
 
 function handleSearch() {

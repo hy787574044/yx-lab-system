@@ -78,9 +78,6 @@ public class ReportController {
                         ExcelExportUtil.column("生成时间", LabReport::getGeneratedTime),
                         ExcelExportUtil.column("发布人", LabReport::getPublishedByName),
                         ExcelExportUtil.column("发布时间", LabReport::getPublishedTime),
-                        ExcelExportUtil.column("推送状态", item -> LabWorkflowConstants.getPushStatusLabel(item.getPushStatus())),
-                        ExcelExportUtil.column("最近推送时间", LabReport::getLastPushTime),
-                        ExcelExportUtil.column("推送结果", item -> LabWorkflowConstants.translateWorkflowText(item.getLastPushMessage())),
                         ExcelExportUtil.column("内容摘要", item -> LabWorkflowConstants.translateWorkflowText(item.getContentSnapshot()))
                 ));
     }
