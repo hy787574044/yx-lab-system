@@ -144,9 +144,10 @@
 
     <el-dialog
       v-model="subflowDialogVisible"
-      class="detection-subflow-dialog"
+      :class="['detection-subflow-dialog', { 'detection-subflow-dialog--shifted': detectorAssignDialogVisible }]"
       title="检测项明细"
-      width="960px"
+      :style="subflowDialogStyle"
+      :width="detectorAssignDialogVisible ? '760px' : '960px'"
       destroy-on-close
       @closed="resetSubflowDialog"
     >
@@ -185,69 +186,111 @@
             </el-button>
           </div>
 
-          <div class="subflow-list subflow-list--single">
-            <article
-              v-for="item in currentSubflowItems"
-              :key="item.id"
-              class="subflow-card"
-            >
-              <div class="subflow-card__head">
-                <div>
+          <div v-if="canAssignRow(currentSubflowRecord)" class="subflow-batch-panel">
+            <div class="subflow-batch-panel__head">
+              <div>
+                <strong>检测参数列表</strong>
+                <p>可单选或多选检测参数，勾选后右侧会自动弹出检测人员列表。</p>
+              </div>
+              <div class="subflow-batch-panel__actions">
+                <span v-if="selectedAssignableItems.length" class="subflow-batch-panel__count">
+                  已选 {{ selectedAssignableItems.length }} 项
+                </span>
+                <el-button link type="primary" @click="selectAllAssignableSubflowItems">全选可分配</el-button>
+                <el-button link @click="clearSelectedSubflowItems">清空已选</el-button>
+              </div>
+            </div>
+
+            <div class="subflow-pick-list">
+              <label
+                v-for="item in assignableSubflowItems"
+                :key="`pick-${item.id}`"
+                :class="['subflow-pick-item', { 'is-selected': isSubflowItemSelected(item.id) }]"
+              >
+                <el-checkbox
+                  :model-value="isSubflowItemSelected(item.id)"
+                  @change="toggleSubflowItemSelected(item.id, $event)"
+                />
+                <div class="subflow-pick-item__body">
                   <strong>{{ item.parameterName }}</strong>
                   <p>{{ item.methodName || '未绑定检测方法' }}</p>
+                  <span>当前检测人员：{{ getAssignedDetectorName(currentSubflowRecord.id, item) }}</span>
                 </div>
                 <span class="status-chip" :class="getItemStatusClass(item.itemStatus)">
                   {{ getItemStatusLabel(item.itemStatus) }}
                 </span>
-              </div>
-
-              <div class="subflow-meta">
-                <span>标准范围：{{ formatStandardRange(item.standardMin, item.standardMax, item.unit) }}</span>
-                <span>参考范围：{{ item.referenceStandard || '-' }}</span>
-                <span>检测步骤：{{ getMethodBasis(item) }}</span>
-              </div>
-
-              <div class="subflow-result">
-                <span class="subflow-result__label">当前结果</span>
-                <span class="status-chip" :class="getItemResultClass(item)">
-                  {{ getItemResultLabel(item) }}
-                </span>
-              </div>
-
-              <div class="subflow-assign">
-                <label>检测员分配</label>
-                <el-select
-                  :model-value="getAssignedDetectorId(currentSubflowRecord.id, item.id)"
-                  :disabled="!canAssignRow(currentSubflowRecord)"
-                  clearable
-                  filterable
-                  placeholder="请选择检测员"
-                  @update:model-value="updateAssignedDetectorId(currentSubflowRecord.id, item.id, $event)"
-                >
-                  <el-option
-                    v-for="option in detectorOptions"
-                    :key="option.id"
-                    :label="option.displayName || option.realName || option.username"
-                    :value="option.id"
-                  />
-                </el-select>
-              </div>
-              <div v-if="canOpenResultDialogItem(item)" class="subflow-card__action">
-                <el-button
-                  :type="isResultEditable(item) ? 'primary' : 'default'"
-                  plain
-                  @click="openResultDialog(currentSubflowRecord, item)"
-                >
-                  {{ getResultActionLabel(item) }}
-                </el-button>
-              </div>
-            </article>
+              </label>
+            </div>
           </div>
+
         </div>
 
         <div v-else class="subflow-empty">
           当前主流程下暂无参数子流程数据。
         </div>
+
+        <Teleport to="body">
+          <aside
+            v-if="detectorAssignDialogVisible && currentSubflowRecord && canAssignRow(currentSubflowRecord)"
+            class="detector-side-panel"
+            :style="detectorPanelStyle"
+          >
+          <div class="detector-side-panel__header">
+            <strong>选择检测人员</strong>
+            <button
+              type="button"
+              class="detector-side-panel__close"
+              @click="detectorAssignDialogVisible = false"
+            >
+              ×
+            </button>
+          </div>
+
+          <div class="detector-assign-dialog">
+            <div class="detector-assign-dialog__summary">
+              <span class="binding-editor__chip">已选参数<strong>{{ selectedAssignableItems.length }}</strong></span>
+              <span class="binding-editor__chip">可选人员<strong>{{ detectorOptions.length }}</strong></span>
+            </div>
+
+            <section class="detector-assign-dialog__picked">
+              <div class="detector-assign-dialog__head">
+                <strong>待分配检测参数</strong>
+                <span>选择人员后会直接回填到上方列表</span>
+              </div>
+              <div class="detector-assign-dialog__tags">
+                <span
+                  v-for="item in selectedAssignableItems"
+                  :key="`assign-${item.id}`"
+                  class="detector-assign-dialog__tag"
+                >
+                  {{ item.parameterName }}
+                </span>
+              </div>
+            </section>
+
+            <section class="detector-assign-dialog__list">
+              <button
+                type="button"
+                class="subflow-detector-card subflow-detector-card--clear"
+                @click="assignSelectedSubflowItems(null)"
+              >
+                <strong>清空分配</strong>
+                <span>将当前已选参数恢复为待分配</span>
+              </button>
+              <button
+                v-for="option in detectorOptions"
+                :key="option.id"
+                type="button"
+                class="subflow-detector-card"
+                @click="assignSelectedSubflowItems(option.id)"
+              >
+                <strong>{{ getDetectorOptionLabel(option) }}</strong>
+                <span>点击后批量分配当前已选参数</span>
+              </button>
+            </section>
+            </div>
+          </aside>
+        </Teleport>
       </div>
     </el-dialog>
 
@@ -343,9 +386,10 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElButton } from 'element-plus/es/components/button/index.mjs'
+import { ElCheckbox } from 'element-plus/es/components/checkbox/index.mjs'
 import { ElDialog } from 'element-plus/es/components/dialog/index.mjs'
 import { ElForm, ElFormItem } from 'element-plus/es/components/form/index.mjs'
 import { ElInput } from 'element-plus/es/components/input/index.mjs'
@@ -380,6 +424,13 @@ import {
   waitDetectDetectionStatus
 } from '../utils/labEnums'
 
+const props = defineProps({
+  forcedScenePath: {
+    type: String,
+    default: ''
+  }
+})
+
 const route = useRoute()
 
 const WAIT_ASSIGN_STATUS = waitAssignDetectionStatus
@@ -403,6 +454,12 @@ const detailLoadingMap = reactive({})
 const assignmentMap = reactive({})
 const subflowDialogVisible = ref(false)
 const currentSubflowRecord = ref(null)
+const selectedSubflowItemIds = ref([])
+const detectorAssignDialogVisible = ref(false)
+const subflowDialogMetrics = reactive({
+  top: null,
+  height: null
+})
 const resultDialogVisible = ref(false)
 const resultSubmitting = ref(false)
 const resultDialogItemId = ref(null)
@@ -458,6 +515,25 @@ function compareByTimeDesc(left, right) {
 }
 
 const sceneMap = {
+  '/detection-split': {
+    key: 'detection-split',
+    title: '检测分样',
+    subtitle: '样品登录后先进入待分配检测流程，再按套餐参数拆分为多个待分配的检测子流程。',
+    tableTitle: '检测流程队列',
+    tableSubtitle: '点击每条主流程后的“查看检测项”，即可查看套餐参数列表并逐条分配检测员。',
+    note: '当前页面重点处理“待分配”和“待检测”两个阶段，分配完成后即可继续进入检测执行。',
+    guide: '建议先在本页完成参数级人员分配，再由检测员按各自分工执行后续检测录入。',
+    defaultStatKey: 'all',
+    emptyText: '暂无检测分样数据',
+    allowAssign: true,
+    includePendingFallback: true,
+    recordFilter: (item) => [WAIT_ASSIGN_STATUS, WAIT_DETECT_STATUS, reviewPendingDetectionStatus].includes(item.detectionStatus),
+    quickLinks: [
+      { path: '/sample-login', label: '样品登录', desc: '先完成样品登录，再进入检测分样分配检测员' },
+      { path: '/review-result', label: '结果审查', desc: '检测完成提交后进入结果审查闭环' },
+      { path: '/detection-history', label: '历史检测', desc: '查看已完成检测与驳回重检记录' }
+    ]
+  },
   '/detection-analysis': {
     key: 'detection-analysis',
     title: '检测分析',
@@ -519,7 +595,9 @@ const sceneMap = {
   }
 }
 
-const baseScene = computed(() => sceneMap[route.path] || sceneMap['/detection-analysis'])
+const scenePath = computed(() => props.forcedScenePath || route.path)
+
+const baseScene = computed(() => sceneMap[scenePath.value] || sceneMap['/detection-analysis'])
 
 const pendingSampleRecords = computed(() => {
   if (!baseScene.value.includePendingFallback) {
@@ -648,6 +726,51 @@ const currentSubflowLoading = computed(() => {
     return false
   }
   return !!detailLoadingMap[currentSubflowRecord.value.id]
+})
+
+const assignableSubflowItems = computed(() => currentSubflowItems.value.filter((item) => isAssignableSubflowItem(item)))
+
+const selectedAssignableItems = computed(() => {
+  const selectedSet = new Set(selectedSubflowItemIds.value)
+  return assignableSubflowItems.value.filter((item) => selectedSet.has(item.id))
+})
+
+const splitDialogGap = 12
+const splitSubflowDialogWidth = 760
+const splitDetectorPanelWidth = 420
+
+const subflowDialogStyle = computed(() => {
+  if (!detectorAssignDialogVisible.value) {
+    return {}
+  }
+  const style = {
+    left: `calc(50% - ${splitDialogGap}px - ${splitSubflowDialogWidth}px)`,
+    width: `${splitSubflowDialogWidth}px`
+  }
+  if (subflowDialogMetrics.top != null) {
+    style.top = `${subflowDialogMetrics.top}px`
+  }
+  if (subflowDialogMetrics.height != null) {
+    style.height = `${subflowDialogMetrics.height}px`
+  }
+  return style
+})
+
+const detectorPanelStyle = computed(() => {
+  if (!detectorAssignDialogVisible.value) {
+    return {}
+  }
+  const style = {
+    left: `calc(50% + ${splitDialogGap}px)`,
+    width: `${splitDetectorPanelWidth}px`
+  }
+  if (subflowDialogMetrics.top != null) {
+    style.top = `${subflowDialogMetrics.top}px`
+  }
+  if (subflowDialogMetrics.height != null) {
+    style.height = `${subflowDialogMetrics.height}px`
+  }
+  return style
 })
 
 const pagedRecords = computed(() => {
@@ -797,6 +920,10 @@ function canAssignRow(row) {
     && [WAIT_ASSIGN_STATUS, WAIT_DETECT_STATUS].includes(row.detectionStatus)
 }
 
+function isAssignableSubflowItem(item) {
+  return !!item && [WAIT_ASSIGN_STATUS, WAIT_DETECT_STATUS, rejectedDetectionStatus].includes(item.itemStatus)
+}
+
 function canViewRecordResults(row) {
   if (!row || row.__sampleOnly) {
     return false
@@ -918,8 +1045,108 @@ function updateAssignedDetectorId(recordId, itemId, value) {
   assignmentMap[recordId][itemId] = value ?? null
 }
 
+function getDetectorOptionLabel(option) {
+  if (!option) {
+    return '-'
+  }
+  return option.displayName || option.realName || option.username || '-'
+}
+
+function getAssignedDetectorName(recordId, item) {
+  const detectorId = getAssignedDetectorId(recordId, item.id)
+  if (detectorId == null || detectorId === '') {
+    return '待分配'
+  }
+  const option = detectorOptions.value.find((candidate) => String(candidate.id) === String(detectorId))
+  return getDetectorOptionLabel(option)
+}
+
+function isSubflowItemSelected(itemId) {
+  return selectedSubflowItemIds.value.includes(itemId)
+}
+
+function getSubflowDialogElement() {
+  return document.querySelector('.el-dialog.detection-subflow-dialog')
+    || document.querySelector('.detection-subflow-dialog .el-dialog')
+}
+
+function syncSubflowDialogMetrics() {
+  if (typeof window === 'undefined') {
+    return
+  }
+  const dialog = getSubflowDialogElement()
+  if (!dialog) {
+    return
+  }
+  const rect = dialog.getBoundingClientRect()
+  subflowDialogMetrics.top = rect.top
+  subflowDialogMetrics.height = rect.height
+}
+
+async function showDetectorAssignPanel() {
+  syncSubflowDialogMetrics()
+  await nextTick()
+  syncSubflowDialogMetrics()
+  detectorAssignDialogVisible.value = true
+}
+
+function toggleSubflowItemSelected(itemId, checked) {
+  if (checked) {
+    if (!selectedSubflowItemIds.value.includes(itemId)) {
+      selectedSubflowItemIds.value = [...selectedSubflowItemIds.value, itemId]
+    }
+    showDetectorAssignPanel()
+    return
+  }
+  selectedSubflowItemIds.value = selectedSubflowItemIds.value.filter((id) => id !== itemId)
+  if (!selectedSubflowItemIds.value.length) {
+    detectorAssignDialogVisible.value = false
+  }
+}
+
+function selectAllAssignableSubflowItems() {
+  selectedSubflowItemIds.value = assignableSubflowItems.value.map((item) => item.id)
+  if (selectedSubflowItemIds.value.length) {
+    showDetectorAssignPanel()
+  } else {
+    detectorAssignDialogVisible.value = false
+  }
+}
+
+function clearSelectedSubflowItems() {
+  selectedSubflowItemIds.value = []
+  detectorAssignDialogVisible.value = false
+  resetSubflowDialogMetrics()
+}
+
+function resetSubflowDialogMetrics() {
+  subflowDialogMetrics.top = null
+  subflowDialogMetrics.height = null
+}
+
+function assignSelectedSubflowItems(detectorId) {
+  const recordId = currentSubflowRecord.value?.id
+  if (!recordId || !selectedAssignableItems.value.length) {
+    ElMessage.warning('请先勾选需要分配的检测参数')
+    return
+  }
+  selectedAssignableItems.value.forEach((item) => {
+    updateAssignedDetectorId(recordId, item.id, detectorId)
+  })
+  const detectorLabel = detectorId == null
+    ? '未分配'
+    : getDetectorOptionLabel(detectorOptions.value.find((option) => String(option.id) === String(detectorId)))
+  detectorAssignDialogVisible.value = false
+  selectedSubflowItemIds.value = []
+  resetSubflowDialogMetrics()
+  ElMessage.success(`已将所选参数批量设置为${detectorLabel}`)
+}
+
 function resetSubflowDialog() {
   currentSubflowRecord.value = null
+  selectedSubflowItemIds.value = []
+  detectorAssignDialogVisible.value = false
+  resetSubflowDialogMetrics()
 }
 
 function resetResultForm() {
@@ -1062,6 +1289,7 @@ async function openRecordResultDialog(row) {
 
 async function openSubflowDialog(row) {
   currentSubflowRecord.value = row
+  selectedSubflowItemIds.value = []
   subflowDialogVisible.value = true
   if (row?.__sampleOnly) {
     return
@@ -1174,10 +1402,23 @@ async function handleExport() {
 onMounted(async () => {
   syncRouteState()
   await loadData()
+  window.addEventListener('resize', syncSubflowDialogMetrics)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', syncSubflowDialogMetrics)
 })
 
 watch(() => route.fullPath, () => {
   syncRouteState()
+})
+
+watch(detectorAssignDialogVisible, async (visible) => {
+  if (!visible) {
+    return
+  }
+  await nextTick()
+  syncSubflowDialogMetrics()
 })
 </script>
 
@@ -1287,6 +1528,11 @@ watch(() => route.fullPath, () => {
   padding: 8px 6px;
 }
 
+.subflow-panel--dialog {
+  position: relative;
+  overflow: visible;
+}
+
 .subflow-head {
   display: flex;
   justify-content: space-between;
@@ -1363,9 +1609,260 @@ watch(() => route.fullPath, () => {
   font-size: 13px;
 }
 
+.subflow-batch-panel {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid color-mix(in srgb, var(--brand) 12%, #ffffff 88%);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(248, 251, 255, 0.98), rgba(242, 247, 255, 0.94));
+}
+
+.subflow-batch-panel__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.subflow-batch-panel__head strong {
+  display: block;
+  color: var(--text-main);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.subflow-batch-panel__head p {
+  margin: 6px 0 0;
+  color: var(--text-sub);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.subflow-batch-panel__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+
+.subflow-batch-panel__count {
+  color: var(--text-sub);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.subflow-pick-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.subflow-pick-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--line-soft);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.92);
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.subflow-pick-item:hover,
+.subflow-pick-item.is-selected {
+  border-color: color-mix(in srgb, var(--brand) 34%, #ffffff 66%);
+  box-shadow: var(--shadow-sm);
+}
+
+.subflow-pick-item.is-selected {
+  transform: translateY(-1px);
+}
+
+.subflow-pick-item__body {
+  min-width: 0;
+}
+
+.subflow-pick-item__body strong {
+  display: block;
+  color: var(--text-main);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.subflow-pick-item__body p,
+.subflow-pick-item__body span {
+  display: block;
+  margin: 4px 0 0;
+  color: var(--text-sub);
+  font-size: 13px;
+  line-height: 1.6;
+  word-break: break-word;
+}
+
+.detector-assign-dialog {
+  display: grid;
+  gap: 12px;
+}
+
+.detector-side-panel {
+  margin-top: 16px;
+  padding: 18px;
+  border: 1px solid color-mix(in srgb, var(--brand) 12%, #ffffff 88%);
+  border-radius: 22px;
+  background: #ffffff;
+  box-shadow: var(--shadow-lg);
+  width: 420px;
+}
+
+.detector-side-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid color-mix(in srgb, var(--brand) 14%, #ffffff 86%);
+}
+
+.detector-side-panel__header strong {
+  color: var(--text-main);
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.detector-side-panel__close {
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-sub);
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.detector-side-panel__close:hover {
+  background: color-mix(in srgb, var(--brand) 8%, #ffffff 92%);
+  color: var(--brand);
+}
+
+.detector-assign-dialog__summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.detector-assign-dialog__picked {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--line-soft);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.detector-assign-dialog__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.detector-assign-dialog__head strong {
+  color: var(--text-main);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.detector-assign-dialog__head span {
+  color: var(--text-sub);
+  font-size: 12px;
+  line-height: 1.6;
+  text-align: right;
+}
+
+.detector-assign-dialog__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.detector-assign-dialog__tag {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--brand) 8%, #ffffff 92%);
+  border: 1px solid color-mix(in srgb, var(--brand) 16%, #ffffff 84%);
+  color: var(--text-main);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.detector-assign-dialog__list {
+  display: grid;
+  gap: 10px;
+}
+
+.subflow-detector-card {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--line-soft);
+  border-radius: 14px;
+  background: #ffffff;
+  display: grid;
+  gap: 2px;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.subflow-detector-card strong {
+  display: block;
+  color: var(--text-main);
+  font-size: 14px;
+  line-height: 1.5;
+  text-align: left;
+}
+
+.subflow-detector-card span {
+  margin: 4px 0 0;
+  color: var(--text-sub);
+  font-size: 12px;
+  line-height: 1.6;
+  text-align: left;
+}
+
+
+.subflow-detector-card:hover {
+  border-color: color-mix(in srgb, var(--brand) 34%, #ffffff 66%);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
+}
+
+.subflow-detector-card--clear {
+  background: color-mix(in srgb, #f59e0b 8%, #ffffff 92%);
+}
+
 .subflow-assign {
   display: grid;
   gap: 8px;
+}
+
+.subflow-assign__value {
+  min-height: 40px;
+  padding: 9px 12px;
+  border: 1px solid var(--line-soft);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.88);
+  color: var(--text-main);
+  font-size: 13px;
+  line-height: 1.6;
 }
 
 .subflow-card__action {
@@ -1422,14 +1919,42 @@ watch(() => route.fullPath, () => {
   margin-top: 4px;
 }
 
+:deep(.el-dialog.detection-subflow-dialog),
 :deep(.detection-subflow-dialog .el-dialog) {
   max-width: min(960px, calc(100vw - 64px));
+  overflow: visible;
+  transition: width 0.22s ease, left 0.22s ease, transform 0.22s ease;
 }
 
+:deep(.el-dialog.detection-subflow-dialog .el-dialog__body),
 :deep(.detection-subflow-dialog .el-dialog__body) {
   padding-top: 18px;
   padding-left: 20px;
   padding-right: 20px;
+  overflow: visible;
+}
+
+@media (min-width: 960px) {
+  :deep(.el-dialog.detection-subflow-dialog--shifted),
+  :deep(.detection-subflow-dialog--shifted .el-dialog) {
+    position: fixed;
+    left: calc(50% - 12px - 760px);
+    right: auto !important;
+    transform: none !important;
+    width: 760px !important;
+    max-width: none !important;
+    margin: 0;
+  }
+
+  .detector-side-panel {
+    position: fixed;
+    left: calc(50% + 12px);
+    right: auto;
+    width: 420px;
+    margin-top: 0;
+    z-index: 2300;
+    overflow: auto;
+  }
 }
 
 .subflow-empty {
@@ -1445,7 +1970,8 @@ watch(() => route.fullPath, () => {
 }
 
 @media (max-width: 1100px) {
-  .subflow-list {
+  .subflow-list,
+  .subflow-pick-list {
     grid-template-columns: 1fr;
   }
 }
@@ -1463,6 +1989,19 @@ watch(() => route.fullPath, () => {
   .subflow-head {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .subflow-batch-panel__head,
+  .detector-assign-dialog__head {
+    flex-direction: column;
+  }
+
+  .subflow-batch-panel__actions {
+    white-space: normal;
+  }
+
+  .subflow-pick-item {
+    grid-template-columns: auto minmax(0, 1fr);
   }
 
   .result-dialog__summary {

@@ -108,14 +108,22 @@ export const labMenuGroups = [
     title: '检测管理',
     shortTitle: '检测',
     iconKey: 'DataLine',
-    defaultPath: '/detection-analysis',
+    defaultPath: '/detection-split',
     children: [
+      {
+        path: '/detection-split',
+        title: '检测分样',
+        shortTitle: '检测分样',
+        subtitle: '对已分配样品进行检测分样与结果录入。',
+        componentKey: 'DetectionSplitView',
+        defaultStatKey: 'all'
+      },
       {
         path: '/detection-analysis',
         title: '检测分析',
         shortTitle: '检测分析',
         subtitle: '对已分配样品进行检测分析与结果录入。',
-        componentKey: 'DetectionView',
+        componentKey: 'DetectionAnalysisView',
         defaultStatKey: 'all'
       },
       {
@@ -342,7 +350,7 @@ export const labMenuGroups = [
 export const legacyRedirects = [
   { path: '/monitoring', redirect: '/monitoring-ledger' },
   { path: '/samples', redirect: '/sample-login' },
-  { path: '/detections', redirect: '/detection-analysis' },
+  { path: '/detections', redirect: '/detection-split' },
   { path: '/detection-project', redirect: '/detection-projects' },
   { path: '/detection-parameter-method-bindings', redirect: '/detection-projects' },
   { path: '/detection-method', redirect: '/detection-methods' },

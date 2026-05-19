@@ -14,6 +14,7 @@ import com.yx.lab.common.security.SecurityContext;
 import com.yx.lab.common.util.PageUtils;
 import com.yx.lab.modules.detection.dto.DetectionAssignCommand;
 import com.yx.lab.modules.detection.dto.DetectionItemCommand;
+import com.yx.lab.modules.detection.dto.DetectionItemQuery;
 import com.yx.lab.modules.detection.dto.DetectionRecordQuery;
 import com.yx.lab.modules.detection.dto.DetectionSubmitCommand;
 import com.yx.lab.modules.detection.entity.DetectionItem;
@@ -27,6 +28,8 @@ import com.yx.lab.modules.detection.mapper.DetectionParameterMapper;
 import com.yx.lab.modules.detection.mapper.DetectionRecordMapper;
 import com.yx.lab.modules.detection.mapper.DetectionTypeMapper;
 import com.yx.lab.modules.detection.vo.DetectionRecordDetailVO;
+import com.yx.lab.modules.detection.vo.DetectionItemPageVO;
+import com.yx.lab.modules.detection.vo.DetectionItemSummaryVO;
 import com.yx.lab.modules.review.entity.ReviewRecord;
 import com.yx.lab.modules.review.mapper.ReviewRecordMapper;
 import com.yx.lab.modules.sample.dto.SampleDetectionConfigItem;
@@ -40,6 +43,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -100,6 +104,28 @@ public class DetectionWorkflowService {
                         .orderByDesc(DetectionRecord::getCreatedTime));
         detectionPendingFlowService.fillRecordSummaries(page.getRecords());
         return new PageResult<>(page.getTotal(), page.getRecords());
+    }
+
+    public PageResult<DetectionItemPageVO> itemPage(DetectionItemQuery query) {
+        detectionPendingFlowService.syncPendingFlowsForOpenSamples();
+        Page<DetectionItem> page = detectionItemMapper.selectPage(
+                PageUtils.buildPage(query),
+                buildItemQueryWrapper(query, false));
+        return new PageResult<>(page.getTotal(), buildDetectionItemPageList(page.getRecords()));
+    }
+
+    public DetectionItemSummaryVO itemSummary(DetectionItemQuery query) {
+        detectionPendingFlowService.syncPendingFlowsForOpenSamples();
+        List<DetectionItem> items = detectionItemMapper.selectList(buildItemQueryWrapper(query, true)
+                .select(DetectionItem::getId, DetectionItem::getItemStatus));
+        DetectionItemSummaryVO summary = new DetectionItemSummaryVO();
+        summary.setTotal(items.size());
+        summary.setWaitAssignCount(countItemStatus(items, LabWorkflowConstants.DetectionStatus.WAIT_ASSIGN));
+        summary.setWaitDetectCount(countItemStatus(items, LabWorkflowConstants.DetectionStatus.WAIT_DETECT));
+        summary.setPendingReviewCount(countItemStatus(items, LabWorkflowConstants.DetectionStatus.SUBMITTED));
+        summary.setApprovedCount(countItemStatus(items, LabWorkflowConstants.DetectionStatus.APPROVED));
+        summary.setRejectedCount(countItemStatus(items, LabWorkflowConstants.DetectionStatus.REJECTED));
+        return summary;
     }
 
     /**
@@ -260,6 +286,112 @@ public class DetectionWorkflowService {
         applyRecordDetectorSummary(record, pendingItems, currentUser);
         applyPendingRecordStatus(record, sample, pendingItems, currentUser);
         detectionRecordMapper.updateById(record);
+    }
+
+    private LambdaQueryWrapper<DetectionItem> buildItemQueryWrapper(DetectionItemQuery query, boolean ignoreStatusFilter) {
+        CurrentUser currentUser = SecurityContext.getCurrentUser();
+        String keyword = query == null ? null : StrUtil.trim(query.getKeyword());
+        String itemStatus = query == null ? null : query.getItemStatus();
+        Boolean mine = query == null ? null : query.getMine();
+        List<Long> matchedRecordIds = findMatchedRecordIds(keyword);
+        LambdaQueryWrapper<DetectionItem> wrapper = new LambdaQueryWrapper<DetectionItem>()
+                .eq(StrUtil.isNotBlank(itemStatus) && !ignoreStatusFilter,
+                        DetectionItem::getItemStatus,
+                        itemStatus)
+                .eq(Boolean.TRUE.equals(mine) && currentUser != null,
+                        DetectionItem::getDetectorId,
+                        currentUser == null ? null : currentUser.getUserId())
+                .orderByDesc(DetectionItem::getUpdatedTime)
+                .orderByDesc(DetectionItem::getCreatedTime);
+        if (StrUtil.isBlank(keyword)) {
+            return wrapper;
+        }
+        wrapper.and(condition -> {
+            condition.like(DetectionItem::getParameterName, keyword)
+                    .or()
+                    .like(DetectionItem::getMethodName, keyword)
+                    .or()
+                    .like(DetectionItem::getDetectorName, keyword);
+            if (!matchedRecordIds.isEmpty()) {
+                condition.or().in(DetectionItem::getRecordId, matchedRecordIds);
+            }
+        });
+        return wrapper;
+    }
+
+    private List<Long> findMatchedRecordIds(String keyword) {
+        if (StrUtil.isBlank(keyword)) {
+            return Collections.emptyList();
+        }
+        return detectionRecordMapper.selectList(new LambdaQueryWrapper<DetectionRecord>()
+                        .select(DetectionRecord::getId)
+                        .and(wrapper -> wrapper
+                                .like(DetectionRecord::getSampleNo, keyword)
+                                .or()
+                                .like(DetectionRecord::getSealNo, keyword)
+                                .or()
+                                .like(DetectionRecord::getDetectionTypeName, keyword)))
+                .stream()
+                .map(DetectionRecord::getId)
+                .filter(id -> id != null)
+                .distinct()
+                .collect(Collectors.toList());
+    }
+
+    private List<DetectionItemPageVO> buildDetectionItemPageList(List<DetectionItem> items) {
+        if (items == null || items.isEmpty()) {
+            return Collections.emptyList();
+        }
+        fillMethodBasis(items);
+        Map<Long, DetectionRecord> recordMap = loadDetectionRecordMap(items);
+        return items.stream().map(item -> {
+            DetectionRecord record = recordMap.get(item.getRecordId());
+            DetectionItemPageVO vo = new DetectionItemPageVO();
+            vo.setId(item.getId());
+            vo.setRecordId(item.getRecordId());
+            vo.setSampleId(record == null ? null : record.getSampleId());
+            vo.setSampleNo(record == null ? null : record.getSampleNo());
+            vo.setSealNo(record == null ? null : record.getSealNo());
+            vo.setDetectionTypeId(record == null ? null : record.getDetectionTypeId());
+            vo.setDetectionTypeName(record == null ? null : record.getDetectionTypeName());
+            vo.setDetectionTime(record == null ? null : record.getDetectionTime());
+            vo.setParameterId(item.getParameterId());
+            vo.setParameterName(item.getParameterName());
+            vo.setStandardMin(item.getStandardMin());
+            vo.setStandardMax(item.getStandardMax());
+            vo.setResultValue(item.getResultValue());
+            vo.setUnit(item.getUnit());
+            vo.setReferenceStandard(item.getReferenceStandard());
+            vo.setMethodId(item.getMethodId());
+            vo.setMethodName(item.getMethodName());
+            vo.setMethodBasis(item.getMethodBasis());
+            vo.setDetectorId(item.getDetectorId());
+            vo.setDetectorName(item.getDetectorName());
+            vo.setItemStatus(item.getItemStatus());
+            vo.setExceedFlag(item.getExceedFlag());
+            vo.setAbnormalRemark(record == null ? null : record.getAbnormalRemark());
+            vo.setUpdatedTime(item.getUpdatedTime());
+            return vo;
+        }).collect(Collectors.toList());
+    }
+
+    private Map<Long, DetectionRecord> loadDetectionRecordMap(List<DetectionItem> items) {
+        List<Long> recordIds = items.stream()
+                .map(DetectionItem::getRecordId)
+                .filter(id -> id != null)
+                .distinct()
+                .collect(Collectors.toList());
+        if (recordIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        return detectionRecordMapper.selectList(new LambdaQueryWrapper<DetectionRecord>()
+                        .in(DetectionRecord::getId, recordIds))
+                .stream()
+                .collect(Collectors.toMap(DetectionRecord::getId, item -> item, (left, right) -> left));
+    }
+
+    private long countItemStatus(List<DetectionItem> items, String itemStatus) {
+        return items.stream().filter(item -> StrUtil.equals(itemStatus, item.getItemStatus())).count();
     }
 
     private void insertSubmittedRecord(LabSample sample,
