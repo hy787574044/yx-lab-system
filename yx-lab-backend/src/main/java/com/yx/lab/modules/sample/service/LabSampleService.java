@@ -24,6 +24,9 @@ import com.yx.lab.modules.sample.entity.LabSample;
 import com.yx.lab.modules.sample.entity.SamplingTask;
 import com.yx.lab.modules.sample.mapper.LabSampleMapper;
 import com.yx.lab.modules.sample.mapper.SamplingTaskMapper;
+import com.yx.lab.modules.system.entity.LabFlowConfig;
+import com.yx.lab.modules.system.mapper.LabFlowConfigMapper;
+import com.yx.lab.modules.system.service.FlowConfigManagementService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -45,6 +48,8 @@ public class LabSampleService {
     private final DetectionMethodMapper detectionMethodMapper;
 
     private final DetectionPendingFlowService detectionPendingFlowService;
+
+    private final LabFlowConfigMapper labFlowConfigMapper;
 
     private final ObjectMapper objectMapper;
 
@@ -100,6 +105,16 @@ public class LabSampleService {
         // 套餐与参数快照在登录时固化，后续检测流程都以本次登录快照为准。
         DetectionType detectionType = resolveDetectionType(command);
         List<SampleDetectionConfigItem> detectionConfigItems = normalizeDetectionConfigItems(command, detectionType);
+        LabFlowConfig reviewFlow = resolveSelectedFlow(
+                command.getReviewFlowId(),
+                command.getReviewFlowName(),
+                FlowConfigManagementService.FLOW_TYPE_REVIEW,
+                "审核流程");
+        LabFlowConfig publishFlow = resolveSelectedFlow(
+                command.getPublishFlowId(),
+                command.getPublishFlowName(),
+                FlowConfigManagementService.FLOW_TYPE_PUBLISH,
+                "发布流程");
 
         // 封签号是样品与采样任务衔接的关键主键，先统一归一化并做唯一性校验。
         String sealNo = resolveSealNo(commandSealNo, task);
@@ -116,6 +131,10 @@ public class LabSampleService {
         sample.setDetectionTypeId(detectionType == null ? command.getDetectionTypeId() : detectionType.getId());
         sample.setDetectionTypeName(resolveDetectionTypeName(command, detectionType));
         sample.setDetectionConfigSnapshot(serializeDetectionConfigItems(detectionConfigItems));
+        sample.setReviewFlowId(reviewFlow == null ? null : reviewFlow.getId());
+        sample.setReviewFlowName(reviewFlow == null ? null : reviewFlow.getFlowName());
+        sample.setPublishFlowId(publishFlow == null ? null : publishFlow.getId());
+        sample.setPublishFlowName(publishFlow == null ? null : publishFlow.getFlowName());
         sample.setSamplingTime(command.getSamplingTime());
         sample.setSealTime(LocalDateTime.now());
         sample.setSamplerId(resolveSamplerId(command, task, currentUser));
@@ -288,6 +307,32 @@ public class LabSampleService {
             return detectionTypeName;
         }
         return StrUtil.trim(command.getDetectionItems());
+    }
+
+    private LabFlowConfig resolveSelectedFlow(Long flowId, String submittedFlowName, String expectedType, String label) {
+        LabFlowConfig flow = flowId == null ? findDefaultFlow(expectedType) : labFlowConfigMapper.selectById(flowId);
+        if (flow == null) {
+            return null;
+        }
+        if (!expectedType.equals(flow.getFlowType())) {
+            throw new BusinessException(label + "类型不正确，请刷新后重新选择");
+        }
+        if (!Integer.valueOf(1).equals(flow.getStatus())) {
+            throw new BusinessException(label + "已停用，请重新选择");
+        }
+        if (StrUtil.isNotBlank(submittedFlowName) && !StrUtil.equals(StrUtil.trim(submittedFlowName), flow.getFlowName())) {
+            throw new BusinessException(label + "名称与配置不一致，请刷新后重新选择");
+        }
+        return flow;
+    }
+
+    private LabFlowConfig findDefaultFlow(String flowType) {
+        return labFlowConfigMapper.selectOne(new LambdaQueryWrapper<LabFlowConfig>()
+                .eq(LabFlowConfig::getFlowType, flowType)
+                .eq(LabFlowConfig::getStatus, 1)
+                .orderByDesc(LabFlowConfig::getDefaultFlag)
+                .orderByAsc(LabFlowConfig::getFlowName)
+                .last("limit 1"));
     }
 
     private List<SampleDetectionConfigItem> normalizeDetectionConfigItems(SampleLoginCommand command, DetectionType detectionType) {

@@ -733,6 +733,50 @@
               </div>
             </div>
           </el-form-item>
+          <el-form-item label="审核流程">
+            <el-input
+              v-if="isLoginReadonly"
+              :model-value="loginForm.reviewFlowName || '-'"
+              readonly
+            />
+            <el-select
+              v-else
+              v-model="loginForm.reviewFlowId"
+              filterable
+              placeholder="请选择审核流程"
+              style="width: 100%"
+              @change="handleReviewFlowChange"
+            >
+              <el-option
+                v-for="item in reviewFlowOptions"
+                :key="item.id"
+                :label="item.flowName"
+                :value="item.id"
+              />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="发布流程">
+            <el-input
+              v-if="isLoginReadonly"
+              :model-value="loginForm.publishFlowName || '-'"
+              readonly
+            />
+            <el-select
+              v-else
+              v-model="loginForm.publishFlowId"
+              filterable
+              placeholder="请选择发布流程"
+              style="width: 100%"
+              @change="handlePublishFlowChange"
+            >
+              <el-option
+                v-for="item in publishFlowOptions"
+                :key="item.id"
+                :label="item.flowName"
+                :value="item.id"
+              />
+            </el-select>
+          </el-form-item>
           <el-form-item label="采样时间">
             <el-input v-if="isLoginReadonly" :model-value="loginForm.samplingTime || '-'" readonly />
             <el-date-picker
@@ -789,6 +833,7 @@ import {
   fetchDetectionParametersApi,
   fetchMonitoringPointsApi,
   fetchDetectionTypesApi,
+  fetchFlowConfigOptionsApi,
   fetchSamplesApi,
   fetchSamplingPlansApi,
   fetchSamplingTasksApi,
@@ -836,6 +881,8 @@ import {
 } from '../utils/labEnums'
 
 const route = useRoute()
+const FLOW_TYPE_REVIEW = 'REVIEW'
+const FLOW_TYPE_PUBLISH = 'PUBLISH'
 
 const planQuery = reactive({
   keyword: '',
@@ -881,6 +928,8 @@ const samplerLoading = ref(false)
 const detectionProjectOptions = ref([])
 const detectionParameterOptions = ref([])
 const detectionMethodOptions = ref([])
+const reviewFlowOptions = ref([])
+const publishFlowOptions = ref([])
 const loginPreviewTaskLabel = ref('')
 
 const loginForm = reactive({
@@ -893,6 +942,10 @@ const loginForm = reactive({
   detectionTypeId: null,
   detectionTypeName: '',
   detectionConfigItems: [],
+  reviewFlowId: null,
+  reviewFlowName: '',
+  publishFlowId: null,
+  publishFlowName: '',
   samplingTime: '',
   samplerId: null,
   samplerName: '',
@@ -1773,6 +1826,45 @@ async function loadDetectionProjects() {
   detectionMethodOptions.value = Array.isArray(methodResult) ? methodResult : []
 }
 
+async function loadFlowOptions() {
+  if (reviewFlowOptions.value.length && publishFlowOptions.value.length) {
+    return
+  }
+  const [reviewOptions, publishOptions] = await Promise.all([
+    fetchFlowConfigOptionsApi({ flowType: FLOW_TYPE_REVIEW }),
+    fetchFlowConfigOptionsApi({ flowType: FLOW_TYPE_PUBLISH })
+  ])
+  reviewFlowOptions.value = Array.isArray(reviewOptions) ? reviewOptions : []
+  publishFlowOptions.value = Array.isArray(publishOptions) ? publishOptions : []
+}
+
+function findFlowOption(options, flowId) {
+  return options.find((item) => String(item.id) === String(flowId))
+}
+
+function getDefaultFlowOption(options) {
+  return options.find((item) => item.defaultFlag) || options[0] || null
+}
+
+function applyDefaultFlowSelections() {
+  const reviewFlow = getDefaultFlowOption(reviewFlowOptions.value)
+  const publishFlow = getDefaultFlowOption(publishFlowOptions.value)
+  loginForm.reviewFlowId = reviewFlow?.id || null
+  loginForm.reviewFlowName = reviewFlow?.flowName || ''
+  loginForm.publishFlowId = publishFlow?.id || null
+  loginForm.publishFlowName = publishFlow?.flowName || ''
+}
+
+function handleReviewFlowChange(flowId) {
+  const flow = findFlowOption(reviewFlowOptions.value, flowId)
+  loginForm.reviewFlowName = flow?.flowName || ''
+}
+
+function handlePublishFlowChange(flowId) {
+  const flow = findFlowOption(publishFlowOptions.value, flowId)
+  loginForm.publishFlowName = flow?.flowName || ''
+}
+
 function parseDetectionItemsText(value) {
   return String(value || '').trim()
 }
@@ -2089,6 +2181,10 @@ function resetLoginForm() {
   loginForm.detectionTypeId = null
   loginForm.detectionTypeName = ''
   loginForm.detectionConfigItems = []
+  loginForm.reviewFlowId = null
+  loginForm.reviewFlowName = ''
+  loginForm.publishFlowId = null
+  loginForm.publishFlowName = ''
   loginForm.samplingTime = ''
   loginForm.samplerId = null
   loginForm.samplerName = ''
@@ -2102,8 +2198,9 @@ async function openLoginDialog(task = firstLoggableTask.value) {
     ElMessage.warning('当前没有待登录的已完成采样任务')
     return
   }
-  await loadDetectionProjects()
+  await Promise.all([loadDetectionProjects(), loadFlowOptions()])
   resetLoginForm()
+  applyDefaultFlowSelections()
   loginDialogMode.value = 'create'
   applyTaskToLoginForm(task || pendingLoggableTasks.value[0])
   loginDialogVisible.value = true
@@ -2137,6 +2234,10 @@ function applySampleToLoginForm(sample) {
   if (!loginForm.detectionConfigItems.length && loginForm.detectionTypeId) {
     loginForm.detectionConfigItems = buildLoginDetectionConfigItems(getDetectionTypeById(loginForm.detectionTypeId))
   }
+  loginForm.reviewFlowId = sample.reviewFlowId || null
+  loginForm.reviewFlowName = sample.reviewFlowName || ''
+  loginForm.publishFlowId = sample.publishFlowId || null
+  loginForm.publishFlowName = sample.publishFlowName || ''
   loginForm.samplingTime = sample.samplingTime || ''
   loginForm.samplerId = sample.samplerId || null
   loginForm.samplerName = sample.samplerName || ''
@@ -2146,7 +2247,7 @@ function applySampleToLoginForm(sample) {
 }
 
 async function openSampleDetailDialog(sample) {
-  await loadDetectionProjects()
+  await Promise.all([loadDetectionProjects(), loadFlowOptions()])
   resetLoginForm()
   loginDialogMode.value = 'view'
   applySampleToLoginForm(sample)
@@ -2199,6 +2300,10 @@ async function submitSampleLogin() {
     ElMessage.warning('请完整填写样品登录信息')
     return
   }
+  if (!loginForm.reviewFlowId || !loginForm.publishFlowId) {
+    ElMessage.warning('请选择审核流程和发布流程')
+    return
+  }
   if (!loginDetectionConfigRows.value.length || loginDetectionConfigRows.value.some((item) => !item.methodId)) {
     ElMessage.warning('请选择检测套餐对应的检测参数与检测方法')
     return
@@ -2233,7 +2338,7 @@ async function submitSampleLogin() {
 
 onMounted(async () => {
   syncRouteState()
-  await Promise.all([loadPlans(), loadTasks(), loadSamples(), loadDetectionProjects()])
+  await Promise.all([loadPlans(), loadTasks(), loadSamples(), loadDetectionProjects(), loadFlowOptions()])
 })
 
 watch(() => route.fullPath, () => {

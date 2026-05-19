@@ -37,6 +37,14 @@ public class SampleLoginCommand {
 
     private List<SampleDetectionConfigItem> detectionConfigItems;
 
+    private Long reviewFlowId;
+
+    private String reviewFlowName;
+
+    private Long publishFlowId;
+
+    private String publishFlowName;
+
     @NotNull(message = "采样时间不能为空")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime samplingTime;

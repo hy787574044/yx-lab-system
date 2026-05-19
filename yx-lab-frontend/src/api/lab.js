@@ -625,6 +625,14 @@ export const updateSystemRoleApi = (id, data) => request.post(`/api/system/roles
  * @returns {Promise<any>} 删除结果。
  */
 export const deleteSystemRoleApi = (id) => request.post(`/api/system/roles/${id}/delete`)
+export const fetchFlowConfigsApi = (params) => request.get('/api/system/flowConfigs', { params })
+export const fetchFlowConfigOptionsApi = (params) => request.get('/api/system/flowConfigs/options', { params })
+export const createFlowConfigApi = (data) => request.post('/api/system/flowConfigs', data)
+export const updateFlowConfigApi = (id, data) => request.post(`/api/system/flowConfigs/${id}`, data)
+export const saveFlowConfigNodesApi = (id, data) => request.post(`/api/system/flowConfigs/${id}/nodes`, data)
+export const updateFlowConfigStatusApi = (id, data) => request.post(`/api/system/flowConfigs/${id}/status`, data)
+export const setDefaultFlowConfigApi = (id) => request.post(`/api/system/flowConfigs/${id}/default`)
+export const deleteFlowConfigApi = (id) => request.post(`/api/system/flowConfigs/${id}/delete`)
 export const createSystemOrgApi = (data) => request.post('/api/system/orgs', data)
 export const updateSystemOrgApi = (id, data) => request.post(`/api/system/orgs/${id}`, data)
 export const deleteSystemOrgApi = (id) => request.post(`/api/system/orgs/${id}/delete`)

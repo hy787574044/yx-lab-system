@@ -323,6 +323,13 @@ export const labMenuGroups = [
         componentKey: 'SystemManagementView'
       },
       {
+        path: '/system-flow-config',
+        title: '流程配置',
+        shortTitle: '流程配置',
+        subtitle: '提前维护审核流程与发布流程，供样品登录选择使用。',
+        componentKey: 'FlowConfigView'
+      },
+      {
         path: '/detection-projects',
         title: '检测参数',
         shortTitle: '检测参数',

@@ -4,6 +4,7 @@ import com.yx.lab.common.model.ApiResponse;
 import com.yx.lab.common.model.PageResult;
 import com.yx.lab.common.constant.LabWorkflowConstants;
 import com.yx.lab.common.util.ExcelExportUtil;
+import cn.hutool.core.util.StrUtil;
 import com.yx.lab.modules.sample.dto.LabSampleQuery;
 import com.yx.lab.modules.sample.dto.SampleLoginCommand;
 import com.yx.lab.modules.sample.entity.LabSample;
@@ -69,6 +70,8 @@ public class LabSampleController {
                         ExcelExportUtil.column("采样时间", LabSample::getSamplingTime),
                         ExcelExportUtil.column("封签时间", LabSample::getSealTime),
                         ExcelExportUtil.column("采样人员", LabSample::getSamplerName),
+                        ExcelExportUtil.column("审核流程", item -> StrUtil.blankToDefault(item.getReviewFlowName(), "-")),
+                        ExcelExportUtil.column("发布流程", item -> StrUtil.blankToDefault(item.getPublishFlowName(), "-")),
                         ExcelExportUtil.column("保存条件", LabSample::getStorageCondition),
                         ExcelExportUtil.column("结果摘要", item -> LabWorkflowConstants.translateWorkflowText(item.getResultSummary())),
                         ExcelExportUtil.column("备注", LabSample::getRemark),

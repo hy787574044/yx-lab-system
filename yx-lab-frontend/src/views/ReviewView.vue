@@ -267,7 +267,7 @@
           :loading="reviewSubmitting"
           @click="submitReviewDecision"
         >
-          提交审核
+          提交
         </el-button>
       </template>
     </el-dialog>

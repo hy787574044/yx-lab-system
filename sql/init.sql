@@ -103,6 +103,52 @@ CREATE TABLE lab_login_log (
     KEY idx_lab_login_log_login_time (login_time)
 );
 
+DROP TABLE IF EXISTS lab_flow_node;
+DROP TABLE IF EXISTS lab_flow_config;
+CREATE TABLE lab_flow_config (
+    id BIGINT PRIMARY KEY,
+    flow_name VARCHAR(128) NOT NULL,
+    flow_type VARCHAR(32) NOT NULL COMMENT 'REVIEW审核流程，PUBLISH发布流程',
+    scope_name VARCHAR(128) NOT NULL,
+    default_flag TINYINT DEFAULT 0,
+    status TINYINT DEFAULT 1,
+    remark VARCHAR(500),
+    deleted TINYINT DEFAULT 0,
+    created_by BIGINT,
+    created_name VARCHAR(64),
+    created_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_by BIGINT,
+    updated_name VARCHAR(64),
+    updated_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_lab_flow_config_name (flow_name),
+    KEY idx_lab_flow_config_type_status (flow_type, status),
+    KEY idx_lab_flow_config_default (flow_type, default_flag)
+);
+
+CREATE TABLE lab_flow_node (
+    id BIGINT PRIMARY KEY,
+    flow_id BIGINT NOT NULL,
+    node_order INT NOT NULL,
+    node_name VARCHAR(64) NOT NULL,
+    role_name VARCHAR(64) NOT NULL,
+    role_code VARCHAR(64),
+    assignee_id BIGINT,
+    assignee_name VARCHAR(64),
+    required_flag TINYINT DEFAULT 1,
+    reject_mode VARCHAR(32) DEFAULT 'PREVIOUS' COMMENT 'PREVIOUS退回上一步，DETECTION退回检测，TERMINATE流程终止',
+    deleted TINYINT DEFAULT 0,
+    created_by BIGINT,
+    created_name VARCHAR(64),
+    created_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_by BIGINT,
+    updated_name VARCHAR(64),
+    updated_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    KEY idx_lab_flow_node_flow_id (flow_id),
+    KEY idx_lab_flow_node_order (flow_id, node_order),
+    KEY idx_lab_flow_node_role_code (role_code),
+    KEY idx_lab_flow_node_assignee_id (assignee_id)
+);
+
 DROP TABLE IF EXISTS lab_monitoring_point;
 CREATE TABLE lab_monitoring_point (
     id BIGINT PRIMARY KEY,
@@ -193,6 +239,13 @@ CREATE TABLE lab_sample (
     point_name VARCHAR(128) NOT NULL,
     sample_type VARCHAR(32),
     detection_items VARCHAR(1000),
+    detection_type_id BIGINT,
+    detection_type_name VARCHAR(128),
+    detection_config_snapshot TEXT,
+    review_flow_id BIGINT,
+    review_flow_name VARCHAR(128),
+    publish_flow_id BIGINT,
+    publish_flow_name VARCHAR(128),
     sampling_time DATETIME,
     seal_time DATETIME,
     sampler_id BIGINT,
@@ -211,7 +264,9 @@ CREATE TABLE lab_sample (
     updated_name VARCHAR(64),
     updated_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     KEY idx_lab_sample_no (sample_no),
-    KEY idx_lab_sample_seal_no (seal_no)
+    KEY idx_lab_sample_seal_no (seal_no),
+    KEY idx_lab_sample_review_flow_id (review_flow_id),
+    KEY idx_lab_sample_publish_flow_id (publish_flow_id)
 );
 
 DROP TABLE IF EXISTS lab_detection_type;
@@ -545,6 +600,27 @@ VALUES (857, 'report_status', '报告状态字典', '报告管理', '待生成\n
 
 INSERT INTO lab_dict (id, dict_code, dict_name, module_name, item_text, status, remark, deleted, created_name, updated_name)
 VALUES (858, 'cycle_type', '周期类型字典', '基础配置', '每日\n每周\n每月\n每季度', 1, '用于周期计划与自动任务配置', 0, 'system', 'system');
+
+INSERT INTO lab_flow_config (id, flow_name, flow_type, scope_name, default_flag, status, remark, deleted, created_name, updated_name)
+VALUES (9601, '常规三级审核', 'REVIEW', '全部样品', 1, 1, '样品检测完成后进入初审、复审、终审。', 0, 'system', 'system');
+
+INSERT INTO lab_flow_config (id, flow_name, flow_type, scope_name, default_flag, status, remark, deleted, created_name, updated_name)
+VALUES (9602, '报告发布审批', 'PUBLISH', '全部报告', 1, 1, '报告生成后先复核，再确认发布。', 0, 'system', 'system');
+
+INSERT INTO lab_flow_node (id, flow_id, node_order, node_name, role_name, role_code, assignee_id, assignee_name, required_flag, reject_mode, deleted, created_name, updated_name)
+VALUES (9611, 9601, 1, '初审', '审核员', 'REVIEWER', NULL, NULL, 1, 'DETECTION', 0, 'system', 'system');
+
+INSERT INTO lab_flow_node (id, flow_id, node_order, node_name, role_name, role_code, assignee_id, assignee_name, required_flag, reject_mode, deleted, created_name, updated_name)
+VALUES (9612, 9601, 2, '复审', '审核员', 'REVIEWER', NULL, NULL, 1, 'PREVIOUS', 0, 'system', 'system');
+
+INSERT INTO lab_flow_node (id, flow_id, node_order, node_name, role_name, role_code, assignee_id, assignee_name, required_flag, reject_mode, deleted, created_name, updated_name)
+VALUES (9613, 9601, 3, '终审', '审核员', 'REVIEWER', NULL, NULL, 1, 'PREVIOUS', 0, 'system', 'system');
+
+INSERT INTO lab_flow_node (id, flow_id, node_order, node_name, role_name, role_code, assignee_id, assignee_name, required_flag, reject_mode, deleted, created_name, updated_name)
+VALUES (9621, 9602, 1, '报告复核', '报告员', 'REPORTER', NULL, NULL, 1, 'PREVIOUS', 0, 'system', 'system');
+
+INSERT INTO lab_flow_node (id, flow_id, node_order, node_name, role_name, role_code, assignee_id, assignee_name, required_flag, reject_mode, deleted, created_name, updated_name)
+VALUES (9622, 9602, 2, '发布确认', '报告员', 'REPORTER', NULL, NULL, 1, 'TERMINATE', 0, 'system', 'system');
 
 INSERT INTO lab_user (id, username, password, real_name, role_code, phone, status, deleted, created_name, updated_name)
 VALUES (1001, 'admin', 'e86f78a8a3caf0b60d8e74e5942aa6d86dc150cd3c03338aef25b7d2d7e3acc7', '系统管理员', 'ADMIN', '13800000000', 1, 0, 'system', 'system');

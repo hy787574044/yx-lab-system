@@ -16,6 +16,7 @@ const componentMap = {
   AssetView: () => import('../views/AssetView.vue'),
   InstrumentMaintenanceView: () => import('../views/InstrumentMaintenanceView.vue'),
   SystemManagementView: () => import('../views/SystemManagementView.vue'),
+  FlowConfigView: () => import('../views/FlowConfigView.vue'),
   StatisticsView: () => import('../views/StatisticsView.vue'),
   FeaturePlaceholderView: () => import('../views/FeaturePlaceholderView.vue')
 }

@@ -58,6 +58,22 @@ public class LabSample extends BaseEntity {
     @TableField("detection_config_snapshot")
     private String detectionConfigSnapshot;
 
+    @Schema(description = "审核流程ID")
+    @TableField("review_flow_id")
+    private Long reviewFlowId;
+
+    @Schema(description = "审核流程名称")
+    @TableField("review_flow_name")
+    private String reviewFlowName;
+
+    @Schema(description = "发布流程ID")
+    @TableField("publish_flow_id")
+    private Long publishFlowId;
+
+    @Schema(description = "发布流程名称")
+    @TableField("publish_flow_name")
+    private String publishFlowName;
+
     @Schema(description = "采样时间")
     @TableField("sampling_time")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
