@@ -86,7 +86,9 @@ public class DetectionWorkflowService {
      * @return 检测主流程分页结果
      */
     public PageResult<DetectionRecord> page(DetectionRecordQuery query) {
-        detectionPendingFlowService.syncPendingFlowsForOpenSamples();
+        if (shouldSyncPendingFlows(query)) {
+            detectionPendingFlowService.syncPendingFlowsForOpenSamples();
+        }
         Page<DetectionRecord> page = detectionRecordMapper.selectPage(
                 PageUtils.buildPage(query),
                 buildRecordQueryWrapper(query, false, true));
@@ -106,11 +108,35 @@ public class DetectionWorkflowService {
     }
 
     public PageResult<DetectionItemPageVO> itemPage(DetectionItemQuery query) {
-        detectionPendingFlowService.syncPendingFlowsForOpenSamples();
+        if (shouldSyncPendingFlows(query)) {
+            detectionPendingFlowService.syncPendingFlowsForOpenSamples();
+        }
         Page<DetectionItem> page = detectionItemMapper.selectPage(
                 PageUtils.buildPage(query),
                 buildItemQueryWrapper(query, false, true));
         return new PageResult<>(page.getTotal(), buildDetectionItemPageList(page.getRecords()));
+    }
+
+    private boolean shouldSyncPendingFlows(DetectionRecordQuery query) {
+        String status = query == null ? null : query.getDetectionStatus();
+        String scope = query == null ? null : query.getScope();
+        if (StrUtil.equals(scope, "detection-split")) {
+            return true;
+        }
+        if (StrUtil.isBlank(status)) {
+            return true;
+        }
+        return LabWorkflowConstants.DetectionStatus.WAIT_ASSIGN.equals(status)
+                || LabWorkflowConstants.DetectionStatus.WAIT_DETECT.equals(status);
+    }
+
+    private boolean shouldSyncPendingFlows(DetectionItemQuery query) {
+        String status = query == null ? null : query.getItemStatus();
+        if (StrUtil.isBlank(status)) {
+            return true;
+        }
+        return LabWorkflowConstants.DetectionStatus.WAIT_ASSIGN.equals(status)
+                || LabWorkflowConstants.DetectionStatus.WAIT_DETECT.equals(status);
     }
 
     public DetectionItemSummaryVO itemSummary(DetectionItemQuery query) {

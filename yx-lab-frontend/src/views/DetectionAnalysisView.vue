@@ -267,6 +267,7 @@ const query = reactive({
 
 const records = ref([])
 const total = ref(0)
+let loadDataVersion = 0
 const summary = reactive({
   total: 0,
   waitAssignCount: 0,
@@ -528,6 +529,7 @@ async function submitDetectionResult() {
 }
 
 async function loadData() {
+  const currentVersion = ++loadDataVersion
   const requestQuery = {
     ...query,
     mine: query.mine === '' ? undefined : query.mine
@@ -536,10 +538,20 @@ async function loadData() {
     keyword: requestQuery.keyword,
     mine: requestQuery.mine
   }
-  const pageResult = await fetchDetectionItemsApi(requestQuery)
-  const summaryResult = await fetchDetectionItemSummaryApi(summaryQuery)
+  const [pageResult, summaryResult] = await Promise.all([
+    fetchDetectionItemsApi(requestQuery),
+    fetchDetectionItemSummaryApi(summaryQuery)
+  ])
+  if (currentVersion !== loadDataVersion) {
+    return
+  }
   records.value = pageResult.records || []
   total.value = Number(pageResult.total || 0)
+  if (!records.value.length && total.value > 0 && query.pageNum > 1) {
+    query.pageNum = 1
+    await loadData()
+    return
+  }
   summary.total = Number(summaryResult.total || 0)
   summary.waitAssignCount = Number(summaryResult.waitAssignCount || 0)
   summary.waitDetectCount = Number(summaryResult.waitDetectCount || 0)

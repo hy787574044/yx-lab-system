@@ -1,5 +1,5 @@
 <template>
-  <div class="content-grid review-page fixed-table-page">
+  <div class="content-grid review-page fixed-table-page" v-loading="loading">
     <section class="glass-panel section-block fixed-table-section">
       <div class="section-head">
         <div>
@@ -284,6 +284,7 @@ import { ElButton } from 'element-plus/es/components/button/index.mjs'
 import { ElDialog } from 'element-plus/es/components/dialog/index.mjs'
 import { ElForm, ElFormItem } from 'element-plus/es/components/form/index.mjs'
 import { ElInput } from 'element-plus/es/components/input/index.mjs'
+import { ElLoadingDirective } from 'element-plus/es/components/loading/index.mjs'
 import { ElMessage } from 'element-plus/es/components/message/index.mjs'
 import { ElOption, ElSelect } from 'element-plus/es/components/select/index.mjs'
 import { ElTable, ElTableColumn } from 'element-plus/es/components/table/index.mjs'
@@ -310,6 +311,7 @@ import {
 } from '../utils/labEnums'
 
 const route = useRoute()
+const vLoading = ElLoadingDirective
 
 const WAIT_ASSIGN_STATUS = waitAssignDetectionStatus
 const WAIT_DETECT_STATUS = waitDetectDetectionStatus
@@ -326,8 +328,10 @@ const pendingDetections = ref([])
 const total = ref(0)
 const pendingTotal = ref(0)
 const activeStatKey = ref('pending')
+const loading = ref(false)
 const reviewDialogVisible = ref(false)
 const reviewSubmitting = ref(false)
+let loadDataVersion = 0
 
 const reviewDialog = reactive({
   detectionRecordId: null,
@@ -510,6 +514,9 @@ const visibleRecords = computed(() => {
 const paginationTotal = computed(() => {
   if (baseScene.value.key === 'review-result' && !query.reviewResult && activeStatKey.value === 'pending') {
     return pendingTotal.value
+  }
+  if (baseScene.value.key === 'review-result' && !query.reviewResult && activeStatKey.value === 'all') {
+    return pendingTotal.value + total.value
   }
   return total.value
 })
@@ -781,46 +788,70 @@ async function submitReviewDecision() {
 }
 
 async function loadData() {
-  const isPendingReviewQueue = baseScene.value.key === 'review-result'
-    && !query.reviewResult
-    && activeStatKey.value === 'pending'
-  const reviewQuery = {
-    ...query,
-    mine: query.mine === '' ? undefined : query.mine
-  }
-  const detectionQuery = {
-    pageNum: isPendingReviewQueue ? query.pageNum : 1,
-    pageSize: isPendingReviewQueue ? query.pageSize : 500,
-    keyword: query.keyword,
-    detectionStatus: reviewPendingDetectionStatus,
-    mine: query.mine === '' ? undefined : query.mine
-  }
-  const [reviewResult, detectionResult] = isPendingReviewQueue
-    ? [{ records: [], total: 0 }, await fetchDetectionsApi(detectionQuery)]
-    : await Promise.all([
-        fetchReviewsApi(reviewQuery),
-        fetchDetectionsApi(detectionQuery)
-      ])
-  const detectionRecords = detectionResult.records || []
-  const detectionMap = detectionRecords.reduce((result, item) => {
-    result[item.id] = item
-    return result
-  }, {})
-  reviewRecords.value = (reviewResult.records || []).map((item) => {
-    const related = detectionMap[item.detectionRecordId] || {}
-    return {
-      ...item,
-      detectionTypeName: item.detectionTypeName || related.detectionTypeName || '-',
-      detectorName: item.detectorName || related.detectorName || '-',
-      parameterCount: item.parameterCount ?? related.parameterCount ?? 0,
-      completedCount: item.completedCount ?? related.completedCount ?? 0
+  const currentVersion = ++loadDataVersion
+  loading.value = true
+  const reviewResultFilter = resolveReviewResultFilter()
+  try {
+    const shouldLoadPendingRows = baseScene.value.key === 'review-result'
+      && !reviewResultFilter
+      && (activeStatKey.value === 'pending' || activeStatKey.value === 'all')
+    const shouldLoadReviewRows = !(baseScene.value.key === 'review-result'
+      && !reviewResultFilter
+      && activeStatKey.value === 'pending')
+    const reviewQuery = {
+      ...query,
+      reviewResult: reviewResultFilter,
+      mine: query.mine === '' ? undefined : query.mine
     }
-  })
-  total.value = toSafeNumber(reviewResult.total)
-  pendingTotal.value = toSafeNumber(detectionResult.total)
-  pendingDetections.value = query.reviewResult
-    ? []
-    : detectionRecords.filter((item) => item.detectionStatus === reviewPendingDetectionStatus)
+    const detectionQuery = {
+      pageNum: query.pageNum,
+      pageSize: query.pageSize,
+      keyword: query.keyword,
+      detectionStatus: reviewPendingDetectionStatus,
+      mine: query.mine === '' ? undefined : query.mine
+    }
+    const [reviewResult, detectionResult] = await Promise.all([
+      shouldLoadReviewRows ? fetchReviewsApi(reviewQuery) : Promise.resolve({ records: [], total: 0 }),
+      shouldLoadPendingRows ? fetchDetectionsApi(detectionQuery) : Promise.resolve({ records: [], total: 0 })
+    ])
+    if (currentVersion !== loadDataVersion) {
+      return
+    }
+    const detectionRecords = detectionResult.records || []
+    reviewRecords.value = (reviewResult.records || []).map(normalizeReviewRecord)
+    total.value = shouldLoadReviewRows ? toSafeNumber(reviewResult.total) : 0
+    pendingTotal.value = shouldLoadPendingRows ? toSafeNumber(detectionResult.total) : 0
+    pendingDetections.value = query.reviewResult
+      ? []
+      : detectionRecords.filter((item) => item.detectionStatus === reviewPendingDetectionStatus)
+  } finally {
+    if (currentVersion === loadDataVersion) {
+      loading.value = false
+    }
+  }
+}
+
+function resolveReviewResultFilter() {
+  if (query.reviewResult) {
+    return query.reviewResult
+  }
+  if (activeStatKey.value === 'approved') {
+    return approvedReviewResult
+  }
+  if (activeStatKey.value === 'rejected') {
+    return rejectedReviewResult
+  }
+  return undefined
+}
+
+function normalizeReviewRecord(item) {
+  return {
+    ...item,
+    detectionTypeName: item.detectionTypeName || '-',
+    detectorName: item.detectorName || '-',
+    parameterCount: item.parameterCount ?? 0,
+    completedCount: item.completedCount ?? 0
+  }
 }
 
 async function handleExport() {
@@ -842,6 +873,7 @@ onMounted(async () => {
 
 watch(() => route.fullPath, () => {
   syncRouteState()
+  loadData()
 })
 </script>
 

@@ -302,10 +302,17 @@
             <div class="toolbar-fields">
               <label class="toolbar-field toolbar-field--medium">
                 <span>关键字</span>
-                <el-input v-model="sceneKeyword" clearable :placeholder="currentScene.keywordPlaceholder" />
+                <el-input
+                  v-model="sceneKeyword"
+                  clearable
+                  :placeholder="currentScene.keywordPlaceholder"
+                  @keyup.enter="handleSceneSearch"
+                />
               </label>
             </div>
             <div class="toolbar-actions">
+              <el-button type="primary" @click="handleSceneSearch">查询</el-button>
+              <el-button @click="resetSceneQuery">重置</el-button>
             </div>
           </div>
         </div>
@@ -331,6 +338,12 @@
             </el-table-column>
           </el-table>
           </div>
+          <TablePagination
+            v-model:current-page="sceneQuery.pageNum"
+            v-model:page-size="sceneQuery.pageSize"
+            :total="sceneTotal"
+            @change="handleScenePageChange"
+          />
         </div>
       </template>
     </section>
@@ -531,6 +544,11 @@ const logQuery = reactive({
   pageSize: DEFAULT_PAGE_SIZE,
   keyword: '',
   sourceType: ''
+})
+
+const sceneQuery = reactive({
+  pageNum: 1,
+  pageSize: DEFAULT_PAGE_SIZE
 })
 
 const dictRows = ref([])
@@ -888,7 +906,7 @@ const visibleRoleRows = computed(() => {
   return roleRows.value
 })
 
-const visibleSceneRows = computed(() => {
+const filteredSceneRows = computed(() => {
   let rows = currentSceneRows.value
   const keyword = normalizeKeyword(sceneKeyword.value)
   if (keyword) {
@@ -1039,6 +1057,15 @@ const currentStats = computed(() => {
   }
 })
 
+const sceneTotal = computed(() => filteredSceneRows.value.length)
+
+const visibleSceneRows = computed(() => {
+  const pageSize = Math.max(1, Number(sceneQuery.pageSize || DEFAULT_PAGE_SIZE))
+  const pageNum = Math.max(1, Number(sceneQuery.pageNum || 1))
+  const start = (pageNum - 1) * pageSize
+  return filteredSceneRows.value.slice(start, start + pageSize)
+})
+
 watch(
   () => route.path,
   async () => {
@@ -1049,7 +1076,23 @@ watch(
     resetUserQueryState()
     resetRoleQueryState()
     resetLogQueryState()
+    resetSceneQueryState()
     await loadPageData()
+  }
+)
+
+watch(sceneKeyword, () => {
+  sceneQuery.pageNum = 1
+})
+
+watch(
+  () => [sceneTotal.value, sceneQuery.pageSize],
+  () => {
+    const pageSize = Math.max(1, Number(sceneQuery.pageSize || DEFAULT_PAGE_SIZE))
+    const maxPage = Math.max(1, Math.ceil(sceneTotal.value / pageSize))
+    if (sceneQuery.pageNum > maxPage) {
+      sceneQuery.pageNum = maxPage
+    }
   }
 )
 
@@ -1199,6 +1242,11 @@ function resetLogQueryState() {
   logQuery.sourceType = ''
 }
 
+function resetSceneQueryState() {
+  sceneQuery.pageNum = 1
+  sceneQuery.pageSize = DEFAULT_PAGE_SIZE
+}
+
 function handleStatClick(key) {
   activeStatKey.value = key
 
@@ -1264,20 +1312,32 @@ function handleStatClick(key) {
     }
     logQuery.pageNum = 1
     loadLogs()
+    return
   }
+
+  sceneQuery.pageNum = 1
 }
 
 async function loadPageData() {
-  await Promise.all([
-    loadUserSummary(),
-    loadOrgOptions(),
-    loadRoleOptions(),
-    loadLogs(),
-    loadDicts(),
-    loadOrgs(),
-    loadUsers(),
-    loadRoles()
-  ])
+  if (isUserScene.value) {
+    await Promise.all([loadUsers(), loadOrgOptions(), loadRoleOptions()])
+    return
+  }
+  if (isOrgScene.value) {
+    await Promise.all([loadOrgs(), loadOrgOptions()])
+    return
+  }
+  if (isDictScene.value) {
+    await loadDicts()
+    return
+  }
+  if (isRoleScene.value) {
+    await loadRoles()
+    return
+  }
+  if (isLogScene.value) {
+    await loadLogs()
+  }
 }
 
 async function handleExportCurrentScene() {
@@ -1501,6 +1561,14 @@ function handleLogSearch() {
   loadLogs()
 }
 
+function handleSceneSearch() {
+  sceneQuery.pageNum = 1
+}
+
+function handleScenePageChange() {
+  // 静态场景数据在前端分页，公共分页组件已同步页码与条数。
+}
+
 function handleLogSourceChange() {
   logQuery.pageNum = 1
   syncLogActiveStatKey()
@@ -1535,6 +1603,12 @@ function resetLogQuery() {
   activeStatKey.value = 'all'
   resetLogQueryState()
   loadLogs()
+}
+
+function resetSceneQuery() {
+  activeStatKey.value = 'all'
+  sceneKeyword.value = ''
+  resetSceneQueryState()
 }
 
 function openDictDialog(row) {

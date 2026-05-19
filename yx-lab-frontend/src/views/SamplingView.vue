@@ -1464,6 +1464,22 @@ async function loadSamples() {
   sampleTotal.value = toSafeNumber(result.total)
 }
 
+async function loadCurrentSceneData() {
+  if (isPlanScene.value) {
+    await loadPlans()
+    return
+  }
+  if (isTaskScene.value) {
+    await loadTasks()
+    return
+  }
+  if (baseScene.value.key === 'sample-login') {
+    await Promise.all([loadTasks(), loadSamples()])
+    return
+  }
+  await loadSamples()
+}
+
 async function handleExportCurrentScene() {
   try {
     if (isPlanScene.value) {
@@ -2338,11 +2354,12 @@ async function submitSampleLogin() {
 
 onMounted(async () => {
   syncRouteState()
-  await Promise.all([loadPlans(), loadTasks(), loadSamples(), loadDetectionProjects(), loadFlowOptions()])
+  await loadCurrentSceneData()
 })
 
 watch(() => route.fullPath, () => {
   syncRouteState()
+  loadCurrentSceneData()
 })
 </script>
 

@@ -65,12 +65,7 @@ public class SystemLogManagementService {
         String keyword = normalizeKeyword(query.getKeyword());
         String sourceType = normalizeSourceType(query.getSourceType());
 
-        List<SystemLogVO> allLogs = new ArrayList<>();
-        allLogs.addAll(buildLoginLogs());
-        allLogs.addAll(buildSampleTraceLogs());
-        allLogs.addAll(buildDetectionLogs());
-        allLogs.addAll(buildReviewLogs());
-        allLogs.addAll(buildPushLogs());
+        List<SystemLogVO> allLogs = buildLogsBySourceType(sourceType);
 
         List<SystemLogVO> keywordMatchedLogs = allLogs.stream()
                 .filter(item -> matchesKeyword(item, keyword))
@@ -96,6 +91,26 @@ public class SystemLogManagementService {
         long total = filteredLogs.size();
         List<SystemLogVO> pageRecords = paginate(filteredLogs, query.getPageNum(), query.getPageSize());
         return new SystemLogPageVO(total, pageRecords, keywordMatchedLogs.size(), loginCount, processCount, pushCount);
+    }
+
+    private List<SystemLogVO> buildLogsBySourceType(String sourceType) {
+        List<SystemLogVO> logs = new ArrayList<>();
+        if (StrUtil.isBlank(sourceType) || SOURCE_TYPE_LOGIN.equals(sourceType)) {
+            logs.addAll(buildLoginLogs());
+        }
+        if (StrUtil.isBlank(sourceType) || SOURCE_TYPE_PROCESS.equals(sourceType) || SOURCE_TYPE_SAMPLE.equals(sourceType)) {
+            logs.addAll(buildSampleTraceLogs());
+        }
+        if (StrUtil.isBlank(sourceType) || SOURCE_TYPE_PROCESS.equals(sourceType) || SOURCE_TYPE_DETECTION.equals(sourceType)) {
+            logs.addAll(buildDetectionLogs());
+        }
+        if (StrUtil.isBlank(sourceType) || SOURCE_TYPE_PROCESS.equals(sourceType) || SOURCE_TYPE_REVIEW.equals(sourceType)) {
+            logs.addAll(buildReviewLogs());
+        }
+        if (StrUtil.isBlank(sourceType) || SOURCE_TYPE_PUSH.equals(sourceType)) {
+            logs.addAll(buildPushLogs());
+        }
+        return logs;
     }
 
     private List<SystemLogVO> buildLoginLogs() {

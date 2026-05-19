@@ -17,7 +17,9 @@ import com.yx.lab.modules.system.vo.OrgOptionVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -55,8 +57,10 @@ public class OrgManagementService {
                         .eq(StrUtil.isNotBlank(query.getOrgType()), LabOrg::getOrgType, StrUtil.trim(query.getOrgType()))
                         .orderByAsc(LabOrg::getOrgCode)
                         .orderByDesc(LabOrg::getCreatedTime));
-        List<LabOrgVO> records = page.getRecords().stream()
-                .map(this::toVO)
+        List<LabOrg> pageRecords = page.getRecords();
+        Map<Long, Long> memberCountMap = loadMemberCountMap(pageRecords);
+        List<LabOrgVO> records = pageRecords.stream()
+                .map(entity -> toVO(entity, memberCountMap.getOrDefault(entity.getId(), 0L)))
                 .collect(Collectors.toList());
         return new PageResult<>(page.getTotal(), records);
     }
@@ -191,6 +195,12 @@ public class OrgManagementService {
     }
 
     private LabOrgVO toVO(LabOrg entity) {
+        Long memberCount = labUserMapper.selectCount(new LambdaQueryWrapper<LabUser>()
+                .eq(LabUser::getOrgId, entity.getId()));
+        return toVO(entity, memberCount);
+    }
+
+    private LabOrgVO toVO(LabOrg entity, Long memberCount) {
         LabOrgVO vo = new LabOrgVO();
         vo.setId(entity.getId());
         vo.setOrgCode(entity.getOrgCode());
@@ -199,12 +209,32 @@ public class OrgManagementService {
         vo.setParentName(entity.getParentName());
         vo.setOrgType(entity.getOrgType());
         vo.setStatus(entity.getStatus());
-        vo.setMemberCount(labUserMapper.selectCount(new LambdaQueryWrapper<LabUser>()
-                .eq(LabUser::getOrgId, entity.getId())));
+        vo.setMemberCount(memberCount == null ? 0L : memberCount);
         vo.setRemark(entity.getRemark());
         vo.setCreatedTime(entity.getCreatedTime());
         vo.setUpdatedTime(entity.getUpdatedTime());
         return vo;
+    }
+
+    private Map<Long, Long> loadMemberCountMap(List<LabOrg> records) {
+        if (records == null || records.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        List<Long> orgIds = records.stream()
+                .map(LabOrg::getId)
+                .filter(id -> id != null)
+                .distinct()
+                .collect(Collectors.toList());
+        if (orgIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        return labUserMapper.selectList(new LambdaQueryWrapper<LabUser>()
+                        .select(LabUser::getOrgId)
+                        .in(LabUser::getOrgId, orgIds))
+                .stream()
+                .map(LabUser::getOrgId)
+                .filter(id -> id != null)
+                .collect(Collectors.groupingBy(id -> id, Collectors.counting()));
     }
 
     private OrgOptionVO toOption(LabOrg entity) {

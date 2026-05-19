@@ -523,6 +523,7 @@ const query = reactive({
 })
 const records = ref([])
 const total = ref(0)
+let loadDataVersion = 0
 const detectorOptions = ref([])
 const detectorOptionsLoaded = ref(false)
 const activeStatKey = ref('all')
@@ -1516,6 +1517,7 @@ function getActiveDetectionStatusFilter() {
 }
 
 async function loadData() {
+  const currentVersion = ++loadDataVersion
   const detectionQuery = {
     ...query,
     scope: baseScene.value.key,
@@ -1527,7 +1529,13 @@ async function loadData() {
     scope: baseScene.value.key,
     mine: query.mine === '' ? undefined : query.mine
   }
-  const detectionResult = await fetchDetectionsApi(detectionQuery)
+  const [detectionResult, summaryResult] = await Promise.all([
+    fetchDetectionsApi(detectionQuery),
+    fetchDetectionRecordSummaryApi(summaryQuery)
+  ])
+  if (currentVersion !== loadDataVersion) {
+    return
+  }
 
   records.value = detectionResult.records || []
   total.value = Number(detectionResult.total || 0)
@@ -1537,7 +1545,6 @@ async function loadData() {
     return
   }
 
-  const summaryResult = await fetchDetectionRecordSummaryApi(summaryQuery)
   summary.total = Number(summaryResult.total || 0)
   summary.waitAssignCount = Number(summaryResult.waitAssignCount || 0)
   summary.waitDetectCount = Number(summaryResult.waitDetectCount || 0)

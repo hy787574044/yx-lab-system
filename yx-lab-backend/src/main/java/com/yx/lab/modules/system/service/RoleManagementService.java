@@ -17,7 +17,9 @@ import com.yx.lab.modules.system.vo.RoleOptionVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -53,8 +55,10 @@ public class RoleManagementService {
                         .eq(StrUtil.isNotBlank(query.getRoleScope()), LabRole::getRoleScope, StrUtil.trim(query.getRoleScope()))
                         .orderByAsc(LabRole::getRoleCode)
                         .orderByDesc(LabRole::getCreatedTime));
-        List<LabRoleVO> records = page.getRecords().stream()
-                .map(this::toVO)
+        List<LabRole> pageRecords = page.getRecords();
+        Map<String, Long> userCountMap = loadUserCountMap(pageRecords);
+        List<LabRoleVO> records = pageRecords.stream()
+                .map(entity -> toVO(entity, userCountMap.getOrDefault(StrUtil.trim(entity.getRoleCode()), 0L)))
                 .collect(Collectors.toList());
         return new PageResult<>(page.getTotal(), records);
     }
@@ -178,18 +182,46 @@ public class RoleManagementService {
     }
 
     private LabRoleVO toVO(LabRole entity) {
+        Long userCount = labUserMapper.selectCount(new LambdaQueryWrapper<LabUser>()
+                .eq(LabUser::getRoleCode, entity.getRoleCode()));
+        return toVO(entity, userCount);
+    }
+
+    private LabRoleVO toVO(LabRole entity, Long userCount) {
         LabRoleVO vo = new LabRoleVO();
         vo.setId(entity.getId());
         vo.setRoleCode(entity.getRoleCode());
         vo.setRoleName(entity.getRoleName());
         vo.setRoleScope(entity.getRoleScope());
         vo.setStatus(entity.getStatus());
-        vo.setUserCount(labUserMapper.selectCount(new LambdaQueryWrapper<LabUser>()
-                .eq(LabUser::getRoleCode, entity.getRoleCode())));
+        vo.setUserCount(userCount == null ? 0L : userCount);
         vo.setRemark(entity.getRemark());
         vo.setCreatedTime(entity.getCreatedTime());
         vo.setUpdatedTime(entity.getUpdatedTime());
         return vo;
+    }
+
+    private Map<String, Long> loadUserCountMap(List<LabRole> records) {
+        if (records == null || records.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        List<String> roleCodes = records.stream()
+                .map(LabRole::getRoleCode)
+                .map(StrUtil::trim)
+                .filter(StrUtil::isNotBlank)
+                .distinct()
+                .collect(Collectors.toList());
+        if (roleCodes.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        return labUserMapper.selectList(new LambdaQueryWrapper<LabUser>()
+                        .select(LabUser::getRoleCode)
+                        .in(LabUser::getRoleCode, roleCodes))
+                .stream()
+                .map(LabUser::getRoleCode)
+                .map(StrUtil::trim)
+                .filter(StrUtil::isNotBlank)
+                .collect(Collectors.groupingBy(roleCode -> roleCode, Collectors.counting()));
     }
 
     private RoleOptionVO toOption(LabRole entity) {
