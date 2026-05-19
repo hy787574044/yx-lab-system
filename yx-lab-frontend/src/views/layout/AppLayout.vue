@@ -114,6 +114,7 @@
             :default-openeds="defaultOpenMenuIds"
             router
             unique-opened
+            :collapse-transition="false"
             class="menu-panel"
           >
             <el-sub-menu
@@ -1128,12 +1129,50 @@ onBeforeUnmount(() => {
   --el-menu-active-color: #ffffff;
 }
 
+:deep(.menu-panel .collapse-transition),
+:deep(.menu-panel .el-collapse-transition-enter-active),
+:deep(.menu-panel .el-collapse-transition-leave-active),
+:deep(.menu-panel .el-collapse-transition-enter-from),
+:deep(.menu-panel .el-collapse-transition-leave-to) {
+  transition: none !important;
+}
+
+:deep(.menu-panel .el-menu),
+:deep(.menu-panel .el-sub-menu),
+:deep(.menu-panel .el-sub-menu__title),
+:deep(.menu-panel .el-menu-item),
+:deep(.menu-panel .el-icon),
+:deep(.menu-panel .el-sub-menu__icon-arrow) {
+  transition: background-color 0.12s ease, color 0.12s ease, border-color 0.12s ease !important;
+}
+
 :deep(.menu-panel .el-sub-menu__title) {
   height: 46px;
   margin: 0 0 6px;
   padding-left: 18px !important;
   color: #ffffff;
   font-weight: 600;
+}
+
+:deep(.menu-panel .el-sub-menu__title .el-icon:not(.el-sub-menu__icon-arrow)) {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  margin-right: 10px;
+}
+
+:deep(.menu-panel .el-sub-menu__icon-arrow) {
+  right: 18px;
+  flex: 0 0 12px;
+  width: 12px;
+  height: 12px;
+  margin-top: -6px;
+  transform-origin: center;
+}
+
+:deep(.menu-panel .el-sub-menu.is-opened > .el-sub-menu__title .el-sub-menu__icon-arrow),
+:deep(.menu-panel .el-sub-menu__icon-arrow) {
+  transition: none !important;
 }
 
 :deep(.menu-panel .el-sub-menu__title:hover) {

@@ -70,7 +70,7 @@
         <div class="table-card__body">
         <el-table
           class="list-table"
-          :data="pagedRecords"
+          :data="records"
           stripe
           row-key="id"
           height="100%"
@@ -136,7 +136,7 @@
         <TablePagination
           v-model:current-page="query.pageNum"
           v-model:page-size="query.pageSize"
-          :total="displayTotal"
+          :total="total"
           @change="loadData"
         />
       </div>
@@ -147,7 +147,7 @@
       :class="['detection-subflow-dialog', { 'detection-subflow-dialog--shifted': detectorAssignDialogVisible }]"
       title="检测项明细"
       :style="subflowDialogStyle"
-      :width="detectorAssignDialogVisible ? '760px' : '960px'"
+      :width="detectorAssignDialogVisible ? `${splitPanelWidth}px` : '1360px'"
       destroy-on-close
       @closed="resetSubflowDialog"
     >
@@ -168,7 +168,7 @@
           正在加载参数子流程...
         </div>
 
-        <div v-else-if="currentSubflowItems.length">
+        <div v-else-if="currentSubflowItems.length" class="subflow-content">
           <div class="subflow-head">
             <div class="subflow-summary">
               <button
@@ -181,13 +181,6 @@
                 {{ item.label }} {{ item.value }}
               </button>
             </div>
-            <el-button
-              v-if="canAssignRow(currentSubflowRecord)"
-              type="primary"
-              @click="saveAssignments(currentSubflowRecord)"
-            >
-              保存人员分配
-            </el-button>
           </div>
 
           <div v-if="canAssignRow(currentSubflowRecord)" class="subflow-batch-panel">
@@ -220,11 +213,22 @@
                   <p>{{ item.methodName || '未绑定检测方法' }}</p>
                   <span>当前检测人员：{{ getAssignedDetectorName(currentSubflowRecord.id, item) }}</span>
                 </div>
-                <span class="status-chip" :class="getItemStatusClass(item.itemStatus)">
-                  {{ getItemStatusLabel(item.itemStatus) }}
+                <span class="status-chip" :class="getSubflowItemStatusClass(currentSubflowRecord.id, item)">
+                  {{ getSubflowItemStatusLabel(currentSubflowRecord.id, item) }}
                 </span>
               </label>
             </div>
+
+          </div>
+
+          <div v-if="canAssignRow(currentSubflowRecord)" class="subflow-submit-footer">
+            <span>完成参数人员选择后，点击提交保存分配结果</span>
+            <el-button
+              type="primary"
+              @click="saveAssignments(currentSubflowRecord)"
+            >
+              提交
+            </el-button>
           </div>
 
           <div v-else class="subflow-readonly-panel">
@@ -235,40 +239,43 @@
               border
               max-height="460"
             >
-              <el-table-column prop="parameterName" label="检测参数" min-width="150" show-overflow-tooltip />
-              <el-table-column prop="methodName" label="检测方法" min-width="180" show-overflow-tooltip>
+              <el-table-column prop="parameterName" label="检测参数" min-width="140" show-overflow-tooltip />
+              <el-table-column prop="methodName" label="检测方法" min-width="170" show-overflow-tooltip>
                 <template #default="{ row }">{{ row.methodName || '-' }}</template>
               </el-table-column>
-              <el-table-column label="检测步骤" min-width="220" show-overflow-tooltip>
+              <el-table-column label="检测步骤" min-width="210" show-overflow-tooltip>
                 <template #default="{ row }">{{ getMethodBasis(row) }}</template>
               </el-table-column>
-              <el-table-column label="检测人员" min-width="120">
+              <el-table-column label="检测人员" width="110">
                 <template #default="{ row }">{{ row.detectorName || '-' }}</template>
               </el-table-column>
-              <el-table-column label="标准范围" min-width="140">
-                <template #default="{ row }">
-                  {{ formatStandardRange(row.standardMin, row.standardMax, row.unit) }}
-                </template>
-              </el-table-column>
-              <el-table-column prop="referenceStandard" label="参考范围" min-width="150" show-overflow-tooltip>
-                <template #default="{ row }">{{ row.referenceStandard || '-' }}</template>
-              </el-table-column>
-              <el-table-column label="检测值" min-width="110">
-                <template #default="{ row }">{{ row.resultValue ?? '-' }}</template>
-              </el-table-column>
-              <el-table-column label="判定结果" width="110" header-cell-class-name="cell-center" class-name="cell-center">
+              <el-table-column label="判定结果" width="100" header-cell-class-name="cell-center" class-name="cell-center">
                 <template #default="{ row }">
                   <span class="status-chip" :class="getItemResultClass(row)">
                     {{ getItemResultLabel(row) }}
                   </span>
                 </template>
               </el-table-column>
-              <el-table-column label="子流程状态" width="120" header-cell-class-name="cell-center" class-name="cell-center">
+              <el-table-column label="子流程状态" width="112" header-cell-class-name="cell-center" class-name="cell-center">
                 <template #default="{ row }">
-                  <span class="status-chip" :class="getItemStatusClass(row.itemStatus)">
-                    {{ getItemStatusLabel(row.itemStatus) }}
+                  <span class="status-chip" :class="getSubflowItemStatusClass(currentSubflowRecord.id, row)">
+                    {{ getSubflowItemStatusLabel(currentSubflowRecord.id, row) }}
                   </span>
                 </template>
+              </el-table-column>
+              <el-table-column label="标准范围" min-width="130">
+                <template #default="{ row }">
+                  {{ formatStandardRange(row.standardMin, row.standardMax) }}
+                </template>
+              </el-table-column>
+              <el-table-column prop="unit" label="单位" width="90">
+                <template #default="{ row }">{{ row.unit || '-' }}</template>
+              </el-table-column>
+              <el-table-column prop="referenceStandard" label="参考范围" min-width="140" show-overflow-tooltip>
+                <template #default="{ row }">{{ row.referenceStandard || '-' }}</template>
+              </el-table-column>
+              <el-table-column label="检测值" width="100">
+                <template #default="{ row }">{{ row.resultValue ?? '-' }}</template>
               </el-table-column>
               <el-table-column label="操作" width="100" fixed="right" header-cell-class-name="cell-center" class-name="cell-center">
                 <template #default="{ row }">
@@ -303,7 +310,7 @@
             <button
               type="button"
               class="detector-side-panel__close"
-              @click="detectorAssignDialogVisible = false"
+              @click="handleCloseDetectorPanel"
             >
               ×
             </button>
@@ -398,13 +405,16 @@
           <el-table-column prop="methodName" label="检测方法" min-width="220" show-overflow-tooltip />
           <el-table-column label="标准范围" min-width="140">
             <template #default="{ row }">
-              {{ formatStandardRange(row.standardMin, row.standardMax, row.unit) }}
+              {{ formatStandardRange(row.standardMin, row.standardMax) }}
             </template>
+          </el-table-column>
+          <el-table-column prop="unit" label="单位" width="90">
+            <template #default="{ row }">{{ row.unit || '-' }}</template>
           </el-table-column>
           <el-table-column prop="referenceStandard" label="参考范围" min-width="160" show-overflow-tooltip>
             <template #default="{ row }">{{ row.referenceStandard || '-' }}</template>
           </el-table-column>
-          <el-table-column label="检测值" min-width="180">
+          <el-table-column label="检测值" width="90">
             <template #default="{ row }">
               <span v-if="resultDialogReadonly">{{ row.resultValue ?? '-' }}</span>
               <el-input-number
@@ -473,9 +483,8 @@ import {
   exportDetectionsApi,
   fetchDetectionDetailApi,
   fetchDetectionDetectorsApi,
-  fetchDetectionMethodsApi,
+  fetchDetectionRecordSummaryApi,
   fetchDetectionsApi,
-  fetchSamplesApi,
   submitDetectionApi
 } from '../api/lab'
 import {
@@ -488,7 +497,6 @@ import {
   getStatusClass,
   rejectedDetectionStatus,
   reviewPendingDetectionStatus,
-  availableDetectionSampleStatuses,
   translateWorkflowText,
   waitAssignDetectionStatus,
   waitDetectDetectionStatus
@@ -505,7 +513,6 @@ const route = useRoute()
 
 const WAIT_ASSIGN_STATUS = waitAssignDetectionStatus
 const WAIT_DETECT_STATUS = waitDetectDetectionStatus
-const MAX_LOAD_SIZE = 500
 
 const query = reactive({
   keyword: '',
@@ -515,10 +522,18 @@ const query = reactive({
   pageSize: DEFAULT_PAGE_SIZE
 })
 const records = ref([])
-const samplePool = ref([])
+const total = ref(0)
 const detectorOptions = ref([])
-const detectionMethodOptions = ref([])
+const detectorOptionsLoaded = ref(false)
 const activeStatKey = ref('all')
+const summary = reactive({
+  total: 0,
+  waitAssignCount: 0,
+  waitDetectCount: 0,
+  pendingReviewCount: 0,
+  approvedCount: 0,
+  rejectedCount: 0
+})
 const detailMap = reactive({})
 const detailLoadingMap = reactive({})
 const assignmentMap = reactive({})
@@ -672,51 +687,25 @@ const scenePath = computed(() => props.forcedScenePath || route.path)
 
 const baseScene = computed(() => sceneMap[scenePath.value] || sceneMap['/detection-analysis'])
 
-const pendingSampleRecords = computed(() => {
-  if (!baseScene.value.includePendingFallback) {
-    return []
-  }
-  if (query.mine === true) {
-    return []
-  }
-  if (query.detectionStatus && query.detectionStatus !== WAIT_ASSIGN_STATUS) {
-    return []
-  }
-  const existingSampleIds = new Set(records.value.map((item) => item.sampleId))
-  return samplePool.value
-    .filter((item) => availableDetectionSampleStatuses.includes(item.sampleStatus))
-    .filter((item) => !existingSampleIds.has(item.id))
-    .map(buildPendingSampleRecord)
-    .sort(compareByTimeDesc)
-})
-
-const sourceRecords = computed(() => {
-  const actualRecords = [...records.value].sort(compareByTimeDesc)
-  if (!baseScene.value.includePendingFallback) {
-    return actualRecords
-  }
-  return [...actualRecords, ...pendingSampleRecords.value].sort(compareByTimeDesc)
-})
-
-const sceneRecords = computed(() => sourceRecords.value.filter((item) => baseScene.value.recordFilter(item)))
+const sceneRecords = computed(() => records.value)
 
 const currentScene = computed(() => ({
   ...baseScene.value,
   tags: [
     {
       label: '待分配',
-      value: sceneRecords.value.filter((item) => item.detectionStatus === WAIT_ASSIGN_STATUS).length,
-      type: sceneRecords.value.some((item) => item.detectionStatus === WAIT_ASSIGN_STATUS) ? 'warning' : 'success'
+      value: summary.waitAssignCount,
+      type: summary.waitAssignCount > 0 ? 'warning' : 'success'
     },
     {
       label: '待检测',
-      value: sceneRecords.value.filter((item) => item.detectionStatus === WAIT_DETECT_STATUS).length,
-      type: sceneRecords.value.some((item) => item.detectionStatus === WAIT_DETECT_STATUS) ? 'info' : 'success'
+      value: summary.waitDetectCount,
+      type: summary.waitDetectCount > 0 ? 'info' : 'success'
     },
     {
       label: '待审查',
-      value: sceneRecords.value.filter((item) => item.detectionStatus === reviewPendingDetectionStatus).length,
-      type: sceneRecords.value.some((item) => item.detectionStatus === reviewPendingDetectionStatus) ? 'danger' : 'success'
+      value: summary.pendingReviewCount,
+      type: summary.pendingReviewCount > 0 ? 'danger' : 'success'
     }
   ]
 }))
@@ -731,37 +720,37 @@ const allStats = computed(() => [
   {
     key: 'all',
     label: baseScene.value.key === 'detection-ledger' ? '台账总量' : '流程总量',
-    value: sceneRecords.value.length,
+    value: summary.total,
     desc: baseScene.value.key === 'detection-ledger' ? '当前检测台账主流程总数' : '当前场景下可见的检测主流程总数'
   },
   {
     key: 'waitAssign',
     label: '待分配',
-    value: sceneRecords.value.filter((item) => item.detectionStatus === WAIT_ASSIGN_STATUS).length,
+    value: summary.waitAssignCount,
     desc: '样品已进入检测分析，但参数子流程尚未完成检测员分配'
   },
   {
     key: 'waitDetect',
     label: '待检测',
-    value: sceneRecords.value.filter((item) => item.detectionStatus === WAIT_DETECT_STATUS).length,
+    value: summary.waitDetectCount,
     desc: '参数子流程已完成检测员分配，等待检测执行'
   },
   {
     key: 'pendingReview',
     label: '待审查',
-    value: sceneRecords.value.filter((item) => item.detectionStatus === reviewPendingDetectionStatus).length,
+    value: summary.pendingReviewCount,
     desc: '检测结果已提交，等待进入审查闭环'
   },
   {
     key: 'approved',
     label: '已通过',
-    value: sceneRecords.value.filter((item) => item.detectionStatus === approvedDetectionStatus).length,
+    value: summary.approvedCount,
     desc: '检测审查已通过，可继续进入报告正式产物环节'
   },
   {
     key: 'rejected',
     label: '已驳回',
-    value: sceneRecords.value.filter((item) => item.detectionStatus === rejectedDetectionStatus).length,
+    value: summary.rejectedCount,
     desc: '检测审查已驳回，样品重新回到重检待办链路'
   }
 ])
@@ -773,27 +762,6 @@ const currentStats = computed(() => {
   const allowedKeys = new Set(baseScene.value.statKeys)
   return allStats.value.filter((item) => allowedKeys.has(item.key))
 })
-
-const filteredRecords = computed(() => {
-  if (activeStatKey.value === 'waitAssign') {
-    return sceneRecords.value.filter((item) => item.detectionStatus === WAIT_ASSIGN_STATUS)
-  }
-  if (activeStatKey.value === 'waitDetect') {
-    return sceneRecords.value.filter((item) => item.detectionStatus === WAIT_DETECT_STATUS)
-  }
-  if (activeStatKey.value === 'pendingReview') {
-    return sceneRecords.value.filter((item) => item.detectionStatus === reviewPendingDetectionStatus)
-  }
-  if (activeStatKey.value === 'approved') {
-    return sceneRecords.value.filter((item) => item.detectionStatus === approvedDetectionStatus)
-  }
-  if (activeStatKey.value === 'rejected') {
-    return sceneRecords.value.filter((item) => item.detectionStatus === rejectedDetectionStatus)
-  }
-  return sceneRecords.value
-})
-
-const displayTotal = computed(() => filteredRecords.value.length)
 
 const currentSubflowItems = computed(() => {
   if (!currentSubflowRecord.value || currentSubflowRecord.value.__sampleOnly) {
@@ -851,22 +819,20 @@ const selectedAssignableItems = computed(() => {
 })
 
 const splitDialogGap = 12
-const splitSubflowDialogWidth = 760
-const splitDetectorPanelWidth = 420
+const splitPanelWidth = 620
+const splitPanelHeight = 620
 
 const subflowDialogStyle = computed(() => {
   if (!detectorAssignDialogVisible.value) {
     return {}
   }
   const style = {
-    left: `calc(50% - ${splitDialogGap}px - ${splitSubflowDialogWidth}px)`,
-    width: `${splitSubflowDialogWidth}px`
+    left: `calc(50% - ${splitDialogGap}px - ${splitPanelWidth}px)`,
+    width: `${splitPanelWidth}px`,
+    height: `${splitPanelHeight}px`
   }
   if (subflowDialogMetrics.top != null) {
     style.top = `${subflowDialogMetrics.top}px`
-  }
-  if (subflowDialogMetrics.height != null) {
-    style.height = `${subflowDialogMetrics.height}px`
   }
   return style
 })
@@ -877,20 +843,13 @@ const detectorPanelStyle = computed(() => {
   }
   const style = {
     left: `calc(50% + ${splitDialogGap}px)`,
-    width: `${splitDetectorPanelWidth}px`
+    width: `${splitPanelWidth}px`,
+    height: `${splitPanelHeight}px`
   }
   if (subflowDialogMetrics.top != null) {
     style.top = `${subflowDialogMetrics.top}px`
   }
-  if (subflowDialogMetrics.height != null) {
-    style.height = `${subflowDialogMetrics.height}px`
-  }
   return style
-})
-
-const pagedRecords = computed(() => {
-  const start = (query.pageNum - 1) * query.pageSize
-  return filteredRecords.value.slice(start, start + query.pageSize)
 })
 
 const resultDialogReadonly = computed(() => {
@@ -937,6 +896,20 @@ function getItemStatusClass(status) {
   return getDetectionStatusClass(status)
 }
 
+function getSubflowItemStatusLabel(recordId, item) {
+  if (item?.itemStatus === WAIT_ASSIGN_STATUS && isSubflowItemAssigned(recordId, item)) {
+    return '待提交'
+  }
+  return getItemStatusLabel(item?.itemStatus)
+}
+
+function getSubflowItemStatusClass(recordId, item) {
+  if (item?.itemStatus === WAIT_ASSIGN_STATUS && isSubflowItemAssigned(recordId, item)) {
+    return 'info'
+  }
+  return getItemStatusClass(item?.itemStatus)
+}
+
 function getDetectionResultLabel(row) {
   const total = Number(row?.parameterCount || 0)
   const completed = Number(row?.completedCount || 0)
@@ -967,6 +940,7 @@ function getDetectionResultClass(row) {
 function handleStatClick(key) {
   activeStatKey.value = activeStatKey.value === key ? baseScene.value.defaultStatKey : key
   query.pageNum = 1
+  loadData()
 }
 
 function handleSearch() {
@@ -1021,12 +995,7 @@ function getMethodBasis(item) {
   if (item?.methodBasis) {
     return item.methodBasis
   }
-  const methodId = item?.methodId == null ? '' : String(item.methodId)
-  if (!methodId) {
-    return '-'
-  }
-  const method = detectionMethodOptions.value.find((option) => String(option.id) === methodId)
-  return method?.methodBasis || '-'
+  return '-'
 }
 
 function canAssignRow(row) {
@@ -1220,10 +1189,28 @@ function syncSubflowDialogMetrics() {
 }
 
 async function showDetectorAssignPanel() {
+  await loadDetectorOptions()
   syncSubflowDialogMetrics()
   await nextTick()
   syncSubflowDialogMetrics()
   detectorAssignDialogVisible.value = true
+}
+
+async function loadDetectorOptions(force = false) {
+  if (!force && detectorOptionsLoaded.value) {
+    return
+  }
+  const result = await fetchDetectionDetectorsApi()
+  detectorOptions.value = (result || []).map((item) => ({
+    ...item,
+    id: item.userId ?? item.id
+  }))
+  detectorOptionsLoaded.value = true
+}
+
+function handleCloseDetectorPanel() {
+  detectorAssignDialogVisible.value = false
+  pendingDetectorId.value = undefined
 }
 
 function toggleSubflowItemSelected(itemId, checked) {
@@ -1235,25 +1222,18 @@ function toggleSubflowItemSelected(itemId, checked) {
     return
   }
   selectedSubflowItemIds.value = selectedSubflowItemIds.value.filter((id) => id !== itemId)
-  if (!selectedSubflowItemIds.value.length) {
-    detectorAssignDialogVisible.value = false
-  }
 }
 
 function selectAllAssignableSubflowItems() {
   selectedSubflowItemIds.value = assignableSubflowItems.value.map((item) => item.id)
   if (selectedSubflowItemIds.value.length) {
     showDetectorAssignPanel()
-  } else {
-    detectorAssignDialogVisible.value = false
   }
 }
 
 function clearSelectedSubflowItems() {
   selectedSubflowItemIds.value = []
   pendingDetectorId.value = undefined
-  detectorAssignDialogVisible.value = false
-  resetSubflowDialogMetrics()
 }
 
 function resetSubflowDialogMetrics() {
@@ -1453,11 +1433,15 @@ async function openRecordResultDialog(row) {
 async function openSubflowDialog(row) {
   currentSubflowRecord.value = row
   selectedSubflowItemIds.value = []
+  detectorAssignDialogVisible.value = false
   subflowDialogVisible.value = true
   if (row?.__sampleOnly) {
     return
   }
   await loadRecordDetail(row.id)
+  if (canAssignRow(row)) {
+    showDetectorAssignPanel()
+  }
 }
 
 async function saveAssignments(row) {
@@ -1472,7 +1456,7 @@ async function saveAssignments(row) {
       detectorId: getAssignedDetectorId(row.id, item.id)
     }))
   })
-  ElMessage.success('检测员分配已保存')
+  ElMessage.success('检测员分配已提交')
   await Promise.all([
     loadRecordDetail(row.id, true),
     loadData()
@@ -1520,41 +1504,54 @@ async function submitDetectionResult() {
   }
 }
 
+function getActiveDetectionStatusFilter() {
+  const statStatusMap = {
+    waitAssign: WAIT_ASSIGN_STATUS,
+    waitDetect: WAIT_DETECT_STATUS,
+    pendingReview: reviewPendingDetectionStatus,
+    approved: approvedDetectionStatus,
+    rejected: rejectedDetectionStatus
+  }
+  return statStatusMap[activeStatKey.value] || query.detectionStatus || undefined
+}
+
 async function loadData() {
   const detectionQuery = {
     ...query,
+    scope: baseScene.value.key,
+    detectionStatus: getActiveDetectionStatusFilter(),
     mine: query.mine === '' ? undefined : query.mine
   }
-  const sampleQuery = {
-    pageNum: 1,
-    pageSize: MAX_LOAD_SIZE,
-    keyword: query.keyword
+  const summaryQuery = {
+    keyword: query.keyword,
+    scope: baseScene.value.key,
+    mine: query.mine === '' ? undefined : query.mine
   }
-  const [detectionResult, sampleResult, detectorResult, detectionMethodResult] = await Promise.all([
-    fetchDetectionsApi({ ...detectionQuery, pageNum: 1, pageSize: MAX_LOAD_SIZE }),
-    fetchSamplesApi(sampleQuery),
-    fetchDetectionDetectorsApi(),
-    fetchDetectionMethodsApi({ pageNum: 1, pageSize: MAX_LOAD_SIZE })
-  ])
+  const detectionResult = await fetchDetectionsApi(detectionQuery)
 
   records.value = detectionResult.records || []
-  samplePool.value = sampleResult.records || []
-  detectorOptions.value = (detectorResult || []).map((item) => ({
-    ...item,
-    id: item.userId ?? item.id
-  }))
-  detectionMethodOptions.value = detectionMethodResult.records || []
-
-  const maxPage = Math.max(1, Math.ceil(displayTotal.value / query.pageSize))
-  if (query.pageNum > maxPage) {
+  total.value = Number(detectionResult.total || 0)
+  if (!records.value.length && total.value > 0 && query.pageNum > 1) {
     query.pageNum = 1
+    await loadData()
+    return
   }
+
+  const summaryResult = await fetchDetectionRecordSummaryApi(summaryQuery)
+  summary.total = Number(summaryResult.total || 0)
+  summary.waitAssignCount = Number(summaryResult.waitAssignCount || 0)
+  summary.waitDetectCount = Number(summaryResult.waitDetectCount || 0)
+  summary.pendingReviewCount = Number(summaryResult.pendingReviewCount || 0)
+  summary.approvedCount = Number(summaryResult.approvedCount || 0)
+  summary.rejectedCount = Number(summaryResult.rejectedCount || 0)
 }
 
 async function handleExport() {
   try {
     await exportDetectionsApi({
       ...query,
+      scope: baseScene.value.key,
+      detectionStatus: getActiveDetectionStatusFilter(),
       mine: query.mine === '' ? undefined : query.mine
     })
     ElMessage.success('检测流程导出成功')
@@ -1575,6 +1572,7 @@ onBeforeUnmount(() => {
 
 watch(() => route.fullPath, () => {
   syncRouteState()
+  loadData()
 })
 
 watch(detectorAssignDialogVisible, async (visible) => {
@@ -1698,6 +1696,12 @@ watch(detectorAssignDialogVisible, async (visible) => {
   overflow: visible;
 }
 
+.subflow-content {
+  display: grid;
+  gap: 12px;
+  min-height: 0;
+}
+
 .subflow-head {
   display: flex;
   justify-content: space-between;
@@ -1799,6 +1803,7 @@ watch(detectorAssignDialogVisible, async (visible) => {
 
 .subflow-batch-panel {
   display: grid;
+  min-height: 0;
   gap: 14px;
   padding: 16px;
   border: 1px solid color-mix(in srgb, var(--brand) 12%, #ffffff 88%);
@@ -1844,7 +1849,24 @@ watch(detectorAssignDialogVisible, async (visible) => {
 .subflow-pick-list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-content: start;
   gap: 12px;
+  min-height: 0;
+}
+
+.subflow-submit-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid color-mix(in srgb, var(--brand) 12%, #ffffff 88%);
+}
+
+.subflow-submit-footer span {
+  color: var(--text-sub);
+  font-size: 13px;
+  line-height: 1.6;
 }
 
 .subflow-pick-item {
@@ -1893,17 +1915,21 @@ watch(detectorAssignDialogVisible, async (visible) => {
 
 .detector-assign-dialog {
   display: grid;
+  min-height: 0;
   gap: 12px;
 }
 
 .detector-side-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
   margin-top: 16px;
   padding: 18px;
   border: 1px solid color-mix(in srgb, var(--brand) 12%, #ffffff 88%);
   border-radius: 22px;
   background: #ffffff;
   box-shadow: var(--shadow-lg);
-  width: 420px;
+  width: 620px;
 }
 
 .detector-side-panel__header {
@@ -1995,7 +2021,9 @@ watch(detectorAssignDialogVisible, async (visible) => {
 
 .detector-assign-dialog__list {
   display: grid;
+  align-content: start;
   gap: 10px;
+  min-height: 0;
 }
 
 .subflow-detector-card {
@@ -2142,26 +2170,98 @@ watch(detectorAssignDialogVisible, async (visible) => {
   overflow: visible;
 }
 
-@media (min-width: 960px) {
+@media (min-width: 1320px) {
   :deep(.el-dialog.detection-subflow-dialog--shifted),
   :deep(.detection-subflow-dialog--shifted .el-dialog) {
     position: fixed;
-    left: calc(50% - 12px - 760px);
+    left: calc(50% - 12px - 620px);
     right: auto !important;
     transform: none !important;
-    width: 760px !important;
+    width: 620px !important;
+    height: 620px !important;
     max-width: none !important;
     margin: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  :deep(.el-dialog.detection-subflow-dialog--shifted .el-dialog__body),
+  :deep(.detection-subflow-dialog--shifted .el-dialog__body) {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  :deep(.el-dialog.detection-subflow-dialog--shifted .el-dialog__header),
+  :deep(.detection-subflow-dialog--shifted .el-dialog__header) {
+    flex: none;
+  }
+
+  .subflow-panel--dialog {
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .subflow-panel--dialog .result-dialog__summary,
+  .subflow-panel--dialog .subflow-head {
+    flex: none;
+  }
+
+  .subflow-content {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .subflow-batch-panel {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .subflow-pick-list {
+    flex: 1;
+    overflow: auto;
+    padding-right: 4px;
+  }
+
+  .subflow-submit-footer {
+    flex: none;
   }
 
   .detector-side-panel {
     position: fixed;
     left: calc(50% + 12px);
     right: auto;
-    width: 420px;
+    width: 620px;
+    height: 620px;
     margin-top: 0;
     z-index: 2300;
+    overflow: hidden;
+  }
+
+  .detector-assign-dialog {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .detector-assign-dialog__summary,
+  .detector-assign-dialog__picked,
+  .detector-assign-dialog__footer {
+    flex: none;
+  }
+
+  .detector-assign-dialog__list {
+    flex: 1;
     overflow: auto;
+    padding-right: 4px;
   }
 }
 

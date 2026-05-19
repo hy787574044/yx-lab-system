@@ -13,6 +13,7 @@ import com.yx.lab.modules.detection.service.DetectionWorkflowService;
 import com.yx.lab.modules.detection.vo.DetectionItemPageVO;
 import com.yx.lab.modules.detection.vo.DetectionItemSummaryVO;
 import com.yx.lab.modules.detection.vo.DetectionRecordDetailVO;
+import com.yx.lab.modules.detection.vo.DetectionRecordSummaryVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -46,6 +47,15 @@ public class DetectionWorkflowController {
     @Operation(summary = "检测主流程分页")
     public ApiResponse<PageResult<DetectionRecord>> page(@Validated DetectionRecordQuery query) {
         return ApiResponse.success(detectionWorkflowService.page(query));
+    }
+
+    /**
+     * 汇总查询检测主流程状态统计。
+     */
+    @GetMapping("/summary")
+    @Operation(summary = "检测主流程统计")
+    public ApiResponse<DetectionRecordSummaryVO> summary(@Validated DetectionRecordQuery query) {
+        return ApiResponse.success(detectionWorkflowService.summary(query));
     }
 
     /**
@@ -109,7 +119,8 @@ public class DetectionWorkflowController {
                         ExcelExportUtil.column("检测方法", DetectionItemPageVO::getMethodName),
                         ExcelExportUtil.column("检测步骤", DetectionItemPageVO::getMethodBasis),
                         ExcelExportUtil.column("检测人员", DetectionItemPageVO::getDetectorName),
-                        ExcelExportUtil.column("标准范围", item -> formatStandardRange(item.getStandardMin(), item.getStandardMax(), item.getUnit())),
+                        ExcelExportUtil.column("标准范围", item -> formatStandardRange(item.getStandardMin(), item.getStandardMax())),
+                        ExcelExportUtil.column("单位", DetectionItemPageVO::getUnit),
                         ExcelExportUtil.column("参考范围", DetectionItemPageVO::getReferenceStandard),
                         ExcelExportUtil.column("检测值", DetectionItemPageVO::getResultValue),
                         ExcelExportUtil.column("判定结果", this::formatResultLabel),
@@ -148,16 +159,15 @@ public class DetectionWorkflowController {
         return ApiResponse.successMessage("检测提交成功");
     }
 
-    private String formatStandardRange(java.math.BigDecimal min, java.math.BigDecimal max, String unit) {
-        String suffix = unit == null || unit.trim().isEmpty() ? "" : (" " + unit.trim());
+    private String formatStandardRange(java.math.BigDecimal min, java.math.BigDecimal max) {
         if (min != null && max != null) {
-            return min.stripTrailingZeros().toPlainString() + " - " + max.stripTrailingZeros().toPlainString() + suffix;
+            return min.stripTrailingZeros().toPlainString() + " - " + max.stripTrailingZeros().toPlainString();
         }
         if (min != null) {
-            return ">= " + min.stripTrailingZeros().toPlainString() + suffix;
+            return ">= " + min.stripTrailingZeros().toPlainString();
         }
         if (max != null) {
-            return "<= " + max.stripTrailingZeros().toPlainString() + suffix;
+            return "<= " + max.stripTrailingZeros().toPlainString();
         }
         return "-";
     }

@@ -85,13 +85,13 @@
               </div>
             </template>
           </el-table-column>
-          <el-table-column prop="unit" label="单位" width="100">
-            <template #default="{ row }">{{ row.unit || '-' }}</template>
-          </el-table-column>
           <el-table-column label="标准范围" min-width="170">
             <template #default="{ row }">
-              {{ formatStandardRange(row.standardMin, row.standardMax, row.unit) }}
+              {{ formatStandardRange(row.standardMin, row.standardMax) }}
             </template>
+          </el-table-column>
+          <el-table-column prop="unit" label="单位" width="100">
+            <template #default="{ row }">{{ row.unit || '-' }}</template>
           </el-table-column>
           <el-table-column label="已绑定方法数" width="120" class-name="cell-center" header-cell-class-name="cell-center">
             <template #default="{ row }">{{ Number(row.methodCount || 0) }}</template>

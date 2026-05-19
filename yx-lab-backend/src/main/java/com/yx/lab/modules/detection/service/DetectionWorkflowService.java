@@ -30,6 +30,7 @@ import com.yx.lab.modules.detection.mapper.DetectionTypeMapper;
 import com.yx.lab.modules.detection.vo.DetectionRecordDetailVO;
 import com.yx.lab.modules.detection.vo.DetectionItemPageVO;
 import com.yx.lab.modules.detection.vo.DetectionItemSummaryVO;
+import com.yx.lab.modules.detection.vo.DetectionRecordSummaryVO;
 import com.yx.lab.modules.review.entity.ReviewRecord;
 import com.yx.lab.modules.review.mapper.ReviewRecordMapper;
 import com.yx.lab.modules.sample.dto.SampleDetectionConfigItem;
@@ -86,45 +87,40 @@ public class DetectionWorkflowService {
      */
     public PageResult<DetectionRecord> page(DetectionRecordQuery query) {
         detectionPendingFlowService.syncPendingFlowsForOpenSamples();
-        CurrentUser currentUser = SecurityContext.getCurrentUser();
         Page<DetectionRecord> page = detectionRecordMapper.selectPage(
                 PageUtils.buildPage(query),
-                new LambdaQueryWrapper<DetectionRecord>()
-                        .and(StrUtil.isNotBlank(query.getKeyword()), wrapper -> wrapper
-                                .like(DetectionRecord::getSampleNo, query.getKeyword())
-                                .or()
-                                .like(DetectionRecord::getSealNo, query.getKeyword())
-                                .or()
-                                .like(DetectionRecord::getDetectionTypeName, query.getKeyword()))
-                        .eq(StrUtil.isNotBlank(query.getDetectionStatus()), DetectionRecord::getDetectionStatus, query.getDetectionStatus())
-                        .eq(Boolean.TRUE.equals(query.getMine()) && currentUser != null,
-                                DetectionRecord::getDetectorId,
-                                currentUser == null ? null : currentUser.getUserId())
-                        .orderByDesc(DetectionRecord::getDetectionTime)
-                        .orderByDesc(DetectionRecord::getCreatedTime));
+                buildRecordQueryWrapper(query, false, true));
         detectionPendingFlowService.fillRecordSummaries(page.getRecords());
         return new PageResult<>(page.getTotal(), page.getRecords());
+    }
+
+    public DetectionRecordSummaryVO summary(DetectionRecordQuery query) {
+        DetectionRecordSummaryVO summary = new DetectionRecordSummaryVO();
+        summary.setTotal(countRecords(query, null));
+        summary.setWaitAssignCount(countRecords(query, LabWorkflowConstants.DetectionStatus.WAIT_ASSIGN));
+        summary.setWaitDetectCount(countRecords(query, LabWorkflowConstants.DetectionStatus.WAIT_DETECT));
+        summary.setPendingReviewCount(countRecords(query, LabWorkflowConstants.DetectionStatus.SUBMITTED));
+        summary.setApprovedCount(countRecords(query, LabWorkflowConstants.DetectionStatus.APPROVED));
+        summary.setRejectedCount(countRecords(query, LabWorkflowConstants.DetectionStatus.REJECTED));
+        return summary;
     }
 
     public PageResult<DetectionItemPageVO> itemPage(DetectionItemQuery query) {
         detectionPendingFlowService.syncPendingFlowsForOpenSamples();
         Page<DetectionItem> page = detectionItemMapper.selectPage(
                 PageUtils.buildPage(query),
-                buildItemQueryWrapper(query, false));
+                buildItemQueryWrapper(query, false, true));
         return new PageResult<>(page.getTotal(), buildDetectionItemPageList(page.getRecords()));
     }
 
     public DetectionItemSummaryVO itemSummary(DetectionItemQuery query) {
-        detectionPendingFlowService.syncPendingFlowsForOpenSamples();
-        List<DetectionItem> items = detectionItemMapper.selectList(buildItemQueryWrapper(query, true)
-                .select(DetectionItem::getId, DetectionItem::getItemStatus));
         DetectionItemSummaryVO summary = new DetectionItemSummaryVO();
-        summary.setTotal(items.size());
-        summary.setWaitAssignCount(countItemStatus(items, LabWorkflowConstants.DetectionStatus.WAIT_ASSIGN));
-        summary.setWaitDetectCount(countItemStatus(items, LabWorkflowConstants.DetectionStatus.WAIT_DETECT));
-        summary.setPendingReviewCount(countItemStatus(items, LabWorkflowConstants.DetectionStatus.SUBMITTED));
-        summary.setApprovedCount(countItemStatus(items, LabWorkflowConstants.DetectionStatus.APPROVED));
-        summary.setRejectedCount(countItemStatus(items, LabWorkflowConstants.DetectionStatus.REJECTED));
+        summary.setTotal(countItems(query, null));
+        summary.setWaitAssignCount(countItems(query, LabWorkflowConstants.DetectionStatus.WAIT_ASSIGN));
+        summary.setWaitDetectCount(countItems(query, LabWorkflowConstants.DetectionStatus.WAIT_DETECT));
+        summary.setPendingReviewCount(countItems(query, LabWorkflowConstants.DetectionStatus.SUBMITTED));
+        summary.setApprovedCount(countItems(query, LabWorkflowConstants.DetectionStatus.APPROVED));
+        summary.setRejectedCount(countItems(query, LabWorkflowConstants.DetectionStatus.REJECTED));
         return summary;
     }
 
@@ -288,7 +284,76 @@ public class DetectionWorkflowService {
         detectionRecordMapper.updateById(record);
     }
 
+    private LambdaQueryWrapper<DetectionRecord> buildRecordQueryWrapper(DetectionRecordQuery query,
+                                                                        boolean ignoreStatusFilter,
+                                                                        boolean withOrder) {
+        CurrentUser currentUser = SecurityContext.getCurrentUser();
+        String keyword = query == null ? null : StrUtil.trim(query.getKeyword());
+        String status = query == null ? null : query.getDetectionStatus();
+        String scope = query == null ? null : query.getScope();
+        Boolean mine = query == null ? null : query.getMine();
+        LambdaQueryWrapper<DetectionRecord> wrapper = new LambdaQueryWrapper<DetectionRecord>()
+                .and(StrUtil.isNotBlank(keyword), condition -> condition
+                        .like(DetectionRecord::getSampleNo, keyword)
+                        .or()
+                        .like(DetectionRecord::getSealNo, keyword)
+                        .or()
+                        .like(DetectionRecord::getDetectionTypeName, keyword))
+                .eq(Boolean.TRUE.equals(mine) && currentUser != null,
+                        DetectionRecord::getDetectorId,
+                        currentUser == null ? null : currentUser.getUserId());
+        if (!ignoreStatusFilter && StrUtil.isNotBlank(status)) {
+            wrapper.eq(DetectionRecord::getDetectionStatus, status);
+        } else {
+            applyRecordScope(wrapper, scope);
+        }
+        if (withOrder) {
+            wrapper.orderByDesc(DetectionRecord::getDetectionTime)
+                    .orderByDesc(DetectionRecord::getCreatedTime);
+        }
+        return wrapper;
+    }
+
+    private void applyRecordScope(LambdaQueryWrapper<DetectionRecord> wrapper, String scope) {
+        if (StrUtil.equals(scope, "detection-split")) {
+            wrapper.eq(DetectionRecord::getDetectionStatus, LabWorkflowConstants.DetectionStatus.WAIT_ASSIGN);
+            return;
+        }
+        if (StrUtil.equals(scope, "detection-history")) {
+            wrapper.and(condition -> condition
+                    .in(DetectionRecord::getDetectionStatus,
+                            LabWorkflowConstants.DetectionStatus.APPROVED,
+                            LabWorkflowConstants.DetectionStatus.REJECTED)
+                    .or()
+                    .eq(DetectionRecord::getDetectionResult, LabWorkflowConstants.DetectionResult.ABNORMAL));
+        }
+    }
+
+    private long countRecords(DetectionRecordQuery query, String status) {
+        LambdaQueryWrapper<DetectionRecord> wrapper = buildRecordQueryWrapper(query, true, false);
+        if (StrUtil.isNotBlank(status)) {
+            wrapper.eq(DetectionRecord::getDetectionStatus, status);
+        }
+        Long count = detectionRecordMapper.selectCount(wrapper);
+        return count == null ? 0L : count;
+    }
+
+    private long countItems(DetectionItemQuery query, String status) {
+        LambdaQueryWrapper<DetectionItem> wrapper = buildItemQueryWrapper(query, true, false);
+        if (StrUtil.isNotBlank(status)) {
+            wrapper.eq(DetectionItem::getItemStatus, status);
+        }
+        Long count = detectionItemMapper.selectCount(wrapper);
+        return count == null ? 0L : count;
+    }
+
     private LambdaQueryWrapper<DetectionItem> buildItemQueryWrapper(DetectionItemQuery query, boolean ignoreStatusFilter) {
+        return buildItemQueryWrapper(query, ignoreStatusFilter, true);
+    }
+
+    private LambdaQueryWrapper<DetectionItem> buildItemQueryWrapper(DetectionItemQuery query,
+                                                                    boolean ignoreStatusFilter,
+                                                                    boolean withOrder) {
         CurrentUser currentUser = SecurityContext.getCurrentUser();
         String keyword = query == null ? null : StrUtil.trim(query.getKeyword());
         String itemStatus = query == null ? null : query.getItemStatus();
@@ -300,9 +365,11 @@ public class DetectionWorkflowService {
                         itemStatus)
                 .eq(Boolean.TRUE.equals(mine) && currentUser != null,
                         DetectionItem::getDetectorId,
-                        currentUser == null ? null : currentUser.getUserId())
-                .orderByDesc(DetectionItem::getUpdatedTime)
-                .orderByDesc(DetectionItem::getCreatedTime);
+                        currentUser == null ? null : currentUser.getUserId());
+        if (withOrder) {
+            wrapper.orderByDesc(DetectionItem::getUpdatedTime)
+                    .orderByDesc(DetectionItem::getCreatedTime);
+        }
         if (StrUtil.isBlank(keyword)) {
             return wrapper;
         }
@@ -388,10 +455,6 @@ public class DetectionWorkflowService {
                         .in(DetectionRecord::getId, recordIds))
                 .stream()
                 .collect(Collectors.toMap(DetectionRecord::getId, item -> item, (left, right) -> left));
-    }
-
-    private long countItemStatus(List<DetectionItem> items, String itemStatus) {
-        return items.stream().filter(item -> StrUtil.equals(itemStatus, item.getItemStatus())).count();
     }
 
     private void insertSubmittedRecord(LabSample sample,

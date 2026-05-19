@@ -66,8 +66,27 @@ public class DetectionPendingFlowService {
         List<LabSample> samples = labSampleMapper.selectList(new LambdaQueryWrapper<LabSample>()
                 .in(LabSample::getSampleStatus, LabWorkflowConstants.DETECTABLE_SAMPLE_STATUSES)
                 .orderByAsc(LabSample::getCreatedTime));
+        if (samples.isEmpty()) {
+            return;
+        }
+        List<Long> sampleIds = samples.stream()
+                .map(LabSample::getId)
+                .filter(id -> id != null)
+                .collect(Collectors.toList());
+        Map<Long, List<DetectionRecord>> activeRecordGroup = sampleIds.isEmpty()
+                ? Collections.emptyMap()
+                : detectionRecordMapper.selectList(new LambdaQueryWrapper<DetectionRecord>()
+                        .in(DetectionRecord::getSampleId, sampleIds)
+                        .in(DetectionRecord::getDetectionStatus, LabWorkflowConstants.ACTIVE_DETECTION_RECORD_STATUSES))
+                .stream()
+                .collect(Collectors.groupingBy(DetectionRecord::getSampleId));
         for (LabSample sample : samples) {
-            createPendingFlowIfMissing(sample);
+            List<DetectionRecord> activeRecords = activeRecordGroup.getOrDefault(sample.getId(), Collections.emptyList());
+            if (activeRecords.isEmpty()) {
+                createPendingFlowIfMissing(sample);
+            } else if (activeRecords.size() > 1) {
+                collapseDuplicateActiveRecords(sample.getId());
+            }
         }
     }
 

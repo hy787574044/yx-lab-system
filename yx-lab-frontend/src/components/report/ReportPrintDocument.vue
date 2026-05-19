@@ -137,9 +137,9 @@
               <tr>
                 <th class="col-index">序号</th>
                 <th class="col-parameter">检测参数</th>
-                <th class="col-unit">单位</th>
                 <th class="col-method">检测方法</th>
                 <th class="col-standard">标准范围</th>
+                <th class="col-unit">单位</th>
                 <th class="col-reference">参考范围</th>
                 <th class="col-value">化验值</th>
                 <th class="col-judge">单项判定</th>
@@ -151,9 +151,9 @@
                 <tr class="result-main-row">
                   <td class="cell-center">{{ page.startIndex + index + 1 }}</td>
                   <td>{{ item.parameterName || '-' }}</td>
-                  <td class="cell-center">{{ item.unit || '-' }}</td>
                   <td>{{ item.methodName || '-' }}</td>
                   <td>{{ item.standardRange || '-' }}</td>
+                  <td class="cell-center">{{ item.unit || '-' }}</td>
                   <td>{{ item.referenceStandard || '-' }}</td>
                   <td class="cell-center">{{ item.resultValue || '-' }}</td>
                   <td class="cell-center">

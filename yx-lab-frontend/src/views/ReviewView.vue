@@ -127,10 +127,9 @@
         </div>
 
         <TablePagination
-          v-if="baseScene.key !== 'review-result'"
           v-model:current-page="query.pageNum"
           v-model:page-size="query.pageSize"
-          :total="total"
+          :total="paginationTotal"
           @change="loadData"
         />
       </div>
@@ -175,8 +174,11 @@
           <el-table-column prop="methodName" label="检测方法" min-width="180" show-overflow-tooltip />
           <el-table-column label="标准范围" min-width="130">
             <template #default="{ row }">
-              {{ formatStandardRange(row.standardMin, row.standardMax, row.unit) }}
+              {{ formatStandardRange(row.standardMin, row.standardMax) }}
             </template>
+          </el-table-column>
+          <el-table-column prop="unit" label="单位" width="90">
+            <template #default="{ row }">{{ row.unit || '-' }}</template>
           </el-table-column>
           <el-table-column prop="referenceStandard" label="参考范围" min-width="150" show-overflow-tooltip>
             <template #default="{ row }">{{ row.referenceStandard || '-' }}</template>
@@ -322,6 +324,7 @@ const query = reactive({
 const reviewRecords = ref([])
 const pendingDetections = ref([])
 const total = ref(0)
+const pendingTotal = ref(0)
 const activeStatKey = ref('pending')
 const reviewDialogVisible = ref(false)
 const reviewSubmitting = ref(false)
@@ -460,7 +463,7 @@ const currentStats = computed(() => [
   {
     key: 'pending',
     label: '待审核',
-    value: mappedPendingRows.value.length,
+    value: baseScene.value.key === 'review-result' ? pendingTotal.value : mappedPendingRows.value.length,
     desc: '检测结果已提交，等待审查人员完成整单审核'
   },
   {
@@ -504,6 +507,13 @@ const visibleRecords = computed(() => {
   return reviewRecords.value
 })
 
+const paginationTotal = computed(() => {
+  if (baseScene.value.key === 'review-result' && !query.reviewResult && activeStatKey.value === 'pending') {
+    return pendingTotal.value
+  }
+  return total.value
+})
+
 const reviewDialogTitle = computed(() => reviewDialogReadonly.value ? '审查明细查看' : '审查处理')
 
 const pendingReviewItemCount = computed(() => reviewDialog.items.filter((item) => item.itemStatus === reviewPendingDetectionStatus).length)
@@ -518,6 +528,8 @@ const reviewDialogNote = computed(() => (
 
 function handleStatClick(key) {
   activeStatKey.value = activeStatKey.value === key ? baseScene.value.defaultStatKey : key
+  query.pageNum = 1
+  loadData()
 }
 
 function handleSearch() {
@@ -535,6 +547,7 @@ function resetQuery() {
 
 function syncRouteState() {
   activeStatKey.value = baseScene.value.defaultStatKey
+  query.pageNum = 1
 }
 
 function isPendingRow(row) {
@@ -768,21 +781,26 @@ async function submitReviewDecision() {
 }
 
 async function loadData() {
+  const isPendingReviewQueue = baseScene.value.key === 'review-result'
+    && !query.reviewResult
+    && activeStatKey.value === 'pending'
   const reviewQuery = {
     ...query,
     mine: query.mine === '' ? undefined : query.mine
   }
   const detectionQuery = {
-    pageNum: 1,
-    pageSize: 500,
+    pageNum: isPendingReviewQueue ? query.pageNum : 1,
+    pageSize: isPendingReviewQueue ? query.pageSize : 500,
     keyword: query.keyword,
     detectionStatus: reviewPendingDetectionStatus,
     mine: query.mine === '' ? undefined : query.mine
   }
-  const [reviewResult, detectionResult] = await Promise.all([
-    fetchReviewsApi(reviewQuery),
-    fetchDetectionsApi(detectionQuery)
-  ])
+  const [reviewResult, detectionResult] = isPendingReviewQueue
+    ? [{ records: [], total: 0 }, await fetchDetectionsApi(detectionQuery)]
+    : await Promise.all([
+        fetchReviewsApi(reviewQuery),
+        fetchDetectionsApi(detectionQuery)
+      ])
   const detectionRecords = detectionResult.records || []
   const detectionMap = detectionRecords.reduce((result, item) => {
     result[item.id] = item
@@ -799,6 +817,7 @@ async function loadData() {
     }
   })
   total.value = toSafeNumber(reviewResult.total)
+  pendingTotal.value = toSafeNumber(detectionResult.total)
   pendingDetections.value = query.reviewResult
     ? []
     : detectionRecords.filter((item) => item.detectionStatus === reviewPendingDetectionStatus)

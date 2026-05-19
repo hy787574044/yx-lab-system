@@ -89,7 +89,10 @@
               <template #default="{ row }">{{ row.detectorName || '-' }}</template>
             </el-table-column>
             <el-table-column label="标准范围" min-width="150">
-              <template #default="{ row }">{{ formatStandardRange(row.standardMin, row.standardMax, row.unit) }}</template>
+              <template #default="{ row }">{{ formatStandardRange(row.standardMin, row.standardMax) }}</template>
+            </el-table-column>
+            <el-table-column prop="unit" label="单位" width="90">
+              <template #default="{ row }">{{ row.unit || '-' }}</template>
             </el-table-column>
             <el-table-column prop="referenceStandard" label="参考范围" min-width="160" show-overflow-tooltip>
               <template #default="{ row }">{{ row.referenceStandard || '-' }}</template>
@@ -533,10 +536,8 @@ async function loadData() {
     keyword: requestQuery.keyword,
     mine: requestQuery.mine
   }
-  const [pageResult, summaryResult] = await Promise.all([
-    fetchDetectionItemsApi(requestQuery),
-    fetchDetectionItemSummaryApi(summaryQuery)
-  ])
+  const pageResult = await fetchDetectionItemsApi(requestQuery)
+  const summaryResult = await fetchDetectionItemSummaryApi(summaryQuery)
   records.value = pageResult.records || []
   total.value = Number(pageResult.total || 0)
   summary.total = Number(summaryResult.total || 0)

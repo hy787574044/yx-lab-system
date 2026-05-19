@@ -337,6 +337,7 @@ export const saveDetectionParameterMethodBindingsApi = (parameterId, data) => re
  */
 export const fetchDetectionMethodOptionsApi = () => request.get('/api/detectionConfig/methods/options')
 export const fetchDetectionsApi = (params) => request.get('/api/detections', { params })
+export const fetchDetectionRecordSummaryApi = (params) => request.get('/api/detections/summary', { params })
 export const exportDetectionsApi = (params) => downloadExcel('/api/detections/export', params, '检测流程.xlsx')
 export const fetchDetectionItemsApi = (params) => request.get('/api/detections/items', { params })
 export const fetchDetectionItemSummaryApi = (params) => request.get('/api/detections/items/summary', { params })

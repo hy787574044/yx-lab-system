@@ -107,13 +107,13 @@
                 </div>
               </template>
             </el-table-column>
-            <el-table-column prop="unit" label="单位" min-width="100">
-              <template #default="{ row }">{{ row.unit || '-' }}</template>
-            </el-table-column>
             <el-table-column label="标准范围" min-width="180">
               <template #default="{ row }">
-                {{ formatStandardRange(row.standardMin, row.standardMax, row.unit) }}
+                {{ formatStandardRange(row.standardMin, row.standardMax) }}
               </template>
+            </el-table-column>
+            <el-table-column prop="unit" label="单位" min-width="100">
+              <template #default="{ row }">{{ row.unit || '-' }}</template>
             </el-table-column>
             <el-table-column prop="referenceStandard" label="参考标准" min-width="180" show-overflow-tooltip>
               <template #default="{ row }">{{ row.referenceStandard || '-' }}</template>

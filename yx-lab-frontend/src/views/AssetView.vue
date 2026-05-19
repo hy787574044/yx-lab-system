@@ -1081,13 +1081,20 @@ watch(() => route.fullPath, () => {
 }
 
 .asset-page :deep(.el-tabs__content) {
+  display: flex;
+  flex-direction: column;
   flex: 1 1 auto;
   min-height: 0;
+  overflow: hidden;
 }
 
 .asset-page :deep(.el-tab-pane) {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
   height: 100%;
   min-height: 0;
+  overflow: hidden;
 }
 
 .asset-stats {

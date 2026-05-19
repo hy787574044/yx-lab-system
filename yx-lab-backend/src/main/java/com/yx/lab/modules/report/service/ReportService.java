@@ -496,8 +496,8 @@ public class ReportService {
                 .append("<th style=\"width:60px;\">序号</th>")
                 .append("<th style=\"width:120px;\">检测参数</th>")
                 .append("<th style=\"width:150px;\">检测方法</th>")
-                .append("<th style=\"width:90px;\">单位</th>")
                 .append("<th style=\"width:120px;\">标准范围</th>")
+                .append("<th style=\"width:90px;\">单位</th>")
                 .append("<th style=\"width:160px;\">参考标准</th>")
                 .append("<th style=\"width:90px;\">检测值</th>")
                 .append("<th style=\"width:140px;\">结果对比</th>")
@@ -516,8 +516,8 @@ public class ReportService {
                         .append("<td style=\"text-align:center;\">").append(index++).append("</td>")
                         .append("<td>").append(escapeHtml(StrUtil.blankToDefault(item.getParameterName(), "-"))).append("</td>")
                         .append("<td>").append(escapeHtml(StrUtil.blankToDefault(item.getMethodName(), "-"))).append("</td>")
+                        .append("<td>").append(escapeHtml(formatStandardRange(item.getStandardMin(), item.getStandardMax(), null))).append("</td>")
                         .append("<td>").append(escapeHtml(StrUtil.blankToDefault(item.getUnit(), "-"))).append("</td>")
-                        .append("<td>").append(escapeHtml(formatStandardRange(item.getStandardMin(), item.getStandardMax(), item.getUnit()))).append("</td>")
                         .append("<td>").append(escapeHtml(StrUtil.blankToDefault(item.getReferenceStandard(), "-"))).append("</td>")
                         .append("<td>").append(escapeHtml(formatDecimal(item.getResultValue()))).append("</td>")
                         .append("<td class=\"").append(exceeded ? "compare-bad" : "compare-ok").append("\">")
@@ -732,9 +732,9 @@ public class ReportService {
                 html.append("<table class=\"result-table\"><thead><tr>")
                         .append("<th class=\"col-index\">序号</th>")
                         .append("<th class=\"col-parameter\">检测参数</th>")
-                        .append("<th class=\"col-unit\">单位</th>")
                         .append("<th class=\"col-method\">检测方法</th>")
                         .append("<th class=\"col-standard\">标准范围</th>")
+                        .append("<th class=\"col-unit\">单位</th>")
                         .append("<th class=\"col-reference\">参考范围</th>")
                         .append("<th class=\"col-value\">检测值</th>")
                         .append("<th class=\"col-judge\">单项判定</th>")
@@ -750,9 +750,9 @@ public class ReportService {
                             .append("\">")
                             .append("<td class=\"cell-center\">").append(page.getStartIndex() + i + 1).append("</td>")
                             .append("<td>").append(safeText(item.getParameterName())).append("</td>")
-                            .append("<td class=\"cell-center\">").append(safeText(item.getUnit())).append("</td>")
                             .append("<td>").append(safeText(item.getMethodName())).append("</td>")
                             .append("<td>").append(safeText(item.getStandardRange())).append("</td>")
+                            .append("<td class=\"cell-center\">").append(safeText(item.getUnit())).append("</td>")
                             .append("<td>").append(safeText(item.getReferenceStandard())).append("</td>")
                             .append("<td class=\"cell-center\">").append(safeText(item.getResultValue())).append("</td>")
                             .append("<td class=\"cell-center\"><span class=\"state-tag ").append(judgmentClass).append("\">").append(safeText(item.getJudgmentLabel())).append("</span></td>")
@@ -905,7 +905,7 @@ public class ReportService {
         vo.setParameterName(StrUtil.blankToDefault(item == null ? null : item.getParameterName(), "-"));
         vo.setMethodName(StrUtil.blankToDefault(item == null ? null : item.getMethodName(), "-"));
         vo.setUnit(StrUtil.blankToDefault(item == null ? null : item.getUnit(), "-"));
-        vo.setStandardRange(item == null ? "-" : formatStandardRange(item.getStandardMin(), item.getStandardMax(), item.getUnit()));
+        vo.setStandardRange(item == null ? "-" : formatStandardRange(item.getStandardMin(), item.getStandardMax(), null));
         vo.setReferenceStandard(StrUtil.blankToDefault(item == null ? null : item.getReferenceStandard(), "-"));
         vo.setResultValue(item == null ? "-" : formatDecimal(item.getResultValue()));
         vo.setCompareText(item == null ? "-" : buildCompareText(item));
