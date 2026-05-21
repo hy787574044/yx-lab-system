@@ -11,7 +11,7 @@ import lombok.EqualsAndHashCode;
 import java.time.LocalDateTime;
 
 /**
- * 报告实体，记录正式报告的生成、发布、推送及产物信息。
+ * 报告实体，记录正式报告的生成、发布及产物信息。
  */
 @Data
 @TableName("lab_report")
@@ -63,19 +63,6 @@ public class LabReport extends BaseEntity {
     @Schema(description = "发布人名称")
     @TableField("published_by_name")
     private String publishedByName;
-
-    @Schema(description = "推送状态")
-    @TableField("push_status")
-    private String pushStatus;
-
-    @Schema(description = "最近推送时间")
-    @TableField("last_push_time")
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    private LocalDateTime lastPushTime;
-
-    @Schema(description = "最近推送说明")
-    @TableField("last_push_message")
-    private String lastPushMessage;
 
     @Schema(description = "报告文件路径")
     @TableField("file_path")

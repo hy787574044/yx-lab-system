@@ -1,10 +1,15 @@
 package com.yx.lab.modules.mobile.service;
 
+import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.yx.lab.common.exception.BusinessException;
+import com.yx.lab.common.model.PageResult;
 import com.yx.lab.common.security.CurrentUser;
 import com.yx.lab.common.security.SecurityContext;
+import com.yx.lab.common.util.PageUtils;
 import com.yx.lab.modules.mobile.vo.MobileReportVO;
+import com.yx.lab.modules.report.dto.ReportQuery;
 import com.yx.lab.modules.report.entity.LabReport;
 import com.yx.lab.modules.report.mapper.LabReportMapper;
 import com.yx.lab.modules.review.entity.ReviewRecord;
@@ -21,7 +26,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * 移动端报告查询服务，返回当前用户可见的报告数据。
+ * 移动端报告查询服务。
  */
 @Service
 @RequiredArgsConstructor
@@ -34,15 +39,25 @@ public class MobileReportQueryService {
     private final ReviewRecordMapper reviewRecordMapper;
 
     /**
-     * 查询当前用户可查看的报告列表。
+     * 分页查询当前用户可见的移动端报告。
      *
-     * @return 报告列表
+     * @param query 报告分页查询条件
+     * @return 报告分页结果
      */
-    public List<MobileReportVO> reportMine() {
+    public PageResult<MobileReportVO> reportMine(ReportQuery query) {
         CurrentUser currentUser = requireCurrentUser();
+        String keyword = query == null ? null : StrUtil.trim(query.getKeyword());
+
         LambdaQueryWrapper<LabReport> wrapper = new LambdaQueryWrapper<LabReport>()
-                .orderByDesc(LabReport::getGeneratedTime)
-                .last("limit 50");
+                .and(StrUtil.isNotBlank(keyword), condition -> condition
+                        .like(LabReport::getReportName, keyword)
+                        .or()
+                        .like(LabReport::getSealNo, keyword)
+                        .or()
+                        .like(LabReport::getSampleNo, keyword))
+                .eq(StrUtil.isNotBlank(query.getReportType()), LabReport::getReportType, query.getReportType())
+                .eq(StrUtil.isNotBlank(query.getReportStatus()), LabReport::getReportStatus, query.getReportStatus())
+                .orderByDesc(LabReport::getGeneratedTime);
         if (!isAdmin(currentUser)) {
             Set<Long> sampleIds = new LinkedHashSet<>();
             sampleIds.addAll(labSampleMapper.selectList(new LambdaQueryWrapper<LabSample>()
@@ -57,23 +72,25 @@ public class MobileReportQueryService {
                     .filter(sampleId -> sampleId != null)
                     .collect(Collectors.toList()));
             if (!sampleIds.isEmpty()) {
-                wrapper.and(query -> query.in(LabReport::getSampleId, new ArrayList<>(sampleIds))
+                wrapper.and(condition -> condition
+                        .in(LabReport::getSampleId, new ArrayList<>(sampleIds))
                         .or()
                         .eq(LabReport::getPublishedBy, currentUser.getUserId()));
             } else {
                 wrapper.eq(LabReport::getPublishedBy, currentUser.getUserId());
             }
         }
-        return labReportMapper.selectList(wrapper)
-                .stream()
+
+        Page<LabReport> page = labReportMapper.selectPage(PageUtils.buildPage(query), wrapper);
+        return new PageResult<>(page.getTotal(), page.getRecords().stream()
                 .map(this::toMobileReportVO)
-                .collect(Collectors.toList());
+                .collect(Collectors.toList()));
     }
 
     private CurrentUser requireCurrentUser() {
         CurrentUser currentUser = SecurityContext.getCurrentUser();
         if (currentUser == null || currentUser.getUserId() == null) {
-            throw new BusinessException("当前登录信息已失效，请重新登录");
+            throw new BusinessException("当前登录信息已失效，请重新登录。");
         }
         return currentUser;
     }
@@ -93,9 +110,6 @@ public class MobileReportQueryService {
         vo.setGeneratedTime(report.getGeneratedTime());
         vo.setPublishedTime(report.getPublishedTime());
         vo.setPublishedByName(report.getPublishedByName());
-        vo.setPushStatus(report.getPushStatus());
-        vo.setLastPushTime(report.getLastPushTime());
-        vo.setLastPushMessage(report.getLastPushMessage());
         return vo;
     }
 }

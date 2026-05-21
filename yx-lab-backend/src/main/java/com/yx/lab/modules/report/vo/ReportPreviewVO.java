@@ -34,15 +34,6 @@ public class ReportPreviewVO {
     @Schema(description = "发布人")
     private String publishedByName;
 
-    @Schema(description = "推送状态中文")
-    private String pushStatusLabel;
-
-    @Schema(description = "最近推送时间")
-    private String lastPushTime;
-
-    @Schema(description = "推送结果说明")
-    private String lastPushMessage;
-
     @Schema(description = "样品编号")
     private String sampleNo;
 

@@ -34,6 +34,26 @@ public class ReviewRecord extends BaseEntity {
     @TableField("seal_no")
     private String sealNo;
 
+    @Schema(description = "审核流程ID")
+    @TableField("flow_id")
+    private Long flowId;
+
+    @Schema(description = "审核流程节点ID")
+    @TableField("flow_node_id")
+    private Long flowNodeId;
+
+    @Schema(description = "审核流程节点名称")
+    @TableField("flow_node_name")
+    private String flowNodeName;
+
+    @Schema(description = "审核流程节点顺序")
+    @TableField("flow_node_order")
+    private Integer flowNodeOrder;
+
+    @Schema(description = "是否必审，1是，0否")
+    @TableField("required_flag")
+    private Integer requiredFlag;
+
     @Schema(description = "检测套餐名称")
     @TableField(exist = false)
     private String detectionTypeName;

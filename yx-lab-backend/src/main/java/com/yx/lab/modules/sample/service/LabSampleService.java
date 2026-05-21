@@ -232,9 +232,6 @@ public class LabSampleService {
         if (StrUtil.isBlank(task.getSealNo()) && StrUtil.isBlank(sealNo)) {
             throw new BusinessException("采样任务尚未录入封签号，请先录入或粘贴 OCR 识别结果。");
         }
-        if (StrUtil.isNotBlank(sealNo) && StrUtil.isNotBlank(task.getSealNo()) && !sealNo.equals(task.getSealNo())) {
-            throw new BusinessException("识别到的封签号与采样任务封签号不一致。");
-        }
         Long existingCount = labSampleMapper.selectCount(new LambdaQueryWrapper<LabSample>()
                 .eq(LabSample::getTaskId, task.getId()));
         if (existingCount != null && existingCount > 0) {
@@ -255,11 +252,11 @@ public class LabSampleService {
 
     private String resolveSealNo(String commandSealNo, SamplingTask task) {
         if (task != null) {
-            if (StrUtil.isNotBlank(task.getSealNo())) {
-                return task.getSealNo();
-            }
             if (StrUtil.isNotBlank(commandSealNo)) {
                 return commandSealNo;
+            }
+            if (StrUtil.isNotBlank(task.getSealNo())) {
+                return task.getSealNo();
             }
             throw new BusinessException("采样任务尚未录入封签号。");
         }

@@ -457,7 +457,7 @@
           :loading="resultSubmitting"
           @click="submitDetectionResult"
         >
-          提交检测结果
+          提交
         </el-button>
       </template>
     </el-dialog>

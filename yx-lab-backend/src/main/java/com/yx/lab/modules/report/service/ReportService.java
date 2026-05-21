@@ -16,10 +16,8 @@ import com.yx.lab.modules.detection.mapper.DetectionRecordMapper;
 import com.yx.lab.modules.report.dto.ReportQuery;
 import com.yx.lab.modules.report.dto.ReportTemplateSaveCommand;
 import com.yx.lab.modules.report.entity.LabReport;
-import com.yx.lab.modules.report.entity.ReportPushRecord;
 import com.yx.lab.modules.report.entity.ReportTemplate;
 import com.yx.lab.modules.report.mapper.LabReportMapper;
-import com.yx.lab.modules.report.mapper.ReportPushRecordMapper;
 import com.yx.lab.modules.report.mapper.ReportTemplateMapper;
 import com.yx.lab.modules.report.vo.ReportPreviewItemVO;
 import com.yx.lab.modules.report.vo.ReportPreviewVO;
@@ -30,11 +28,10 @@ import com.yx.lab.modules.sample.mapper.LabSampleMapper;
 import com.yx.lab.modules.sample.service.LabSampleService;
 import com.yx.lab.modules.storage.service.StorageService;
 import com.yx.lab.modules.system.entity.LabUser;
-import com.yx.lab.modules.system.mapper.LabUserMapper;
 import com.yx.lab.modules.system.service.FlowConfigManagementService;
 import com.yx.lab.modules.system.service.FlowNodeGateService;
-import lombok.RequiredArgsConstructor;
 import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
@@ -45,9 +42,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -71,11 +66,7 @@ public class ReportService {
 
     private final ReviewRecordMapper reviewRecordMapper;
 
-    private final LabUserMapper labUserMapper;
-
     private final FlowNodeGateService flowNodeGateService;
-
-    private final ReportPushRecordMapper reportPushRecordMapper;
 
     private final StorageService storageService;
 
@@ -148,7 +139,7 @@ public class ReportService {
     }
 
     /**
-     * 正式发布报告，并生成报告产物及推送记录。
+     * 正式发布报告，并生成报告产物。
      *
      * @param id 报告ID
      */
@@ -176,18 +167,12 @@ public class ReportService {
         report.setPublishedBy(currentUser.getUserId());
         report.setPublishedByName(currentUser.getRealName());
 
-        // 发布成功后同步记录推送状态，便于后续追踪是否已下发到外部平台或接收人。
-        PushResult pushResult = pushReport(existing, now);
-        report.setPushStatus(pushResult.pushStatus);
-        report.setLastPushTime(now);
-        report.setLastPushMessage(pushResult.pushMessage);
         labReportMapper.updateById(report);
 
         if (existing.getSampleId() != null) {
             labSampleService.appendTrace(existing.getSampleId(),
                     "报告已发布：报告名称=" + existing.getReportName()
-                            + "，发布人=" + currentUser.getRealName()
-                            + "，推送结果=" + pushResult.pushMessage);
+                            + "，发布人=" + currentUser.getRealName());
         }
     }
 
@@ -204,9 +189,6 @@ public class ReportService {
         LabReport report = new LabReport();
         report.setId(existing.getId());
         report.setReportStatus(LabWorkflowConstants.ReportStatus.DRAFT);
-        report.setPushStatus("CANCELLED");
-        report.setLastPushTime(LocalDateTime.now());
-        report.setLastPushMessage("报告已取消发布");
         labReportMapper.updateById(report);
         if (existing.getSampleId() != null) {
             labSampleService.appendTrace(existing.getSampleId(),
@@ -251,7 +233,6 @@ public class ReportService {
         report.setDetectionRecordId(record.getId());
         report.setReportStatus(LabWorkflowConstants.ReportStatus.GENERATED);
         report.setContentSnapshot(content);
-        report.setPushStatus("PENDING");
         // 报告入库时同步生成 HTML 产物，后续预览和打印直接复用该正式文件。
         report.setFilePath(writeReportArtifact(report, sample, record, loadDetectionItems(record.getId()), loadLatestReview(sample.getId())));
         labReportMapper.insert(report);
@@ -561,9 +542,6 @@ public class ReportService {
         vo.setGeneratedTime(formatDateTime(report == null ? null : report.getGeneratedTime()));
         vo.setPublishedTime(formatDateTime(report == null ? null : report.getPublishedTime()));
         vo.setPublishedByName(StrUtil.blankToDefault(report == null ? null : report.getPublishedByName(), "-"));
-        vo.setPushStatusLabel(LabWorkflowConstants.getPushStatusLabel(report == null ? null : report.getPushStatus()));
-        vo.setLastPushTime(formatDateTime(report == null ? null : report.getLastPushTime()));
-        vo.setLastPushMessage(translateWorkflowText(StrUtil.blankToDefault(report == null ? null : report.getLastPushMessage(), "-")));
 
         vo.setSampleNo(StrUtil.blankToDefault(sample == null ? null : sample.getSampleNo(), "-"));
         vo.setSealNo(StrUtil.blankToDefault(sample == null ? null : sample.getSealNo(), "-"));
@@ -607,7 +585,6 @@ public class ReportService {
         List<ReportPreviewPage> pages = Collections.singletonList(new ReportPreviewPage(1, 0, new ArrayList<>(allItems)));
         int totalPages = 1;
         int longTextLength = safeLength(previewData == null ? null : previewData.getTraceLog())
-                + safeLength(previewData == null ? null : previewData.getLastPushMessage())
                 + safeLength(previewData == null ? null : previewData.getReviewRemark())
                 + safeLength(previewData == null ? null : previewData.getRejectReason())
                 + safeLength(previewData == null ? null : previewData.getSampleRemark())
@@ -710,9 +687,8 @@ public class ReportService {
                         .append("<tr><td class=\"label\">审查时间</td><td>").append(safeText(previewData.getReviewTime())).append("</td><td class=\"label\">审查人员</td><td>")
                         .append(safeText(previewData.getReviewerName())).append("</td><td class=\"label\">审查结论</td><td>").append(safeText(previewData.getReviewResultLabel())).append("</td></tr>")
                         .append("<tr><td class=\"label\">发布时间</td><td>").append(safeText(previewData.getPublishedTime())).append("</td><td class=\"label\">发布人</td><td>")
-                        .append(safeText(previewData.getPublishedByName())).append("</td><td class=\"label\">推送状态</td><td>").append(safeText(previewData.getPushStatusLabel())).append("</td></tr>")
-                        .append("<tr><td class=\"label\">最近推送时间</td><td>").append(safeText(previewData.getLastPushTime())).append("</td><td class=\"label label--wide\">推送结果说明</td><td colspan=\"3\">")
-                        .append(safeText(previewData.getLastPushMessage())).append("</td></tr>")
+                        .append(safeText(previewData.getPublishedByName())).append("</td><td class=\"label\">流程状态</td><td>")
+                        .append(safeText(previewData.getDetectionStatusLabel())).append("</td></tr>")
                         .append("</tbody></table></section>");
 
                 html.append("<section class=\"paper-section paper-summary\">")
@@ -1110,86 +1086,4 @@ public class ReportService {
         return result;
     }
 
-    private PushResult pushReport(LabReport report, LocalDateTime pushTime) {
-        List<PushRecipient> recipients = resolvePushRecipients(report);
-        if (recipients.isEmpty()) {
-            return new PushResult("PENDING", "未配置报告接收人，暂未执行推送");
-        }
-        List<String> recipientNames = new ArrayList<>();
-        for (PushRecipient recipient : recipients) {
-            ReportPushRecord pushRecord = new ReportPushRecord();
-            pushRecord.setReportId(report.getId());
-            pushRecord.setSampleId(report.getSampleId());
-            pushRecord.setSampleNo(report.getSampleNo());
-            pushRecord.setSealNo(report.getSealNo());
-            pushRecord.setRecipientUserId(recipient.userId);
-            pushRecord.setRecipientName(recipient.recipientName);
-            pushRecord.setRecipientPhone(recipient.recipientPhone);
-            pushRecord.setPushChannel("INTERNAL");
-            pushRecord.setPushStatus("SUCCESS");
-            pushRecord.setPushMessage("报告已推送到接收人：" + report.getReportName());
-            pushRecord.setPushTime(pushTime);
-            reportPushRecordMapper.insert(pushRecord);
-            recipientNames.add(recipient.recipientName);
-        }
-        return new PushResult("SUCCESS",
-                "成功推送给" + recipientNames.size() + "位接收人：" + String.join("、", recipientNames));
-    }
-
-    private List<PushRecipient> resolvePushRecipients(LabReport report) {
-        Map<String, PushRecipient> recipientMap = new LinkedHashMap<>();
-        LabSample sample = report.getSampleId() == null ? null : labSampleMapper.selectById(report.getSampleId());
-        if (sample != null && sample.getSamplerId() != null) {
-            addRecipient(recipientMap, sample.getSamplerId(), sample.getSamplerName());
-        }
-        if (report.getSampleId() == null) {
-            return new ArrayList<>(recipientMap.values());
-        }
-        ReviewRecord latestReview = reviewRecordMapper.selectOne(new LambdaQueryWrapper<ReviewRecord>()
-                .eq(ReviewRecord::getSampleId, report.getSampleId())
-                .orderByDesc(ReviewRecord::getReviewTime)
-                .orderByDesc(ReviewRecord::getCreatedTime)
-                .last("limit 1"));
-        if (latestReview != null && latestReview.getReviewerId() != null) {
-            addRecipient(recipientMap, latestReview.getReviewerId(), latestReview.getReviewerName());
-        }
-        return new ArrayList<>(recipientMap.values());
-    }
-
-    private void addRecipient(Map<String, PushRecipient> recipientMap, Long userId, String fallbackName) {
-        if (userId == null) {
-            return;
-        }
-        LabUser user = labUserMapper.selectById(userId);
-        String recipientName = user == null ? StrUtil.blankToDefault(fallbackName, "未命名接收人") : StrUtil.blankToDefault(user.getRealName(), fallbackName);
-        String recipientPhone = user == null ? null : user.getPhone();
-        recipientMap.putIfAbsent(String.valueOf(userId), new PushRecipient(userId, recipientName, recipientPhone));
-    }
-
-    private static class PushRecipient {
-
-        private final Long userId;
-
-        private final String recipientName;
-
-        private final String recipientPhone;
-
-        private PushRecipient(Long userId, String recipientName, String recipientPhone) {
-            this.userId = userId;
-            this.recipientName = recipientName;
-            this.recipientPhone = recipientPhone;
-        }
-    }
-
-    private static class PushResult {
-
-        private final String pushStatus;
-
-        private final String pushMessage;
-
-        private PushResult(String pushStatus, String pushMessage) {
-            this.pushStatus = pushStatus;
-            this.pushMessage = pushMessage;
-        }
-    }
 }

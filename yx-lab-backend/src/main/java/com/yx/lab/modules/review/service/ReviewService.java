@@ -22,6 +22,7 @@ import com.yx.lab.modules.review.mapper.ReviewRecordMapper;
 import com.yx.lab.modules.sample.entity.LabSample;
 import com.yx.lab.modules.sample.mapper.LabSampleMapper;
 import com.yx.lab.modules.sample.service.LabSampleService;
+import com.yx.lab.modules.system.entity.LabFlowNode;
 import com.yx.lab.modules.system.service.FlowConfigManagementService;
 import com.yx.lab.modules.system.service.FlowNodeGateService;
 import lombok.RequiredArgsConstructor;
@@ -30,10 +31,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -100,11 +103,13 @@ public class ReviewService {
         }
 
         CurrentUser currentUser = SecurityContext.getCurrentUser();
-        flowNodeGateService.assertCanHandle(
+        Set<Long> approvedReviewNodeIds = loadApprovedReviewNodeIds(record.getId());
+        LabFlowNode currentReviewNode = flowNodeGateService.resolveCurrentRequiredNode(
                 sample.getReviewFlowId(),
                 FlowConfigManagementService.FLOW_TYPE_REVIEW,
                 currentUser,
-                "审核");
+                "审核",
+                approvedReviewNodeIds);
         List<DetectionItem> recordItems = detectionItemMapper.selectList(new LambdaQueryWrapper<DetectionItem>()
                 .eq(DetectionItem::getRecordId, record.getId())
                 .orderByAsc(DetectionItem::getCreatedTime));
@@ -121,21 +126,10 @@ public class ReviewService {
 
         // 审查以“待审子流程”为最小单位，支持逐项通过或驳回，再汇总回主流程。
         Map<Long, ReviewItemCommand> reviewItemMap = validateReviewItems(command, pendingReviewItems);
-        boolean anyRejected = false;
+        boolean anyRejected = hasRejectedItem(reviewItemMap);
         StringBuilder rejectSummaryBuilder = new StringBuilder();
-        for (DetectionItem item : pendingReviewItems) {
-            ReviewItemCommand itemCommand = reviewItemMap.get(item.getId());
-            if (itemCommand == null) {
-                continue;
-            }
-            if (LabWorkflowConstants.ReviewResult.APPROVED.equals(itemCommand.getReviewResult())) {
-                item.setItemStatus(LabWorkflowConstants.DetectionStatus.APPROVED);
-            } else {
-                item.setItemStatus(LabWorkflowConstants.DetectionStatus.REJECTED);
-                anyRejected = true;
-                appendRejectSummary(rejectSummaryBuilder, item, itemCommand);
-            }
-            detectionItemMapper.updateById(item);
+        if (anyRejected) {
+            applyRejectedReviewItems(pendingReviewItems, reviewItemMap, rejectSummaryBuilder);
         }
 
         String rejectReason = rejectSummaryBuilder.toString();
@@ -149,6 +143,7 @@ public class ReviewService {
         reviewRecord.setSampleId(record.getSampleId());
         reviewRecord.setSampleNo(record.getSampleNo());
         reviewRecord.setSealNo(sample.getSealNo());
+        fillReviewNodeInfo(reviewRecord, sample, currentReviewNode);
         reviewRecord.setReviewerId(currentUser.getUserId());
         reviewRecord.setReviewerName(currentUser.getRealName());
         reviewRecord.setReviewTime(LocalDateTime.now());
@@ -157,7 +152,25 @@ public class ReviewService {
         reviewRecord.setReviewRemark(reviewRemark);
         reviewRecordMapper.insert(reviewRecord);
 
-        // 只有全部子流程都审核通过，主流程和样品状态才会整体流转到“已完成/已出报告”。
+        if (currentReviewNode != null && LabWorkflowConstants.ReviewResult.APPROVED.equals(overallReviewResult)) {
+            approvedReviewNodeIds.add(currentReviewNode.getId());
+        }
+
+        // 多级审核时，前置必审节点只记录节点通过，不改变检测项最终状态，也不生成报告。
+        if (!anyRejected && flowNodeGateService.hasRemainingRequiredNode(
+                sample.getReviewFlowId(),
+                FlowConfigManagementService.FLOW_TYPE_REVIEW,
+                approvedReviewNodeIds)) {
+            record.setAbnormalRemark(buildPendingReviewSummary(currentReviewNode));
+            detectionRecordMapper.updateById(record);
+            return;
+        }
+
+        if (!anyRejected) {
+            markItemsApproved(pendingReviewItems);
+        }
+
+        // 只有全部子流程都审核通过，且审核流程全部必审节点通过，主流程和样品状态才会整体流转到“已完成/已出报告”。
         if (!anyRejected && recordItems.stream().allMatch(item -> LabWorkflowConstants.DetectionStatus.APPROVED.equals(item.getItemStatus()))) {
             record.setDetectionStatus(LabWorkflowConstants.DetectionStatus.APPROVED);
             record.setAbnormalRemark(StrUtil.blankToDefault(reviewRemark, "全部子流程审核通过"));
@@ -216,6 +229,78 @@ public class ReviewService {
             throw new BusinessException("请完成当前主流程下全部待审查子流程的审核判定。");
         }
         return reviewItemMap;
+    }
+
+    private Set<Long> loadApprovedReviewNodeIds(Long detectionRecordId) {
+        if (detectionRecordId == null) {
+            return new HashSet<>();
+        }
+        ReviewRecord latestRejectedRecord = reviewRecordMapper.selectOne(new LambdaQueryWrapper<ReviewRecord>()
+                .eq(ReviewRecord::getDetectionRecordId, detectionRecordId)
+                .eq(ReviewRecord::getReviewResult, LabWorkflowConstants.ReviewResult.REJECTED)
+                .orderByDesc(ReviewRecord::getReviewTime)
+                .orderByDesc(ReviewRecord::getCreatedTime)
+                .orderByDesc(ReviewRecord::getId)
+                .last("LIMIT 1"));
+        return reviewRecordMapper.selectList(new LambdaQueryWrapper<ReviewRecord>()
+                        .eq(ReviewRecord::getDetectionRecordId, detectionRecordId)
+                        .eq(ReviewRecord::getReviewResult, LabWorkflowConstants.ReviewResult.APPROVED)
+                        .gt(latestRejectedRecord != null && latestRejectedRecord.getId() != null,
+                                ReviewRecord::getId,
+                                latestRejectedRecord == null ? null : latestRejectedRecord.getId())
+                        .isNotNull(ReviewRecord::getFlowNodeId))
+                .stream()
+                .map(ReviewRecord::getFlowNodeId)
+                .filter(id -> id != null)
+                .collect(Collectors.toCollection(HashSet::new));
+    }
+
+    private boolean hasRejectedItem(Map<Long, ReviewItemCommand> reviewItemMap) {
+        return reviewItemMap.values().stream()
+                .anyMatch(item -> LabWorkflowConstants.ReviewResult.REJECTED.equals(item.getReviewResult()));
+    }
+
+    private void applyRejectedReviewItems(List<DetectionItem> pendingReviewItems,
+                                          Map<Long, ReviewItemCommand> reviewItemMap,
+                                          StringBuilder rejectSummaryBuilder) {
+        for (DetectionItem item : pendingReviewItems) {
+            ReviewItemCommand itemCommand = reviewItemMap.get(item.getId());
+            if (itemCommand == null) {
+                continue;
+            }
+            if (LabWorkflowConstants.ReviewResult.APPROVED.equals(itemCommand.getReviewResult())) {
+                item.setItemStatus(LabWorkflowConstants.DetectionStatus.APPROVED);
+            } else {
+                item.setItemStatus(LabWorkflowConstants.DetectionStatus.REJECTED);
+                appendRejectSummary(rejectSummaryBuilder, item, itemCommand);
+            }
+            detectionItemMapper.updateById(item);
+        }
+    }
+
+    private void markItemsApproved(List<DetectionItem> pendingReviewItems) {
+        for (DetectionItem item : pendingReviewItems) {
+            item.setItemStatus(LabWorkflowConstants.DetectionStatus.APPROVED);
+            detectionItemMapper.updateById(item);
+        }
+    }
+
+    private void fillReviewNodeInfo(ReviewRecord reviewRecord, LabSample sample, LabFlowNode currentReviewNode) {
+        reviewRecord.setFlowId(sample.getReviewFlowId());
+        if (currentReviewNode == null) {
+            return;
+        }
+        reviewRecord.setFlowNodeId(currentReviewNode.getId());
+        reviewRecord.setFlowNodeName(currentReviewNode.getNodeName());
+        reviewRecord.setFlowNodeOrder(currentReviewNode.getNodeOrder());
+        reviewRecord.setRequiredFlag(currentReviewNode.getRequiredFlag());
+    }
+
+    private String buildPendingReviewSummary(LabFlowNode currentReviewNode) {
+        if (currentReviewNode == null || StrUtil.isBlank(currentReviewNode.getNodeName())) {
+            return "当前审核节点已通过，待下一审核节点处理";
+        }
+        return currentReviewNode.getNodeName() + "已通过，待下一审核节点处理";
     }
 
     private void appendRejectSummary(StringBuilder builder, DetectionItem item, ReviewItemCommand itemCommand) {

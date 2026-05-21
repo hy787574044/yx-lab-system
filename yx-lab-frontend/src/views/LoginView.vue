@@ -5,28 +5,12 @@
         <div class="login-brand__mark">YX</div>
         <div>
           <strong>阳新化验室水质管理平台</strong>
-          <p>Laboratory Water Quality Management Platform</p>
         </div>
       </div>
 
       <div class="login-side__copy">
         <span class="hero-tag">智慧化验室业务中台</span>
         <h1>统一支撑采样、检测、审核、报告和留痕闭环</h1>
-        <p>
-          依据阳新化验室 PC 端设计规范，构建标准化、规范化、可追踪的化验室业务工作界面，
-          让业务办理、台账管理和状态流转都保持一致的后台体验。
-        </p>
-      </div>
-
-      <div class="login-side__footer">
-        <div class="footer-card">
-          <strong>统一业务入口</strong>
-          <span>覆盖监测点位、样品采样、检测分析、结果审核、报告发布等核心模块。</span>
-        </div>
-        <div class="footer-card">
-          <strong>规范视觉体系</strong>
-          <span>使用统一色板、导航结构、表单布局、表格样式和状态色规范。</span>
-        </div>
       </div>
     </div>
 
@@ -81,52 +65,86 @@ async function submit() {
 
 <style scoped>
 .login-shell {
+  position: relative;
   min-height: 100vh;
-  display: grid;
-  grid-template-columns: minmax(0, 1.2fr) 520px;
+  overflow: hidden;
   background:
-    radial-gradient(circle at right top, rgba(118, 175, 255, 0.28) 0, rgba(118, 175, 255, 0.28) 120px, transparent 121px),
-    radial-gradient(circle at 90% 18%, rgba(34, 131, 255, 0.12) 0, rgba(34, 131, 255, 0.12) 240px, transparent 241px),
-    linear-gradient(135deg, #1e63dc 0%, #278cff 52%, #2ec0ff 100%);
+    linear-gradient(90deg, rgba(0, 15, 38, 0.48) 0%, rgba(0, 38, 82, 0.12) 52%, rgba(0, 12, 32, 0.36) 100%),
+    url("/assets/shouye_Image.png") center center / cover no-repeat,
+    linear-gradient(135deg, #0b2f59 0%, #064b87 58%, #041b38 100%);
+}
+
+.login-shell::before,
+.login-shell::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+}
+
+.login-shell::before {
+  inset: 0;
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.032) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.032) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: linear-gradient(90deg, rgba(0, 0, 0, 0.86), rgba(0, 0, 0, 0.28), rgba(0, 0, 0, 0.66));
+}
+
+.login-shell::after {
+  width: 760px;
+  height: 760px;
+  right: -300px;
+  top: -220px;
+  border-radius: 50%;
+  border: 1px solid rgba(125, 211, 252, 0.16);
+  box-shadow:
+    inset 0 0 90px rgba(14, 165, 233, 0.08),
+    0 0 120px rgba(14, 165, 233, 0.10);
 }
 
 .login-side {
   position: relative;
+  z-index: 2;
+  width: min(62vw, 980px);
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   padding: 40px 56px 48px;
-  color: #ffffff;
+  color: #f5fbff;
   overflow: hidden;
 }
 
 .login-side::before,
 .login-side::after {
-  content: "";
-  position: absolute;
-  border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  display: none;
 }
 
 .login-side::before {
-  width: 320px;
-  height: 320px;
-  right: -60px;
-  top: -80px;
+  inset: 0;
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: linear-gradient(90deg, rgba(0, 0, 0, 0.84), rgba(0, 0, 0, 0.18));
 }
 
 .login-side::after {
-  width: 520px;
-  height: 520px;
-  right: -180px;
-  top: -160px;
+  width: 720px;
+  height: 720px;
+  right: -260px;
+  top: -210px;
+  border-radius: 50%;
+  border: 1px solid rgba(125, 211, 252, 0.16);
+  box-shadow:
+    inset 0 0 80px rgba(14, 165, 233, 0.08),
+    0 0 100px rgba(14, 165, 233, 0.10);
 }
 
 .login-brand,
-.login-side__copy,
-.login-side__footer {
+.login-side__copy {
   position: relative;
-  z-index: 1;
+  z-index: 2;
 }
 
 .login-brand {
@@ -141,8 +159,9 @@ async function submit() {
   display: grid;
   place-items: center;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.16);
-  border: 1px solid rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.76);
+  border: 1px solid rgba(222, 249, 255, 0.45);
+  box-shadow: 0 10px 28px rgba(12, 39, 58, 0.20);
   font-size: 18px;
   font-weight: 700;
   letter-spacing: 1px;
@@ -154,20 +173,15 @@ async function submit() {
   font-weight: 600;
 }
 
-.login-brand p {
-  margin: 4px 0 0;
-  color: rgba(255, 255, 255, 0.76);
-  font-size: 13px;
-}
-
 .hero-tag {
   display: inline-flex;
   align-items: center;
   min-height: 30px;
   padding: 0 14px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.16);
-  color: #ffffff;
+  background: rgba(9, 49, 72, 0.46);
+  border: 1px solid rgba(173, 237, 255, 0.30);
+  color: #dffbff;
   font-size: 13px;
   font-weight: 600;
 }
@@ -183,57 +197,37 @@ async function submit() {
   font-size: 40px;
   line-height: 1.35;
   font-weight: 700;
-}
-
-.login-side__copy p {
-  max-width: 520px;
-  margin: 0;
-  color: rgba(255, 255, 255, 0.82);
-  font-size: 15px;
-  line-height: 1.9;
-}
-
-.login-side__footer {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
-}
-
-.footer-card {
-  padding: 16px 18px;
-  border-radius: 10px;
-  background: rgba(7, 33, 89, 0.22);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  backdrop-filter: blur(8px);
-}
-
-.footer-card strong {
-  display: block;
-  margin-bottom: 8px;
-  font-size: 15px;
-}
-
-.footer-card span {
-  color: rgba(255, 255, 255, 0.78);
-  font-size: 13px;
-  line-height: 1.7;
+  color: #f3fbff;
+  text-shadow: 0 12px 30px rgba(7, 28, 43, 0.36);
 }
 
 .login-main {
-  display: grid;
-  place-items: center;
-  padding: 32px;
-  background: linear-gradient(180deg, #f5f9ff 0%, #eef4fb 100%);
+  position: absolute;
+  z-index: 4;
+  top: 0;
+  right: clamp(36px, 5vw, 72px);
+  bottom: 0;
+  width: 420px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
 }
 
 .login-card {
   width: 100%;
   max-width: 420px;
-  padding: 32px 32px 28px;
-  background: rgba(255, 255, 255, 0.98);
-  border: 1px solid #d9e5f2;
-  border-radius: 12px;
-  box-shadow: 0 12px 30px rgba(31, 83, 170, 0.14);
+  padding: 34px 32px 30px;
+  background: rgba(248, 252, 255, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.82);
+  border-radius: 18px;
+  box-shadow:
+    0 24px 64px rgba(15, 95, 131, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(20px);
 }
 
 .login-card__head h2 {
@@ -282,29 +276,31 @@ async function submit() {
 }
 
 @media (max-width: 1200px) {
-  .login-shell {
-    grid-template-columns: 1fr 460px;
+  .login-side {
+    width: calc(100% - 500px);
+    padding: 32px 36px 40px;
   }
 
-  .login-side {
-    padding: 32px 36px 40px;
+  .login-main {
+    right: 36px;
   }
 
   .login-side__copy h1 {
     font-size: 34px;
   }
+
 }
 
 @media (max-width: 980px) {
-  .login-shell {
-    grid-template-columns: 1fr;
-  }
-
   .login-side {
+    width: 100%;
     min-height: 420px;
   }
 
   .login-main {
+    position: relative;
+    inset: auto;
+    width: auto;
     padding: 20px;
   }
 }
@@ -316,10 +312,6 @@ async function submit() {
 
   .login-side__copy h1 {
     font-size: 28px;
-  }
-
-  .login-side__footer {
-    grid-template-columns: 1fr;
   }
 
   .login-card {

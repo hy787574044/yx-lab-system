@@ -16,22 +16,6 @@ export const labMenuGroups = [
     ]
   },
   {
-    id: 'monitoring',
-    title: '监测点位',
-    shortTitle: '点位',
-    iconKey: 'LocationFilled',
-    defaultPath: '/monitoring-ledger',
-    children: [
-      {
-        path: '/monitoring-ledger',
-        title: '监测点位台账',
-        shortTitle: '点位台账',
-        subtitle: '维护监测点位基础信息，支撑采样计划与业务流转。',
-        componentKey: 'MonitoringPointView'
-      }
-    ]
-  },
-  {
     id: 'sample',
     title: '样品管理',
     shortTitle: '样品',
@@ -314,6 +298,13 @@ export const labMenuGroups = [
         shortTitle: '数据字典',
         subtitle: '对系统中的数据字典进行管理。',
         componentKey: 'SystemManagementView'
+      },
+      {
+        path: '/monitoring-ledger',
+        title: '监测点位台账',
+        shortTitle: '点位台账',
+        subtitle: '维护监测点位基础信息，支撑采样计划与业务流转。',
+        componentKey: 'MonitoringPointView'
       },
       {
         path: '/system-forms',

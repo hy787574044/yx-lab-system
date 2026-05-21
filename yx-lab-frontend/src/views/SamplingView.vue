@@ -57,7 +57,14 @@
                 </label>
                 <label class="toolbar-field">
                   <span>采样人员</span>
-                  <el-select v-model="taskQuery.samplerId" clearable filterable placeholder="请选择采样人员">
+                  <el-select
+                    v-model="taskQuery.samplerId"
+                    clearable
+                    filterable
+                    placeholder="请选择采样人员"
+                    :loading="samplerLoading"
+                    @visible-change="handleSamplerDropdownVisible"
+                  >
                     <el-option
                       v-for="item in samplerOptions"
                       :key="item.id"
@@ -325,7 +332,14 @@
               </label>
               <label class="toolbar-field">
                 <span>采样人员</span>
-                <el-select v-model="planQuery.samplerId" clearable filterable placeholder="请选择采样人员">
+                <el-select
+                  v-model="planQuery.samplerId"
+                  clearable
+                  filterable
+                  placeholder="请选择采样人员"
+                  :loading="samplerLoading"
+                  @visible-change="handleSamplerDropdownVisible"
+                >
                   <el-option
                     v-for="item in samplerOptions"
                     :key="item.id"
@@ -487,6 +501,7 @@
               style="width: 100%"
               placeholder="请选择采样员"
               :loading="samplerLoading"
+              @visible-change="handleSamplerDropdownVisible"
               @change="handlePlanSamplerChange"
             >
               <el-option
@@ -523,7 +538,7 @@
       </el-form>
       <template #footer>
         <el-button @click="planDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="submitting" @click="submitPlanForm">{{ editingPlanId ? '确认保存' : '确认创建' }}</el-button>
+        <el-button type="primary" :loading="submitting" @click="submitPlanForm">保存</el-button>
       </template>
     </el-dialog>
 
@@ -542,6 +557,7 @@
             style="width: 100%"
             placeholder="请选择采样员"
             :loading="samplerLoading"
+            @visible-change="handleSamplerDropdownVisible"
             @change="handleDispatchSamplerChange"
           >
             <el-option
@@ -602,29 +618,23 @@
           </el-form-item>
           <el-form-item label="OCR封签号">
             <el-input
-              v-model="loginForm.sealNo"
-              :readonly="isLoginReadonly"
-              placeholder="可粘贴 OCR 识别结果，自动匹配采样任务"
-              @change="isLoginReadonly ? undefined : handleLoginSealNoChange"
+              :model-value="loginForm.sealNo || '-'"
+              readonly
+              placeholder="选择待登录任务后自动带出"
             />
           </el-form-item>
           <el-form-item label="点位名称">
-            <el-input v-model="loginForm.pointName" :readonly="isLoginReadonly" placeholder="请输入点位名称" />
+            <el-input
+              :model-value="loginForm.pointName || '-'"
+              readonly
+              placeholder="选择待登录任务后自动带出"
+            />
           </el-form-item>
           <el-form-item label="样品类型">
             <el-input
-              v-if="isLoginReadonly"
               :model-value="getEnumLabel(sampleTypeLabelMap, loginForm.sampleType) || loginForm.sampleType || '-'"
               readonly
             />
-            <el-select v-else v-model="loginForm.sampleType" style="width: 100%">
-              <el-option
-                v-for="option in sampleTypeOptions"
-                :key="option.value"
-                :label="option.label"
-                :value="option.value"
-              />
-            </el-select>
           </el-form-item>
           <el-form-item label="采样人员">
             <el-input v-model="loginForm.samplerName" readonly />
@@ -801,7 +811,7 @@
       </el-form>
       <template #footer>
         <el-button @click="loginDialogVisible = false">{{ isLoginReadonly ? '关闭' : '取消' }}</el-button>
-        <el-button v-if="!isLoginReadonly" type="primary" :loading="submitting" @click="submitSampleLogin">确认登录</el-button>
+        <el-button v-if="!isLoginReadonly" type="primary" :loading="submitting" @click="submitSampleLogin">保存</el-button>
       </template>
     </el-dialog>
   </div>
@@ -1573,12 +1583,19 @@ async function loadSamplers() {
     const result = await fetchSystemUsersApi({
       pageNum: 1,
       pageSize: 500,
+      roleCode: 'SAMPLER',
       status: 1
     })
-    const records = result.records || []
-    samplerOptions.value = records.filter((item) => String(item.roleCode || '').trim().toUpperCase() === 'SAMPLER')
+    const records = Array.isArray(result.records) ? result.records : []
+    samplerOptions.value = records
   } finally {
     samplerLoading.value = false
+  }
+}
+
+function handleSamplerDropdownVisible(visible) {
+  if (visible) {
+    loadSamplers()
   }
 }
 
@@ -1801,7 +1818,7 @@ async function resumePlan(row) {
 async function promptTaskSealNo(row, options = {}) {
   const {
     title = row?.sealNo ? '修改采样封签号' : '录入采样封签号',
-    confirmButtonText = '确认保存'
+    confirmButtonText = '保存'
   } = options
   try {
     const { value } = await ElMessageBox.prompt(

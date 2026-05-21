@@ -1,24 +1,29 @@
 package com.yx.lab.modules.mobile.service;
 
+import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.yx.lab.common.constant.LabWorkflowConstants;
 import com.yx.lab.common.exception.BusinessException;
+import com.yx.lab.common.model.PageResult;
 import com.yx.lab.common.security.CurrentUser;
 import com.yx.lab.common.security.SecurityContext;
+import com.yx.lab.common.util.PageUtils;
+import com.yx.lab.modules.detection.dto.DetectionRecordQuery;
 import com.yx.lab.modules.detection.entity.DetectionRecord;
 import com.yx.lab.modules.detection.mapper.DetectionRecordMapper;
 import com.yx.lab.modules.mobile.vo.MobileReviewHistoryVO;
 import com.yx.lab.modules.mobile.vo.MobileReviewTodoVO;
+import com.yx.lab.modules.review.dto.ReviewQuery;
 import com.yx.lab.modules.review.entity.ReviewRecord;
 import com.yx.lab.modules.review.mapper.ReviewRecordMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * 移动端审查查询服务，负责审查历史与待审查记录查询。
+ * 移动端审核查询服务。
  */
 @Service
 @RequiredArgsConstructor
@@ -29,38 +34,60 @@ public class MobileReviewQueryService {
     private final ReviewRecordMapper reviewRecordMapper;
 
     /**
-     * 查询当前审查人的历史审查记录。
+     * 分页查询当前审核人的审核历史。
      *
-     * @return 审查历史列表
+     * @param query 审核记录分页查询条件
+     * @return 审核历史分页结果
      */
-    public List<MobileReviewHistoryVO> reviewHistory() {
+    public PageResult<MobileReviewHistoryVO> reviewHistory(ReviewQuery query) {
         CurrentUser currentUser = requireCurrentUser();
-        List<ReviewRecord> records = reviewRecordMapper.selectList(new LambdaQueryWrapper<ReviewRecord>()
-                .eq(ReviewRecord::getReviewerId, currentUser.getUserId())
-                .orderByDesc(ReviewRecord::getReviewTime));
-        return records.stream()
+        String keyword = query == null ? null : StrUtil.trim(query.getKeyword());
+        Page<ReviewRecord> page = reviewRecordMapper.selectPage(
+                PageUtils.buildPage(query),
+                new LambdaQueryWrapper<ReviewRecord>()
+                        .and(StrUtil.isNotBlank(keyword), wrapper -> wrapper
+                                .like(ReviewRecord::getSampleNo, keyword)
+                                .or()
+                                .like(ReviewRecord::getSealNo, keyword))
+                        .eq(StrUtil.isNotBlank(query.getReviewResult()),
+                                ReviewRecord::getReviewResult,
+                                query.getReviewResult())
+                        .eq(ReviewRecord::getReviewerId, currentUser.getUserId())
+                        .orderByDesc(ReviewRecord::getReviewTime));
+        return new PageResult<>(page.getTotal(), page.getRecords().stream()
                 .map(this::toReviewHistoryVO)
-                .collect(Collectors.toList());
+                .collect(Collectors.toList()));
     }
 
     /**
-     * 查询移动端待审查主流程列表。
+     * 分页查询移动端审核待办。
      *
-     * @return 待审查列表
+     * @param query 检测流程分页查询条件
+     * @return 审核待办分页结果
      */
-    public List<MobileReviewTodoVO> reviewTodo() {
-        List<DetectionRecord> records = detectionRecordMapper.selectList(new LambdaQueryWrapper<DetectionRecord>()
-                .eq(DetectionRecord::getDetectionStatus, LabWorkflowConstants.DetectionStatus.SUBMITTED)
-                .orderByDesc(DetectionRecord::getDetectionTime));
-        return records.stream()
+    public PageResult<MobileReviewTodoVO> reviewTodo(DetectionRecordQuery query) {
+        String keyword = query == null ? null : StrUtil.trim(query.getKeyword());
+        Page<DetectionRecord> page = detectionRecordMapper.selectPage(
+                PageUtils.buildPage(query),
+                new LambdaQueryWrapper<DetectionRecord>()
+                        .and(StrUtil.isNotBlank(keyword), wrapper -> wrapper
+                                .like(DetectionRecord::getSampleNo, keyword)
+                                .or()
+                                .like(DetectionRecord::getSealNo, keyword)
+                                .or()
+                                .like(DetectionRecord::getDetectionTypeName, keyword))
+                        .eq(DetectionRecord::getDetectionStatus, LabWorkflowConstants.DetectionStatus.SUBMITTED)
+                        .orderByDesc(DetectionRecord::getDetectionTime)
+                        .orderByDesc(DetectionRecord::getCreatedTime));
+        return new PageResult<>(page.getTotal(), page.getRecords().stream()
                 .map(this::toReviewTodoVO)
-                .collect(Collectors.toList());
+                .collect(Collectors.toList()));
     }
 
     private CurrentUser requireCurrentUser() {
         CurrentUser currentUser = SecurityContext.getCurrentUser();
         if (currentUser == null || currentUser.getUserId() == null) {
-            throw new BusinessException("当前登录信息已失效，请重新登录");
+            throw new BusinessException("当前登录信息已失效，请重新登录。");
         }
         return currentUser;
     }

@@ -98,14 +98,8 @@
                 <td>{{ previewData.publishedTime || '-' }}</td>
                 <td class="label">发布人</td>
                 <td>{{ previewData.publishedByName || '-' }}</td>
-                <td class="label">推送状态</td>
-                <td>{{ previewData.pushStatusLabel || '-' }}</td>
-              </tr>
-              <tr>
-                <td class="label">最近推送时间</td>
-                <td>{{ previewData.lastPushTime || '-' }}</td>
-                <td class="label label--wide">推送结果说明</td>
-                <td colspan="3">{{ previewData.lastPushMessage || '-' }}</td>
+                <td class="label">流程状态</td>
+                <td>{{ previewData.detectionStatusLabel || '-' }}</td>
               </tr>
             </tbody>
           </table>

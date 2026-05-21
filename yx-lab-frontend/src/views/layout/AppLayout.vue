@@ -6,7 +6,6 @@
           <div class="brand-mark">YX</div>
           <div class="brand-copy">
             <strong>阳新化验室水质管理平台</strong>
-            <p>Yangxin Laboratory Water Quality Platform</p>
           </div>
         </button>
 
@@ -73,8 +72,13 @@
           <em>99+</em>
         </button>
 
-        <button type="button" class="topbar-action icon-only" @click="toggleFullscreen">
-          <el-icon><FullScreen /></el-icon>
+        <button
+          type="button"
+          :class="['topbar-action', 'icon-only', 'topbar-action--fullscreen', { 'is-active': isFullscreen }]"
+          :title="isFullscreen ? '退出全屏' : '进入全屏'"
+          @click="toggleFullscreen"
+        >
+          <el-icon><component :is="isFullscreen ? Fold : FullScreen" /></el-icon>
         </button>
 
         <el-dropdown trigger="click" popper-class="user-dropdown-popper" @command="handleUserCommand">
@@ -236,11 +240,11 @@ import {
   DocumentChecked,
   Files,
   FullScreen,
+  Fold,
   House,
   List,
   LocationFilled,
   PieChart,
-  Search,
   Setting,
   SetUp,
   Tickets
@@ -276,6 +280,7 @@ const themeOptions = [
 const router = useRouter()
 const route = useRoute()
 const menuRef = ref()
+const isFullscreen = ref(Boolean(document.fullscreenElement))
 const menuKeyword = ref('')
 const currentThemeId = ref(themeOptions[0].id)
 const user = ref(getUser() || {})
@@ -402,6 +407,10 @@ function handleGlobalSearch() {
 
 function showMessageTip() {
   ElMessage.info('当前为演示消息入口，后续可接入正式消息中心。')
+}
+
+function syncFullscreenState() {
+  isFullscreen.value = Boolean(document.fullscreenElement)
 }
 
 function toggleFullscreen() {
@@ -572,12 +581,14 @@ watch(
 )
 
 onMounted(() => {
+  document.addEventListener('fullscreenchange', syncFullscreenState)
   initTheme()
   window.addEventListener('yx-lab-user-updated', syncUserFromStorage)
   loadUserAvatar()
 })
 
 onBeforeUnmount(() => {
+  document.removeEventListener('fullscreenchange', syncFullscreenState)
   window.removeEventListener('yx-lab-user-updated', syncUserFromStorage)
   clearAvatarPreview()
   clearUserAvatarSrc()
@@ -623,7 +634,7 @@ onBeforeUnmount(() => {
 
 .topbar-right {
   gap: 12px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   justify-content: flex-end;
 }
 
@@ -697,7 +708,7 @@ onBeforeUnmount(() => {
 }
 
 .topbar-search {
-  width: 248px;
+  display: none;
 }
 
 .topbar-action {
@@ -734,6 +745,42 @@ onBeforeUnmount(() => {
   width: 38px;
   justify-content: center;
   padding: 0;
+}
+
+.topbar-action--collapse {
+  position: relative;
+  overflow: hidden;
+  transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.topbar-action--collapse::before {
+  content: "";
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  left: 10px;
+  width: 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.36);
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.topbar-action--collapse :deep(svg) {
+  font-size: 17px;
+  transition: transform 0.2s ease;
+}
+
+.topbar-action--collapse.is-collapsed {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.32);
+}
+
+.topbar-action--collapse.is-collapsed::before {
+  transform: translateX(11px);
+}
+
+.topbar-action--collapse.is-collapsed :deep(svg) {
+  transform: scale(0.96);
 }
 
 .skin-trigger {
@@ -947,6 +994,7 @@ onBeforeUnmount(() => {
   padding: 18px 0 12px;
   box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.04);
   overflow: hidden;
+  transition: width 0.22s ease, padding 0.22s ease;
 }
 
 .sidebar-head {
@@ -994,6 +1042,33 @@ onBeforeUnmount(() => {
   overscroll-behavior: contain;
 }
 
+.sidebar.is-collapsed {
+  width: 74px;
+  padding-top: 14px;
+}
+
+.sidebar.is-collapsed .sidebar-head,
+.sidebar.is-collapsed .sidebar-footer {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.sidebar.is-collapsed .sidebar-head {
+  max-height: 0;
+  padding-bottom: 0;
+}
+
+.sidebar.is-collapsed .sidebar-footer {
+  max-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.sidebar-head,
+.sidebar-footer {
+  transition: opacity 0.18s ease, max-height 0.18s ease, padding 0.18s ease;
+}
+
 .workspace {
   display: flex;
   flex-direction: column;
@@ -1003,6 +1078,11 @@ onBeforeUnmount(() => {
   margin-left: var(--layout-sidebar-width);
   overflow: hidden;
   padding: 10px 14px 14px;
+  transition: margin-left 0.22s ease;
+}
+
+.workspace.is-collapsed {
+  margin-left: 74px;
 }
 
 .breadcrumb-row {

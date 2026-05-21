@@ -191,11 +191,11 @@ VALUES
 (800002, 780002, 770002, 'SAMPLE-DEMO-002', 'SEAL-DEMO-002', 1301, '刘审核', NOW() - INTERVAL 12 DAY + INTERVAL 3 HOUR, 'APPROVED', NULL, '指标稳定，审核通过。', 0, 1301, '刘审核', NOW() - INTERVAL 12 DAY + INTERVAL 3 HOUR, 1301, '刘审核', NOW() - INTERVAL 12 DAY + INTERVAL 3 HOUR),
 (800003, 780004, 770004, 'SAMPLE-DEMO-004', 'SEAL-DEMO-004', 1302, '何审核', NOW() - INTERVAL 5 DAY + INTERVAL 4 HOUR, 'REJECTED', '余氯低于控制要求，请重新检测。', '要求检测员复核余氯结果并补充现场说明。', 0, 1302, '何审核', NOW() - INTERVAL 5 DAY + INTERVAL 4 HOUR, 1302, '何审核', NOW() - INTERVAL 5 DAY + INTERVAL 4 HOUR);
 
-INSERT INTO lab_report (id, report_name, report_type, generated_time, sample_id, sample_no, seal_no, detection_record_id, report_status, published_time, published_by, published_by_name, push_status, last_push_time, last_push_message, file_path, content_snapshot, deleted, created_by, created_name, created_time, updated_by, updated_name, updated_time)
+INSERT INTO lab_report (id, report_name, report_type, generated_time, sample_id, sample_no, seal_no, detection_record_id, report_status, published_time, published_by, published_by_name, file_path, content_snapshot, deleted, created_by, created_name, created_time, updated_by, updated_name, updated_time)
 VALUES
-(810001, 'SAMPLE-DEMO-001-检测报告', 'DAILY', NOW() - INTERVAL 16 DAY, 770001, 'SAMPLE-DEMO-001', 'SEAL-DEMO-001', 780001, 'GENERATED', NULL, NULL, NULL, 'PENDING', NULL, '报告已生成，待发布。', NULL, '样品编号：SAMPLE-DEMO-001\n点位名称：城东水厂出厂水\n检测类型：出厂水常规九项\n检测结果：正常\n结论：本次检测符合要求。', 0, 1301, '刘审核', NOW() - INTERVAL 16 DAY, 1301, '刘审核', NOW() - INTERVAL 16 DAY),
-(810002, 'SAMPLE-DEMO-002-检测报告', 'DAILY', NOW() - INTERVAL 11 DAY, 770002, 'SAMPLE-DEMO-002', 'SEAL-DEMO-002', 780002, 'PUBLISHED', NOW() - INTERVAL 10 DAY, 1401, '孙报告', 'SUCCESS', NOW() - INTERVAL 10 DAY, '已推送至业务系统。', NULL, '样品编号：SAMPLE-DEMO-002\n点位名称：城西水厂出厂水\n检测类型：出厂水常规九项\n检测结果：正常\n结论：本次检测符合要求。', 0, 1301, '刘审核', NOW() - INTERVAL 11 DAY, 1401, '孙报告', NOW() - INTERVAL 10 DAY),
-(810003, '应急复检报告草稿', 'DAILY', NOW() - INTERVAL 2 DAY, 770004, 'SAMPLE-DEMO-004', 'SEAL-DEMO-004', 780004, 'DRAFT', NULL, NULL, NULL, 'PENDING', NULL, '驳回样品复检后再发布。', NULL, '样品编号：SAMPLE-DEMO-004\n当前状态：待重检\n说明：草稿报告用于演示报告草稿状态。', 0, 1401, '孙报告', NOW() - INTERVAL 2 DAY, 1401, '孙报告', NOW() - INTERVAL 2 DAY);
+(810001, 'SAMPLE-DEMO-001-检测报告', 'DAILY', NOW() - INTERVAL 16 DAY, 770001, 'SAMPLE-DEMO-001', 'SEAL-DEMO-001', 780001, 'GENERATED', NULL, NULL, NULL, NULL, '样品编号：SAMPLE-DEMO-001\n点位名称：城东水厂出厂水\n检测类型：出厂水常规九项\n检测结果：正常\n结论：本次检测符合要求。', 0, 1301, '刘审核', NOW() - INTERVAL 16 DAY, 1301, '刘审核', NOW() - INTERVAL 16 DAY),
+(810002, 'SAMPLE-DEMO-002-检测报告', 'DAILY', NOW() - INTERVAL 11 DAY, 770002, 'SAMPLE-DEMO-002', 'SEAL-DEMO-002', 780002, 'PUBLISHED', NOW() - INTERVAL 10 DAY, 1401, '孙报告', NULL, '样品编号：SAMPLE-DEMO-002\n点位名称：城西水厂出厂水\n检测类型：出厂水常规九项\n检测结果：正常\n结论：本次检测符合要求。', 0, 1301, '刘审核', NOW() - INTERVAL 11 DAY, 1401, '孙报告', NOW() - INTERVAL 10 DAY),
+(810003, '应急复检报告草稿', 'DAILY', NOW() - INTERVAL 2 DAY, 770004, 'SAMPLE-DEMO-004', 'SEAL-DEMO-004', 780004, 'DRAFT', NULL, NULL, NULL, NULL, '样品编号：SAMPLE-DEMO-004\n当前状态：待重检\n说明：草稿报告用于演示报告草稿状态。', 0, 1401, '孙报告', NOW() - INTERVAL 2 DAY, 1401, '孙报告', NOW() - INTERVAL 2 DAY);
 
 INSERT INTO lab_report_push_record (id, report_id, sample_id, sample_no, seal_no, recipient_user_id, recipient_name, recipient_phone, push_channel, push_status, push_message, push_time, deleted, created_by, created_name, created_time, updated_by, updated_name, updated_time)
 VALUES
@@ -586,7 +586,7 @@ SELECT
 FROM tmp_demo_seq
 WHERE MOD(n, 5) IN (3, 4);
 
-INSERT INTO lab_report (id, report_name, report_type, generated_time, sample_id, sample_no, seal_no, detection_record_id, report_status, published_time, published_by, published_by_name, push_status, last_push_time, last_push_message, file_path, content_snapshot, deleted, created_by, created_name, created_time, updated_by, updated_name, updated_time)
+INSERT INTO lab_report (id, report_name, report_type, generated_time, sample_id, sample_no, seal_no, detection_record_id, report_status, published_time, published_by, published_by_name, file_path, content_snapshot, deleted, created_by, created_name, created_time, updated_by, updated_name, updated_time)
 SELECT
     970000 + n,
     CONCAT('SAMPLE-BATCH-', LPAD(n, 4, '0'), '-检测报告'),
@@ -600,9 +600,6 @@ SELECT
     CASE WHEN MOD(n, 5) = 4 AND MOD(n, 2) = 0 THEN NOW() - INTERVAL (MOD(n, 90) + 1) DAY + INTERVAL 8 HOUR ELSE NULL END,
     CASE WHEN MOD(n, 5) = 4 AND MOD(n, 2) = 0 THEN 1401 ELSE NULL END,
     CASE WHEN MOD(n, 5) = 4 AND MOD(n, 2) = 0 THEN '孙报告' ELSE NULL END,
-    CASE WHEN MOD(n, 5) = 4 AND MOD(n, 2) = 0 THEN 'SUCCESS' ELSE 'PENDING' END,
-    CASE WHEN MOD(n, 5) = 4 AND MOD(n, 2) = 0 THEN NOW() - INTERVAL (MOD(n, 90) + 1) DAY + INTERVAL 8 HOUR ELSE NULL END,
-    CASE WHEN MOD(n, 5) = 4 AND MOD(n, 2) = 0 THEN '已推送至业务系统。' ELSE '报告已生成，待后续处理。' END,
     NULL,
     CONCAT('样品编号：SAMPLE-BATCH-', LPAD(n, 4, '0'), '\n检测类型：', CASE MOD(n, 4) WHEN 0 THEN '出厂水常规九项' WHEN 1 THEN '原水重点五项' WHEN 2 THEN '管网末梢四项' ELSE '应急复检套餐' END, '\n检测结果：', CASE MOD(n, 5) WHEN 3 THEN '待重检' ELSE '正常' END),
     0,

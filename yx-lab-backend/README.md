@@ -262,14 +262,14 @@ curl -G "http://localhost:8080/api/unified/users/menus" \
 
 如果你的数据库已经初始化过，需要同步执行 `sql/init.sql` 中对应的字段调整，保证样品封签号和流程留痕能够正常入库。
 
-### 报告正式产物与推送调整
+### 报告正式产物调整
 
-本次报告正式产物与推送功能对以下结构进行了扩展：
+本次报告正式产物功能对以下结构进行了扩展：
 
-- `lab_report`：新增 `published_time`、`published_by`、`published_by_name`、`push_status`、`last_push_time`、`last_push_message`
-- `lab_report_push_record`：新增报告推送留痕表
+- `lab_report`：新增 `published_time`、`published_by`、`published_by_name`
+- `lab_report_push_record`：报告推送留痕历史表
 
-同时，报告生成后会落地正式 HTML 文件产物，文件路径写入 `lab_report.file_path`；报告发布后会生成推送留痕记录。
+同时，报告生成后会落地正式 HTML 文件产物，文件路径写入 `lab_report.file_path`。
 
 如果你的数据库已经初始化过，需要同步执行 `sql/init.sql` 中对应的建表和字段调整。
 ### 移动端闭环入口
@@ -284,7 +284,7 @@ curl -G "http://localhost:8080/api/unified/users/menus" \
 - 已完成采样任务的样品登录
 - 待检样品与退回重检样品的检测提交
 - 移动端审核通过 / 驳回重检
-- 正式报告在线预览与推送结果回看
+- 正式报告在线预览
 
 后端移动端聚合接口包括：
 

@@ -1,0 +1,115 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="skyWall" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#9fc4d0"/>
+      <stop offset="0.34" stop-color="#7eacbd"/>
+      <stop offset="0.68" stop-color="#557f96"/>
+      <stop offset="1" stop-color="#355d77"/>
+    </linearGradient>
+    <linearGradient id="floor" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#9cb9c5"/>
+      <stop offset="0.48" stop-color="#6e91a3"/>
+      <stop offset="1" stop-color="#35566e"/>
+    </linearGradient>
+    <linearGradient id="benchTop" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#355b70"/>
+      <stop offset="0.26" stop-color="#d3e6eb"/>
+      <stop offset="0.58" stop-color="#8fb4c1"/>
+      <stop offset="1" stop-color="#2f5369"/>
+    </linearGradient>
+    <linearGradient id="benchFace" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#244a63"/>
+      <stop offset="0.58" stop-color="#456f83"/>
+      <stop offset="1" stop-color="#173a52"/>
+    </linearGradient>
+    <linearGradient id="glassPanel" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f4fbff" stop-opacity="0.38"/>
+      <stop offset="0.48" stop-color="#b9d5df" stop-opacity="0.16"/>
+      <stop offset="1" stop-color="#1f5a77" stop-opacity="0.12"/>
+    </linearGradient>
+    <linearGradient id="lightStrip" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#bff7ff" stop-opacity="0"/>
+      <stop offset="0.32" stop-color="#dffcff" stop-opacity="0.88"/>
+      <stop offset="0.72" stop-color="#8aeaff" stop-opacity="0.72"/>
+      <stop offset="1" stop-color="#bff7ff" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="labGlow" cx="54%" cy="30%" r="68%">
+      <stop offset="0" stop-color="#e9fbff" stop-opacity="0.42"/>
+      <stop offset="0.32" stop-color="#b6d6df" stop-opacity="0.20"/>
+      <stop offset="1" stop-color="#12334a" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="rightDepth" cx="82%" cy="48%" r="54%">
+      <stop offset="0" stop-color="#9ec5d1" stop-opacity="0.20"/>
+      <stop offset="0.58" stop-color="#274b62" stop-opacity="0.16"/>
+      <stop offset="1" stop-color="#102c43" stop-opacity="0.34"/>
+    </radialGradient>
+    <filter id="softBlur">
+      <feGaussianBlur stdDeviation="3"/>
+    </filter>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="20" stdDeviation="24" flood-color="#102c43" flood-opacity="0.22"/>
+    </filter>
+    <pattern id="wallLines" width="120" height="120" patternUnits="userSpaceOnUse">
+      <path d="M120 0H0v120" fill="none" stroke="#ecfbff" stroke-opacity="0.055" stroke-width="1"/>
+    </pattern>
+  </defs>
+
+  <rect width="1920" height="1080" fill="url(#skyWall)"/>
+  <rect width="1920" height="1080" fill="url(#wallLines)"/>
+  <rect width="1920" height="1080" fill="url(#labGlow)"/>
+  <rect width="1920" height="1080" fill="url(#rightDepth)"/>
+
+  <g opacity="0.58">
+    <path d="M0 0h1920v270H0Z" fill="#d7edf3" fill-opacity="0.20"/>
+    <path d="M120 88h1680" stroke="url(#lightStrip)" stroke-width="12" stroke-linecap="round"/>
+    <path d="M420 150h1040" stroke="#e7fbff" stroke-opacity="0.30" stroke-width="4" stroke-linecap="round"/>
+    <path d="M0 278h1920" stroke="#d8f6ff" stroke-opacity="0.16" stroke-width="2"/>
+  </g>
+
+  <g opacity="0.42" filter="url(#softBlur)">
+    <rect x="1120" y="116" width="540" height="390" rx="28" fill="url(#glassPanel)" stroke="#d8f7ff" stroke-opacity="0.32"/>
+    <path d="M1172 186h436M1172 286h436M1172 386h436M1312 136v356M1492 136v356" stroke="#eefcff" stroke-opacity="0.24" stroke-width="3"/>
+    <rect x="250" y="138" width="610" height="300" rx="24" fill="url(#glassPanel)" stroke="#d8f7ff" stroke-opacity="0.22"/>
+    <path d="M304 214h500M304 308h500M458 156v270M650 156v270" stroke="#eafcff" stroke-opacity="0.18" stroke-width="3"/>
+  </g>
+
+  <g opacity="0.88">
+    <path d="M0 668c304-38 560-18 802-46 324-38 704-86 1118-26v484H0Z" fill="url(#floor)"/>
+    <path d="M0 668c304-38 560-18 802-46 324-38 704-86 1118-26" fill="none" stroke="#e5faff" stroke-opacity="0.26" stroke-width="2"/>
+  </g>
+
+  <g filter="url(#shadow)">
+    <path d="M172 544h1120l118 104H92Z" fill="url(#benchTop)"/>
+    <path d="M92 648h1318v116H92Z" fill="url(#benchFace)"/>
+    <path d="M132 692h250M430 692h310M790 692h296M1136 692h206" stroke="#b6d5df" stroke-opacity="0.26" stroke-width="3" stroke-linecap="round"/>
+    <rect x="182" y="724" width="158" height="220" rx="10" fill="#243f55" fill-opacity="0.72"/>
+    <rect x="1114" y="724" width="158" height="220" rx="10" fill="#243f55" fill-opacity="0.72"/>
+  </g>
+
+  <g opacity="0.72" filter="url(#shadow)">
+    <rect x="378" y="428" width="220" height="116" rx="18" fill="#dbeff4" fill-opacity="0.72" stroke="#e9fbff" stroke-opacity="0.58"/>
+    <rect x="412" y="462" width="152" height="18" rx="9" fill="#628ba0" fill-opacity="0.32"/>
+    <rect x="412" y="498" width="108" height="14" rx="7" fill="#8fb9c7" fill-opacity="0.38"/>
+    <rect x="650" y="392" width="310" height="152" rx="22" fill="#ecf8fb" fill-opacity="0.42" stroke="#e9fbff" stroke-opacity="0.46"/>
+    <path d="M696 438h208M696 478h156M696 516h220" stroke="#24566e" stroke-opacity="0.18" stroke-width="7" stroke-linecap="round"/>
+    <path d="M698 516c42-44 84-30 126-70 34-32 64-10 100-40" fill="none" stroke="#5ddff0" stroke-opacity="0.48" stroke-width="4" stroke-linecap="round"/>
+  </g>
+
+  <g opacity="0.56">
+    <rect x="1028" y="448" width="86" height="96" rx="16" fill="#e8f6fa" fill-opacity="0.46" stroke="#e9fbff" stroke-opacity="0.38"/>
+    <rect x="1138" y="420" width="132" height="124" rx="20" fill="#d8edf3" fill-opacity="0.44" stroke="#e9fbff" stroke-opacity="0.34"/>
+    <path d="M1050 492h42M1164 462h80M1164 502h54" stroke="#2e6178" stroke-opacity="0.20" stroke-width="7" stroke-linecap="round"/>
+  </g>
+
+  <g opacity="0.40">
+    <path d="M150 850h1010" stroke="url(#lightStrip)" stroke-width="4" stroke-linecap="round"/>
+    <path d="M1430 240h420M1390 316h460M1500 392h300" stroke="#e5fbff" stroke-opacity="0.12" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="1460" cy="680" r="18" fill="#a7f3ff" fill-opacity="0.18"/>
+    <circle cx="1640" cy="520" r="10" fill="#d8fbff" fill-opacity="0.24"/>
+    <circle cx="520" cy="804" r="12" fill="#b4f4ff" fill-opacity="0.16"/>
+  </g>
+
+  <rect width="1920" height="1080" fill="#0c2f48" opacity="0.12"/>
+  <rect x="0" y="0" width="760" height="1080" fill="#123b55" opacity="0.22"/>
+  <rect x="1260" y="0" width="660" height="1080" fill="#102b42" opacity="0.18"/>
+</svg>

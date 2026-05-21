@@ -67,7 +67,7 @@
         <article class="overview-card" @click="activeTab = 'report'">
           <span>正式报告</span>
           <strong>{{ reports.length }}</strong>
-          <p>支持在线预览与推送结果回看</p>
+          <p>支持正式报告在线预览</p>
         </article>
       </div>
 
@@ -86,7 +86,6 @@
             </div>
             <p>样品编号：{{ row.sampleNo || '-' }}</p>
             <p>发布时间：{{ row.publishedTime || row.generatedTime || '-' }}</p>
-            <p>推送状态：{{ getPushStatusLabel(row.pushStatus) }}</p>
             <el-button size="small" @click="previewReport(row)">预览正式报告</el-button>
           </article>
         </div>
@@ -255,7 +254,7 @@
       <div class="mobile-section">
         <div class="section-headline">
           <h3>我的报告</h3>
-          <span class="section-tip">支持正式产物在线预览与推送留痕回看</span>
+          <span class="section-tip">支持正式报告在线预览</span>
         </div>
         <div v-if="reports.length" class="card-stack">
           <article class="report-card" v-for="row in reports" :key="row.id">
@@ -269,8 +268,6 @@
             <p>封签编号：{{ row.sealNo || '-' }}</p>
             <p>发布时间：{{ row.publishedTime || row.generatedTime || '-' }}</p>
             <p>发布人员：{{ row.publishedByName || '-' }}</p>
-            <p>推送状态：{{ getPushStatusLabel(row.pushStatus) }}</p>
-            <p v-if="row.lastPushMessage">推送结果：{{ row.lastPushMessage }}</p>
             <div class="card-actions">
               <el-button size="small" @click="previewReport(row)">预览正式报告</el-button>
             </div>
@@ -369,7 +366,7 @@
       </el-form>
       <template #footer>
         <el-button @click="loginDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="submitting" @click="submitSampleLogin">确认登录</el-button>
+        <el-button type="primary" :loading="submitting" @click="submitSampleLogin">保存</el-button>
       </template>
     </el-dialog>
 
@@ -556,7 +553,6 @@ import {
   getStatusClass,
   inProgressTaskStatus,
   pendingTaskStatus,
-  pushStatusLabelMap,
   rejectedReviewResult,
   reportStatusLabelMap,
   reviewResultLabelMap,
@@ -582,6 +578,12 @@ const detectionHistory = ref([])
 const reviewTodos = ref([])
 const reviewHistory = ref([])
 const reports = ref([])
+const samplingTodoTotal = ref(0)
+const detectionTodoTotal = ref(0)
+const detectionHistoryTotal = ref(0)
+const reviewTodoTotal = ref(0)
+const reviewHistoryTotal = ref(0)
+const reportTotal = ref(0)
 
 const detectionTypes = ref([])
 const detectionParameters = ref([])
@@ -654,18 +656,18 @@ const currentUserInitial = computed(() => (currentUser.value.realName || current
 const profileAvatarSrc = computed(() => profileAvatarPreviewUrl.value || (profileForm.avatarUrl ? currentUserAvatarSrc.value : ''))
 
 const stats = computed(() => [
-  { label: '采样待办', value: samplingTodos.value.length, desc: '待执行和待样品登录任务' },
-  { label: '检测待办', value: detectionTodos.value.length, desc: '待检样品和退回重检样品' },
-  { label: '审核待办', value: reviewTodos.value.length, desc: '待审核检测记录' },
-  { label: '我的报告', value: reports.value.length, desc: '正式报告与推送留痕' }
+  { label: '采样待办', value: samplingTodoTotal.value, desc: '待执行和待样品登录任务' },
+  { label: '检测待办', value: detectionTodoTotal.value, desc: '待检样品和退回重检样品' },
+  { label: '审核待办', value: reviewTodoTotal.value, desc: '待审核检测记录' },
+  { label: '我的报告', value: reportTotal.value, desc: '正式报告在线预览' }
 ])
 
 const tabOptions = computed(() => [
-  { value: 'overview', label: '总览', count: samplingTodos.value.length + detectionTodos.value.length + reviewTodos.value.length },
-  { value: 'sampling', label: '采样', count: samplingTodos.value.length },
-  { value: 'detection', label: '检测', count: detectionTodos.value.length },
-  { value: 'review', label: '审核', count: reviewTodos.value.length },
-  { value: 'report', label: '报告', count: reports.value.length }
+  { value: 'overview', label: '总览', count: samplingTodoTotal.value + detectionTodoTotal.value + reviewTodoTotal.value },
+  { value: 'sampling', label: '采样', count: samplingTodoTotal.value },
+  { value: 'detection', label: '检测', count: detectionTodoTotal.value },
+  { value: 'review', label: '审核', count: reviewTodoTotal.value },
+  { value: 'report', label: '报告', count: reportTotal.value }
 ])
 
 function parseDetectionItemsText(value) {
@@ -682,10 +684,6 @@ function matchDetectionTypesForSample(sample) {
   }
   const matched = enabledDetectionTypes.value.filter((item) => expectedNames.includes(item.typeName))
   return matched.length ? matched : enabledDetectionTypes.value
-}
-
-function getPushStatusLabel(status) {
-  return getEnumLabel(pushStatusLabelMap, status)
 }
 
 async function refreshCurrentUser() {
@@ -800,19 +798,25 @@ async function refreshAll() {
       reviewHistoryData,
       reportData
     ] = await Promise.all([
-      fetchMobileSamplingTodoApi(),
-      fetchMobileDetectionTodoApi(),
-      fetchMobileDetectionHistoryApi(),
-      fetchMobileReviewTodoApi(),
-      fetchMobileReviewHistoryApi(),
-      fetchMobileReportsApi()
+      fetchMobileSamplingTodoApi({ pageNum: 1, pageSize: 200 }),
+      fetchMobileDetectionTodoApi({ pageNum: 1, pageSize: 200 }),
+      fetchMobileDetectionHistoryApi({ pageNum: 1, pageSize: 200 }),
+      fetchMobileReviewTodoApi({ pageNum: 1, pageSize: 200 }),
+      fetchMobileReviewHistoryApi({ pageNum: 1, pageSize: 200 }),
+      fetchMobileReportsApi({ pageNum: 1, pageSize: 200 })
     ])
-    samplingTodos.value = samplingData || []
-    detectionTodos.value = detectionTodoData || []
-    detectionHistory.value = detectionHistoryData || []
-    reviewTodos.value = reviewTodoData || []
-    reviewHistory.value = reviewHistoryData || []
-    reports.value = reportData || []
+    samplingTodos.value = samplingData?.records || []
+    detectionTodos.value = detectionTodoData?.records || []
+    detectionHistory.value = detectionHistoryData?.records || []
+    reviewTodos.value = reviewTodoData?.records || []
+    reviewHistory.value = reviewHistoryData?.records || []
+    reports.value = reportData?.records || []
+    samplingTodoTotal.value = Number(samplingData?.total || 0)
+    detectionTodoTotal.value = Number(detectionTodoData?.total || 0)
+    detectionHistoryTotal.value = Number(detectionHistoryData?.total || 0)
+    reviewTodoTotal.value = Number(reviewTodoData?.total || 0)
+    reviewHistoryTotal.value = Number(reviewHistoryData?.total || 0)
+    reportTotal.value = Number(reportData?.total || 0)
   } finally {
     refreshing.value = false
   }

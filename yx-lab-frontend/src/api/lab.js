@@ -84,37 +84,37 @@ export const dashboardApi = () => request.get('/api/dashboard/overview')
  *
  * @returns {Promise<any>} 采样待办列表。
  */
-export const fetchMobileSamplingTodoApi = () => request.get('/api/mobile/sampling/todo')
+export const fetchMobileSamplingTodoApi = (params) => request.get('/api/mobile/sampling/todo', { params })
 /**
  * 获取移动端检测待办。
  *
  * @returns {Promise<any>} 检测待办列表。
  */
-export const fetchMobileDetectionTodoApi = () => request.get('/api/mobile/detection/todo')
+export const fetchMobileDetectionTodoApi = (params) => request.get('/api/mobile/detection/todo', { params })
 /**
  * 获取移动端检测历史。
  *
  * @returns {Promise<any>} 检测历史列表。
  */
-export const fetchMobileDetectionHistoryApi = () => request.get('/api/mobile/detection/history')
+export const fetchMobileDetectionHistoryApi = (params) => request.get('/api/mobile/detection/history', { params })
 /**
  * 获取移动端审核待办。
  *
  * @returns {Promise<any>} 审核待办列表。
  */
-export const fetchMobileReviewTodoApi = () => request.get('/api/mobile/review/todo')
+export const fetchMobileReviewTodoApi = (params) => request.get('/api/mobile/review/todo', { params })
 /**
  * 获取移动端审核历史。
  *
  * @returns {Promise<any>} 审核历史列表。
  */
-export const fetchMobileReviewHistoryApi = () => request.get('/api/mobile/review/history')
+export const fetchMobileReviewHistoryApi = (params) => request.get('/api/mobile/review/history', { params })
 /**
  * 获取移动端我的报告。
  *
  * @returns {Promise<any>} 报告列表。
  */
-export const fetchMobileReportsApi = () => request.get('/api/mobile/reports/mine')
+export const fetchMobileReportsApi = (params) => request.get('/api/mobile/reports/mine', { params })
 
 // 监测点位
 export const fetchMonitoringPointsApi = (params) => request.get('/api/monitoringPoints', { params })

@@ -27,11 +27,4 @@ public class MobileReportVO {
     private LocalDateTime publishedTime;
 
     private String publishedByName;
-
-    private String pushStatus;
-
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    private LocalDateTime lastPushTime;
-
-    private String lastPushMessage;
 }
