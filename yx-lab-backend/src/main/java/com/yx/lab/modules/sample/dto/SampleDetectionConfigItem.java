@@ -36,7 +36,7 @@ public class SampleDetectionConfigItem {
     private BigDecimal standardMax;
 
     /**
-     * 参考标准。
+     * 检测标准。
      */
     private String referenceStandard;
 

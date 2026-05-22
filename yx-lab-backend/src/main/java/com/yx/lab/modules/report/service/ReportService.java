@@ -479,7 +479,7 @@ public class ReportService {
                 .append("<th style=\"width:150px;\">检测方法</th>")
                 .append("<th style=\"width:120px;\">标准范围</th>")
                 .append("<th style=\"width:90px;\">单位</th>")
-                .append("<th style=\"width:160px;\">参考标准</th>")
+                .append("<th style=\"width:160px;\">检测标准</th>")
                 .append("<th style=\"width:90px;\">检测值</th>")
                 .append("<th style=\"width:140px;\">结果对比</th>")
                 .append("<th style=\"width:110px;\">单项判定</th>")
@@ -547,6 +547,7 @@ public class ReportService {
         vo.setSealNo(StrUtil.blankToDefault(sample == null ? null : sample.getSealNo(), "-"));
         vo.setPointName(StrUtil.blankToDefault(sample == null ? null : sample.getPointName(), "-"));
         vo.setSampleTypeLabel(StrUtil.blankToDefault(LabWorkflowConstants.getSampleTypeLabel(sample == null ? null : sample.getSampleType()), "-"));
+        vo.setQualityControlTypeLabel(StrUtil.blankToDefault(LabWorkflowConstants.getQualityControlTypeLabel(sample == null ? null : sample.getQualityControlType()), "-"));
         vo.setSamplingTime(formatDateTime(sample == null ? null : sample.getSamplingTime()));
         vo.setSealTime(formatDateTime(sample == null ? null : sample.getSealTime()));
         vo.setSamplerName(StrUtil.blankToDefault(sample == null ? null : sample.getSamplerName(), "-"));
@@ -673,8 +674,9 @@ public class ReportService {
                         .append(safeText(previewData.getReportTypeLabel())).append("</td><td class=\"label\">报告状态</td><td>").append(safeText(previewData.getReportStatusLabel())).append("</td></tr>")
                         .append("<tr><td class=\"label\">样品编号</td><td>").append(safeText(previewData.getSampleNo())).append("</td><td class=\"label\">封签编号</td><td>")
                         .append(safeText(previewData.getSealNo())).append("</td><td class=\"label\">点位名称</td><td>").append(safeText(previewData.getPointName())).append("</td></tr>")
-                        .append("<tr><td class=\"label\">样品类型</td><td>").append(safeText(previewData.getSampleTypeLabel())).append("</td><td class=\"label\">样品状态</td><td>")
-                        .append(safeText(previewData.getSampleStatusLabel())).append("</td><td class=\"label\">结果摘要</td><td>").append(safeText(previewData.getResultSummary())).append("</td></tr>")
+                        .append("<tr><td class=\"label\">样品类型</td><td>").append(safeText(previewData.getSampleTypeLabel())).append("</td><td class=\"label\">质控类型</td><td>")
+                        .append(safeText(previewData.getQualityControlTypeLabel())).append("</td><td class=\"label\">样品状态</td><td>").append(safeText(previewData.getSampleStatusLabel())).append("</td></tr>")
+                        .append("<tr><td class=\"label\">结果摘要</td><td colspan=\"5\">").append(safeText(previewData.getResultSummary())).append("</td></tr>")
                         .append("<tr><td class=\"label\">采样时间</td><td>").append(safeText(previewData.getSamplingTime())).append("</td><td class=\"label\">封签时间</td><td>")
                         .append(safeText(previewData.getSealTime())).append("</td><td class=\"label\">采样人员</td><td>").append(safeText(previewData.getSamplerName())).append("</td></tr>")
                         .append("<tr><td class=\"label\">天气情况</td><td>").append(safeText(previewData.getWeather())).append("</td><td class=\"label\">保存条件</td><td>")
@@ -711,7 +713,7 @@ public class ReportService {
                         .append("<th class=\"col-method\">检测方法</th>")
                         .append("<th class=\"col-standard\">标准范围</th>")
                         .append("<th class=\"col-unit\">单位</th>")
-                        .append("<th class=\"col-reference\">参考范围</th>")
+                        .append("<th class=\"col-reference\">检测标准</th>")
                         .append("<th class=\"col-value\">检测值</th>")
                         .append("<th class=\"col-judge\">单项判定</th>")
                         .append("<th class=\"col-status\">子流程状态</th>")

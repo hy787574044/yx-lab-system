@@ -22,7 +22,7 @@ public class ReportPreviewItemVO {
     @Schema(description = "标准范围")
     private String standardRange;
 
-    @Schema(description = "参考范围")
+    @Schema(description = "检测标准")
     private String referenceStandard;
 
     @Schema(description = "化验值")

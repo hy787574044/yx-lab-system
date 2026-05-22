@@ -115,7 +115,7 @@
             <el-table-column prop="unit" label="单位" min-width="100">
               <template #default="{ row }">{{ row.unit || '-' }}</template>
             </el-table-column>
-            <el-table-column prop="referenceStandard" label="参考标准" min-width="180" show-overflow-tooltip>
+            <el-table-column prop="referenceStandard" label="检测标准" min-width="180" show-overflow-tooltip>
               <template #default="{ row }">{{ row.referenceStandard || '-' }}</template>
             </el-table-column>
             <el-table-column prop="exceedRule" label="判定规则" min-width="220" show-overflow-tooltip>
@@ -286,7 +286,7 @@
     >
       <el-form label-width="100px">
         <div class="form-grid">
-          <el-form-item label="检测参数">
+          <el-form-item label="检测参数" required>
             <el-input
               v-model="parameterForm.parameterName"
               placeholder="请输入检测参数名称，例如 pH、浊度、余氯"
@@ -304,8 +304,8 @@
           <el-form-item label="标准上限">
             <el-input v-model="parameterForm.standardMax" placeholder="可为空" />
           </el-form-item>
-          <el-form-item label="参考标准">
-            <el-input v-model="parameterForm.referenceStandard" placeholder="请输入参考标准" />
+          <el-form-item label="检测标准">
+            <el-input v-model="parameterForm.referenceStandard" placeholder="请输入检测标准" />
           </el-form-item>
           <el-form-item label="状态">
             <el-radio-group v-model="parameterForm.enabled">
@@ -410,7 +410,7 @@
     >
       <el-form label-width="100px">
         <div class="form-grid">
-          <el-form-item label="套餐名称">
+          <el-form-item label="套餐名称" required>
             <el-input v-model="groupForm.typeName" placeholder="请输入检测套餐名称" />
           </el-form-item>
           <el-form-item label="状态">
@@ -419,7 +419,7 @@
               <el-radio-button :label="0">停用</el-radio-button>
             </el-radio-group>
           </el-form-item>
-          <el-form-item class="form-span-2" label="参数方法绑定">
+          <el-form-item class="form-span-2" label="参数方法绑定" required>
             <div class="binding-editor">
               <div class="binding-editor__select">
                 <div class="binding-editor__summary">
@@ -933,7 +933,35 @@ const currentStats = computed(() => (
 ))
 
 function handleStatClick(key) {
-  activeStatKey.value = activeStatKey.value === key ? 'all' : key
+  const nextKey = activeStatKey.value === key ? 'all' : key
+  activeStatKey.value = nextKey
+  applyCurrentStatToQuery(nextKey)
+  loadCurrentSceneRows()
+}
+
+function applyCurrentStatToQuery(key) {
+  const currentQuery = isParameterScene.value ? parameterQuery : groupQuery
+  currentQuery.enabled = key === 'enabled' ? 1 : key === 'disabled' ? 0 : ''
+  currentQuery.pageNum = 1
+}
+
+function syncActiveStatByCurrentQuery() {
+  const currentQuery = isParameterScene.value ? parameterQuery : groupQuery
+  if (String(currentQuery.enabled) === '1') {
+    activeStatKey.value = 'enabled'
+  } else if (String(currentQuery.enabled) === '0') {
+    activeStatKey.value = 'disabled'
+  } else {
+    activeStatKey.value = 'all'
+  }
+}
+
+function loadCurrentSceneRows() {
+  if (isParameterScene.value) {
+    loadParameters()
+    return
+  }
+  loadGroups()
 }
 
 function parseParameterIds(value) {
@@ -1509,11 +1537,13 @@ async function submitParameterBindings() {
 
 function handleParameterSearch() {
   parameterQuery.pageNum = 1
+  syncActiveStatByCurrentQuery()
   loadParameters()
 }
 
 function handleGroupSearch() {
   groupQuery.pageNum = 1
+  syncActiveStatByCurrentQuery()
   loadGroups()
 }
 
@@ -1521,6 +1551,7 @@ function resetParameterQuery() {
   parameterQuery.enabled = ''
   parameterQuery.keyword = ''
   parameterQuery.pageNum = 1
+  activeStatKey.value = 'all'
   loadParameters()
 }
 
@@ -1529,6 +1560,7 @@ function resetGroupQuery() {
   groupQuery.enabled = ''
   groupQuery.keyword = ''
   groupQuery.pageNum = 1
+  activeStatKey.value = 'all'
   loadGroups()
 }
 

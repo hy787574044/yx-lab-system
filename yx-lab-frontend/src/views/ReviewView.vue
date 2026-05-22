@@ -180,7 +180,7 @@
           <el-table-column prop="unit" label="单位" width="90">
             <template #default="{ row }">{{ row.unit || '-' }}</template>
           </el-table-column>
-          <el-table-column prop="referenceStandard" label="参考范围" min-width="150" show-overflow-tooltip>
+          <el-table-column prop="referenceStandard" label="检测标准" min-width="150" show-overflow-tooltip>
             <template #default="{ row }">{{ row.referenceStandard || '-' }}</template>
           </el-table-column>
           <el-table-column prop="resultValue" label="检测值" min-width="110">
@@ -534,13 +534,16 @@ const reviewDialogNote = computed(() => (
 ))
 
 function handleStatClick(key) {
-  activeStatKey.value = activeStatKey.value === key ? baseScene.value.defaultStatKey : key
+  const nextKey = activeStatKey.value === key ? baseScene.value.defaultStatKey : key
+  activeStatKey.value = nextKey
+  query.reviewResult = getReviewResultByStatKey(nextKey) || ''
   query.pageNum = 1
   loadData()
 }
 
 function handleSearch() {
   query.pageNum = 1
+  syncActiveStatByQuery()
   loadData()
 }
 
@@ -549,12 +552,32 @@ function resetQuery() {
   query.reviewResult = ''
   query.mine = ''
   query.pageNum = 1
+  syncRouteState()
   loadData()
 }
 
 function syncRouteState() {
   activeStatKey.value = baseScene.value.defaultStatKey
+  query.reviewResult = getReviewResultByStatKey(activeStatKey.value) || ''
   query.pageNum = 1
+}
+
+function getReviewResultByStatKey(key) {
+  const statResultMap = {
+    approved: approvedReviewResult,
+    rejected: rejectedReviewResult
+  }
+  return statResultMap[key]
+}
+
+function syncActiveStatByQuery() {
+  if (query.reviewResult === approvedReviewResult) {
+    activeStatKey.value = 'approved'
+  } else if (query.reviewResult === rejectedReviewResult) {
+    activeStatKey.value = 'rejected'
+  } else {
+    activeStatKey.value = baseScene.value.defaultStatKey
+  }
 }
 
 function isPendingRow(row) {

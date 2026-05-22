@@ -391,7 +391,7 @@
           <el-form-item label="角色编码" prop="roleCode"><el-select v-model="userForm.roleCode" filterable placeholder="请选择角色编码" style="width: 100%"><el-option v-for="item in roleOptionsForUser" :key="item.value" :label="item.label" :value="item.value" /></el-select></el-form-item>
           <el-form-item label="手机号" prop="phone"><el-input v-model="userForm.phone" placeholder="请输入手机号" /></el-form-item>
           <el-form-item label="状态" prop="status"><el-radio-group v-model="userForm.status"><el-radio-button :label="1">启用</el-radio-button><el-radio-button :label="0">停用</el-radio-button></el-radio-group></el-form-item>
-          <el-form-item label="登录密码" prop="password"><el-input v-model="userForm.password" type="password" show-password :placeholder="userForm.id ? '留空表示不修改密码' : '请输入登录密码'" /></el-form-item>
+          <el-form-item label="登录密码" prop="password" :required="!userForm.id"><el-input v-model="userForm.password" type="password" show-password :placeholder="userForm.id ? '留空表示不修改密码' : '请输入登录密码'" /></el-form-item>
         </div>
       </el-form>
       <template #footer><el-button @click="userDialogVisible = false">取消</el-button><el-button type="primary" :loading="savingUser" @click="submitUserForm">保存</el-button></template>
@@ -1538,21 +1538,25 @@ async function loadRoleOptions() {
 
 function handleDictSearch() {
   dictQuery.pageNum = 1
+  syncStatusActiveStatKey(dictQuery)
   loadDicts()
 }
 
 function handleOrgSearch() {
   orgQuery.pageNum = 1
+  syncStatusActiveStatKey(orgQuery)
   loadOrgs()
 }
 
 function handleUserSearch() {
   userQuery.pageNum = 1
+  syncStatusActiveStatKey(userQuery)
   loadUsers()
 }
 
 function handleRoleSearch() {
   roleQuery.pageNum = 1
+  syncStatusActiveStatKey(roleQuery)
   loadRoles()
 }
 
@@ -1563,6 +1567,16 @@ function handleLogSearch() {
 
 function handleSceneSearch() {
   sceneQuery.pageNum = 1
+}
+
+function syncStatusActiveStatKey(queryState) {
+  if (String(queryState.status) === '1') {
+    activeStatKey.value = 'enabled'
+  } else if (String(queryState.status) === '0') {
+    activeStatKey.value = 'disabled'
+  } else {
+    activeStatKey.value = 'all'
+  }
 }
 
 function handleScenePageChange() {

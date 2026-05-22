@@ -258,9 +258,17 @@ public class DictManagementService {
                 buildItemText(mapOf(
                         "FACTORY", "出厂水",
                         "RAW", "原水",
-                        "TERMINAL", "管网末梢"
+                        "TERMINAL", "管网末梢",
+                        "SOURCE_WATER", "水源水"
                 )),
                 "系统内置：样品登录、样品台账、移动端统一使用。"));
+        definitions.add(new BuiltInDictDefinition("quality_control_type", "质控类型", "采样管理",
+                buildItemText(mapOf(
+                        "PARALLEL", "平行样",
+                        "BLANK", "空白样",
+                        "QUALITY_CONTROL", "质控样"
+                )),
+                "系统内置：样品登录时用于标识本次样品的质控属性。"));
         definitions.add(new BuiltInDictDefinition("sample_status", "样品状态", "采样管理",
                 buildItemText(mapOf(
                         "LOGGED", "已登录",

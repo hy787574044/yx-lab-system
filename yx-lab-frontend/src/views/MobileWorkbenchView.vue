@@ -316,10 +316,10 @@
       @closed="resetLoginForm"
     >
       <el-form label-position="top">
-        <el-form-item label="点位名称">
+        <el-form-item label="点位名称" required>
           <el-input v-model="loginForm.pointName" />
         </el-form-item>
-        <el-form-item label="样品类型">
+        <el-form-item label="样品类型" required>
           <el-select v-model="loginForm.sampleType" style="width: 100%">
             <el-option
               v-for="option in sampleTypeOptions"
@@ -329,7 +329,17 @@
             />
           </el-select>
         </el-form-item>
-        <el-form-item label="检测项目组">
+        <el-form-item label="质控类型">
+          <el-select v-model="loginForm.qualityControlType" clearable placeholder="请选择质控类型" style="width: 100%">
+            <el-option
+              v-for="option in qualityControlTypeOptions"
+              :key="option.value"
+              :label="option.label"
+              :value="option.value"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="检测项目组" required>
           <el-select
             v-model="loginForm.detectionItems"
             clearable
@@ -345,7 +355,7 @@
             />
           </el-select>
         </el-form-item>
-        <el-form-item label="采样时间">
+        <el-form-item label="采样时间" required>
           <el-date-picker
             v-model="loginForm.samplingTime"
             type="datetime"
@@ -379,7 +389,7 @@
       @closed="resetDetectionForm"
     >
       <el-form label-position="top">
-        <el-form-item label="检测项目组">
+        <el-form-item label="检测项目组" required>
           <el-select v-model="detectionForm.detectionTypeId" style="width: 100%" @change="handleDetectionTypeChange">
             <el-option
               v-for="item in currentDetectionTypeOptions"
@@ -556,6 +566,7 @@ import {
   rejectedReviewResult,
   reportStatusLabelMap,
   reviewResultLabelMap,
+  qualityControlTypeOptions,
   sampleStatusLabelMap,
   sampleTypeLabelMap,
   sampleTypeOptions,
@@ -616,6 +627,7 @@ const loginForm = reactive({
   pointId: null,
   pointName: '',
   sampleType: '',
+  qualityControlType: '',
   detectionItems: '',
   samplingTime: '',
   samplerId: null,
@@ -918,6 +930,7 @@ async function openLoginDialog(task) {
   loginForm.pointId = task.pointId || null
   loginForm.pointName = task.pointName || ''
   loginForm.sampleType = task.sampleType || ''
+  loginForm.qualityControlType = ''
   loginForm.detectionItems = String(task.detectionItems || '').trim()
   loginForm.samplingTime = task.samplingTime || dayjs().format('YYYY-MM-DD HH:mm:ss')
   loginForm.samplerId = task.samplerId || currentUser.value.userId || currentUser.value.id || null
@@ -933,6 +946,7 @@ function resetLoginForm() {
   loginForm.pointId = null
   loginForm.pointName = ''
   loginForm.sampleType = ''
+  loginForm.qualityControlType = ''
   loginForm.detectionItems = ''
   loginForm.samplingTime = ''
   loginForm.samplerId = null

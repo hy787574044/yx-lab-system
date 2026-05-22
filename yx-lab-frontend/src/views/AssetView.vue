@@ -254,7 +254,7 @@
           <el-form-item label="存放位置" prop="storageLocation">
             <el-input v-model="instrumentForm.storageLocation" placeholder="请输入存放位置" />
           </el-form-item>
-          <el-form-item label="购置日期" prop="purchaseDate">
+          <el-form-item label="购置日期" prop="purchaseDate" required>
             <el-date-picker
               v-model="instrumentForm.purchaseDate"
               type="date"
@@ -389,7 +389,7 @@
               />
             </el-select>
           </el-form-item>
-          <el-form-item class="form-span-2" label="上传文件" prop="fileUrl">
+          <el-form-item class="form-span-2" label="上传文件" prop="fileUrl" :required="!documentForm.id && !documentForm.fileUrl">
             <el-upload
               :auto-upload="false"
               :limit="1"
@@ -697,7 +697,7 @@ function resetDocumentQuery() {
 
 function handleInstrumentSearch() {
   instrumentQuery.pageNum = 1
-  activeStatKey.value = '设备总数'
+  syncInstrumentActiveStatByQuery()
   loadInstruments()
 }
 
@@ -714,12 +714,36 @@ function handleStatClick(item) {
 
   if (instrumentStatLabels.includes(item.label)) {
     active.value = 'inst'
-    activeStatKey.value = activeStatKey.value === item.label ? '设备总数' : item.label
+    const nextLabel = activeStatKey.value === item.label ? '设备总数' : item.label
+    activeStatKey.value = nextLabel
+    instrumentQuery.instrumentStatus = getInstrumentStatusByStatLabel(nextLabel) || ''
+    instrumentQuery.pageNum = 1
+    loadInstruments()
     return
   }
 
   active.value = 'doc'
   activeStatKey.value = activeStatKey.value === item.label ? '文档总数' : item.label
+}
+
+function getInstrumentStatusByStatLabel(label) {
+  if (label === '正常设备') {
+    return instrumentNormalStatus
+  }
+  if (label === '待校准') {
+    return instrumentCalibratingStatus
+  }
+  return ''
+}
+
+function syncInstrumentActiveStatByQuery() {
+  if (instrumentQuery.instrumentStatus === instrumentNormalStatus) {
+    activeStatKey.value = '正常设备'
+  } else if (instrumentQuery.instrumentStatus === instrumentCalibratingStatus) {
+    activeStatKey.value = '待校准'
+  } else {
+    activeStatKey.value = '设备总数'
+  }
 }
 
 watch(active, (value) => {

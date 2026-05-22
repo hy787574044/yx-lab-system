@@ -94,11 +94,13 @@
             <el-table-column prop="unit" label="单位" width="90">
               <template #default="{ row }">{{ row.unit || '-' }}</template>
             </el-table-column>
-            <el-table-column prop="referenceStandard" label="参考范围" min-width="160" show-overflow-tooltip>
+            <el-table-column prop="referenceStandard" label="检测标准" min-width="160" show-overflow-tooltip>
               <template #default="{ row }">{{ row.referenceStandard || '-' }}</template>
             </el-table-column>
-            <el-table-column label="检测值" min-width="120">
-              <template #default="{ row }">{{ row.resultValue ?? '-' }}</template>
+            <el-table-column label="检测结果" min-width="120" header-cell-class-name="result-field-header">
+              <template #default="{ row }">
+                {{ row.resultValue ?? '-' }}
+              </template>
             </el-table-column>
             <el-table-column label="判定结果" width="110" header-cell-class-name="cell-center" class-name="cell-center">
               <template #default="{ row }">
@@ -153,7 +155,6 @@
       <div class="result-dialog">
         <div class="result-dialog__summary">
           <span class="binding-editor__chip">样品编号<strong>{{ resultForm.sampleNo || '-' }}</strong></span>
-          <span class="binding-editor__chip">封签编号<strong>{{ resultForm.sealNo || '-' }}</strong></span>
           <span class="binding-editor__chip">检测套餐<strong>{{ resultForm.detectionTypeName || '-' }}</strong></span>
           <span class="binding-editor__chip">检测参数<strong>{{ resultForm.parameterName || '-' }}</strong></span>
           <span class="binding-editor__chip">检测人员<strong>{{ resultForm.detectorName || '-' }}</strong></span>
@@ -165,24 +166,16 @@
             <strong>{{ resultForm.methodName || '-' }}</strong>
           </div>
           <div class="result-meta-card">
-            <span>参考范围</span>
+            <span>检测标准</span>
             <strong>{{ resultForm.referenceStandard || '-' }}</strong>
           </div>
           <div class="result-meta-card">
             <span>标准范围</span>
-            <strong>{{ formatStandardRange(resultForm.standardMin, resultForm.standardMax) }}</strong>
+            <strong>{{ formatStandardRange(resultForm.standardMin, resultForm.standardMax, resultForm.unit) }}</strong>
           </div>
           <div class="result-meta-card">
             <span>单位</span>
             <strong>{{ resultForm.unit || '-' }}</strong>
-          </div>
-          <div class="result-meta-card">
-            <span>子流程状态</span>
-            <strong>{{ getItemStatusLabel(resultForm.itemStatus) }}</strong>
-          </div>
-          <div class="result-meta-card">
-            <span>当前判定</span>
-            <strong>{{ getResultValueStatusLabel(resultForm) }}</strong>
           </div>
         </div>
 
@@ -191,7 +184,7 @@
             <span>检测步骤</span>
             <strong>{{ resultForm.methodBasis || '-' }}</strong>
           </div>
-          <el-form-item label="检测值">
+          <el-form-item label="检测结果" :required="!resultDialogReadonly" class="result-field-form-item">
             <div class="result-value-field">
               <span v-if="resultDialogReadonly" class="result-fixed-value">{{ resultForm.resultValue ?? '-' }}</span>
               <el-input-number
@@ -510,7 +503,7 @@ async function submitDetectionResult() {
     return
   }
   if (resultForm.resultValue == null || resultForm.resultValue === '') {
-    ElMessage.warning('请先填写检测值')
+    ElMessage.warning('请先填写检测结果')
     return
   }
 
@@ -698,6 +691,12 @@ onMounted(async () => {
 .result-value-input {
   width: 220px;
   max-width: 100%;
+}
+
+:deep(.result-field-header .cell),
+:deep(.result-field-form-item .el-form-item__label) {
+  color: #d4380d;
+  font-weight: 700;
 }
 
 .result-value-unit {

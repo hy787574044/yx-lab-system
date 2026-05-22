@@ -45,7 +45,7 @@ public class DetectionItem extends BaseEntity {
     @TableField("unit")
     private String unit;
 
-    @Schema(description = "参考范围")
+    @Schema(description = "检测标准")
     @TableField("reference_standard")
     private String referenceStandard;
 

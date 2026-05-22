@@ -491,8 +491,8 @@ function handleStatClick(key) {
 }
 
 function handleSearch() {
-  activeStatKey.value = 'all'
   query.pageNum = 1
+  syncActiveStatByQuery()
   loadFlowConfigs()
 }
 
@@ -504,6 +504,18 @@ function resetQuery() {
   query.flowType = ''
   query.status = ''
   loadFlowConfigs()
+}
+
+function syncActiveStatByQuery() {
+  if (query.flowType === FLOW_TYPE_REVIEW && query.status === '') {
+    activeStatKey.value = 'review'
+  } else if (query.flowType === FLOW_TYPE_PUBLISH && query.status === '') {
+    activeStatKey.value = 'publish'
+  } else if (query.status === 1 || String(query.status) === '1') {
+    activeStatKey.value = 'enabled'
+  } else {
+    activeStatKey.value = 'all'
+  }
 }
 
 function openFlowDialog(row) {

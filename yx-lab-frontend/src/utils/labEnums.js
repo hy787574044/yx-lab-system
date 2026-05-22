@@ -39,6 +39,11 @@ export const registeredSampleRegisterStatus = 'REGISTERED'
 export const factorySampleType = 'FACTORY'
 export const rawSampleType = 'RAW'
 export const terminalSampleType = 'TERMINAL'
+export const sourceWaterSampleType = 'SOURCE_WATER'
+
+export const parallelQualityControlType = 'PARALLEL'
+export const blankQualityControlType = 'BLANK'
+export const qcQualityControlType = 'QUALITY_CONTROL'
 
 export const routineSamplingType = 'ROUTINE'
 
@@ -126,7 +131,14 @@ export const sampleRegisterStatusLabelMap = {
 export const sampleTypeLabelMap = {
   [factorySampleType]: '出厂水',
   [rawSampleType]: '原水',
-  [terminalSampleType]: '管网末梢'
+  [terminalSampleType]: '管网末梢',
+  [sourceWaterSampleType]: '水源水'
+}
+
+export const qualityControlTypeLabelMap = {
+  [parallelQualityControlType]: '平行样',
+  [blankQualityControlType]: '空白样',
+  [qcQualityControlType]: '质控样'
 }
 
 export const sampleStatusLabelMap = {
@@ -183,6 +195,7 @@ export const pointTypeOptions = buildOptions(pointTypeLabelMap)
 export const frequencyTypeOptions = buildOptions(frequencyTypeLabelMap)
 export const cycleTypeOptions = buildOptions(cycleTypeLabelMap)
 export const sampleTypeOptions = buildOptions(sampleTypeLabelMap)
+export const qualityControlTypeOptions = buildOptions(qualityControlTypeLabelMap)
 export const reportTypeOptions = buildOptions(reportTypeLabelMap)
 export const reportStatusOptions = buildOptions(reportStatusLabelMap)
 

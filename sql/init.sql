@@ -239,6 +239,7 @@ CREATE TABLE lab_sample (
     point_id BIGINT NOT NULL,
     point_name VARCHAR(128) NOT NULL,
     sample_type VARCHAR(32),
+    quality_control_type VARCHAR(32),
     detection_items VARCHAR(1000),
     detection_type_id BIGINT,
     detection_type_name VARCHAR(128),

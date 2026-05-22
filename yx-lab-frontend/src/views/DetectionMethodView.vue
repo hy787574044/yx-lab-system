@@ -146,7 +146,7 @@
     >
       <el-form label-width="100px">
         <div class="form-grid">
-          <el-form-item label="检测方法">
+          <el-form-item label="检测方法" required>
             <el-input v-model="form.methodName" placeholder="请输入检测方法名称" />
           </el-form-item>
           <el-form-item label="方法编码">
@@ -280,7 +280,11 @@ const currentStats = computed(() => [
 ])
 
 function handleStatClick(key) {
-  activeStatKey.value = activeStatKey.value === key ? 'all' : key
+  const nextKey = activeStatKey.value === key ? 'all' : key
+  activeStatKey.value = nextKey
+  query.enabled = nextKey === 'enabled' ? 1 : nextKey === 'disabled' ? 0 : ''
+  query.pageNum = 1
+  loadRows()
 }
 
 function resetForm() {
@@ -351,6 +355,7 @@ async function removeRow(row) {
 
 function handleSearch() {
   query.pageNum = 1
+  syncActiveStatByQuery()
   loadRows()
 }
 
@@ -359,7 +364,18 @@ function resetQuery() {
   query.enabled = ''
   query.keyword = ''
   query.pageNum = 1
+  activeStatKey.value = 'all'
   loadRows()
+}
+
+function syncActiveStatByQuery() {
+  if (String(query.enabled) === '1') {
+    activeStatKey.value = 'enabled'
+  } else if (String(query.enabled) === '0') {
+    activeStatKey.value = 'disabled'
+  } else {
+    activeStatKey.value = 'all'
+  }
 }
 
 async function loadParameterOptions() {

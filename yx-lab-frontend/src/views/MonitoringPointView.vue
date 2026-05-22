@@ -117,7 +117,7 @@
     <el-dialog v-model="dialogVisible" :title="dialogTitle" width="720px" @closed="resetForm">
       <el-form :model="form" label-width="100px">
         <div class="form-grid">
-          <el-form-item label="点位名称">
+          <el-form-item label="点位名称" required>
             <el-input v-model="form.pointName" placeholder="请输入点位名称" />
           </el-form-item>
           <el-form-item label="所属区域">
@@ -261,7 +261,12 @@ const visibleRecords = computed(() => {
 })
 
 function handleStatClick(key) {
-  activeStatKey.value = key === activeStatKey.value ? 'all' : key
+  const nextKey = key === activeStatKey.value ? 'all' : key
+  activeStatKey.value = nextKey
+  query.pointStatus = nextKey === 'enabled' ? enabledPointStatus : ''
+  query.pointType = nextKey === 'factory' ? factoryPointType : ''
+  query.pageNum = 1
+  loadData()
 }
 
 function openCreateDialog() {
@@ -289,6 +294,7 @@ function openEditDialog(row) {
 
 function handleSearch() {
   query.pageNum = 1
+  syncActiveStatByQuery()
   loadData()
 }
 
@@ -300,6 +306,16 @@ function resetQuery() {
   query.pointStatus = ''
   activeStatKey.value = 'all'
   loadData()
+}
+
+function syncActiveStatByQuery() {
+  if (query.pointStatus === enabledPointStatus && !query.pointType) {
+    activeStatKey.value = 'enabled'
+  } else if (query.pointType === factoryPointType && !query.pointStatus) {
+    activeStatKey.value = 'factory'
+  } else {
+    activeStatKey.value = 'all'
+  }
 }
 
 function resetForm() {

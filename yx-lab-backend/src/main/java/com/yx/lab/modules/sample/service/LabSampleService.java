@@ -127,6 +127,7 @@ public class LabSampleService {
         sample.setPointId(command.getPointId() != null ? command.getPointId() : (task == null ? null : task.getPointId()));
         sample.setPointName(StrUtil.isNotBlank(command.getPointName()) ? command.getPointName() : (task == null ? null : task.getPointName()));
         sample.setSampleType(StrUtil.isNotBlank(command.getSampleType()) ? command.getSampleType() : (task == null ? null : task.getSampleType()));
+        sample.setQualityControlType(StrUtil.blankToDefault(StrUtil.trim(command.getQualityControlType()), null));
         sample.setDetectionItems(resolveDetectionItems(command, detectionType));
         sample.setDetectionTypeId(detectionType == null ? command.getDetectionTypeId() : detectionType.getId());
         sample.setDetectionTypeName(resolveDetectionTypeName(command, detectionType));

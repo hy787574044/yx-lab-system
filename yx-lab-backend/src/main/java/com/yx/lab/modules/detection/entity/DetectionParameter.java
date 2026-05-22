@@ -37,7 +37,7 @@ public class DetectionParameter extends BaseEntity {
     @TableField("exceed_rule")
     private String exceedRule;
 
-    @Schema(description = "参考范围")
+    @Schema(description = "检测标准")
     @TableField("reference_standard")
     private String referenceStandard;
 

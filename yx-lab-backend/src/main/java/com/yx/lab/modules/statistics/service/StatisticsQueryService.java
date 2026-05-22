@@ -117,7 +117,8 @@ public class StatisticsQueryService {
         return Arrays.asList(
                 new StatisticsDimensionItemVO("出厂水", sampleTypeTotal(LabWorkflowConstants.SampleType.FACTORY)),
                 new StatisticsDimensionItemVO("原水", sampleTypeTotal(LabWorkflowConstants.SampleType.RAW)),
-                new StatisticsDimensionItemVO("管网末梢", sampleTypeTotal(LabWorkflowConstants.SampleType.TERMINAL)));
+                new StatisticsDimensionItemVO("管网末梢", sampleTypeTotal(LabWorkflowConstants.SampleType.TERMINAL)),
+                new StatisticsDimensionItemVO("水源水", sampleTypeTotal(LabWorkflowConstants.SampleType.SOURCE_WATER)));
     }
 
     public List<StatisticsDimensionItemVO> sampleStatusDistribution() {

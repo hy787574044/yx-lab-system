@@ -89,7 +89,7 @@
               {{ row.detectorName || (row.detectionStatus === WAIT_ASSIGN_STATUS ? '待分配' : '-') }}
             </template>
           </el-table-column>
-          <el-table-column label="检测结果" width="120" header-cell-class-name="cell-center" class-name="cell-center">
+          <el-table-column label="检测结果" width="120" header-cell-class-name="cell-center result-field-header" class-name="cell-center">
             <template #default="{ row }">
               <span class="status-chip" :class="getDetectionResultClass(row)">
                 {{ getDetectionResultLabel(row) }}
@@ -144,10 +144,9 @@
 
     <el-dialog
       v-model="subflowDialogVisible"
-      :class="['detection-subflow-dialog', { 'detection-subflow-dialog--shifted': detectorAssignDialogVisible }]"
+      :class="['detection-subflow-dialog', { 'detection-subflow-dialog--assign': currentSubflowRecord && canAssignRow(currentSubflowRecord) }]"
       title="检测项明细"
-      :style="subflowDialogStyle"
-      :width="detectorAssignDialogVisible ? `${splitPanelWidth}px` : '1360px'"
+      :width="currentSubflowRecord && canAssignRow(currentSubflowRecord) ? '1280px' : '1080px'"
       destroy-on-close
       @closed="resetSubflowDialog"
     >
@@ -183,52 +182,90 @@
             </div>
           </div>
 
-          <div v-if="canAssignRow(currentSubflowRecord)" class="subflow-batch-panel">
-            <div class="subflow-batch-panel__head">
-              <div>
-                <strong>检测参数列表</strong>
-                <p>可单选或多选检测参数，勾选后右侧会自动弹出检测人员列表。</p>
-              </div>
-              <div class="subflow-batch-panel__actions">
-                <span v-if="selectedAssignableItems.length" class="subflow-batch-panel__count">
-                  已选 {{ selectedAssignableItems.length }} 项
-                </span>
-                <el-button link type="primary" @click="selectAllAssignableSubflowItems">全选可分配</el-button>
-                <el-button link @click="clearSelectedSubflowItems">清空已选</el-button>
-              </div>
-            </div>
-
-            <div class="subflow-pick-list">
-              <label
-                v-for="item in assignableSubflowItems"
-                :key="`pick-${item.id}`"
-                :class="['subflow-pick-item', { 'is-selected': isSubflowItemSelected(item.id) }]"
-              >
-                <el-checkbox
-                  :model-value="isSubflowItemSelected(item.id)"
-                  @change="toggleSubflowItemSelected(item.id, $event)"
-                />
-                <div class="subflow-pick-item__body">
-                  <strong>{{ item.parameterName }}</strong>
-                  <p>{{ item.methodName || '未绑定检测方法' }}</p>
-                  <span>当前检测人员：{{ getAssignedDetectorName(currentSubflowRecord.id, item) }}</span>
+          <div v-if="canAssignRow(currentSubflowRecord)" class="subflow-assign-layout">
+            <div class="subflow-assign-main">
+              <div class="subflow-batch-panel">
+                <div class="subflow-batch-panel__head">
+                  <div>
+                    <strong>检测参数列表</strong>
+                    <p>左侧勾选一个或多个检测参数，右侧选择检测人员后点击确认即可批量设置。</p>
+                  </div>
+                  <div class="subflow-batch-panel__actions">
+                    <span v-if="selectedAssignableItems.length" class="subflow-batch-panel__count">
+                      已选 {{ selectedAssignableItems.length }} 项
+                    </span>
+                    <el-button link type="primary" @click="selectAllAssignableSubflowItems">全选可分配</el-button>
+                    <el-button link @click="clearSelectedSubflowItems">清空已选</el-button>
+                  </div>
                 </div>
-                <span class="status-chip" :class="getSubflowItemStatusClass(currentSubflowRecord.id, item)">
-                  {{ getSubflowItemStatusLabel(currentSubflowRecord.id, item) }}
-                </span>
-              </label>
+
+                <div class="subflow-pick-list">
+                  <label
+                    v-for="item in assignableSubflowItems"
+                    :key="`pick-${item.id}`"
+                    :class="['subflow-pick-item', { 'is-selected': isSubflowItemSelected(item.id) }]"
+                  >
+                    <el-checkbox
+                      :model-value="isSubflowItemSelected(item.id)"
+                      @change="toggleSubflowItemSelected(item.id, $event)"
+                    />
+                    <div class="subflow-pick-item__body">
+                      <strong>{{ item.parameterName }}</strong>
+                      <p>{{ item.methodName || '未绑定检测方法' }}</p>
+                      <span>当前检测人员：{{ getAssignedDetectorName(currentSubflowRecord.id, item) }}</span>
+                    </div>
+                    <span class="status-chip" :class="getSubflowItemStatusClass(currentSubflowRecord.id, item)">
+                      {{ getSubflowItemStatusLabel(currentSubflowRecord.id, item) }}
+                    </span>
+                  </label>
+                </div>
+              </div>
             </div>
 
-          </div>
+            <aside class="detector-side-panel detector-side-panel--inline">
+              <div class="detector-side-panel__header">
+                <strong>选择检测人员</strong>
+                <el-input
+                  v-model="detectorKeyword"
+                  clearable
+                  class="detector-side-panel__search"
+                  placeholder="输入人员名称筛选"
+                />
+              </div>
 
-          <div v-if="canAssignRow(currentSubflowRecord)" class="subflow-submit-footer">
-            <span>完成参数人员选择后，点击提交保存分配结果</span>
-            <el-button
-              type="primary"
-              @click="saveAssignments(currentSubflowRecord)"
-            >
-              提交
-            </el-button>
+              <div class="detector-assign-dialog">
+                <div class="detector-assign-dialog__summary">
+                  <span class="binding-editor__chip">已选参数<strong>{{ selectedAssignableItems.length }}</strong></span>
+                  <span class="binding-editor__chip">可选人员<strong>{{ filteredDetectorOptions.length }}</strong></span>
+                </div>
+
+                <section class="detector-assign-dialog__list">
+                  <button
+                    v-for="option in filteredDetectorOptions"
+                    :key="option.id"
+                    type="button"
+                    :class="['subflow-detector-card', { 'is-selected': isPendingDetectorSelected(option.id) }]"
+                    @click="selectPendingDetector(option.id)"
+                  >
+                    <span v-if="isPendingDetectorSelected(option.id)" class="detector-check-mark">✓</span>
+                    <strong>{{ getDetectorOptionLabel(option) }}</strong>
+                    <span>{{ isPendingDetectorSelected(option.id) ? '已选择，已回填到左侧待提交参数' : '点击选择该检测人员' }}</span>
+                  </button>
+                  <div v-if="!filteredDetectorOptions.length" class="detector-empty">
+                    未找到匹配的检测人员
+                  </div>
+                </section>
+              </div>
+            </aside>
+
+            <div class="subflow-submit-footer">
+              <el-button
+                type="primary"
+                @click="saveAssignments(currentSubflowRecord)"
+              >
+                提交
+              </el-button>
+            </div>
           </div>
 
           <div v-else class="subflow-readonly-panel">
@@ -271,11 +308,13 @@
               <el-table-column prop="unit" label="单位" width="90">
                 <template #default="{ row }">{{ row.unit || '-' }}</template>
               </el-table-column>
-              <el-table-column prop="referenceStandard" label="参考范围" min-width="140" show-overflow-tooltip>
+              <el-table-column prop="referenceStandard" label="检测标准" min-width="140" show-overflow-tooltip>
                 <template #default="{ row }">{{ row.referenceStandard || '-' }}</template>
               </el-table-column>
-              <el-table-column label="检测值" width="100">
-                <template #default="{ row }">{{ row.resultValue ?? '-' }}</template>
+              <el-table-column label="检测结果" width="100" header-cell-class-name="result-field-header">
+                <template #default="{ row }">
+                  {{ row.resultValue ?? '-' }}
+                </template>
               </el-table-column>
               <el-table-column label="操作" width="100" fixed="right" header-cell-class-name="cell-center" class-name="cell-center">
                 <template #default="{ row }">
@@ -299,75 +338,6 @@
           当前主流程下暂无参数子流程数据。
         </div>
 
-        <Teleport to="body">
-          <aside
-            v-if="detectorAssignDialogVisible && currentSubflowRecord && canAssignRow(currentSubflowRecord)"
-            class="detector-side-panel"
-            :style="detectorPanelStyle"
-          >
-          <div class="detector-side-panel__header">
-            <strong>选择检测人员</strong>
-            <button
-              type="button"
-              class="detector-side-panel__close"
-              @click="handleCloseDetectorPanel"
-            >
-              ×
-            </button>
-          </div>
-
-          <div class="detector-assign-dialog">
-            <div class="detector-assign-dialog__summary">
-              <span class="binding-editor__chip">已选参数<strong>{{ selectedAssignableItems.length }}</strong></span>
-              <span class="binding-editor__chip">可选人员<strong>{{ detectorOptions.length }}</strong></span>
-            </div>
-
-            <section class="detector-assign-dialog__picked">
-              <div class="detector-assign-dialog__head">
-                <strong>待分配检测参数</strong>
-                <span>选择人员后点击确认，才会回填到左侧列表</span>
-              </div>
-              <div class="detector-assign-dialog__tags">
-                <span
-                  v-for="item in selectedAssignableItems"
-                  :key="`assign-${item.id}`"
-                  class="detector-assign-dialog__tag"
-                >
-                  {{ item.parameterName }}
-                </span>
-              </div>
-            </section>
-
-            <section class="detector-assign-dialog__list">
-              <button
-                type="button"
-                :class="['subflow-detector-card', 'subflow-detector-card--clear', { 'is-selected': pendingDetectorId === null }]"
-                @click="selectPendingDetector(null)"
-              >
-                <strong>清空分配</strong>
-                <span>将当前已选参数恢复为待分配</span>
-              </button>
-              <button
-                v-for="option in detectorOptions"
-                :key="option.id"
-                type="button"
-                :class="['subflow-detector-card', { 'is-selected': isPendingDetectorSelected(option.id) }]"
-                @click="selectPendingDetector(option.id)"
-              >
-                <strong>{{ getDetectorOptionLabel(option) }}</strong>
-                <span>{{ isPendingDetectorSelected(option.id) ? '已选择，点击下方确认后生效' : '点击选择该检测人员' }}</span>
-              </button>
-            </section>
-
-            <div class="detector-assign-dialog__footer">
-              <span>{{ getPendingDetectorLabel() }}</span>
-              <el-button type="primary" :disabled="!selectedAssignableItems.length" @click="confirmSelectedDetector">
-                确认
-              </el-button>
-            </div>
-            </div>
-          </aside>
-        </Teleport>
       </div>
     </el-dialog>
 
@@ -382,7 +352,6 @@
       <div class="result-dialog">
         <div class="result-dialog__summary">
           <span class="binding-editor__chip">样品编号<strong>{{ resultForm.sampleNo || '-' }}</strong></span>
-          <span class="binding-editor__chip">封签编号<strong>{{ resultForm.sealNo || '-' }}</strong></span>
           <span class="binding-editor__chip">检测套餐<strong>{{ resultForm.detectionTypeName || '-' }}</strong></span>
           <span class="binding-editor__chip">{{ resultDialogScopeLabel }}<strong>{{ resultForm.parameterName || '-' }}</strong></span>
           <span class="binding-editor__chip">参数数<strong>{{ resultForm.items.length }}</strong></span>
@@ -405,16 +374,16 @@
           <el-table-column prop="methodName" label="检测方法" min-width="220" show-overflow-tooltip />
           <el-table-column label="标准范围" min-width="140">
             <template #default="{ row }">
-              {{ formatStandardRange(row.standardMin, row.standardMax) }}
+              {{ formatStandardRange(row.standardMin, row.standardMax, row.unit) }}
             </template>
           </el-table-column>
           <el-table-column prop="unit" label="单位" width="90">
             <template #default="{ row }">{{ row.unit || '-' }}</template>
           </el-table-column>
-          <el-table-column prop="referenceStandard" label="参考范围" min-width="160" show-overflow-tooltip>
+          <el-table-column prop="referenceStandard" label="检测标准" min-width="160" show-overflow-tooltip>
             <template #default="{ row }">{{ row.referenceStandard || '-' }}</template>
           </el-table-column>
-          <el-table-column label="检测值" width="90">
+          <el-table-column label="检测结果" width="100" header-cell-class-name="result-field-header">
             <template #default="{ row }">
               <span v-if="resultDialogReadonly">{{ row.resultValue ?? '-' }}</span>
               <el-input-number
@@ -425,13 +394,6 @@
                 controls-position="right"
                 style="width: 100%"
               />
-            </template>
-          </el-table-column>
-          <el-table-column label="判定结果" width="120" header-cell-class-name="cell-center" class-name="cell-center">
-            <template #default="{ row }">
-              <span class="status-chip" :class="getResultValueStatusClass(row)">
-                {{ getResultValueStatusLabel(row) }}
-              </span>
             </template>
           </el-table-column>
         </el-table>
@@ -466,7 +428,7 @@
 </template>
 
 <script setup>
-import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElButton } from 'element-plus/es/components/button/index.mjs'
 import { ElCheckbox } from 'element-plus/es/components/checkbox/index.mjs'
@@ -526,6 +488,7 @@ const total = ref(0)
 let loadDataVersion = 0
 const detectorOptions = ref([])
 const detectorOptionsLoaded = ref(false)
+const detectorKeyword = ref('')
 const activeStatKey = ref('all')
 const summary = reactive({
   total: 0,
@@ -543,11 +506,6 @@ const currentSubflowRecord = ref(null)
 const selectedSubflowItemIds = ref([])
 const subflowItemFilter = ref('all')
 const pendingDetectorId = ref(undefined)
-const detectorAssignDialogVisible = ref(false)
-const subflowDialogMetrics = reactive({
-  top: null,
-  height: null
-})
 const resultDialogVisible = ref(false)
 const resultSubmitting = ref(false)
 const resultDialogItemId = ref(null)
@@ -819,38 +777,34 @@ const selectedAssignableItems = computed(() => {
   return currentSubflowItems.value.filter((item) => isAssignableSubflowItem(item) && selectedSet.has(item.id))
 })
 
-const splitDialogGap = 12
-const splitPanelWidth = 620
-const splitPanelHeight = 620
-
-const subflowDialogStyle = computed(() => {
-  if (!detectorAssignDialogVisible.value) {
-    return {}
+const filteredDetectorOptions = computed(() => {
+  const keyword = detectorKeyword.value.trim().toLowerCase()
+  if (!keyword) {
+    return detectorOptions.value
   }
-  const style = {
-    left: `calc(50% - ${splitDialogGap}px - ${splitPanelWidth}px)`,
-    width: `${splitPanelWidth}px`,
-    height: `${splitPanelHeight}px`
-  }
-  if (subflowDialogMetrics.top != null) {
-    style.top = `${subflowDialogMetrics.top}px`
-  }
-  return style
+  return detectorOptions.value.filter((option) => getDetectorSearchText(option).includes(keyword))
 })
 
-const detectorPanelStyle = computed(() => {
-  if (!detectorAssignDialogVisible.value) {
-    return {}
+const selectedCommonDetectorId = computed(() => {
+  const recordId = currentSubflowRecord.value?.id
+  if (!recordId || !selectedAssignableItems.value.length) {
+    return undefined
   }
-  const style = {
-    left: `calc(50% + ${splitDialogGap}px)`,
-    width: `${splitPanelWidth}px`,
-    height: `${splitPanelHeight}px`
+  const detectorIds = selectedAssignableItems.value.map((item) => getAssignedDetectorId(recordId, item.id))
+  const firstDetectorId = detectorIds[0]
+  if (firstDetectorId === null || firstDetectorId === undefined || firstDetectorId === '') {
+    return undefined
   }
-  if (subflowDialogMetrics.top != null) {
-    style.top = `${subflowDialogMetrics.top}px`
+  return detectorIds.every((detectorId) => String(detectorId) === String(firstDetectorId))
+    ? firstDetectorId
+    : undefined
+})
+
+const activeDetectorId = computed(() => {
+  if (selectedAssignableItems.value.length) {
+    return selectedCommonDetectorId.value
   }
-  return style
+  return pendingDetectorId.value
 })
 
 const resultDialogReadonly = computed(() => {
@@ -939,13 +893,16 @@ function getDetectionResultClass(row) {
 }
 
 function handleStatClick(key) {
-  activeStatKey.value = activeStatKey.value === key ? baseScene.value.defaultStatKey : key
+  const nextKey = activeStatKey.value === key ? baseScene.value.defaultStatKey : key
+  activeStatKey.value = nextKey
+  query.detectionStatus = getDetectionStatusByStatKey(nextKey) || ''
   query.pageNum = 1
   loadData()
 }
 
 function handleSearch() {
   query.pageNum = 1
+  syncActiveStatByQuery()
   loadData()
 }
 
@@ -954,11 +911,13 @@ function resetQuery() {
   query.detectionStatus = ''
   query.mine = ''
   query.pageNum = 1
+  syncRouteState()
   loadData()
 }
 
 function syncRouteState() {
   activeStatKey.value = baseScene.value.defaultStatKey
+  query.detectionStatus = getDetectionStatusByStatKey(activeStatKey.value) || ''
   query.pageNum = 1
 }
 
@@ -1063,8 +1022,6 @@ function setSubflowItemFilter(key) {
   subflowItemFilter.value = key
   selectedSubflowItemIds.value = []
   pendingDetectorId.value = undefined
-  detectorAssignDialogVisible.value = false
-  resetSubflowDialogMetrics()
 }
 
 function getItemResultLabel(item) {
@@ -1158,6 +1115,20 @@ function getDetectorOptionLabel(option) {
   return option.displayName || option.realName || option.username || '-'
 }
 
+function getDetectorSearchText(option) {
+  return [
+    option?.displayName,
+    option?.realName,
+    option?.username,
+    option?.nickname,
+    option?.phone,
+    option?.id
+  ]
+    .filter((value) => value !== null && value !== undefined && value !== '')
+    .join(' ')
+    .toLowerCase()
+}
+
 function getAssignedDetectorName(recordId, item) {
   const detectorId = getAssignedDetectorId(recordId, item.id)
   if (detectorId == null || detectorId === '') {
@@ -1171,30 +1142,8 @@ function isSubflowItemSelected(itemId) {
   return selectedSubflowItemIds.value.includes(itemId)
 }
 
-function getSubflowDialogElement() {
-  return document.querySelector('.el-dialog.detection-subflow-dialog')
-    || document.querySelector('.detection-subflow-dialog .el-dialog')
-}
-
-function syncSubflowDialogMetrics() {
-  if (typeof window === 'undefined') {
-    return
-  }
-  const dialog = getSubflowDialogElement()
-  if (!dialog) {
-    return
-  }
-  const rect = dialog.getBoundingClientRect()
-  subflowDialogMetrics.top = rect.top
-  subflowDialogMetrics.height = rect.height
-}
-
 async function showDetectorAssignPanel() {
   await loadDetectorOptions()
-  syncSubflowDialogMetrics()
-  await nextTick()
-  syncSubflowDialogMetrics()
-  detectorAssignDialogVisible.value = true
 }
 
 async function loadDetectorOptions(force = false) {
@@ -1207,11 +1156,6 @@ async function loadDetectorOptions(force = false) {
     id: item.userId ?? item.id
   }))
   detectorOptionsLoaded.value = true
-}
-
-function handleCloseDetectorPanel() {
-  detectorAssignDialogVisible.value = false
-  pendingDetectorId.value = undefined
 }
 
 function toggleSubflowItemSelected(itemId, checked) {
@@ -1237,51 +1181,24 @@ function clearSelectedSubflowItems() {
   pendingDetectorId.value = undefined
 }
 
-function resetSubflowDialogMetrics() {
-  subflowDialogMetrics.top = null
-  subflowDialogMetrics.height = null
+function isPendingDetectorSelected(detectorId) {
+  return activeDetectorId.value !== undefined && String(activeDetectorId.value) === String(detectorId)
 }
 
 function selectPendingDetector(detectorId) {
-  pendingDetectorId.value = detectorId
-}
-
-function isPendingDetectorSelected(detectorId) {
-  return pendingDetectorId.value !== undefined && String(pendingDetectorId.value) === String(detectorId)
-}
-
-function getPendingDetectorLabel() {
-  if (pendingDetectorId.value === undefined) {
-    return '请选择检测人员'
-  }
-  if (pendingDetectorId.value === null) {
-    return '已选择：清空分配'
-  }
-  const option = detectorOptions.value.find((candidate) => String(candidate.id) === String(pendingDetectorId.value))
-  return `已选择：${getDetectorOptionLabel(option)}`
-}
-
-function confirmSelectedDetector() {
   const recordId = currentSubflowRecord.value?.id
   if (!recordId || !selectedAssignableItems.value.length) {
     ElMessage.warning('请先勾选需要分配的检测参数')
     return
   }
-  if (pendingDetectorId.value === undefined) {
-    ElMessage.warning('请先选择检测人员')
-    return
-  }
-  selectedAssignableItems.value.forEach((item) => {
-    updateAssignedDetectorId(recordId, item.id, pendingDetectorId.value)
+  const selectedItems = [...selectedAssignableItems.value]
+  selectedItems.forEach((item) => {
+    updateAssignedDetectorId(recordId, item.id, detectorId)
   })
-  const detectorLabel = pendingDetectorId.value == null
-    ? '未分配'
-    : getDetectorOptionLabel(detectorOptions.value.find((option) => String(option.id) === String(pendingDetectorId.value)))
-  detectorAssignDialogVisible.value = false
-  pendingDetectorId.value = undefined
+  pendingDetectorId.value = detectorId
   selectedSubflowItemIds.value = []
-  resetSubflowDialogMetrics()
-  ElMessage.success(`已将所选参数批量设置为${detectorLabel}`)
+  const detectorLabel = getDetectorOptionLabel(detectorOptions.value.find((option) => String(option.id) === String(detectorId)))
+  ElMessage.success(`已将 ${selectedItems.length} 个参数分配给${detectorLabel}，请点击提交保存`)
 }
 
 function resetSubflowDialog() {
@@ -1289,8 +1206,6 @@ function resetSubflowDialog() {
   selectedSubflowItemIds.value = []
   subflowItemFilter.value = 'all'
   pendingDetectorId.value = undefined
-  detectorAssignDialogVisible.value = false
-  resetSubflowDialogMetrics()
 }
 
 function resetResultForm() {
@@ -1434,14 +1349,14 @@ async function openRecordResultDialog(row) {
 async function openSubflowDialog(row) {
   currentSubflowRecord.value = row
   selectedSubflowItemIds.value = []
-  detectorAssignDialogVisible.value = false
+  pendingDetectorId.value = undefined
   subflowDialogVisible.value = true
   if (row?.__sampleOnly) {
     return
   }
   await loadRecordDetail(row.id)
   if (canAssignRow(row)) {
-    showDetectorAssignPanel()
+    await loadDetectorOptions()
   }
 }
 
@@ -1506,6 +1421,10 @@ async function submitDetectionResult() {
 }
 
 function getActiveDetectionStatusFilter() {
+  return query.detectionStatus || getDetectionStatusByStatKey(activeStatKey.value) || undefined
+}
+
+function getDetectionStatusByStatKey(key) {
   const statStatusMap = {
     waitAssign: WAIT_ASSIGN_STATUS,
     waitDetect: WAIT_DETECT_STATUS,
@@ -1513,7 +1432,18 @@ function getActiveDetectionStatusFilter() {
     approved: approvedDetectionStatus,
     rejected: rejectedDetectionStatus
   }
-  return statStatusMap[activeStatKey.value] || query.detectionStatus || undefined
+  return statStatusMap[key]
+}
+
+function syncActiveStatByQuery() {
+  const matchedEntry = Object.entries({
+    waitAssign: WAIT_ASSIGN_STATUS,
+    waitDetect: WAIT_DETECT_STATUS,
+    pendingReview: reviewPendingDetectionStatus,
+    approved: approvedDetectionStatus,
+    rejected: rejectedDetectionStatus
+  }).find(([, status]) => status === query.detectionStatus)
+  activeStatKey.value = matchedEntry?.[0] || baseScene.value.defaultStatKey
 }
 
 async function loadData() {
@@ -1570,11 +1500,6 @@ async function handleExport() {
 onMounted(async () => {
   syncRouteState()
   await loadData()
-  window.addEventListener('resize', syncSubflowDialogMetrics)
-})
-
-onBeforeUnmount(() => {
-  window.removeEventListener('resize', syncSubflowDialogMetrics)
 })
 
 watch(() => route.fullPath, () => {
@@ -1582,14 +1507,6 @@ watch(() => route.fullPath, () => {
   loadData()
 })
 
-watch(detectorAssignDialogVisible, async (visible) => {
-  if (!visible) {
-    pendingDetectorId.value = undefined
-    return
-  }
-  await nextTick()
-  syncSubflowDialogMetrics()
-})
 </script>
 
 <style scoped>
@@ -1810,6 +1727,7 @@ watch(detectorAssignDialogVisible, async (visible) => {
 
 .subflow-batch-panel {
   display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
   min-height: 0;
   gap: 14px;
   padding: 16px;
@@ -1855,25 +1773,22 @@ watch(detectorAssignDialogVisible, async (visible) => {
 
 .subflow-pick-list {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   align-content: start;
   gap: 12px;
   min-height: 0;
+  overflow: auto;
+  padding-right: 4px;
 }
 
 .subflow-submit-footer {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   gap: 12px;
-  padding-top: 12px;
+  grid-column: 1 / -1;
+  padding-top: 14px;
   border-top: 1px solid color-mix(in srgb, var(--brand) 12%, #ffffff 88%);
-}
-
-.subflow-submit-footer span {
-  color: var(--text-sub);
-  font-size: 13px;
-  line-height: 1.6;
 }
 
 .subflow-pick-item {
@@ -1922,8 +1837,29 @@ watch(detectorAssignDialogVisible, async (visible) => {
 
 .detector-assign-dialog {
   display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
   min-height: 0;
   gap: 12px;
+  overflow: hidden;
+}
+
+.subflow-assign-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 10px 16px;
+  height: 100%;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.subflow-assign-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .detector-side-panel {
@@ -1937,6 +1873,16 @@ watch(detectorAssignDialogVisible, async (visible) => {
   background: #ffffff;
   box-shadow: var(--shadow-lg);
   width: 620px;
+}
+
+.detector-side-panel--inline {
+  width: auto;
+  height: 100%;
+  min-height: 0;
+  margin-top: 0;
+  padding: 16px;
+  box-shadow: none;
+  overflow: hidden;
 }
 
 .detector-side-panel__header {
@@ -1953,6 +1899,11 @@ watch(detectorAssignDialogVisible, async (visible) => {
   color: var(--text-main);
   font-size: 16px;
   line-height: 1.5;
+}
+
+.detector-side-panel__search {
+  width: 240px;
+  max-width: 58%;
 }
 
 .detector-side-panel__close {
@@ -1978,59 +1929,20 @@ watch(detectorAssignDialogVisible, async (visible) => {
   gap: 10px;
 }
 
-.detector-assign-dialog__picked {
-  display: grid;
-  gap: 12px;
-  padding: 14px;
-  border: 1px solid var(--line-soft);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.92);
-}
-
-.detector-assign-dialog__head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.detector-assign-dialog__head strong {
-  color: var(--text-main);
-  font-size: 14px;
-  line-height: 1.5;
-}
-
-.detector-assign-dialog__head span {
-  color: var(--text-sub);
-  font-size: 12px;
-  line-height: 1.6;
-  text-align: right;
-}
-
-.detector-assign-dialog__tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.detector-assign-dialog__tag {
-  display: inline-flex;
-  align-items: center;
-  min-height: 32px;
-  padding: 0 12px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--brand) 8%, #ffffff 92%);
-  border: 1px solid color-mix(in srgb, var(--brand) 16%, #ffffff 84%);
-  color: var(--text-main);
-  font-size: 13px;
-  line-height: 1.5;
-}
-
 .detector-assign-dialog__list {
   display: grid;
   align-content: start;
   gap: 10px;
   min-height: 0;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.detector-empty {
+  padding: 20px 12px;
+  color: var(--text-sub);
+  font-size: 13px;
+  text-align: center;
 }
 
 .subflow-detector-card {
@@ -2041,6 +1953,7 @@ watch(detectorAssignDialogVisible, async (visible) => {
   background: #ffffff;
   display: grid;
   gap: 2px;
+  position: relative;
   cursor: pointer;
   transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
 }
@@ -2073,23 +1986,22 @@ watch(detectorAssignDialogVisible, async (visible) => {
   box-shadow: 0 10px 24px rgba(99, 102, 241, 0.14);
 }
 
-.subflow-detector-card--clear {
-  background: color-mix(in srgb, #f59e0b 8%, #ffffff 92%);
-}
-
-.detector-assign-dialog__footer {
-  display: flex;
+.detector-check-mark {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  display: inline-flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding-top: 12px;
-  border-top: 1px solid color-mix(in srgb, var(--brand) 12%, #ffffff 88%);
-}
-
-.detector-assign-dialog__footer span {
-  color: var(--text-sub);
-  font-size: 13px;
-  line-height: 1.6;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  border-radius: 50%;
+  background: #22c55e;
+  color: #ffffff !important;
+  font-size: 13px !important;
+  font-weight: 800;
+  line-height: 1;
 }
 
 .subflow-assign {
@@ -2158,6 +2070,11 @@ watch(detectorAssignDialogVisible, async (visible) => {
   width: 100%;
 }
 
+:deep(.result-field-header .cell) {
+  color: #d4380d;
+  font-weight: 700;
+}
+
 .result-dialog__form {
   margin-top: 4px;
 }
@@ -2169,6 +2086,24 @@ watch(detectorAssignDialogVisible, async (visible) => {
   transition: width 0.22s ease, left 0.22s ease, transform 0.22s ease;
 }
 
+:deep(.el-dialog.detection-subflow-dialog--assign),
+:deep(.detection-subflow-dialog--assign .el-dialog) {
+  display: flex;
+  flex-direction: column;
+  height: min(780px, calc(100vh - 40px));
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  max-width: min(1280px, calc(100vw - 64px));
+  overflow: hidden;
+}
+
+:global(.el-overlay-dialog:has(.detection-subflow-dialog--assign)) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
 :deep(.el-dialog.detection-subflow-dialog .el-dialog__body),
 :deep(.detection-subflow-dialog .el-dialog__body) {
   padding-top: 18px;
@@ -2177,32 +2112,124 @@ watch(detectorAssignDialogVisible, async (visible) => {
   overflow: visible;
 }
 
+:deep(.el-dialog.detection-subflow-dialog--assign .el-dialog__header),
+:deep(.detection-subflow-dialog--assign .el-dialog__header) {
+  flex: none;
+  padding: 14px 24px 8px;
+  margin-right: 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+:deep(.el-dialog.detection-subflow-dialog--assign .el-dialog__title),
+:deep(.detection-subflow-dialog--assign .el-dialog__title) {
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 22px;
+}
+
+:deep(.el-dialog.detection-subflow-dialog--assign .el-dialog__headerbtn),
+:deep(.detection-subflow-dialog--assign .el-dialog__headerbtn) {
+  top: 8px;
+  right: 16px;
+  width: 30px;
+  height: 30px;
+}
+
+:deep(.el-dialog.detection-subflow-dialog--assign .el-dialog__body),
+:deep(.detection-subflow-dialog--assign .el-dialog__body) {
+  flex: 1;
+  min-height: 0;
+  padding: 10px 24px 16px;
+  overflow: hidden;
+}
+
+:deep(.detection-subflow-dialog--assign) .result-dialog__summary {
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+:deep(.detection-subflow-dialog--assign) .binding-editor__chip {
+  min-height: 28px;
+  padding: 0 10px;
+}
+
+:deep(.detection-subflow-dialog--assign) .subflow-head {
+  margin-bottom: 6px;
+}
+
+:deep(.detection-subflow-dialog--assign) .subflow-summary {
+  gap: 6px;
+}
+
+:deep(.detection-subflow-dialog--assign) .subflow-panel--dialog,
+:deep(.detection-subflow-dialog--assign) .subflow-content {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+:deep(.detection-subflow-dialog--assign) .subflow-panel--dialog,
+:deep(.detection-subflow-dialog--assign) .subflow-content,
+:deep(.detection-subflow-dialog--assign) .subflow-assign-main,
+:deep(.detection-subflow-dialog--assign) .detector-side-panel--inline,
+:deep(.detection-subflow-dialog--assign) .detector-assign-dialog {
+  display: flex;
+  flex-direction: column;
+}
+
+:deep(.detection-subflow-dialog--assign) .subflow-content {
+  gap: 6px;
+}
+
+:deep(.detection-subflow-dialog--assign) .subflow-batch-panel,
+:deep(.detection-subflow-dialog--assign) .detector-side-panel--inline {
+  padding: 12px 14px;
+}
+
+:deep(.detection-subflow-dialog--assign) .subflow-batch-panel {
+  gap: 10px;
+}
+
+:deep(.detection-subflow-dialog--assign) .detector-side-panel__header {
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+}
+
+:deep(.detection-subflow-dialog--assign) .detector-assign-dialog {
+  gap: 8px;
+}
+
+:deep(.detection-subflow-dialog--assign) .subflow-submit-footer {
+  padding-top: 8px;
+}
+
+:deep(.detection-subflow-dialog--assign) .result-dialog__summary,
+:deep(.detection-subflow-dialog--assign) .subflow-head,
+:deep(.detection-subflow-dialog--assign) .subflow-submit-footer,
+:deep(.detection-subflow-dialog--assign) .detector-side-panel__header,
+:deep(.detection-subflow-dialog--assign) .detector-assign-dialog__summary {
+  flex: none;
+}
+
+:deep(.detection-subflow-dialog--assign) .subflow-batch-panel,
+:deep(.detection-subflow-dialog--assign) .detector-assign-dialog {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+:deep(.detection-subflow-dialog--assign) .subflow-pick-list,
+:deep(.detection-subflow-dialog--assign) .detector-assign-dialog__list {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding-right: 4px;
+}
+
 @media (min-width: 1320px) {
-  :deep(.el-dialog.detection-subflow-dialog--shifted),
-  :deep(.detection-subflow-dialog--shifted .el-dialog) {
-    position: fixed;
-    left: calc(50% - 12px - 620px);
-    right: auto !important;
-    transform: none !important;
-    width: 620px !important;
-    height: 620px !important;
-    max-width: none !important;
-    margin: 0;
-    display: flex;
-    flex-direction: column;
+  :deep(.el-dialog.detection-subflow-dialog--assign .el-dialog__body),
+  :deep(.detection-subflow-dialog--assign .el-dialog__body) {
     overflow: hidden;
-  }
-
-  :deep(.el-dialog.detection-subflow-dialog--shifted .el-dialog__body),
-  :deep(.detection-subflow-dialog--shifted .el-dialog__body) {
-    flex: 1;
-    min-height: 0;
-    overflow: hidden;
-  }
-
-  :deep(.el-dialog.detection-subflow-dialog--shifted .el-dialog__header),
-  :deep(.detection-subflow-dialog--shifted .el-dialog__header) {
-    flex: none;
   }
 
   .subflow-panel--dialog {
@@ -2241,17 +2268,6 @@ watch(detectorAssignDialogVisible, async (visible) => {
     flex: none;
   }
 
-  .detector-side-panel {
-    position: fixed;
-    left: calc(50% + 12px);
-    right: auto;
-    width: 620px;
-    height: 620px;
-    margin-top: 0;
-    z-index: 2300;
-    overflow: hidden;
-  }
-
   .detector-assign-dialog {
     flex: 1;
     min-height: 0;
@@ -2259,9 +2275,7 @@ watch(detectorAssignDialogVisible, async (visible) => {
     flex-direction: column;
   }
 
-  .detector-assign-dialog__summary,
-  .detector-assign-dialog__picked,
-  .detector-assign-dialog__footer {
+  .detector-assign-dialog__summary {
     flex: none;
   }
 
@@ -2285,6 +2299,10 @@ watch(detectorAssignDialogVisible, async (visible) => {
 }
 
 @media (max-width: 1100px) {
+  .subflow-assign-layout {
+    grid-template-columns: 1fr;
+  }
+
   .subflow-list,
   .subflow-pick-list {
     grid-template-columns: 1fr;
@@ -2306,8 +2324,7 @@ watch(detectorAssignDialogVisible, async (visible) => {
     flex-direction: column;
   }
 
-  .subflow-batch-panel__head,
-  .detector-assign-dialog__head {
+  .subflow-batch-panel__head {
     flex-direction: column;
   }
 

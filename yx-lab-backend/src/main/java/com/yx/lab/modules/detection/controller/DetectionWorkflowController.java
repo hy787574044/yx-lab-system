@@ -121,7 +121,7 @@ public class DetectionWorkflowController {
                         ExcelExportUtil.column("检测人员", DetectionItemPageVO::getDetectorName),
                         ExcelExportUtil.column("标准范围", item -> formatStandardRange(item.getStandardMin(), item.getStandardMax())),
                         ExcelExportUtil.column("单位", DetectionItemPageVO::getUnit),
-                        ExcelExportUtil.column("参考范围", DetectionItemPageVO::getReferenceStandard),
+                        ExcelExportUtil.column("检测标准", DetectionItemPageVO::getReferenceStandard),
                         ExcelExportUtil.column("检测值", DetectionItemPageVO::getResultValue),
                         ExcelExportUtil.column("判定结果", this::formatResultLabel),
                         ExcelExportUtil.column("子流程状态", item -> LabWorkflowConstants.getDetectionStatusLabel(item.getItemStatus())),

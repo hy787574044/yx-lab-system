@@ -268,12 +268,20 @@ const visibleReports = computed(() => {
 })
 
 function handleStatClick(key) {
-  activeStatKey.value = key === activeStatKey.value ? 'all' : key
+  const nextKey = key === activeStatKey.value ? 'all' : key
+  activeStatKey.value = nextKey
+  query.reportStatus = nextKey === 'generated'
+    ? generatedReportStatus
+    : nextKey === 'published'
+      ? publishedReportStatus
+      : ''
+  query.pageNum = 1
+  loadReports()
 }
 
 function handleSearch() {
   query.pageNum = 1
-  activeStatKey.value = 'all'
+  syncActiveStatByQuery()
   loadReports()
 }
 
@@ -285,6 +293,16 @@ function resetQuery() {
   query.reportStatus = ''
   activeStatKey.value = 'all'
   loadReports()
+}
+
+function syncActiveStatByQuery() {
+  if (query.reportStatus === generatedReportStatus) {
+    activeStatKey.value = 'generated'
+  } else if (query.reportStatus === publishedReportStatus) {
+    activeStatKey.value = 'published'
+  } else {
+    activeStatKey.value = 'all'
+  }
 }
 
 async function loadReports() {

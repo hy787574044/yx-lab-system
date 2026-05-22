@@ -928,6 +928,12 @@ textarea {
   font-size: 13px;
 }
 
+.el-form-item.is-required:not(.is-no-asterisk).asterisk-left > .el-form-item__label::before,
+.el-form-item.is-required:not(.is-no-asterisk).asterisk-left > .el-form-item__label-wrap > .el-form-item__label::before {
+  color: #f56c6c !important;
+  font-weight: 700;
+}
+
 .el-tabs__header {
   margin-bottom: 12px;
 }
@@ -1028,11 +1034,30 @@ textarea {
 .table-action-group,
 .table-actions {
   display: flex;
+  width: 100%;
   flex-wrap: nowrap;
   align-items: center;
   justify-content: center;
   gap: 8px;
   white-space: nowrap;
+}
+
+.el-table td.el-table__cell .cell > .action-row,
+.el-table td.el-table__cell .cell > .table-action-row,
+.el-table td.el-table__cell .cell > .table-action-group,
+.el-table td.el-table__cell .cell > .table-actions {
+  min-height: 38px;
+  margin: 0 auto;
+  line-height: 1;
+}
+
+.el-table td.el-table__cell.cell-center .cell:has(> .action-row),
+.el-table td.el-table__cell.cell-center .cell:has(> .table-action-row),
+.el-table td.el-table__cell.cell-center .cell:has(> .table-action-group),
+.el-table td.el-table__cell.cell-center .cell:has(> .table-actions) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .action-row .el-button,

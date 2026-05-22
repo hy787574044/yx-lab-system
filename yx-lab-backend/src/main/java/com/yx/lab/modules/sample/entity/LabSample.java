@@ -42,6 +42,10 @@ public class LabSample extends BaseEntity {
     @TableField("sample_type")
     private String sampleType;
 
+    @Schema(description = "质控类型")
+    @TableField("quality_control_type")
+    private String qualityControlType;
+
     @Schema(description = "检测项目文本")
     @TableField("detection_items")
     private String detectionItems;

@@ -106,7 +106,21 @@ public final class LabWorkflowConstants {
 
         public static final String TERMINAL = "TERMINAL";
 
+        public static final String SOURCE_WATER = "SOURCE_WATER";
+
         private SampleType() {
+        }
+    }
+
+    public static final class QualityControlType {
+
+        public static final String PARALLEL = "PARALLEL";
+
+        public static final String BLANK = "BLANK";
+
+        public static final String QUALITY_CONTROL = "QUALITY_CONTROL";
+
+        private QualityControlType() {
         }
     }
 
@@ -235,7 +249,13 @@ public final class LabWorkflowConstants {
     public static final Set<String> SAMPLE_TYPES = unmodifiableSet(
             SampleType.FACTORY,
             SampleType.RAW,
-            SampleType.TERMINAL);
+            SampleType.TERMINAL,
+            SampleType.SOURCE_WATER);
+
+    public static final Set<String> QUALITY_CONTROL_TYPES = unmodifiableSet(
+            QualityControlType.PARALLEL,
+            QualityControlType.BLANK,
+            QualityControlType.QUALITY_CONTROL);
 
     public static final Set<String> REPORT_TYPES = unmodifiableSet(
             ReportType.DAILY,
@@ -487,7 +507,23 @@ public final class LabWorkflowConstants {
         if (SampleType.TERMINAL.equals(sampleType)) {
             return "管网末梢";
         }
+        if (SampleType.SOURCE_WATER.equals(sampleType)) {
+            return "水源水";
+        }
         return sampleType;
+    }
+
+    public static String getQualityControlTypeLabel(String qualityControlType) {
+        if (QualityControlType.PARALLEL.equals(qualityControlType)) {
+            return "平行样";
+        }
+        if (QualityControlType.BLANK.equals(qualityControlType)) {
+            return "空白样";
+        }
+        if (QualityControlType.QUALITY_CONTROL.equals(qualityControlType)) {
+            return "质控样";
+        }
+        return qualityControlType;
     }
 
     public static String getSampleStatusLabel(String sampleStatus) {

@@ -219,7 +219,7 @@ public class DetectionConfigController {
                         ExcelExportUtil.column("单位", DetectionParameter::getUnit),
                         ExcelExportUtil.column("标准下限", DetectionParameter::getStandardMin),
                         ExcelExportUtil.column("标准上限", DetectionParameter::getStandardMax),
-                        ExcelExportUtil.column("参考标准", DetectionParameter::getReferenceStandard),
+                        ExcelExportUtil.column("检测标准", DetectionParameter::getReferenceStandard),
                         ExcelExportUtil.column("判定规则", DetectionParameter::getExceedRule),
                         ExcelExportUtil.column("状态", item -> item.getEnabled() != null && item.getEnabled() == 1 ? "启用" : "停用"),
                         ExcelExportUtil.column("备注", DetectionParameter::getRemark),

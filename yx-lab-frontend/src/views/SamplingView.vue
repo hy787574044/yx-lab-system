@@ -241,6 +241,11 @@
               {{ getEnumLabel(sampleTypeLabelMap, row.sampleType) }}
             </template>
           </el-table-column>
+          <el-table-column label="质控类型" width="120" header-cell-class-name="cell-center" class-name="cell-center">
+            <template #default="{ row }">
+              {{ getEnumLabel(qualityControlTypeLabelMap, row.qualityControlType) || '-' }}
+            </template>
+          </el-table-column>
           <el-table-column label="样品状态" width="120" header-cell-class-name="cell-center" class-name="cell-center">
             <template #default="{ row }">
               <span class="status-chip" :class="getStatusClass('sampleStatus', row.sampleStatus)">
@@ -439,7 +444,7 @@
     >
       <el-form label-width="96px">
         <div class="plan-form-grid">
-          <el-form-item label="计划名称">
+          <el-form-item label="计划名称" required>
             <el-input v-model="planForm.planName" placeholder="请输入采样计划名称" />
           </el-form-item>
           <el-form-item label="点位来源">
@@ -448,7 +453,7 @@
               <el-option label="手工填写点位" value="CUSTOM" />
             </el-select>
           </el-form-item>
-          <el-form-item v-if="planForm.pointSource === 'EXISTING'" label="监测点位">
+          <el-form-item v-if="planForm.pointSource === 'EXISTING'" label="监测点位" required>
             <el-select
               v-model="planForm.pointId"
               style="width: 100%"
@@ -467,14 +472,14 @@
           <el-form-item v-if="false" label="自填点位">
             <el-input v-model="planForm.pointName" placeholder="请输入采样点位名称" />
           </el-form-item>
-          <el-form-item label="点位名称">
+          <el-form-item label="点位名称" required>
             <el-input
               v-model="planForm.pointName"
               :readonly="planForm.pointSource === 'EXISTING'"
               placeholder="请输入采样点位名称"
             />
           </el-form-item>
-          <el-form-item label="样品类型">
+          <el-form-item label="样品类型" required>
             <el-select v-model="planForm.sampleType" style="width: 100%">
               <el-option
                 v-for="option in sampleTypeOptions"
@@ -484,7 +489,7 @@
               />
             </el-select>
           </el-form-item>
-          <el-form-item label="周期类型">
+          <el-form-item label="周期类型" required>
             <el-select v-model="planForm.cycleType" style="width: 100%">
               <el-option
                 v-for="option in cycleTypeOptions"
@@ -494,7 +499,7 @@
               />
             </el-select>
           </el-form-item>
-          <el-form-item label="采样人员">
+          <el-form-item label="采样人员" required>
             <el-select
               v-model="planForm.samplerId"
               filterable
@@ -512,7 +517,7 @@
               />
             </el-select>
           </el-form-item>
-          <el-form-item label="开始时间">
+          <el-form-item label="开始时间" required>
             <el-date-picker
               v-model="planForm.startTime"
               type="datetime"
@@ -550,7 +555,7 @@
       @closed="resetDispatchForm"
     >
       <el-form label-width="96px">
-        <el-form-item label="采样人员">
+        <el-form-item label="采样人员" required>
           <el-select
             v-model="dispatchForm.samplerId"
             filterable
@@ -594,7 +599,7 @@
     >
       <el-form label-width="96px">
         <div class="login-form-grid">
-          <el-form-item :label="isLoginReadonly ? '关联任务' : '待登录任务'">
+          <el-form-item :label="isLoginReadonly ? '关联任务' : '待登录任务'" :required="!isLoginReadonly">
             <el-input
               v-if="isLoginReadonly"
               :model-value="loginPreviewTaskLabel"
@@ -616,30 +621,51 @@
               />
             </el-select>
           </el-form-item>
-          <el-form-item label="OCR封签号">
+          <el-form-item label="OCR封签号" :required="!isLoginReadonly">
             <el-input
               :model-value="loginForm.sealNo || '-'"
               readonly
               placeholder="选择待登录任务后自动带出"
             />
           </el-form-item>
-          <el-form-item label="点位名称">
+          <el-form-item label="点位名称" :required="!isLoginReadonly">
             <el-input
               :model-value="loginForm.pointName || '-'"
               readonly
               placeholder="选择待登录任务后自动带出"
             />
           </el-form-item>
-          <el-form-item label="样品类型">
+          <el-form-item label="样品类型" :required="!isLoginReadonly">
             <el-input
               :model-value="getEnumLabel(sampleTypeLabelMap, loginForm.sampleType) || loginForm.sampleType || '-'"
               readonly
             />
           </el-form-item>
-          <el-form-item label="采样人员">
+          <el-form-item label="质控类型">
+            <el-input
+              v-if="isLoginReadonly"
+              :model-value="getEnumLabel(qualityControlTypeLabelMap, loginForm.qualityControlType) || '-'"
+              readonly
+            />
+            <el-select
+              v-else
+              v-model="loginForm.qualityControlType"
+              clearable
+              placeholder="请选择质控类型"
+              style="width: 100%"
+            >
+              <el-option
+                v-for="option in qualityControlTypeOptions"
+                :key="option.value"
+                :label="option.label"
+                :value="option.value"
+              />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="采样人员" :required="!isLoginReadonly">
             <el-input v-model="loginForm.samplerName" readonly />
           </el-form-item>
-          <el-form-item class="login-form-span-2 login-form-half-row" label="检测套餐">
+          <el-form-item class="login-form-span-2 login-form-half-row" label="检测套餐" :required="!isLoginReadonly">
             <el-input
               v-if="isLoginReadonly"
               :model-value="loginForm.detectionTypeName || loginForm.detectionItems || '-'"
@@ -662,7 +688,7 @@
               />
             </el-select>
           </el-form-item>
-          <el-form-item v-if="loginForm.detectionTypeId" class="login-form-span-2" label="套餐参数">
+          <el-form-item v-if="loginForm.detectionTypeId" class="login-form-span-2" label="套餐参数" :required="!isLoginReadonly">
             <div class="login-config-panel">
               <div class="login-config-panel__summary">
                 <span class="binding-editor__chip">
@@ -707,7 +733,7 @@
                 <el-table-column prop="unit" label="单位" width="100">
                   <template #default="{ row }">{{ row.unit || '-' }}</template>
                 </el-table-column>
-                <el-table-column prop="referenceStandard" label="参考标准" min-width="160" show-overflow-tooltip>
+                <el-table-column prop="referenceStandard" label="检测标准" min-width="160" show-overflow-tooltip>
                   <template #default="{ row }">{{ row.referenceStandard || '-' }}</template>
                 </el-table-column>
                 <el-table-column label="检测方法" min-width="220">
@@ -743,7 +769,7 @@
               </div>
             </div>
           </el-form-item>
-          <el-form-item label="审核流程">
+          <el-form-item label="审核流程" :required="!isLoginReadonly">
             <el-input
               v-if="isLoginReadonly"
               :model-value="loginForm.reviewFlowName || '-'"
@@ -765,7 +791,7 @@
               />
             </el-select>
           </el-form-item>
-          <el-form-item label="发布流程">
+          <el-form-item label="发布流程" :required="!isLoginReadonly">
             <el-input
               v-if="isLoginReadonly"
               :model-value="loginForm.publishFlowName || '-'"
@@ -787,7 +813,7 @@
               />
             </el-select>
           </el-form-item>
-          <el-form-item label="采样时间">
+          <el-form-item label="采样时间" :required="!isLoginReadonly">
             <el-input v-if="isLoginReadonly" :model-value="loginForm.samplingTime || '-'" readonly />
             <el-date-picker
               v-else
@@ -879,6 +905,8 @@ import {
   pausedPlanStatus,
   pendingTaskStatus,
   planStatusLabelMap,
+  qualityControlTypeLabelMap,
+  qualityControlTypeOptions,
   retestSampleStatus,
   reviewingSampleStatus,
   routineSamplingType,
@@ -948,6 +976,7 @@ const loginForm = reactive({
   pointId: null,
   pointName: '',
   sampleType: '',
+  qualityControlType: '',
   detectionItems: '',
   detectionTypeId: null,
   detectionTypeName: '',
@@ -1446,10 +1475,103 @@ const planStats = computed(() => [
 
 function syncRouteState() {
   activeStatKey.value = baseScene.value.defaultStatKey
+  applyStatToCurrentSceneQuery(activeStatKey.value)
 }
 
 function handleStatClick(key) {
-  activeStatKey.value = activeStatKey.value === key ? baseScene.value.defaultStatKey : key
+  const nextKey = activeStatKey.value === key ? baseScene.value.defaultStatKey : key
+  activeStatKey.value = nextKey
+  applyStatToCurrentSceneQuery(nextKey)
+  loadCurrentSceneData()
+}
+
+function applyStatToCurrentSceneQuery(key) {
+  if (isPlanScene.value) {
+    planQuery.planStatus = getPlanStatusByStatKey(key) || ''
+    planQuery.pageNum = 1
+    return
+  }
+  if (isTaskScene.value) {
+    taskQuery.taskStatus = getTaskStatusByStatKey(key) || ''
+    taskQuery.pageNum = 1
+    return
+  }
+  sampleQuery.sampleStatus = getSampleStatusByStatKey(key) || ''
+  sampleQuery.pageNum = 1
+}
+
+function getPlanStatusByStatKey(key) {
+  const statusMap = {
+    'plans:active': activePlanStatus,
+    'plans:missing-sampler': activePlanStatus,
+    'plans:paused': pausedPlanStatus,
+    'plans:dispatched': dispatchedPlanStatuses[0],
+    'plans:completed': completedPlanStatus
+  }
+  return statusMap[key]
+}
+
+function getTaskStatusByStatKey(key) {
+  const statusMap = {
+    'tasks:pending': pendingTaskStatus,
+    'tasks:progress': inProgressTaskStatus,
+    'tasks:completed': completedTaskStatus,
+    'tasks:abandoned': abandonedTaskStatus,
+    'tasks:unlogged': completedTaskStatus
+  }
+  return statusMap[key]
+}
+
+function getSampleStatusByStatKey(key) {
+  const statusMap = {
+    'samples:logged': loggedSampleStatus,
+    'samples:reviewing': reviewingSampleStatus,
+    'samples:retest': retestSampleStatus,
+    'samples:completed': completedSampleStatus
+  }
+  return statusMap[key]
+}
+
+function syncActiveStatByCurrentQuery() {
+  if (isPlanScene.value) {
+    if (planQuery.planStatus === activePlanStatus) {
+      activeStatKey.value = 'plans:active'
+    } else if (planQuery.planStatus === pausedPlanStatus) {
+      activeStatKey.value = 'plans:paused'
+    } else if (dispatchedPlanStatuses.includes(planQuery.planStatus)) {
+      activeStatKey.value = 'plans:dispatched'
+    } else if (planQuery.planStatus === completedPlanStatus) {
+      activeStatKey.value = 'plans:completed'
+    } else {
+      activeStatKey.value = baseScene.value.defaultStatKey
+    }
+    return
+  }
+  if (isTaskScene.value) {
+    if (taskQuery.taskStatus === pendingTaskStatus) {
+      activeStatKey.value = 'tasks:pending'
+    } else if (taskQuery.taskStatus === inProgressTaskStatus) {
+      activeStatKey.value = 'tasks:progress'
+    } else if (taskQuery.taskStatus === completedTaskStatus) {
+      activeStatKey.value = 'tasks:completed'
+    } else if (taskQuery.taskStatus === abandonedTaskStatus) {
+      activeStatKey.value = 'tasks:abandoned'
+    } else {
+      activeStatKey.value = baseScene.value.defaultStatKey
+    }
+    return
+  }
+  if (sampleQuery.sampleStatus === loggedSampleStatus) {
+    activeStatKey.value = 'samples:logged'
+  } else if (sampleQuery.sampleStatus === reviewingSampleStatus) {
+    activeStatKey.value = 'samples:reviewing'
+  } else if (sampleQuery.sampleStatus === retestSampleStatus) {
+    activeStatKey.value = 'samples:retest'
+  } else if (sampleQuery.sampleStatus === completedSampleStatus) {
+    activeStatKey.value = 'samples:completed'
+  } else {
+    activeStatKey.value = baseScene.value.defaultStatKey
+  }
 }
 
 function isTaskLogged(taskId) {
@@ -1520,6 +1642,7 @@ async function handleExportPlans() {
 
 function handlePlanSearch() {
   planQuery.pageNum = 1
+  syncActiveStatByCurrentQuery()
   loadPlans()
 }
 
@@ -1528,16 +1651,20 @@ function resetPlanQuery() {
   planQuery.planStatus = ''
   planQuery.samplerId = ''
   planQuery.pageNum = 1
+  activeStatKey.value = baseScene.value.defaultStatKey
+  applyStatToCurrentSceneQuery(activeStatKey.value)
   loadPlans()
 }
 
 function handleCurrentSceneSearch() {
   if (isTaskScene.value) {
     taskQuery.pageNum = 1
+    syncActiveStatByCurrentQuery()
     loadTasks()
     return
   }
   sampleQuery.pageNum = 1
+  syncActiveStatByCurrentQuery()
   loadSamples()
 }
 
@@ -1547,6 +1674,8 @@ function resetCurrentSceneQuery() {
     taskQuery.taskStatus = ''
     taskQuery.samplerId = ''
     taskQuery.pageNum = 1
+    activeStatKey.value = baseScene.value.defaultStatKey
+    applyStatToCurrentSceneQuery(activeStatKey.value)
     loadTasks()
     return
   }
@@ -1554,6 +1683,8 @@ function resetCurrentSceneQuery() {
   sampleQuery.sampleStatus = ''
   sampleQuery.sampleType = ''
   sampleQuery.pageNum = 1
+  activeStatKey.value = baseScene.value.defaultStatKey
+  applyStatToCurrentSceneQuery(activeStatKey.value)
   loadSamples()
 }
 
@@ -2184,6 +2315,7 @@ function applyTaskToLoginForm(task) {
   loginForm.pointId = task.pointId || null
   loginForm.pointName = task.pointName || ''
   loginForm.sampleType = task.sampleType || ''
+  loginForm.qualityControlType = ''
   loginForm.detectionItems = parseDetectionItemsText(task.detectionItems)
   loginForm.detectionTypeId = null
   loginForm.detectionTypeName = ''
@@ -2210,6 +2342,7 @@ function resetLoginForm() {
   loginForm.pointId = null
   loginForm.pointName = ''
   loginForm.sampleType = ''
+  loginForm.qualityControlType = ''
   loginForm.detectionItems = ''
   loginForm.detectionTypeId = null
   loginForm.detectionTypeName = ''
@@ -2260,6 +2393,7 @@ function applySampleToLoginForm(sample) {
   loginForm.pointId = sample.pointId || null
   loginForm.pointName = sample.pointName || ''
   loginForm.sampleType = sample.sampleType || ''
+  loginForm.qualityControlType = sample.qualityControlType || ''
   loginForm.detectionItems = parseDetectionItemsText(sample.detectionItems)
   loginForm.detectionTypeId = sample.detectionTypeId || null
   loginForm.detectionTypeName = sample.detectionTypeName || sample.detectionItems || ''

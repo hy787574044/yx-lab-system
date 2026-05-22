@@ -48,10 +48,14 @@
               <tr>
                 <td class="label">样品类型</td>
                 <td>{{ previewData.sampleTypeLabel || '-' }}</td>
+                <td class="label">质控类型</td>
+                <td>{{ previewData.qualityControlTypeLabel || '-' }}</td>
                 <td class="label">样品状态</td>
                 <td>{{ previewData.sampleStatusLabel || '-' }}</td>
+              </tr>
+              <tr>
                 <td class="label">结果摘要</td>
-                <td>{{ previewData.resultSummary || '-' }}</td>
+                <td colspan="5">{{ previewData.resultSummary || '-' }}</td>
               </tr>
               <tr>
                 <td class="label">采样时间</td>
@@ -134,7 +138,7 @@
                 <th class="col-method">检测方法</th>
                 <th class="col-standard">标准范围</th>
                 <th class="col-unit">单位</th>
-                <th class="col-reference">参考范围</th>
+                <th class="col-reference">检测标准</th>
                 <th class="col-value">化验值</th>
                 <th class="col-judge">单项判定</th>
                 <th class="col-status">子流程状态</th>
