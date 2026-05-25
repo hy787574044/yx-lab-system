@@ -7,6 +7,7 @@ import com.yx.lab.common.constant.LabWorkflowConstants;
 import com.yx.lab.common.exception.BusinessException;
 import com.yx.lab.common.model.PageResult;
 import com.yx.lab.common.security.CurrentUser;
+import com.yx.lab.common.security.DataScopeHelper;
 import com.yx.lab.common.security.SecurityContext;
 import com.yx.lab.common.util.PageUtils;
 import com.yx.lab.modules.detection.entity.DetectionItem;
@@ -60,6 +61,8 @@ public class ReviewService {
 
     private final FlowNodeGateService flowNodeGateService;
 
+    private final DataScopeHelper dataScopeHelper;
+
     /**
      * 分页查询审查记录列表。
      *
@@ -77,6 +80,9 @@ public class ReviewService {
                                 .like(ReviewRecord::getSealNo, query.getKeyword()))
                         .eq(StrUtil.isNotBlank(query.getReviewResult()), ReviewRecord::getReviewResult, query.getReviewResult())
                         .eq(Boolean.TRUE.equals(query.getMine()), ReviewRecord::getReviewerId, currentUser.getUserId())
+                        .eq(Boolean.FALSE.equals(query.getMine()) && dataScopeHelper.onlySelfScope(),
+                                ReviewRecord::getReviewerId,
+                                dataScopeHelper.currentUserId())
                         .orderByDesc(ReviewRecord::getReviewTime));
         fillReviewRecordSummaries(page.getRecords());
         return new PageResult<>(page.getTotal(), page.getRecords());

@@ -21,6 +21,9 @@ import 'element-plus/theme-chalk/el-option.css'
 import 'element-plus/theme-chalk/el-option-group.css'
 import 'element-plus/theme-chalk/el-overlay.css'
 import 'element-plus/theme-chalk/el-popper.css'
+import 'element-plus/theme-chalk/el-dropdown.css'
+import 'element-plus/theme-chalk/el-dropdown-menu.css'
+import 'element-plus/theme-chalk/el-dropdown-item.css'
 import 'element-plus/theme-chalk/el-popover.css'
 import 'element-plus/theme-chalk/el-progress.css'
 import 'element-plus/theme-chalk/el-radio-button.css'
@@ -39,6 +42,7 @@ import dayjs from 'dayjs'
 import 'dayjs/locale/zh-cn'
 import App from './App.vue'
 import router from './router'
+import { hasPermission } from './utils/permission'
 import './styles/theme.css'
 
 dayjs.locale('zh-cn')
@@ -48,7 +52,19 @@ if (savedTheme) {
   document.documentElement.setAttribute('data-theme', savedTheme)
 }
 
-createApp(App)
+const app = createApp(App)
+
+app.directive('permission', {
+  mounted(el, binding) {
+    const codes = Array.isArray(binding.value) ? binding.value : [binding.value]
+    const visible = codes.some((code) => hasPermission(code))
+    if (!visible) {
+      el.parentNode?.removeChild(el)
+    }
+  }
+})
+
+app
   .use(createPinia())
   .use(router)
   .mount('#app')

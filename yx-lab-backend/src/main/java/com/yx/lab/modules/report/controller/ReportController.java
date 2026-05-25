@@ -4,6 +4,8 @@ import com.yx.lab.common.model.ApiResponse;
 import com.yx.lab.common.model.PageQuery;
 import com.yx.lab.common.model.PageResult;
 import com.yx.lab.common.constant.LabWorkflowConstants;
+import com.yx.lab.common.security.PermissionConstants;
+import com.yx.lab.common.security.RequirePermission;
 import com.yx.lab.common.util.ExcelExportUtil;
 import com.yx.lab.modules.report.dto.ReportQuery;
 import com.yx.lab.modules.report.dto.ReportTemplateSaveCommand;
@@ -39,6 +41,7 @@ import java.nio.charset.StandardCharsets;
 @RequestMapping("/api/reports")
 @RequiredArgsConstructor
 @Tag(name = "报告管理")
+@RequirePermission(PermissionConstants.REPORT_VIEW)
 public class ReportController {
 
     private final ReportService reportService;
@@ -154,6 +157,7 @@ public class ReportController {
      */
     @PostMapping("/templates")
     @Operation(summary = "新增报告模板")
+    @RequirePermission(PermissionConstants.REPORT_WRITE)
     public ApiResponse<Void> saveTemplate(@Valid @RequestBody ReportTemplateSaveCommand command) {
         reportService.saveTemplate(command);
         return ApiResponse.successMessage("新增成功");
@@ -168,6 +172,7 @@ public class ReportController {
      */
     @PostMapping("/templates/{id}")
     @Operation(summary = "更新报告模板")
+    @RequirePermission(PermissionConstants.REPORT_WRITE)
     public ApiResponse<Void> updateTemplate(@PathVariable Long id, @Valid @RequestBody ReportTemplateSaveCommand command) {
         reportService.updateTemplate(id, command);
         return ApiResponse.successMessage("更新成功");
@@ -181,6 +186,7 @@ public class ReportController {
      */
     @PostMapping("/templates/{id}/delete")
     @Operation(summary = "删除报告模板")
+    @RequirePermission(PermissionConstants.REPORT_WRITE)
     public ApiResponse<Void> deleteTemplate(@PathVariable Long id) {
         reportService.deleteTemplate(id);
         return ApiResponse.successMessage("删除成功");
@@ -194,6 +200,7 @@ public class ReportController {
      */
     @PostMapping("/{id}/publish")
     @Operation(summary = "发布正式报告")
+    @RequirePermission(PermissionConstants.REPORT_PUBLISH)
     public ApiResponse<Void> publish(@PathVariable Long id) {
         reportService.publish(id);
         return ApiResponse.successMessage("发布成功");
@@ -207,6 +214,7 @@ public class ReportController {
      */
     @PostMapping("/{id}/unpublish")
     @Operation(summary = "取消发布报告")
+    @RequirePermission(PermissionConstants.REPORT_PUBLISH)
     public ApiResponse<Void> unpublish(@PathVariable Long id) {
         reportService.unpublish(id);
         return ApiResponse.successMessage("取消发布成功");

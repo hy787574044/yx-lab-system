@@ -26,6 +26,7 @@
           <div class="toolbar-row">
             <div class="toolbar-main">
               <el-button
+                v-permission="'detectionConfig:write'"
                 type="primary"
                 class="toolbar-primary-button"
                 @click="openParameterDialog()"
@@ -89,6 +90,7 @@
                       <span class="binding-tree__dash binding-tree__dash--child">-</span>
                       <span class="binding-tree__method-name">{{ method.methodName }}</span>
                       <el-button
+                        v-permission="'detectionConfig:write'"
                         v-if="method.id"
                         link
                         type="danger"
@@ -140,16 +142,17 @@
             <el-table-column label="操作" width="320" fixed="right" header-cell-class-name="cell-center" class-name="cell-center">
               <template #default="{ row }">
                 <div class="table-action-row">
-                  <el-button link type="primary" @click="openParameterDialog(row)">编辑</el-button>
-                  <el-button link type="primary" @click="openParameterBindingDialog(row)">配置绑定</el-button>
+                  <el-button v-permission="'detectionConfig:write'" link type="primary" @click="openParameterDialog(row)">编辑</el-button>
+                  <el-button v-permission="'detectionConfig:write'" link type="primary" @click="openParameterBindingDialog(row)">配置绑定</el-button>
                   <el-button
+                    v-permission="'detectionConfig:write'"
                     link
                     :disabled="Number(row.methodCount || 0) === 0"
                     @click="clearParameterBindings(row)"
                   >
                     清空绑定
                   </el-button>
-                  <el-button link type="danger" @click="removeParameter(row)">删除</el-button>
+                  <el-button v-permission="'detectionConfig:write'" link type="danger" @click="removeParameter(row)">删除</el-button>
                 </div>
               </template>
             </el-table-column>
@@ -170,6 +173,7 @@
           <div class="toolbar-row">
             <div class="toolbar-main">
               <el-button
+                v-permission="'detectionConfig:write'"
                 type="primary"
                 class="toolbar-primary-button"
                 @click="openGroupDialog()"
@@ -259,8 +263,8 @@
             <el-table-column label="操作" width="170" fixed="right" header-cell-class-name="cell-center" class-name="cell-center">
               <template #default="{ row }">
                 <div class="table-action-row">
-                  <el-button link type="primary" @click="openGroupDialog(row)">编辑</el-button>
-                  <el-button link type="danger" @click="removeGroup(row)">删除</el-button>
+                  <el-button v-permission="'detectionConfig:write'" link type="primary" @click="openGroupDialog(row)">编辑</el-button>
+                  <el-button v-permission="'detectionConfig:write'" link type="danger" @click="removeGroup(row)">删除</el-button>
                 </div>
               </template>
             </el-table-column>
@@ -397,7 +401,7 @@
       </el-form>
       <template #footer>
         <el-button @click="parameterDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="savingParameter" @click="submitParameterForm">保存</el-button>
+        <el-button v-permission="'detectionConfig:write'" type="primary" :loading="savingParameter" @click="submitParameterForm">保存</el-button>
       </template>
     </el-dialog>
 
@@ -456,7 +460,7 @@
                         <span>在右侧为当前检测参数选择 1 个检测方法</span>
                       </div>
                       <div v-if="currentBindingParameterId" class="binding-workbench__methods-actions">
-                        <el-button link @click="clearCurrentParameterMethods">清空</el-button>
+                        <el-button v-permission="'detectionConfig:write'" link @click="clearCurrentParameterMethods">清空</el-button>
                       </div>
                     </div>
 
@@ -521,7 +525,7 @@
       </el-form>
       <template #footer>
         <el-button @click="groupDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="savingGroup" @click="submitGroupForm">保存</el-button>
+        <el-button v-permission="'detectionConfig:write'" type="primary" :loading="savingGroup" @click="submitGroupForm">保存</el-button>
       </template>
     </el-dialog>
 
@@ -634,7 +638,7 @@
 
       <template #footer>
         <el-button @click="parameterBindingDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="savingParameterBinding" @click="submitParameterBindings">保存绑定</el-button>
+        <el-button v-permission="'detectionConfig:write'" type="primary" :loading="savingParameterBinding" @click="submitParameterBindings">保存绑定</el-button>
       </template>
     </el-dialog>
   </div>

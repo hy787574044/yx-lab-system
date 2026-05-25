@@ -8,6 +8,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.yx.lab.common.config.LabSecurityProperties;
 import com.yx.lab.common.exception.BusinessException;
 import com.yx.lab.common.security.CurrentUser;
+import com.yx.lab.common.security.PermissionService;
 import com.yx.lab.common.security.SecurityContext;
 import com.yx.lab.modules.system.dto.LoginRequest;
 import com.yx.lab.modules.system.dto.PasswordChangeCommand;
@@ -59,6 +60,8 @@ public class AuthService {
     private final StringRedisTemplate stringRedisTemplate;
 
     private final LabSecurityProperties securityProperties;
+
+    private final PermissionService permissionService;
 
     private void validateCaptcha(LoginRequest request) {
         if (request == null || StrUtil.isBlank(request.getCaptchaId()) || StrUtil.isBlank(request.getCaptchaCode())) {
@@ -185,6 +188,8 @@ public class AuthService {
         currentUser.setUsername(user.getUsername());
         currentUser.setRealName(user.getRealName());
         currentUser.setRoleCode(user.getRoleCode());
+        currentUser.setPermissionCodes(permissionService.resolvePermissions(user.getRoleCode()));
+        currentUser.setDataScope(permissionService.resolveDataScope(user.getRoleCode()));
         stringRedisTemplate.opsForValue().set(
                 "lab:token:" + token,
                 JSONUtil.toJsonStr(currentUser),
@@ -199,6 +204,8 @@ public class AuthService {
                 .orgId(user.getOrgId())
                 .orgName(user.getOrgName())
                 .roleCode(user.getRoleCode())
+                .permissionCodes(currentUser.getPermissionCodes())
+                .dataScope(currentUser.getDataScope())
                 .phone(user.getPhone())
                 .avatarUrl(user.getAvatarUrl())
                 .build();
@@ -283,6 +290,8 @@ public class AuthService {
                 .orgId(user.getOrgId())
                 .orgName(user.getOrgName())
                 .roleCode(user.getRoleCode())
+                .permissionCodes(permissionService.resolvePermissions(user.getRoleCode()))
+                .dataScope(permissionService.resolveDataScope(user.getRoleCode()))
                 .phone(user.getPhone())
                 .avatarUrl(user.getAvatarUrl())
                 .status(user.getStatus())
@@ -300,6 +309,8 @@ public class AuthService {
         currentUser.setUsername(user.getUsername());
         currentUser.setRealName(user.getRealName());
         currentUser.setRoleCode(user.getRoleCode());
+        currentUser.setPermissionCodes(permissionService.resolvePermissions(user.getRoleCode()));
+        currentUser.setDataScope(permissionService.resolveDataScope(user.getRoleCode()));
         if (ttl != null && ttl > 0L) {
             stringRedisTemplate.opsForValue().set(redisKey, JSONUtil.toJsonStr(currentUser), ttl, TimeUnit.SECONDS);
         } else {

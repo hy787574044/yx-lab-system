@@ -2,6 +2,8 @@ package com.yx.lab.modules.system.controller;
 
 import com.yx.lab.common.model.ApiResponse;
 import com.yx.lab.common.model.PageResult;
+import com.yx.lab.common.security.PermissionConstants;
+import com.yx.lab.common.security.RequirePermission;
 import com.yx.lab.common.util.ExcelExportUtil;
 import com.yx.lab.modules.system.dto.UserQuery;
 import com.yx.lab.modules.system.dto.UserSaveCommand;
@@ -28,6 +30,7 @@ import javax.validation.Valid;
 @RequestMapping("/api/system/users")
 @RequiredArgsConstructor
 @Tag(name = "系统管理-用户管理")
+@RequirePermission(PermissionConstants.SYSTEM_VIEW)
 public class UserManagementController {
 
     private final UserManagementService userManagementService;
@@ -92,6 +95,7 @@ public class UserManagementController {
      */
     @PostMapping
     @Operation(summary = "新增用户")
+    @RequirePermission(PermissionConstants.SYSTEM_WRITE)
     public ApiResponse<Void> save(@Valid @RequestBody UserSaveCommand command) {
         userManagementService.save(command);
         return ApiResponse.successMessage("新增成功");
@@ -106,6 +110,7 @@ public class UserManagementController {
      */
     @PostMapping("/{id}")
     @Operation(summary = "更新用户")
+    @RequirePermission(PermissionConstants.SYSTEM_WRITE)
     public ApiResponse<Void> update(@PathVariable Long id, @Valid @RequestBody UserSaveCommand command) {
         userManagementService.update(id, command);
         return ApiResponse.successMessage("更新成功");
@@ -119,6 +124,7 @@ public class UserManagementController {
      */
     @PostMapping("/{id}/delete")
     @Operation(summary = "删除用户")
+    @RequirePermission(PermissionConstants.SYSTEM_WRITE)
     public ApiResponse<Void> delete(@PathVariable Long id) {
         userManagementService.delete(id);
         return ApiResponse.successMessage("删除成功");

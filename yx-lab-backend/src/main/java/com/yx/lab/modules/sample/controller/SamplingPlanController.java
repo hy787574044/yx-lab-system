@@ -3,6 +3,8 @@ package com.yx.lab.modules.sample.controller;
 import com.yx.lab.common.model.ApiResponse;
 import com.yx.lab.common.model.PageResult;
 import com.yx.lab.common.constant.LabWorkflowConstants;
+import com.yx.lab.common.security.PermissionConstants;
+import com.yx.lab.common.security.RequirePermission;
 import com.yx.lab.common.util.ExcelExportUtil;
 import com.yx.lab.modules.sample.dto.SamplingPlanDispatchCommand;
 import com.yx.lab.modules.sample.dto.SamplingPlanQuery;
@@ -31,6 +33,7 @@ import javax.validation.Valid;
 @RequestMapping("/api/samplingPlans")
 @RequiredArgsConstructor
 @Tag(name = "采样计划管理")
+@RequirePermission(PermissionConstants.SAMPLING_PLAN_VIEW)
 public class SamplingPlanController {
 
     private final SamplingPlanService samplingPlanService;
@@ -95,6 +98,7 @@ public class SamplingPlanController {
      */
     @PostMapping
     @Operation(summary = "新增采样计划")
+    @RequirePermission(PermissionConstants.SAMPLING_PLAN_WRITE)
     public ApiResponse<Void> save(@Valid @RequestBody SamplingPlanSaveCommand command) {
         samplingPlanService.save(command);
         return ApiResponse.successMessage("新增成功");
@@ -109,6 +113,7 @@ public class SamplingPlanController {
      */
     @PostMapping("/{id}")
     @Operation(summary = "更新采样计划")
+    @RequirePermission(PermissionConstants.SAMPLING_PLAN_WRITE)
     public ApiResponse<Void> update(@PathVariable Long id, @Valid @RequestBody SamplingPlanSaveCommand command) {
         samplingPlanService.update(id, command);
         return ApiResponse.successMessage("更新成功");
@@ -122,6 +127,7 @@ public class SamplingPlanController {
      */
     @PostMapping("/{id}/delete")
     @Operation(summary = "删除采样计划")
+    @RequirePermission(PermissionConstants.SAMPLING_PLAN_WRITE)
     public ApiResponse<Void> delete(@PathVariable Long id) {
         samplingPlanService.delete(id);
         return ApiResponse.successMessage("删除成功");
@@ -135,6 +141,7 @@ public class SamplingPlanController {
      */
     @PostMapping("/{id}/pause")
     @Operation(summary = "暂停采样计划")
+    @RequirePermission(PermissionConstants.SAMPLING_PLAN_WRITE)
     public ApiResponse<Void> pause(@PathVariable Long id) {
         samplingPlanService.pause(id);
         return ApiResponse.successMessage("计划已暂停");
@@ -148,6 +155,7 @@ public class SamplingPlanController {
      */
     @PostMapping("/{id}/resume")
     @Operation(summary = "恢复采样计划")
+    @RequirePermission(PermissionConstants.SAMPLING_PLAN_WRITE)
     public ApiResponse<Void> resume(@PathVariable Long id) {
         samplingPlanService.resume(id);
         return ApiResponse.successMessage("计划已恢复");
@@ -161,6 +169,7 @@ public class SamplingPlanController {
      */
     @PostMapping("/dispatch")
     @Operation(summary = "派发采样计划")
+    @RequirePermission(PermissionConstants.SAMPLING_PLAN_WRITE)
     public ApiResponse<Void> dispatch(@Valid @RequestBody SamplingPlanDispatchCommand command) {
         samplingPlanService.dispatch(command);
         return ApiResponse.successMessage("派发成功");

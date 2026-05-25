@@ -3,6 +3,8 @@ package com.yx.lab.modules.system.vo;
 import lombok.Builder;
 import lombok.Data;
 
+import java.util.Set;
+
 @Data
 @Builder
 public class UserProfileVO {
@@ -18,6 +20,10 @@ public class UserProfileVO {
     private String orgName;
 
     private String roleCode;
+
+    private Set<String> permissionCodes;
+
+    private String dataScope;
 
     private String phone;
 

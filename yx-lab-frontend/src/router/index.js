@@ -1,6 +1,8 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { getToken } from '../utils/auth'
 import { labMenuGroups, legacyRedirects } from './menuConfig'
+import { hasPermission } from '../utils/permission'
+import { getMenuPermissionCode } from '../utils/menuPermission'
 
 const componentMap = {
   DashboardView: () => import('../views/DashboardView.vue'),
@@ -37,6 +39,7 @@ function buildMenuChildrenRoutes() {
         defaultTab: item.defaultTab,
         defaultStatKey: item.defaultStatKey,
         defaultStatLabel: item.defaultStatLabel,
+        permissionCode: getMenuPermissionCode(item.path),
         placeholderNote: item.placeholderNote
       }
     }))
@@ -98,6 +101,21 @@ router.beforeEach((to, from, next) => {
 
   if (!getToken()) {
     next(to.path.startsWith('/mobile') ? '/mobile/login' : '/login')
+    return
+  }
+
+  if (to.meta?.permissionCode && !hasPermission(to.meta.permissionCode)) {
+    const firstAllowedPath = labMenuGroups
+      .flatMap((group) => group.children)
+      .map((item) => item.path)
+      .find((path) => path !== to.path && hasPermission(getMenuPermissionCode(path)))
+
+    if (firstAllowedPath) {
+      next(firstAllowedPath)
+      return
+    }
+
+    next()
     return
   }
 

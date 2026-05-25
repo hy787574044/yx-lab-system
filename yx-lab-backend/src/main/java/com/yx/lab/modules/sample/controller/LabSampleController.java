@@ -3,6 +3,8 @@ package com.yx.lab.modules.sample.controller;
 import com.yx.lab.common.model.ApiResponse;
 import com.yx.lab.common.model.PageResult;
 import com.yx.lab.common.constant.LabWorkflowConstants;
+import com.yx.lab.common.security.PermissionConstants;
+import com.yx.lab.common.security.RequirePermission;
 import com.yx.lab.common.util.ExcelExportUtil;
 import cn.hutool.core.util.StrUtil;
 import com.yx.lab.modules.sample.dto.LabSampleQuery;
@@ -31,6 +33,7 @@ import javax.validation.Valid;
 @RequestMapping("/api/samples")
 @RequiredArgsConstructor
 @Tag(name = "样品管理")
+@RequirePermission(PermissionConstants.SAMPLE_VIEW)
 public class LabSampleController {
 
     private final LabSampleService labSampleService;
@@ -100,6 +103,7 @@ public class LabSampleController {
      */
     @PostMapping("/login")
     @Operation(summary = "样品登录")
+    @RequirePermission(PermissionConstants.SAMPLE_WRITE)
     public ApiResponse<LabSample> login(@Valid @RequestBody SampleLoginCommand command) {
         return ApiResponse.success("样品登录成功", labSampleService.loginSample(command));
     }

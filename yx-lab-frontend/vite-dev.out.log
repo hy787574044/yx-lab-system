@@ -685,3 +685,168 @@
 [2m13:50:42[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionAnalysisView.vue[22m
 [2m13:50:43[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/SamplingView.vue[22m
 [2m13:50:43[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/MobileWorkbenchView.vue[22m
+[2m14:00:01[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/MobileWorkbenchView.vue, /src/views/DetectionMethodView.vue, /src/views/DetectionConfigView.vue, /src/views/DetectionParameterMethodBindingView.vue, /src/views/SystemManagementView.vue, /src/views/SamplingView.vue, /src/views/MonitoringPointView.vue, /src/views/DetectionView.vue, /src/views/ReviewView.vue, /src/views/ReportView.vue, /src/views/AssetView.vue, /src/views/InstrumentMaintenanceView.vue, /src/components/common/TablePagination.vue, /src/views/DetectionAnalysisView.vue, /src/views/FlowConfigView.vue, /src/views/StatisticsView.vue[22m
+[2m14:01:16[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/SamplingView.vue[22m
+[2m14:01:27[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/SamplingView.vue[22m
+[2m14:04:07[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/MobileWorkbenchView.vue[22m
+[2m14:04:17[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/MobileWorkbenchView.vue[22m
+[2m14:04:27[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/MobileWorkbenchView.vue[22m
+[2m14:05:10[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/report/ReportPrintDocument.vue[22m
+[2m14:06:05[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/report/ReportPrintDocument.vue[22m
+[2m16:10:34[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/styles/theme.css[22m
+[2m16:10:55[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/SamplingView.vue[22m
+[2m16:11:15[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/SamplingView.vue[22m
+[2m16:11:29[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/MonitoringPointView.vue[22m
+[2m16:11:29[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionMethodView.vue[22m
+[2m16:11:29[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionConfigView.vue[22m
+[2m16:11:47[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/AssetView.vue[22m
+[2m16:11:47[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/SystemManagementView.vue[22m
+[2m16:11:47[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionAnalysisView.vue[22m
+[2m16:13:37[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/MobileWorkbenchView.vue[22m
+[2m16:25:12[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionConfigView.vue[22m
+[2m16:25:12[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionAnalysisView.vue[22m
+[2m16:25:12[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/report/ReportPrintDocument.vue[22m
+[2m16:25:12[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionView.vue[22m
+[2m16:25:12[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/SamplingView.vue[22m
+[2m16:25:13[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/ReviewView.vue[22m
+[2m16:34:10[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionAnalysisView.vue[22m
+[2m16:34:10[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionView.vue[22m
+[2m16:37:33[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionAnalysisView.vue[22m
+[2m16:37:33[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionView.vue[22m
+[2m16:41:40[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionAnalysisView.vue[22m
+[2m16:41:40[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionView.vue[22m
+[2m16:42:01[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionAnalysisView.vue?vue&type=style&index=0&scoped=d15c1a62&lang.css[22m
+[2m16:42:01[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionView.vue?vue&type=style&index=0&scoped=212bbd4a&lang.css[22m
+[2m16:45:50[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionAnalysisView.vue?vue&type=style&index=0&scoped=d15c1a62&lang.css, /src/views/DetectionAnalysisView.vue[22m
+[2m16:45:50[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionView.vue?vue&type=style&index=0&scoped=212bbd4a&lang.css, /src/views/DetectionView.vue[22m
+[2m16:51:52[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionView.vue[22m
+[2m16:52:18[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionView.vue[22m
+[2m16:52:27[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionView.vue[22m
+[2m16:52:40[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionView.vue?vue&type=style&index=0&scoped=212bbd4a&lang.css[22m
+[2m16:53:01[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionView.vue?vue&type=style&index=0&scoped=212bbd4a&lang.css[22m
+[2m16:54:23[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionView.vue[22m
+[2m16:54:40[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionView.vue[22m
+[2m16:55:22[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionView.vue[22m
+[2m16:55:55[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionView.vue[22m
+[2m16:56:51[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionView.vue?vue&type=style&index=0&scoped=212bbd4a&lang.css[22m
+[2m16:57:09[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionView.vue?vue&type=style&index=0&scoped=212bbd4a&lang.css[22m
+[2m17:23:47[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionView.vue?vue&type=style&index=0&scoped=212bbd4a&lang.css[22m
+[2m17:23:56[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionView.vue?vue&type=style&index=0&scoped=212bbd4a&lang.css[22m
+[2m17:24:14[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionView.vue?vue&type=style&index=0&scoped=212bbd4a&lang.css[22m
+[2m17:27:18[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionView.vue?vue&type=style&index=0&scoped=212bbd4a&lang.css[22m
+[2m17:27:45[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionView.vue?vue&type=style&index=0&scoped=212bbd4a&lang.css[22m
+[2m17:30:12[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionView.vue[22m
+[2m17:30:31[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionView.vue?vue&type=style&index=0&scoped=212bbd4a&lang.css[22m
+[2m17:32:53[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionView.vue?vue&type=style&index=0&scoped=212bbd4a&lang.css[22m
+[2m17:52:20[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionView.vue?vue&type=style&index=0&scoped=212bbd4a&lang.css[22m
+[2m17:54:53[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionView.vue[22m
+[2m17:55:04[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionView.vue[22m
+[2m18:00:41[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionView.vue[22m
+[2m20:00:23[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionView.vue[22m
+[2m20:06:23[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionView.vue[22m
+[2m20:06:38[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionView.vue?vue&type=style&index=0&scoped=212bbd4a&lang.css[22m
+[2m20:06:54[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionView.vue?vue&type=style&index=0&scoped=212bbd4a&lang.css[22m
+[2m20:08:29[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionView.vue?vue&type=style&index=0&scoped=212bbd4a&lang.css[22m
+[2m20:08:38[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionView.vue?vue&type=style&index=0&scoped=212bbd4a&lang.css[22m
+[2m20:12:57[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionView.vue[22m
+[2m20:23:03[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionView.vue[22m
+[2m20:27:28[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionView.vue[22m
+[2m20:28:33[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionView.vue?vue&type=style&index=0&scoped=212bbd4a&lang.css[22m
+[2m20:28:44[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionView.vue?vue&type=style&index=0&scoped=212bbd4a&lang.css[22m
+[2m20:31:23[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionView.vue?vue&type=style&index=0&scoped=212bbd4a&lang.css[22m
+[2m20:46:20[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/styles/theme.css[22m
+[2m20:46:29[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionMethodView.vue[22m
+[2m20:46:42[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/MonitoringPointView.vue[22m
+[2m20:46:53[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/ReportView.vue[22m
+[2m20:47:10[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionConfigView.vue[22m
+[2m20:47:33[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionView.vue[22m
+[2m20:47:50[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/ReviewView.vue[22m
+[2m20:48:22[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/SamplingView.vue[22m
+[2m20:49:08[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/SamplingView.vue[22m
+[2m20:49:24[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/AssetView.vue[22m
+[2m20:50:21[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/SystemManagementView.vue[22m
+[2m20:50:33[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/FlowConfigView.vue[22m
+[2m20:54:03[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/styles/theme.css[22m
+[2m08:30:43[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/MobileWorkbenchView.vue, /src/views/DetectionMethodView.vue, /src/views/DetectionConfigView.vue, /src/views/LoginView.vue, /src/views/DashboardView.vue, /src/views/DetectionParameterMethodBindingView.vue, /src/views/SystemManagementView.vue, /src/views/SamplingView.vue, /src/views/MonitoringPointView.vue, /src/views/DetectionView.vue, /src/views/ReviewView.vue, /src/views/ReportView.vue, /src/views/AssetView.vue, /src/views/InstrumentMaintenanceView.vue, /src/views/StatisticsView.vue, /src/views/MobileLoginView.vue, /src/views/DetectionAnalysisView.vue, /src/views/FlowConfigView.vue, /src/views/layout/AppLayout.vue[22m
+[2m08:31:02[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/LoginView.vue[22m
+[2m08:31:13[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/LoginView.vue?vue&type=style&index=0&scoped=45f5edd7&lang.css[22m
+[2m10:08:56[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/report/ReportPrintDocument.vue, /src/components/report/ReportPrintDocument.vue?vue&type=style&index=0&scoped=4804a1d1&lang.css, /src/components/report/ReportPrintDocument.vue?vue&type=style&index=1&lang.css[22m
+[2m10:10:14[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/report/ReportPrintDocument.vue, /src/components/report/ReportPrintDocument.vue?vue&type=style&index=0&scoped=4804a1d1&lang.css, /src/components/report/ReportPrintDocument.vue?vue&type=style&index=1&lang.css[22m
+[2m10:14:32[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/report/ReportPrintDocument.vue, /src/components/report/ReportPrintDocument.vue?vue&type=style&index=0&scoped=4804a1d1&lang.css[22m
+[2m10:14:55[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/report/ReportPrintDocument.vue?vue&type=style&index=0&scoped=4804a1d1&lang.css[22m
+[2m10:21:39[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/report/ReportPrintDocument.vue?vue&type=style&index=0&scoped=4804a1d1&lang.css[22m
+[2m10:25:08[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/report/ReportPrintDocument.vue[22m
+[2m10:27:54[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/report/ReportPrintDocument.vue[22m
+[2m10:28:05[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/report/ReportPrintDocument.vue?vue&type=style&index=0&scoped=4804a1d1&lang.css[22m
+[2m10:31:28[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/report/ReportPrintDocument.vue[22m
+[2m10:34:31[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/report/ReportPrintDocument.vue[22m
+[2m10:36:19[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/report/ReportPrintDocument.vue[22m
+[2m10:36:27[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/report/ReportPrintDocument.vue?vue&type=style&index=0&scoped=4804a1d1&lang.css[22m
+[2m10:39:35[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/report/ReportPrintDocument.vue[22m
+[2m10:39:48[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/report/ReportPrintDocument.vue[22m
+[2m10:41:33[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/report/ReportPrintDocument.vue[22m
+[2m10:41:53[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/report/ReportPrintDocument.vue?vue&type=style&index=0&scoped=4804a1d1&lang.css[22m
+[2m10:43:50[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/report/ReportPrintDocument.vue?vue&type=style&index=0&scoped=4804a1d1&lang.css[22m
+[2m10:49:56[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DashboardView.vue, /src/views/DashboardView.vue?vue&type=style&index=0&scoped=336c5134&lang.css[22m
+[2m11:25:47[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/MobileWorkbenchView.vue, /src/views/DetectionMethodView.vue, /src/views/DetectionConfigView.vue, /src/views/LoginView.vue, /src/views/DashboardView.vue, /src/views/DetectionParameterMethodBindingView.vue, /src/views/SystemManagementView.vue, /src/views/SamplingView.vue, /src/views/MonitoringPointView.vue, /src/views/DetectionView.vue, /src/views/ReviewView.vue, /src/views/ReportView.vue, /src/views/AssetView.vue, /src/views/InstrumentMaintenanceView.vue, /src/views/StatisticsView.vue, /src/views/MobileLoginView.vue, /src/views/DetectionAnalysisView.vue, /src/views/FlowConfigView.vue, /src/views/layout/AppLayout.vue[22m
+[2m11:27:14[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DashboardView.vue, /src/views/DashboardView.vue?vue&type=style&index=0&scoped=336c5134&lang.css[22m
+[2m13:39:08[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/common/MiniCharts.vue, /src/components/common/MiniCharts.vue?vue&type=style&index=0&scoped=a730d842&lang.css[22m
+[2m13:39:19[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DashboardView.vue[22m
+[2m13:53:51[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DashboardView.vue, /src/views/DashboardView.vue?vue&type=style&index=0&scoped=336c5134&lang.css[22m
+[2m14:00:04[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/MobileWorkbenchView.vue, /src/views/DetectionMethodView.vue, /src/views/DetectionConfigView.vue, /src/views/LoginView.vue, /src/views/DashboardView.vue, /src/views/DetectionParameterMethodBindingView.vue, /src/views/SystemManagementView.vue, /src/views/SamplingView.vue, /src/views/MonitoringPointView.vue, /src/views/DetectionView.vue, /src/views/ReviewView.vue, /src/views/ReportView.vue, /src/views/AssetView.vue, /src/views/InstrumentMaintenanceView.vue, /src/views/StatisticsView.vue, /src/views/MobileLoginView.vue, /src/views/DetectionAnalysisView.vue, /src/views/FlowConfigView.vue, /src/views/layout/AppLayout.vue[22m
+[2m14:02:00[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DashboardView.vue[22m
+[2m14:02:09[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DashboardView.vue?vue&type=style&index=0&scoped=336c5134&lang.css[22m
+[2m14:06:06[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DashboardView.vue[22m
+[2m14:08:13[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DashboardView.vue[22m
+[2m14:08:28[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DashboardView.vue[22m
+[2m14:08:35[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DashboardView.vue?vue&type=style&index=0&scoped=336c5134&lang.css[22m
+[2m14:12:11[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DashboardView.vue?vue&type=style&index=0&scoped=336c5134&lang.css[22m
+[2m14:12:20[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DashboardView.vue?vue&type=style&index=0&scoped=336c5134&lang.css[22m
+[2m14:15:26[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DashboardView.vue?vue&type=style&index=0&scoped=336c5134&lang.css, /src/views/DashboardView.vue[22m
+[2m14:15:35[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DashboardView.vue?vue&type=style&index=0&scoped=336c5134&lang.css[22m
+[2m14:18:42[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DashboardView.vue?vue&type=style&index=0&scoped=336c5134&lang.css[22m
+[2m14:19:32[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DashboardView.vue[22m
+[2m14:19:47[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DashboardView.vue?vue&type=style&index=0&scoped=336c5134&lang.css[22m
+[2m14:21:14[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DashboardView.vue?vue&type=style&index=0&scoped=336c5134&lang.css[22m
+[2m14:22:50[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DashboardView.vue?vue&type=style&index=0&scoped=336c5134&lang.css[22m
+[2m14:27:01[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DashboardView.vue?vue&type=style&index=0&scoped=336c5134&lang.css[22m
+[2m14:27:19[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DashboardView.vue?vue&type=style&index=0&scoped=336c5134&lang.css[22m
+[2m14:29:46[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DashboardView.vue?vue&type=style&index=0&scoped=336c5134&lang.css, /src/views/DashboardView.vue[22m
+[2m14:30:04[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DashboardView.vue?vue&type=style&index=0&scoped=336c5134&lang.css[22m
+[2m14:31:07[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DashboardView.vue[22m
+[2m14:32:36[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DashboardView.vue?vue&type=style&index=0&scoped=336c5134&lang.css[22m
+[2m14:32:49[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DashboardView.vue?vue&type=style&index=0&scoped=336c5134&lang.css[22m
+[2m14:33:05[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DashboardView.vue?vue&type=style&index=0&scoped=336c5134&lang.css[22m
+[2m14:33:17[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DashboardView.vue?vue&type=style&index=0&scoped=336c5134&lang.css[22m
+[2m14:34:35[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DashboardView.vue[22m
+[2m14:35:20[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DashboardView.vue[22m
+[2m14:36:16[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DashboardView.vue?vue&type=style&index=0&scoped=336c5134&lang.css[22m
+[2m14:36:27[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DashboardView.vue?vue&type=style&index=0&scoped=336c5134&lang.css[22m
+[2m15:25:41[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/main.js[22m
+[2m15:29:54[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/router/index.js[22m
+[2m15:37:23[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DetectionConfigView.vue[22m
+[2m15:38:01[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/SystemManagementView.vue[22m
+[2m15:38:24[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/AssetView.vue[22m
+[2m15:39:49[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/ReportView.vue[22m
+[2m15:41:11[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/ReviewView.vue[22m
+[2m15:41:37[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/SamplingView.vue[22m
+[2m16:06:31[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/router/menuConfig.js[22m
+[2m16:08:32[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/router/menuConfig.js[22m
+[2m16:10:49[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/layout/AppLayout.vue, /src/views/layout/AppLayout.vue?vue&type=style&index=0&scoped=b0d177fe&lang.css[22m
+[2m16:13:22[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/layout/AppLayout.vue, /src/views/layout/AppLayout.vue?vue&type=style&index=0&scoped=b0d177fe&lang.css[22m
+[2m16:21:47[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/router/index.js[22m
+[2m16:26:48[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/DashboardView.vue[22m
+[2m16:27:03[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/LoginView.vue[22m
+[2m16:29:57[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/main.js[22m
+[2m17:17:10[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/MobileWorkbenchView.vue, /src/views/DetectionMethodView.vue, /src/views/DetectionConfigView.vue, /src/views/LoginView.vue, /src/views/DashboardView.vue, /src/views/DetectionParameterMethodBindingView.vue, /src/views/SystemManagementView.vue, /src/views/SamplingView.vue, /src/views/MonitoringPointView.vue, /src/views/DetectionView.vue, /src/views/ReviewView.vue, /src/views/ReportView.vue, /src/views/AssetView.vue, /src/views/InstrumentMaintenanceView.vue, /src/views/StatisticsView.vue, /src/views/MobileLoginView.vue, /src/views/DetectionAnalysisView.vue, /src/views/FlowConfigView.vue, /src/views/layout/AppLayout.vue[22m
+[2m17:17:10[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/SamplingView.vue[22m
+[2m17:17:24[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/SamplingView.vue[22m
+[2m17:17:35[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/SamplingView.vue[22m
+[2m17:17:56[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/SamplingView.vue[22m
+[2m17:18:18[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/SamplingView.vue?vue&type=style&index=0&scoped=3b8b650d&lang.css[22m
+[2m17:19:45[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/SamplingView.vue[22m
+[2m17:20:05[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/MobileWorkbenchView.vue[22m
+[2m17:24:58[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/SamplingView.vue[22m
+[2m17:30:21[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/SamplingView.vue?vue&type=style&index=0&scoped=3b8b650d&lang.css, /src/views/SamplingView.vue[22m
+[2m17:31:33[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/SamplingView.vue?vue&type=style&index=0&scoped=3b8b650d&lang.css, /src/views/SamplingView.vue[22m
+[2m17:34:25[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/SamplingView.vue[22m

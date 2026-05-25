@@ -348,3 +348,194 @@ AggregateError [ECONNREFUSED]:
 AggregateError [ECONNREFUSED]: 
     at internalConnectMultiple (node:net:1142:49)
     at afterConnectMultiple (node:net:1723:7)
+[2m14:57:55[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/mobile/sampling/todo?pageNum=1&pageSize=200[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+[2m14:57:55[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/mobile/detection/history?pageNum=1&pageSize=200[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+[2m14:57:55[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/mobile/detection/todo?pageNum=1&pageSize=200[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+[2m14:57:55[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/mobile/review/todo?pageNum=1&pageSize=200[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+[2m14:57:55[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/mobile/review/history?pageNum=1&pageSize=200[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+[2m14:57:55[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/mobile/reports/mine?pageNum=1&pageSize=200[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+[2m14:34:35[22m [33m[1m[vite][22m[39m [33mwarning: <button> cannot be child of <button>, according to HTML specifications. This can cause hydration errors or potentially disrupt future functionality.
+169|                    <em>任务状态：{{ item.statusText || '-' }}</em>
+170|                  </div>
+171|                  <button type="button" class="detector-card__action" @click.stop="goRoute('/detection-analysis')">进入处理</button>
+   |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+172|                </button>
+173|              </template>[39m
+  Plugin: [35mvite:vue[39m
+  File: [36mE:/share/yx-lab-system/yx-lab-frontend/src/views/DashboardView.vue[39m
+[2m16:06:31[22m [31m[1m[vite][22m[39m Pre-transform error: Failed to load url /src/router/menuConfig.js (resolved id: E:/share/yx-lab-system/yx-lab-frontend/src/router/menuConfig.js) in E:/share/yx-lab-system/yx-lab-frontend/src/router/index.js. Does the file exist?
+[2m17:35:42[22m [31m[1m[vite][22m[39m [31mInternal server error: Element is missing end tag.[39m
+  Plugin: [35mvite:vue[39m
+  File: [36mE:/share/yx-lab-system/yx-lab-frontend/src/views/MobileWorkbenchView.vue[39m:7:9
+[33m  5  |          <span class="hero-tag">绉诲姩绔棴鐜?/span>
+  6  |          <h1>浠庨噰鏍峰埌鎶ュ憡锛屼竴閮ㄦ墜鏈哄畬鎴愭祦杞?/h1>
+  7  |          <p>鑱氱劍寰呭姙銆佸揩閫熸彁浜ゃ€佸嵆鏃跺洖鐪嬶紝闈㈠悜鐜板満浜哄憳涓庡鏍镐汉鍛樼殑杞婚噺宸ヤ綔鍙般€?/p>
+     |           ^
+  8  |        </div>
+  9  |  [39m
+      at createCompilerError (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1378:17)
+      at emitError (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3014:5)
+      at Object.onclosetag (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:2381:13)
+      at Tokenizer.stateInClosingTagName (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:799:16)
+      at Tokenizer.parse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1157:16)
+      at Object.baseParse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3053:13)
+      at Object.parse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-dom\dist\compiler-dom.cjs.js:910:23)
+      at Object.parse$1 [as parse] (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-sfc\dist\compiler-sfc.cjs.js:1824:24)
+      at createDescriptor (file:///E:/share/yx-lab-system/yx-lab-frontend/node_modules/@vitejs/plugin-vue/dist/index.mjs:71:43)
+      at handleHotUpdate (file:///E:/share/yx-lab-system/yx-lab-frontend/node_modules/@vitejs/plugin-vue/dist/index.mjs:2198:26)
+[2m17:35:59[22m [31m[1m[vite][22m[39m [31mInternal server error: Element is missing end tag.[39m
+  Plugin: [35mvite:vue[39m
+  File: [36mE:/share/yx-lab-system/yx-lab-frontend/src/views/MobileWorkbenchView.vue[39m:7:9
+[33m  5  |          <span class="hero-tag">绉诲姩绔棴鐜?/span>
+  6  |          <h1>浠庨噰鏍峰埌鎶ュ憡锛屼竴閮ㄦ墜鏈哄畬鎴愭祦杞?/h1>
+  7  |          <p>鑱氱劍寰呭姙銆佸揩閫熸彁浜ゃ€佸嵆鏃跺洖鐪嬶紝闈㈠悜鐜板満浜哄憳涓庡鏍镐汉鍛樼殑杞婚噺宸ヤ綔鍙般€?/p>
+     |           ^
+  8  |        </div>
+  9  |  [39m
+      at createCompilerError (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1378:17)
+      at emitError (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3014:5)
+      at Object.onclosetag (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:2381:13)
+      at Tokenizer.stateInClosingTagName (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:799:16)
+      at Tokenizer.parse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1157:16)
+      at Object.baseParse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3053:13)
+      at Object.parse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-dom\dist\compiler-dom.cjs.js:910:23)
+      at Object.parse$1 [as parse] (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-sfc\dist\compiler-sfc.cjs.js:1824:24)
+      at createDescriptor (file:///E:/share/yx-lab-system/yx-lab-frontend/node_modules/@vitejs/plugin-vue/dist/index.mjs:71:43)
+      at handleHotUpdate (file:///E:/share/yx-lab-system/yx-lab-frontend/node_modules/@vitejs/plugin-vue/dist/index.mjs:2198:26)
+[2m17:36:03[22m [31m[1m[vite][22m[39m [31mInternal server error: Element is missing end tag.[39m
+  Plugin: [35mvite:vue[39m
+  File: [36mE:/share/yx-lab-system/yx-lab-frontend/src/views/MobileWorkbenchView.vue[39m:7:9
+[33m  5  |          <span class="hero-tag">绉诲姩绔棴鐜?/span>
+  6  |          <h1>浠庨噰鏍峰埌鎶ュ憡锛屼竴閮ㄦ墜鏈哄畬鎴愭祦杞?/h1>
+  7  |          <p>鑱氱劍寰呭姙銆佸揩閫熸彁浜ゃ€佸嵆鏃跺洖鐪嬶紝闈㈠悜鐜板満浜哄憳涓庡鏍镐汉鍛樼殑杞婚噺宸ヤ綔鍙般€?/p>
+     |           ^
+  8  |        </div>
+  9  |  [39m
+      at createCompilerError (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1378:17)
+      at emitError (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3014:5)
+      at Object.onclosetag (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:2381:13)
+      at Tokenizer.stateInClosingTagName (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:799:16)
+      at Tokenizer.parse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1157:16)
+      at Object.baseParse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3053:13)
+      at Object.parse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-dom\dist\compiler-dom.cjs.js:910:23)
+      at Object.parse$1 [as parse] (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-sfc\dist\compiler-sfc.cjs.js:1824:24)
+      at createDescriptor (file:///E:/share/yx-lab-system/yx-lab-frontend/node_modules/@vitejs/plugin-vue/dist/index.mjs:71:43)
+      at handleHotUpdate (file:///E:/share/yx-lab-system/yx-lab-frontend/node_modules/@vitejs/plugin-vue/dist/index.mjs:2198:26)
+[2m17:36:05[22m [31m[1m[vite][22m[39m [31mInternal server error: Element is missing end tag.[39m
+  Plugin: [35mvite:vue[39m
+  File: [36mE:/share/yx-lab-system/yx-lab-frontend/src/views/MobileWorkbenchView.vue[39m:7:9
+[33m  5  |          <span class="hero-tag">绉诲姩绔棴鐜?/span>
+  6  |          <h1>浠庨噰鏍峰埌鎶ュ憡锛屼竴閮ㄦ墜鏈哄畬鎴愭祦杞?/h1>
+  7  |          <p>鑱氱劍寰呭姙銆佸揩閫熸彁浜ゃ€佸嵆鏃跺洖鐪嬶紝闈㈠悜鐜板満浜哄憳涓庡鏍镐汉鍛樼殑杞婚噺宸ヤ綔鍙般€?/p>
+     |           ^
+  8  |        </div>
+  9  |  [39m
+      at createCompilerError (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1378:17)
+      at emitError (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3014:5)
+      at Object.onclosetag (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:2381:13)
+      at Tokenizer.stateInClosingTagName (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:799:16)
+      at Tokenizer.parse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1157:16)
+      at Object.baseParse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3053:13)
+      at Object.parse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-dom\dist\compiler-dom.cjs.js:910:23)
+      at Object.parse$1 [as parse] (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-sfc\dist\compiler-sfc.cjs.js:1824:24)
+      at createDescriptor (file:///E:/share/yx-lab-system/yx-lab-frontend/node_modules/@vitejs/plugin-vue/dist/index.mjs:71:43)
+      at handleHotUpdate (file:///E:/share/yx-lab-system/yx-lab-frontend/node_modules/@vitejs/plugin-vue/dist/index.mjs:2198:26)
+[2m17:36:06[22m [31m[1m[vite][22m[39m [31mInternal server error: Element is missing end tag.[39m
+  Plugin: [35mvite:vue[39m
+  File: [36mE:/share/yx-lab-system/yx-lab-frontend/src/views/MobileWorkbenchView.vue[39m:7:9
+[33m  5  |          <span class="hero-tag">绉诲姩绔棴鐜?/span>
+  6  |          <h1>浠庨噰鏍峰埌鎶ュ憡锛屼竴閮ㄦ墜鏈哄畬鎴愭祦杞?/h1>
+  7  |          <p>鑱氱劍寰呭姙銆佸揩閫熸彁浜ゃ€佸嵆鏃跺洖鐪嬶紝闈㈠悜鐜板満浜哄憳涓庡鏍镐汉鍛樼殑杞婚噺宸ヤ綔鍙般€?/p>
+     |           ^
+  8  |        </div>
+  9  |  [39m
+      at createCompilerError (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1378:17)
+      at emitError (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3014:5)
+      at Object.onclosetag (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:2381:13)
+      at Tokenizer.stateInClosingTagName (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:799:16)
+      at Tokenizer.parse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1157:16)
+      at Object.baseParse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3053:13)
+      at Object.parse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-dom\dist\compiler-dom.cjs.js:910:23)
+      at Object.parse$1 [as parse] (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-sfc\dist\compiler-sfc.cjs.js:1824:24)
+      at createDescriptor (file:///E:/share/yx-lab-system/yx-lab-frontend/node_modules/@vitejs/plugin-vue/dist/index.mjs:71:43)
+      at handleHotUpdate (file:///E:/share/yx-lab-system/yx-lab-frontend/node_modules/@vitejs/plugin-vue/dist/index.mjs:2198:26)
+[2m17:36:11[22m [31m[1m[vite][22m[39m [31mInternal server error: Element is missing end tag.[39m
+  Plugin: [35mvite:vue[39m
+  File: [36mE:/share/yx-lab-system/yx-lab-frontend/src/views/MobileWorkbenchView.vue[39m:7:9
+[33m  5  |          <span class="hero-tag">绉诲姩绔棴鐜?/span>
+  6  |          <h1>浠庨噰鏍峰埌鎶ュ憡锛屼竴閮ㄦ墜鏈哄畬鎴愭祦杞?/h1>
+  7  |          <p>鑱氱劍寰呭姙銆佸揩閫熸彁浜ゃ€佸嵆鏃跺洖鐪嬶紝闈㈠悜鐜板満浜哄憳涓庡鏍镐汉鍛樼殑杞婚噺宸ヤ綔鍙般€?/p>
+     |           ^
+  8  |        </div>
+  9  |  [39m
+      at createCompilerError (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1378:17)
+      at emitError (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3014:5)
+      at Object.onclosetag (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:2381:13)
+      at Tokenizer.stateInClosingTagName (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:799:16)
+      at Tokenizer.parse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1157:16)
+      at Object.baseParse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3053:13)
+      at Object.parse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-dom\dist\compiler-dom.cjs.js:910:23)
+      at Object.parse$1 [as parse] (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-sfc\dist\compiler-sfc.cjs.js:1824:24)
+      at createDescriptor (file:///E:/share/yx-lab-system/yx-lab-frontend/node_modules/@vitejs/plugin-vue/dist/index.mjs:71:43)
+      at handleHotUpdate (file:///E:/share/yx-lab-system/yx-lab-frontend/node_modules/@vitejs/plugin-vue/dist/index.mjs:2198:26)
+[2m17:36:12[22m [31m[1m[vite][22m[39m [31mInternal server error: Element is missing end tag.[39m
+  Plugin: [35mvite:vue[39m
+  File: [36mE:/share/yx-lab-system/yx-lab-frontend/src/views/MobileWorkbenchView.vue[39m:7:9
+[33m  5  |          <span class="hero-tag">绉诲姩绔棴鐜?/span>
+  6  |          <h1>浠庨噰鏍峰埌鎶ュ憡锛屼竴閮ㄦ墜鏈哄畬鎴愭祦杞?/h1>
+  7  |          <p>鑱氱劍寰呭姙銆佸揩閫熸彁浜ゃ€佸嵆鏃跺洖鐪嬶紝闈㈠悜鐜板満浜哄憳涓庡鏍镐汉鍛樼殑杞婚噺宸ヤ綔鍙般€?/p>
+     |           ^
+  8  |        </div>
+  9  |  [39m
+      at createCompilerError (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1378:17)
+      at emitError (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3014:5)
+      at Object.onclosetag (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:2381:13)
+      at Tokenizer.stateInClosingTagName (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:799:16)
+      at Tokenizer.parse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1157:16)
+      at Object.baseParse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3053:13)
+      at Object.parse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-dom\dist\compiler-dom.cjs.js:910:23)
+      at Object.parse$1 [as parse] (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-sfc\dist\compiler-sfc.cjs.js:1824:24)
+      at createDescriptor (file:///E:/share/yx-lab-system/yx-lab-frontend/node_modules/@vitejs/plugin-vue/dist/index.mjs:71:43)
+      at handleHotUpdate (file:///E:/share/yx-lab-system/yx-lab-frontend/node_modules/@vitejs/plugin-vue/dist/index.mjs:2198:26)
+[2m17:36:34[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/samplingTasks?keyword=&taskStatus=COMPLETED&samplerId=&pageNum=1&pageSize=30[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+[2m17:36:38[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/samplingTasks?keyword=&taskStatus=COMPLETED&samplerId=&pageNum=1&pageSize=30[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+[2m17:36:38[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/samplingTasks?keyword=&taskStatus=COMPLETED&samplerId=&pageNum=1&pageSize=30[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+[2m17:36:39[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/samplingTasks?keyword=&taskStatus=COMPLETED&samplerId=&pageNum=1&pageSize=30[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+[2m17:36:39[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/samplingTasks?keyword=&taskStatus=COMPLETED&samplerId=&pageNum=1&pageSize=30[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+[2m17:36:50[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/samplingTasks?keyword=&taskStatus=COMPLETED&samplerId=&pageNum=1&pageSize=30[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)

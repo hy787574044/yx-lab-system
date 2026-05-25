@@ -2,6 +2,8 @@ package com.yx.lab.modules.system.controller;
 
 import com.yx.lab.common.constant.LabWorkflowConstants;
 import com.yx.lab.common.model.ApiResponse;
+import com.yx.lab.common.security.PermissionConstants;
+import com.yx.lab.common.security.RequirePermission;
 import com.yx.lab.common.util.ExcelExportUtil;
 import com.yx.lab.modules.system.dto.LogQuery;
 import com.yx.lab.modules.system.service.SystemLogManagementService;
@@ -23,6 +25,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/system/logs")
 @RequiredArgsConstructor
 @Tag(name = "系统管理-日志管理")
+@RequirePermission(PermissionConstants.SYSTEM_VIEW)
 public class SystemLogManagementController {
 
     private final SystemLogManagementService systemLogManagementService;

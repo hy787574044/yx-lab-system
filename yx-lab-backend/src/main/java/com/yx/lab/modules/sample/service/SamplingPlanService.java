@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.yx.lab.common.constant.LabWorkflowConstants;
 import com.yx.lab.common.exception.BusinessException;
 import com.yx.lab.common.model.PageResult;
+import com.yx.lab.common.security.DataScopeHelper;
 import com.yx.lab.common.util.PageUtils;
 import com.yx.lab.modules.sample.dto.SamplingPlanDispatchCommand;
 import com.yx.lab.modules.sample.dto.SamplingPlanQuery;
@@ -37,6 +38,8 @@ public class SamplingPlanService {
 
     private final SamplingTaskMapper samplingTaskMapper;
 
+    private final DataScopeHelper dataScopeHelper;
+
     private final ConcurrentMap<Long, ReentrantLock> dispatchLocks = new ConcurrentHashMap<>();
 
     /**
@@ -51,9 +54,21 @@ public class SamplingPlanService {
                 new LambdaQueryWrapper<SamplingPlan>()
                         .like(StrUtil.isNotBlank(query.getKeyword()), SamplingPlan::getPlanName, query.getKeyword())
                         .eq(StrUtil.isNotBlank(query.getPlanStatus()), SamplingPlan::getPlanStatus, query.getPlanStatus())
-                        .eq(query.getSamplerId() != null, SamplingPlan::getSamplerId, query.getSamplerId())
+                        .eq(resolveScopedSamplerId(query.getSamplerId()) != null,
+                                SamplingPlan::getSamplerId,
+                                resolveScopedSamplerId(query.getSamplerId()))
                         .orderByDesc(SamplingPlan::getCreatedTime));
         return new PageResult<>(page.getTotal(), page.getRecords());
+    }
+
+    private Long resolveScopedSamplerId(Long querySamplerId) {
+        if (dataScopeHelper.isAdmin()) {
+            return querySamplerId;
+        }
+        if (dataScopeHelper.isRole("SAMPLER") && dataScopeHelper.currentUserId() != null) {
+            return dataScopeHelper.currentUserId();
+        }
+        return querySamplerId;
     }
 
     /**

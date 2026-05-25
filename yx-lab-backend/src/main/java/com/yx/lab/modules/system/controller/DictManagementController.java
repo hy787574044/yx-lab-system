@@ -2,6 +2,8 @@ package com.yx.lab.modules.system.controller;
 
 import com.yx.lab.common.model.ApiResponse;
 import com.yx.lab.common.model.PageResult;
+import com.yx.lab.common.security.PermissionConstants;
+import com.yx.lab.common.security.RequirePermission;
 import com.yx.lab.common.util.ExcelExportUtil;
 import com.yx.lab.modules.system.dto.DictQuery;
 import com.yx.lab.modules.system.dto.DictSaveCommand;
@@ -28,6 +30,7 @@ import javax.validation.Valid;
 @RequestMapping("/api/system/dicts")
 @RequiredArgsConstructor
 @Tag(name = "系统管理-数据字典管理")
+@RequirePermission(PermissionConstants.SYSTEM_VIEW)
 public class DictManagementController {
 
     private final DictManagementService dictManagementService;
@@ -90,6 +93,7 @@ public class DictManagementController {
      */
     @PostMapping
     @Operation(summary = "新增数据字典")
+    @RequirePermission(PermissionConstants.SYSTEM_WRITE)
     public ApiResponse<Void> save(@Valid @RequestBody DictSaveCommand command) {
         dictManagementService.save(command);
         return ApiResponse.successMessage("新增成功");
@@ -104,6 +108,7 @@ public class DictManagementController {
      */
     @PostMapping("/{id}")
     @Operation(summary = "更新数据字典")
+    @RequirePermission(PermissionConstants.SYSTEM_WRITE)
     public ApiResponse<Void> update(@PathVariable Long id, @Valid @RequestBody DictSaveCommand command) {
         dictManagementService.update(id, command);
         return ApiResponse.successMessage("更新成功");
@@ -117,6 +122,7 @@ public class DictManagementController {
      */
     @PostMapping("/{id}/delete")
     @Operation(summary = "删除数据字典")
+    @RequirePermission(PermissionConstants.SYSTEM_WRITE)
     public ApiResponse<Void> delete(@PathVariable Long id) {
         dictManagementService.delete(id);
         return ApiResponse.successMessage("删除成功");

@@ -2,6 +2,8 @@ package com.yx.lab.modules.system.controller;
 
 import com.yx.lab.common.model.ApiResponse;
 import com.yx.lab.common.model.PageResult;
+import com.yx.lab.common.security.PermissionConstants;
+import com.yx.lab.common.security.RequirePermission;
 import com.yx.lab.common.util.ExcelExportUtil;
 import com.yx.lab.modules.system.dto.RoleQuery;
 import com.yx.lab.modules.system.dto.RoleSaveCommand;
@@ -30,6 +32,7 @@ import java.util.List;
 @RequestMapping("/api/system/roles")
 @RequiredArgsConstructor
 @Tag(name = "系统管理-角色管理")
+@RequirePermission(PermissionConstants.SYSTEM_VIEW)
 public class RoleManagementController {
 
     private final RoleManagementService roleManagementService;
@@ -103,6 +106,7 @@ public class RoleManagementController {
      */
     @PostMapping
     @Operation(summary = "新增角色")
+    @RequirePermission(PermissionConstants.SYSTEM_WRITE)
     public ApiResponse<Void> save(@Valid @RequestBody RoleSaveCommand command) {
         roleManagementService.save(command);
         return ApiResponse.successMessage("新增成功");
@@ -117,6 +121,7 @@ public class RoleManagementController {
      */
     @PostMapping("/{id}")
     @Operation(summary = "更新角色")
+    @RequirePermission(PermissionConstants.SYSTEM_WRITE)
     public ApiResponse<Void> update(@PathVariable Long id, @Valid @RequestBody RoleSaveCommand command) {
         roleManagementService.update(id, command);
         return ApiResponse.successMessage("更新成功");
@@ -130,6 +135,7 @@ public class RoleManagementController {
      */
     @PostMapping("/{id}/delete")
     @Operation(summary = "删除角色")
+    @RequirePermission(PermissionConstants.SYSTEM_WRITE)
     public ApiResponse<Void> delete(@PathVariable Long id) {
         roleManagementService.delete(id);
         return ApiResponse.successMessage("删除成功");

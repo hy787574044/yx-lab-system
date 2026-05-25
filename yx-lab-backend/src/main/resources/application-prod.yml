@@ -1,0 +1,46 @@
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://192.168.7.17:3306/yx_lab?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false
+    username: root
+    password: GlcLMg3SNPrTczvoRN
+  redis:
+    host: 192.168.7.108
+    port: 6379
+    database: 15
+    password: CoOHvRWRlaBgb%Jf)R
+    timeout: 5000ms
+
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+
+logging:
+  level:
+    root: INFO
+    com.yx.lab: DEBUG
+
+lab:
+  storage:
+    upload-dir: /home/resource
+  unified:
+    base-url: http://172.168.1.55:8187
+    api-token:
+    client-id:
+    client-secret:
+    scope:
+    response-type: code
+    timeout: 10000
+    headers:
+      x-ltdno-header:
+      x-tenant-schema:
+      x-tenantid-header:
+      x-userid-header:
+      x-username-header:

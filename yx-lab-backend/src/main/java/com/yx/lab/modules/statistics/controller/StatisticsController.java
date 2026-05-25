@@ -1,6 +1,8 @@
 package com.yx.lab.modules.statistics.controller;
 
 import com.yx.lab.common.model.ApiResponse;
+import com.yx.lab.common.security.PermissionConstants;
+import com.yx.lab.common.security.RequirePermission;
 import com.yx.lab.modules.statistics.service.StatisticsService;
 import com.yx.lab.modules.statistics.vo.StatisticsSummaryVO;
 import io.swagger.v3.oas.annotations.Operation;
@@ -18,6 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/statistics")
 @RequiredArgsConstructor
 @Tag(name = "统计分析")
+@RequirePermission(PermissionConstants.STATISTICS_VIEW)
 public class StatisticsController {
 
     private final StatisticsService statisticsService;

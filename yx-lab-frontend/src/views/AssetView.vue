@@ -26,7 +26,7 @@
           <div class="toolbar-panel">
             <div class="toolbar-row">
               <div class="toolbar-main">
-                <el-button type="primary" class="toolbar-primary-button" @click="openInstrumentDialog()">新增设备</el-button>
+                <el-button v-permission="'asset:write'" type="primary" class="toolbar-primary-button" @click="openInstrumentDialog()">新增设备</el-button>
                 <div class="toolbar-fields">
                   <label class="toolbar-field toolbar-field--wide">
                     <span>关键字</span>
@@ -63,8 +63,8 @@
               <div class="toolbar-actions">
                 <el-button type="primary" @click="handleInstrumentSearch">查询</el-button>
                 <el-button @click="resetInstrumentQuery">重置</el-button>
-                <el-button @click="handleDownloadTemplate" :loading="templateDownloading">下载导入模板</el-button>
-                <el-button type="warning" plain @click="openImportDialog">导入设备</el-button>
+                <el-button v-permission="'asset:write'" @click="handleDownloadTemplate" :loading="templateDownloading">下载导入模板</el-button>
+                <el-button v-permission="'asset:write'" type="warning" plain @click="openImportDialog">导入设备</el-button>
                 <el-button @click="handleExportInstruments">导出</el-button>
               </div>
             </div>
@@ -101,8 +101,8 @@
               <el-table-column label="操作" width="170" fixed="right" header-cell-class-name="cell-center" class-name="cell-center">
                 <template #default="{ row }">
                   <div class="table-action-row">
-                    <el-button link type="primary" @click="openInstrumentDialog(row.id)">编辑</el-button>
-                    <el-button link type="danger" @click="removeInstrument(row)">删除</el-button>
+                    <el-button v-permission="'asset:write'" link type="primary" @click="openInstrumentDialog(row.id)">编辑</el-button>
+                    <el-button v-permission="'asset:write'" link type="danger" @click="removeInstrument(row)">删除</el-button>
                   </div>
                 </template>
               </el-table-column>
@@ -142,7 +142,7 @@
           <div class="toolbar-panel">
             <div class="toolbar-row">
               <div class="toolbar-main">
-                <el-button type="primary" class="toolbar-primary-button" @click="openDocumentDialog()">新增文档</el-button>
+                <el-button v-permission="'asset:write'" type="primary" class="toolbar-primary-button" @click="openDocumentDialog()">新增文档</el-button>
                 <div class="toolbar-fields">
                   <label class="toolbar-field toolbar-field--wide">
                     <span>关键字</span>
@@ -201,8 +201,8 @@
                 <template #default="{ row }">
                   <div class="table-action-row">
                     <el-button link type="primary" @click="previewDocument(row)">查看</el-button>
-                    <el-button v-if="row.canManage" link type="primary" @click="openDocumentDialog(row.id)">编辑</el-button>
-                    <el-button v-if="row.canManage" link type="danger" @click="removeDocument(row)">删除</el-button>
+                    <el-button v-if="row.canManage" v-permission="'asset:write'" link type="primary" @click="openDocumentDialog(row.id)">编辑</el-button>
+                    <el-button v-if="row.canManage" v-permission="'asset:write'" link type="danger" @click="removeDocument(row)">删除</el-button>
                   </div>
                 </template>
               </el-table-column>
@@ -280,7 +280,7 @@
       </el-form>
       <template #footer>
         <el-button @click="instrumentDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="savingInstrument" @click="submitInstrument">保存</el-button>
+        <el-button v-permission="'asset:write'" type="primary" :loading="savingInstrument" @click="submitInstrument">保存</el-button>
       </template>
     </el-dialog>
 
@@ -352,7 +352,7 @@
 
       <template #footer>
         <el-button @click="closeImportDialog">取消</el-button>
-        <el-button type="primary" :loading="importSubmitting" @click="submitImport">开始导入</el-button>
+        <el-button v-permission="'asset:write'" type="primary" :loading="importSubmitting" @click="submitImport">开始导入</el-button>
       </template>
     </el-dialog>
 
@@ -414,7 +414,7 @@
       </el-form>
       <template #footer>
         <el-button @click="documentDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="savingDocument" @click="submitDocument">保存</el-button>
+        <el-button v-permission="'asset:write'" type="primary" :loading="savingDocument" @click="submitDocument">保存</el-button>
       </template>
     </el-dialog>
 

@@ -1,10 +1,10 @@
-<template>
+﻿<template>
   <div class="mobile-shell">
     <header class="mobile-hero">
       <div class="hero-copy">
-        <span class="hero-tag">移动端闭环</span>
+        <span class="hero-tag">移动端工作台</span>
         <h1>从采样到报告，一部手机完成流转</h1>
-        <p>聚焦待办、快速提交、即时回看，面向现场人员与审核人员的轻量工作台。</p>
+        <p>聚焦待办、快速提单、即时回看，面向现场人员与审核人员的轻量工作台。</p>
       </div>
 
       <div class="hero-user">
@@ -115,13 +115,6 @@
             <p v-if="task.sampleLogged">已登录样品：{{ task.sampleNo || '-' }}</p>
             <p v-else-if="task.taskStatus === completedTaskStatus" class="warn-text">采样已完成，请尽快进行样品登录</p>
             <div class="card-actions">
-              <el-button
-                v-if="task.taskStatus === pendingTaskStatus"
-                size="small"
-                @click="handleStartTask(task)"
-              >
-                开始采样
-              </el-button>
               <el-button
                 v-if="task.taskStatus === pendingTaskStatus || task.taskStatus === inProgressTaskStatus"
                 size="small"
@@ -286,6 +279,15 @@
       @closed="resetCompleteForm"
     >
       <el-form label-position="top">
+        <el-form-item label="采样封签号" required>
+          <el-input v-model="completeForm.sealNo" placeholder="请输入或粘贴 OCR 识别的封签号" />
+        </el-form-item>
+        <el-form-item label="天气">
+          <el-input v-model="completeForm.weather" placeholder="例如：晴、多云、小雨" />
+        </el-form-item>
+        <el-form-item label="温度">
+          <el-input v-model="completeForm.temperature" placeholder="例如：26℃" />
+        </el-form-item>
         <el-form-item label="现场指标">
           <el-input
             v-model="completeForm.onsiteMetrics"
@@ -303,7 +305,7 @@
       </el-form>
       <template #footer>
         <el-button @click="completeDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="submitting" @click="submitComplete">确认完成</el-button>
+        <el-button type="primary" :loading="submitting" @click="submitComplete">保存</el-button>
       </template>
     </el-dialog>
 
@@ -420,7 +422,7 @@
       </el-form>
       <template #footer>
         <el-button @click="detectionDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="submitting" @click="submitDetection">确认提交</el-button>
+        <el-button type="primary" :loading="submitting" @click="submitDetection">提交</el-button>
       </template>
     </el-dialog>
 
@@ -437,12 +439,12 @@
           <el-input v-model="reviewForm.reviewRemark" type="textarea" :rows="3" placeholder="填写审核意见" />
         </el-form-item>
         <el-form-item v-if="reviewForm.reviewResult === rejectedReviewResult" label="驳回原因">
-          <el-input v-model="reviewForm.rejectReason" type="textarea" :rows="3" placeholder="请填写退回重检原因" />
+          <el-input v-model="reviewForm.rejectReason" type="textarea" :rows="3" placeholder="请填写驳回重检原因" />
         </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="reviewDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="submitting" @click="submitReview">确认提交</el-button>
+        <el-button type="primary" :loading="submitting" @click="submitReview">提交</el-button>
       </template>
     </el-dialog>
 
@@ -503,7 +505,7 @@
         <el-form-item label="姓名" prop="realName">
           <el-input v-model="profileForm.realName" placeholder="请输入姓名" />
         </el-form-item>
-        <el-form-item label="手机号" prop="phone">
+        <el-form-item label="手机号码" prop="phone">
           <el-input v-model="profileForm.phone" placeholder="请输入手机号" />
         </el-form-item>
       </el-form>
@@ -617,7 +619,10 @@ const reportPrintRef = ref(null)
 
 const completeForm = reactive({
   taskId: null,
+  sealNo: '',
   onsiteMetrics: '',
+  weather: '',
+  temperature: '',
   photoUrls: '',
   remark: ''
 })
@@ -669,7 +674,7 @@ const profileAvatarSrc = computed(() => profileAvatarPreviewUrl.value || (profil
 
 const stats = computed(() => [
   { label: '采样待办', value: samplingTodoTotal.value, desc: '待执行和待样品登录任务' },
-  { label: '检测待办', value: detectionTodoTotal.value, desc: '待检样品和退回重检样品' },
+  { label: '检测待办', value: detectionTodoTotal.value, desc: '待检样品和待重检样品' },
   { label: '审核待办', value: reviewTodoTotal.value, desc: '待审核检测记录' },
   { label: '我的报告', value: reportTotal.value, desc: '正式报告在线预览' }
 ])
@@ -684,7 +689,7 @@ const tabOptions = computed(() => [
 
 function parseDetectionItemsText(value) {
   return String(value || '')
-    .split(/[，,、]/)
+    .split(/[,，、;；\n\r]+/)
     .map((item) => item.trim())
     .filter(Boolean)
 }
@@ -875,7 +880,7 @@ async function abandonTask(task) {
     const { value } = await ElMessageBox.prompt('请填写废弃原因', '废弃采样任务', {
       confirmButtonText: '确认废弃',
       cancelButtonText: '取消',
-      inputPlaceholder: '例如：现场条件不满足，需要改日执行'
+      inputPlaceholder: '例如：现场条件不满足，需改日执行'
     })
     await abandonSamplingTaskApi(task.id, {
       reason: String(value || '').trim(),
@@ -890,7 +895,10 @@ async function abandonTask(task) {
 
 function openCompleteDialog(task) {
   completeForm.taskId = task.id
+  completeForm.sealNo = task.sealNo || ''
   completeForm.onsiteMetrics = ''
+  completeForm.weather = task.weather || ''
+  completeForm.temperature = task.temperature || ''
   completeForm.photoUrls = ''
   completeForm.remark = task.remark || ''
   completeDialogVisible.value = true
@@ -898,7 +906,10 @@ function openCompleteDialog(task) {
 
 function resetCompleteForm() {
   completeForm.taskId = null
+  completeForm.sealNo = ''
   completeForm.onsiteMetrics = ''
+  completeForm.weather = ''
+  completeForm.temperature = ''
   completeForm.photoUrls = ''
   completeForm.remark = ''
 }
@@ -908,11 +919,18 @@ async function submitComplete() {
     ElMessage.warning('请选择要完成的采样任务')
     return
   }
+  if (!String(completeForm.sealNo || '').trim()) {
+    ElMessage.warning('请先录入采样封签号')
+    return
+  }
   submitting.value = true
   try {
     await completeSamplingTaskApi({
       taskId: completeForm.taskId,
+      sealNo: String(completeForm.sealNo || '').trim(),
       onsiteMetrics: completeForm.onsiteMetrics,
+      weather: completeForm.weather,
+      temperature: completeForm.temperature,
       photoUrls: completeForm.photoUrls,
       remark: completeForm.remark
     })
@@ -1151,7 +1169,7 @@ async function logout() {
   try {
     await mobileLogoutApi()
   } catch {
-    // 令牌过期时也要清理本地状态。
+    // 令牌过期时也需要清理本地状态。
   }
   clearToken()
   router.push('/mobile/login')

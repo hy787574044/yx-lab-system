@@ -25,10 +25,29 @@
         </defs>
         <path :d="areaPath" :fill="`url(#${gradientId})`" />
         <path :d="linePath" fill="none" :stroke="lineColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
-        <circle v-for="point in linePoints" :key="`${point.x}-${point.y}`" :cx="point.x" :cy="point.y" r="4" :fill="lineColor" />
+        <g
+          v-for="(point, index) in linePoints"
+          :key="`${point.x}-${point.y}`"
+          class="line-point"
+          @mouseenter="hoverIndex = index"
+          @mouseleave="hoverIndex = null"
+        >
+          <circle :cx="point.x" :cy="point.y" r="10" fill="transparent" />
+          <circle :cx="point.x" :cy="point.y" r="4.5" :fill="lineColor" />
+        </g>
       </svg>
       <div class="axis-labels">
         <span v-for="item in normalizedItems" :key="item.label">{{ item.label }}</span>
+      </div>
+      <div
+        v-if="hoveredLineItem"
+        class="line-tooltip"
+        :style="{ left: `${hoveredTooltipLeft}%` }"
+      >
+        <strong>{{ hoveredLineItem.label }}</strong>
+        <span>合格率：{{ hoveredLineItem.value }}%</span>
+        <span v-if="hasCountDetail(hoveredLineItem)">合格数量：{{ hoveredLineItem.normalCount }}</span>
+        <span v-if="hasCountDetail(hoveredLineItem)">不合格数量：{{ hoveredLineItem.abnormalCount }}</span>
       </div>
     </template>
 
@@ -49,7 +68,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 
 const props = defineProps({
   type: {
@@ -67,11 +86,14 @@ const props = defineProps({
 })
 
 const gradientId = `mini-line-${Math.random().toString(36).slice(2)}`
+const hoverIndex = ref(null)
 const lineColor = computed(() => props.colors[0] || '#1677ff')
 const normalizedItems = computed(() => {
   const items = (props.items || []).map((item, index) => ({
     label: item.label || item.name || '-',
     value: toSafeNumber(item.value),
+    normalCount: toSafeNumber(item.normalCount),
+    abnormalCount: toSafeNumber(item.abnormalCount),
     color: item.color || props.colors[index % props.colors.length]
   }))
   const max = Math.max(...items.map((item) => item.value), 0)
@@ -120,15 +142,31 @@ const areaPath = computed(() => {
   const last = linePoints.value[linePoints.value.length - 1]
   return `${linePath.value} L ${last.x} 142 L ${first.x} 142 Z`
 })
+const hoveredLineItem = computed(() => {
+  if (hoverIndex.value == null) {
+    return null
+  }
+  return normalizedItems.value[hoverIndex.value] || null
+})
+const hoveredTooltipLeft = computed(() => {
+  const total = Math.max(normalizedItems.value.length - 1, 1)
+  const index = hoverIndex.value == null ? 0 : hoverIndex.value
+  return Math.min(92, Math.max(8, (index / total) * 100))
+})
 
 function toSafeNumber(value) {
   const num = typeof value === 'number' ? value : Number.parseFloat(String(value ?? '').replace(/,/g, '').trim())
   return Number.isFinite(num) ? num : 0
 }
+
+function hasCountDetail(item) {
+  return toSafeNumber(item?.normalCount) > 0 || toSafeNumber(item?.abnormalCount) > 0
+}
 </script>
 
 <style scoped>
 .mini-chart {
+  position: relative;
   min-height: 160px;
 }
 
@@ -226,6 +264,37 @@ function toSafeNumber(value) {
   width: 100%;
   height: 150px;
   display: block;
+}
+
+.line-point {
+  cursor: pointer;
+}
+
+.line-tooltip {
+  position: absolute;
+  top: 6px;
+  z-index: 2;
+  display: grid;
+  gap: 4px;
+  min-width: 132px;
+  padding: 9px 10px;
+  border: 1px solid rgba(47, 111, 159, 0.22);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: var(--shadow-md);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.line-tooltip strong {
+  color: var(--text-main);
+  font-size: 13px;
+}
+
+.line-tooltip span {
+  color: var(--text-sub);
+  font-size: 12px;
+  white-space: nowrap;
 }
 
 .axis-labels {

@@ -7,6 +7,7 @@ import com.yx.lab.common.constant.LabWorkflowConstants;
 import com.yx.lab.common.exception.BusinessException;
 import com.yx.lab.common.model.PageResult;
 import com.yx.lab.common.security.CurrentUser;
+import com.yx.lab.common.security.DataScopeHelper;
 import com.yx.lab.common.security.SecurityContext;
 import com.yx.lab.common.util.PageUtils;
 import com.yx.lab.modules.detection.entity.DetectionItem;
@@ -70,6 +71,8 @@ public class ReportService {
 
     private final StorageService storageService;
 
+    private final DataScopeHelper dataScopeHelper;
+
     /**
      * 分页查询报告列表。
      *
@@ -84,13 +87,47 @@ public class ReportService {
                                 .like(LabReport::getReportName, query.getKeyword())
                                 .or()
                                 .like(LabReport::getSealNo, query.getKeyword())
-                                .or()
-                                .like(LabReport::getSampleNo, query.getKeyword()))
+                        .or()
+                        .like(LabReport::getSampleNo, query.getKeyword()))
                         .eq(StrUtil.isNotBlank(query.getReportType()), LabReport::getReportType, query.getReportType())
                         .eq(StrUtil.isNotBlank(query.getReportStatus()), LabReport::getReportStatus, query.getReportStatus())
+                        .in(resolveScopedReportIds() != null, LabReport::getId, resolveScopedReportIds())
                         .orderByDesc(LabReport::getGeneratedTime));
         page.getRecords().forEach(this::refreshStoredContentSnapshotIfNeeded);
         return new PageResult<>(page.getTotal(), page.getRecords());
+    }
+
+    private List<Long> resolveScopedReportIds() {
+        if (dataScopeHelper.isAdmin() || dataScopeHelper.isRole("REPORTER")) {
+            return null;
+        }
+        if (dataScopeHelper.isRole("DETECTOR") && dataScopeHelper.currentUserId() != null) {
+            List<Long> recordIds = detectionRecordMapper.selectList(new LambdaQueryWrapper<DetectionRecord>()
+                            .select(DetectionRecord::getId)
+                            .eq(DetectionRecord::getDetectorId, dataScopeHelper.currentUserId()))
+                    .stream()
+                    .map(DetectionRecord::getId)
+                    .collect(java.util.stream.Collectors.toList());
+            if (recordIds.isEmpty()) {
+                return Collections.singletonList(-1L);
+            }
+            List<Long> reportIds = labReportMapper.selectList(new LambdaQueryWrapper<LabReport>()
+                            .select(LabReport::getId)
+                            .in(LabReport::getDetectionRecordId, recordIds))
+                    .stream()
+                    .map(LabReport::getId)
+                    .collect(java.util.stream.Collectors.toList());
+            return reportIds.isEmpty() ? Collections.singletonList(-1L) : reportIds;
+        }
+        if (dataScopeHelper.onlySelfScope()) {
+            return labReportMapper.selectList(new LambdaQueryWrapper<LabReport>()
+                            .select(LabReport::getId)
+                            .eq(LabReport::getCreatedBy, dataScopeHelper.currentUserId()))
+                    .stream()
+                    .map(LabReport::getId)
+                    .collect(java.util.stream.Collectors.toList());
+        }
+        return null;
     }
 
     /**
@@ -882,6 +919,9 @@ public class ReportService {
         ReportPreviewItemVO vo = new ReportPreviewItemVO();
         vo.setParameterName(StrUtil.blankToDefault(item == null ? null : item.getParameterName(), "-"));
         vo.setMethodName(StrUtil.blankToDefault(item == null ? null : item.getMethodName(), "-"));
+        vo.setDetectorName(StrUtil.blankToDefault(item == null ? null : item.getDetectorName(), "-"));
+        vo.setStartTime(formatDateTime(item == null ? null : item.getCreatedTime()));
+        vo.setEndTime(formatDateTime(item == null ? null : item.getUpdatedTime()));
         vo.setUnit(StrUtil.blankToDefault(item == null ? null : item.getUnit(), "-"));
         vo.setStandardRange(item == null ? "-" : formatStandardRange(item.getStandardMin(), item.getStandardMax(), null));
         vo.setReferenceStandard(StrUtil.blankToDefault(item == null ? null : item.getReferenceStandard(), "-"));

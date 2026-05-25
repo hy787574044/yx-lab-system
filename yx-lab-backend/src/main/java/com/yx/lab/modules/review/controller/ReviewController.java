@@ -3,6 +3,8 @@ package com.yx.lab.modules.review.controller;
 import com.yx.lab.common.constant.LabWorkflowConstants;
 import com.yx.lab.common.model.ApiResponse;
 import com.yx.lab.common.model.PageResult;
+import com.yx.lab.common.security.PermissionConstants;
+import com.yx.lab.common.security.RequirePermission;
 import com.yx.lab.common.util.ExcelExportUtil;
 import com.yx.lab.modules.review.dto.ReviewCommand;
 import com.yx.lab.modules.review.dto.ReviewQuery;
@@ -29,6 +31,7 @@ import java.util.Arrays;
 @RequestMapping("/api/reviews")
 @RequiredArgsConstructor
 @Tag(name = "审核流程管理")
+@RequirePermission(PermissionConstants.REVIEW_VIEW)
 public class ReviewController {
 
     private final ReviewService reviewService;
@@ -81,6 +84,7 @@ public class ReviewController {
      */
     @PostMapping
     @Operation(summary = "提交审核结果")
+    @RequirePermission(PermissionConstants.REVIEW_AUDIT)
     public ApiResponse<Void> review(@Valid @RequestBody ReviewCommand command) {
         reviewService.review(command);
         return ApiResponse.successMessage("审核完成");

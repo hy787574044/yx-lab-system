@@ -4,216 +4,149 @@
       <section
         v-for="page in pages"
         :key="page.pageNo"
-        class="report-paper"
-        :class="{
-          'report-paper--last': page.pageNo === totalPages,
-          'report-paper--measure': singlePage
-        }"
+        :class="[
+          'report-paper',
+          {
+            'report-paper--last': page.pageNo === totalPages,
+            'report-paper--measure': singlePage
+          }
+        ]"
       >
-        <header class="paper-header">
-          <div class="paper-header__side">
-            <span>样品编号：{{ previewData.sampleNo || '-' }}</span>
-            <span>封签编号：{{ previewData.sealNo || '-' }}</span>
-          </div>
-          <div class="paper-header__title">
-            <h1>{{ previewData.reportName || '化验报告' }}</h1>
-            <p>{{ page.pageNo === 1 ? 'A4 通用打印模板' : 'A4 通用打印模板（续页）' }}</p>
-          </div>
-          <div class="paper-header__side paper-header__side--right">
-            <span>第 {{ page.pageNo }} / {{ totalPages }} 页</span>
-            <span>生成时间：{{ previewData.generatedTime || '-' }}</span>
+        <header class="report-header">
+          <h1>{{ template.title }}</h1>
+          <div class="report-meta">
+            <span>报告编号：{{ reportNo }}</span>
+            <span>生成日期：{{ generatedDate }}</span>
+            <span v-if="totalPages > 1">第 {{ page.pageNo }} / {{ totalPages }} 页</span>
           </div>
         </header>
 
-        <section v-if="page.pageNo === 1" class="paper-section">
-          <h2>一、样品基础信息</h2>
-          <table class="info-table">
-            <tbody>
-              <tr>
-                <td class="label">报告名称</td>
-                <td>{{ previewData.reportName || '-' }}</td>
-                <td class="label">报告类型</td>
-                <td>{{ previewData.reportTypeLabel || '-' }}</td>
-                <td class="label">报告状态</td>
-                <td>{{ previewData.reportStatusLabel || '-' }}</td>
-              </tr>
-              <tr>
-                <td class="label">样品编号</td>
-                <td>{{ previewData.sampleNo || '-' }}</td>
-                <td class="label">封签编号</td>
-                <td>{{ previewData.sealNo || '-' }}</td>
-                <td class="label">点位名称</td>
-                <td>{{ previewData.pointName || '-' }}</td>
-              </tr>
-              <tr>
-                <td class="label">样品类型</td>
-                <td>{{ previewData.sampleTypeLabel || '-' }}</td>
-                <td class="label">质控类型</td>
-                <td>{{ previewData.qualityControlTypeLabel || '-' }}</td>
-                <td class="label">样品状态</td>
-                <td>{{ previewData.sampleStatusLabel || '-' }}</td>
-              </tr>
-              <tr>
-                <td class="label">结果摘要</td>
-                <td colspan="5">{{ previewData.resultSummary || '-' }}</td>
-              </tr>
-              <tr>
-                <td class="label">采样时间</td>
-                <td>{{ previewData.samplingTime || '-' }}</td>
-                <td class="label">封签时间</td>
-                <td>{{ previewData.sealTime || '-' }}</td>
-                <td class="label">采样人员</td>
-                <td>{{ previewData.samplerName || '-' }}</td>
-              </tr>
-              <tr>
-                <td class="label">天气情况</td>
-                <td>{{ previewData.weather || '-' }}</td>
-                <td class="label">保存条件</td>
-                <td>{{ previewData.storageCondition || '-' }}</td>
-                <td class="label">样品备注</td>
-                <td>{{ previewData.sampleRemark || '-' }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </section>
+        <template v-if="page.pageNo === 1">
+          <section class="report-section">
+            <h2>一、样品信息</h2>
+            <table class="report-table info-table">
+              <tbody>
+                <tr>
+                  <th>样品编号</th>
+                  <td>{{ text(previewData.sampleNo) }}</td>
+                  <th>样品类型</th>
+                  <td>{{ text(previewData.sampleTypeLabel) }}</td>
+                </tr>
+                <tr>
+                  <th>采样点位</th>
+                  <td>{{ text(previewData.pointName) }}</td>
+                  <th>采样时间</th>
+                  <td>{{ text(previewData.samplingTime) }}</td>
+                </tr>
+                <tr>
+                  <th>采样人员</th>
+                  <td>{{ text(previewData.samplerName) }}</td>
+                  <th>质控品类</th>
+                  <td>{{ text(previewData.qualityControlTypeLabel) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </section>
+        </template>
 
-        <section v-if="page.pageNo === 1" class="paper-section">
-          <h2>二、流程与审查信息</h2>
-          <table class="info-table">
-            <tbody>
-              <tr>
-                <td class="label">化验时间</td>
-                <td>{{ previewData.detectionTime || '-' }}</td>
-                <td class="label">化验人员</td>
-                <td>{{ previewData.detectorName || '-' }}</td>
-                <td class="label">化验结论</td>
-                <td>{{ previewData.detectionResultLabel || '-' }}</td>
-              </tr>
-              <tr>
-                <td class="label">审核时间</td>
-                <td>{{ previewData.reviewTime || '-' }}</td>
-                <td class="label">审核人员</td>
-                <td>{{ previewData.reviewerName || '-' }}</td>
-                <td class="label">审核结论</td>
-                <td>{{ previewData.reviewResultLabel || '-' }}</td>
-              </tr>
-              <tr>
-                <td class="label">发布时间</td>
-                <td>{{ previewData.publishedTime || '-' }}</td>
-                <td class="label">发布人</td>
-                <td>{{ previewData.publishedByName || '-' }}</td>
-                <td class="label">流程状态</td>
-                <td>{{ previewData.detectionStatusLabel || '-' }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </section>
-
-        <section v-if="page.pageNo === 1" class="paper-section paper-summary">
-          <article class="summary-card">
-            <span>参数总数</span>
-            <strong>{{ previewData.parameterCount || 0 }}</strong>
-          </article>
-          <article class="summary-card">
-            <span>正常项</span>
-            <strong class="is-success">{{ previewData.normalCount || 0 }}</strong>
-          </article>
-          <article class="summary-card">
-            <span>异常项</span>
-            <strong class="is-danger">{{ previewData.abnormalCount || 0 }}</strong>
-          </article>
-          <article class="summary-card">
-            <span>流程说明</span>
-            <strong class="is-text">{{ previewData.recordRemark || '-' }}</strong>
-          </article>
-        </section>
-
-        <section class="paper-section">
-          <h2>{{ page.pageNo === 1 ? '三、化验结果明细' : '化验结果明细（续页）' }}</h2>
-          <table v-if="page.items.length" class="result-table">
+        <section class="report-section">
+          <h2>{{ page.pageNo === 1 ? '二、参数信息' : '二、参数信息（续页）' }}</h2>
+          <table v-if="page.items.length" class="report-table parameter-table">
             <thead>
               <tr>
                 <th class="col-index">序号</th>
-                <th class="col-parameter">检测参数</th>
-                <th class="col-method">检测方法</th>
-                <th class="col-standard">标准范围</th>
-                <th class="col-unit">单位</th>
-                <th class="col-reference">检测标准</th>
-                <th class="col-value">化验值</th>
-                <th class="col-judge">单项判定</th>
-                <th class="col-status">子流程状态</th>
+                <th>检测参数</th>
+                <th>检测方法</th>
+                <th>检测标准</th>
+                <th>标准范围</th>
+                <th>检测值</th>
+                <th>检测结果</th>
               </tr>
             </thead>
             <tbody>
-              <template v-for="(item, index) in page.items" :key="`${page.pageNo}-${index}`">
-                <tr class="result-main-row">
-                  <td class="cell-center">{{ page.startIndex + index + 1 }}</td>
-                  <td>{{ item.parameterName || '-' }}</td>
-                  <td>{{ item.methodName || '-' }}</td>
-                  <td>{{ item.standardRange || '-' }}</td>
-                  <td class="cell-center">{{ item.unit || '-' }}</td>
-                  <td>{{ item.referenceStandard || '-' }}</td>
-                  <td class="cell-center">{{ item.resultValue || '-' }}</td>
-                  <td class="cell-center">
-                    <span
-                      :class="[
-                        'state-tag',
-                        item.judgmentLabel === '异常' ? 'state-tag--danger' : 'state-tag--success'
-                      ]"
-                    >
-                      {{ item.judgmentLabel || '-' }}
-                    </span>
-                  </td>
-                  <td class="cell-center">
-                    <span :class="['state-tag', resolveStatusClass(item.itemStatusLabel)]">
-                      {{ item.itemStatusLabel || '-' }}
-                    </span>
-                  </td>
-                </tr>
-                <tr class="result-compare-row">
-                  <td class="compare-label">结果对比</td>
-                  <td colspan="8" :class="item.judgmentLabel === '异常' ? 'text-danger' : 'text-success'">
-                    {{ item.compareText || '-' }}
-                  </td>
-                </tr>
-              </template>
+              <tr v-for="(item, index) in page.items" :key="`${page.pageNo}-${index}`">
+                <td>{{ page.startIndex + index + 1 }}</td>
+                <td>{{ text(item.parameterName) }}</td>
+                <td>{{ text(item.methodName) }}</td>
+                <td>{{ text(item.referenceStandard) }}</td>
+                <td>{{ formatRange(item) }}</td>
+                <td>{{ text(item.resultValue) }}</td>
+                <td :class="['judge-cell', isAbnormal(item) ? 'is-danger' : 'is-success']">
+                  {{ formatJudgment(item) }}
+                </td>
+              </tr>
             </tbody>
           </table>
           <div v-else class="empty-box">当前报告暂无化验结果明细。</div>
+
+          <template v-if="page.pageNo === totalPages">
+            <p class="basis-line">判定依据：{{ judgmentBasis }}</p>
+            <p class="overall-line">整体评价：{{ overallEvaluation }}</p>
+          </template>
         </section>
 
-        <section v-if="page.pageNo === totalPages" class="paper-section">
-          <h2>四、补充说明与签字</h2>
-          <table class="info-table">
+        <section v-if="page.pageNo === totalPages" class="report-section">
+          <h2>三、检测信息</h2>
+          <table class="report-table detection-table">
+            <thead>
+              <tr>
+                <th>检测参数</th>
+                <th>检测人员</th>
+                <th>检测开始时间</th>
+                <th>检测完成时间</th>
+                <th>耗时</th>
+              </tr>
+            </thead>
             <tbody>
-              <tr>
-                <td class="label label--wide">审核意见</td>
-                <td colspan="5">{{ previewData.reviewRemark || '-' }}</td>
-              </tr>
-              <tr>
-                <td class="label label--wide">驳回原因</td>
-                <td colspan="5">{{ previewData.rejectReason || '-' }}</td>
-              </tr>
-              <tr>
-                <td class="label label--wide">流程留痕</td>
-                <td colspan="5" class="trace-text">{{ previewData.traceLog || '当前样品暂无额外流程留痕。' }}</td>
-              </tr>
-              <tr>
-                <td class="label">化验人员</td>
-                <td>{{ previewData.detectorName || '________________' }}</td>
-                <td class="label">审核人员</td>
-                <td>{{ previewData.reviewerName || '________________' }}</td>
-                <td class="label">签字日期</td>
-                <td>________________</td>
+              <tr v-for="(row, index) in detectionRows" :key="index">
+                <td class="merged-parameters">{{ row.parameters }}</td>
+                <td>{{ row.detectorName }}</td>
+                <td>{{ row.startTime }}</td>
+                <td>{{ row.endTime }}</td>
+                <td>{{ row.duration }}</td>
               </tr>
             </tbody>
           </table>
         </section>
 
-        <footer class="paper-footer">
-          <span>阳新化验室管理系统通用报告模板</span>
-          <span>适配 A4 纵向打印，内容超出自动续页</span>
-        </footer>
+        <section v-if="page.pageNo === totalPages" class="report-section">
+          <h2>四、签审信息</h2>
+          <div class="sign-box">
+            <table class="report-table sign-table">
+              <tbody>
+                <tr>
+                  <th>编制人员</th>
+                  <td>{{ compilerName }}</td>
+                  <th>审核人员</th>
+                  <td>{{ text(previewData.reviewerName) }}</td>
+                </tr>
+                <tr>
+                  <th>批准人员</th>
+                  <td>{{ text(previewData.publishedByName) }}</td>
+                  <th>签发日期</th>
+                  <td>{{ signDate }}</td>
+                </tr>
+                <tr>
+                  <th>检测单位</th>
+                  <td colspan="3">{{ template.organizationName }}</td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="report-stamp">
+              <span>阳新化验报告</span>
+              <strong>化验室</strong>
+            </div>
+          </div>
+        </section>
+
+        <section v-if="page.pageNo === totalPages" class="report-section">
+          <h2>五、备注声明</h2>
+          <div class="note-box">
+            <ol class="note-list">
+              <li v-for="item in template.notes" :key="item">{{ item }}</li>
+            </ol>
+          </div>
+        </section>
       </section>
     </div>
   </div>
@@ -221,6 +154,15 @@
 
 <script setup>
 import { computed, nextTick, ref } from 'vue'
+import {
+  FIRST_PAGE_ITEM_COUNT,
+  OTHER_PAGE_ITEM_COUNT,
+  REPORT_TEMPLATE,
+  buildOverallEvaluation,
+  buildReportNo,
+  normalizeDisplay,
+  toDateText
+} from './reportPrintTemplate'
 
 const props = defineProps({
   previewData: {
@@ -233,10 +175,9 @@ const props = defineProps({
   }
 })
 
-const FIRST_PAGE_ITEM_COUNT = 4
-const OTHER_PAGE_ITEM_COUNT = 6
-
 const printRootRef = ref(null)
+
+const template = REPORT_TEMPLATE
 
 const previewItems = computed(() => Array.isArray(props.previewData?.items) ? props.previewData.items : [])
 
@@ -265,21 +206,131 @@ const pages = computed(() => {
 })
 
 const totalPages = computed(() => pages.value.length)
+const reportNo = computed(() => buildReportNo(props.previewData))
+const generatedDate = computed(() => toDateText(props.previewData?.generatedTime))
+const signDate = computed(() => toDateText(props.previewData?.publishedTime || props.previewData?.reviewTime || props.previewData?.generatedTime))
+const compilerName = computed(() => text(props.previewData?.publishedByName || normalizeDetectorName(props.previewData?.detectorName)))
+const judgmentBasis = computed(() => normalizeDisplay(props.previewData?.judgmentBasis, template.judgmentBasis))
+const overallEvaluation = computed(() => buildOverallEvaluation(props.previewData))
+const detectionRows = computed(() => {
+  const rows = new Map()
+  previewItems.value.forEach((item) => {
+    const detectorName = normalizeDetectorName(item.detectorName)
+    const detectorKey = detectorName || '未指定'
+    const itemStartTime = normalizeDisplay(item.startTime || props.previewData?.detectionTime, '')
+    const itemEndTime = normalizeDisplay(item.endTime || props.previewData?.reviewTime || props.previewData?.detectionTime, '')
+    if (!rows.has(detectorKey)) {
+      rows.set(detectorKey, {
+        parameters: [],
+        detectorName: detectorKey,
+        startTime: itemStartTime,
+        endTime: itemEndTime
+      })
+    }
+    const row = rows.get(detectorKey)
+    row.startTime = pickEarlierTime(row.startTime, itemStartTime)
+    row.endTime = pickLaterTime(row.endTime, itemEndTime)
+    const parameterName = normalizeDisplay(item.parameterName, '')
+    if (parameterName && !row.parameters.includes(parameterName)) {
+      row.parameters.push(parameterName)
+    }
+  })
 
-function resolveStatusClass(statusLabel) {
-  if (!statusLabel) {
-    return 'state-tag--plain'
+  if (!rows.size) {
+    const detectorName = normalizeDetectorName(props.previewData?.detectorName) || '未指定'
+    const startTime = normalizeDisplay(props.previewData?.detectionTime, '')
+    const endTime = normalizeDisplay(props.previewData?.reviewTime || props.previewData?.detectionTime, '')
+    return [{
+      parameters: '-',
+      detectorName,
+      startTime: normalizeDisplay(startTime),
+      endTime: normalizeDisplay(endTime),
+      duration: calculateDurationText(startTime, endTime)
+    }]
   }
-  if (statusLabel.includes('驳回') || statusLabel.includes('异常')) {
-    return 'state-tag--danger'
+
+  return Array.from(rows.values()).map((row) => ({
+    ...row,
+    parameters: row.parameters.length ? row.parameters.join('、') : '-',
+    startTime: normalizeDisplay(row.startTime),
+    endTime: normalizeDisplay(row.endTime),
+    duration: calculateDurationText(row.startTime, row.endTime)
+  })).sort((left, right) => left.detectorName.localeCompare(right.detectorName, 'zh-CN'))
+})
+
+function text(value) {
+  return normalizeDisplay(value)
+}
+
+function normalizeDetectorName(value) {
+  const name = normalizeDisplay(value, '')
+  return name && name !== '协同检测' ? name : ''
+}
+
+function parseTime(value) {
+  const text = normalizeDisplay(value, '')
+  if (!text) {
+    return null
   }
-  if (statusLabel.includes('待') || statusLabel.includes('提交')) {
-    return 'state-tag--warning'
+  const timestamp = Date.parse(text.replace(' ', 'T'))
+  return Number.isNaN(timestamp) ? null : timestamp
+}
+
+function pickEarlierTime(left, right) {
+  const leftTime = parseTime(left)
+  const rightTime = parseTime(right)
+  if (leftTime == null) {
+    return right || left
   }
-  if (statusLabel.includes('完成') || statusLabel.includes('通过') || statusLabel.includes('正常')) {
-    return 'state-tag--success'
+  if (rightTime == null) {
+    return left
   }
-  return 'state-tag--plain'
+  return rightTime < leftTime ? right : left
+}
+
+function pickLaterTime(left, right) {
+  const leftTime = parseTime(left)
+  const rightTime = parseTime(right)
+  if (leftTime == null) {
+    return right || left
+  }
+  if (rightTime == null) {
+    return left
+  }
+  return rightTime > leftTime ? right : left
+}
+
+function calculateDurationText(startTime, endTime) {
+  const start = parseTime(startTime)
+  const end = parseTime(endTime)
+  if (start == null || end == null || end < start) {
+    return '-'
+  }
+  return `${Math.ceil((end - start) / 60000)} min`
+}
+
+function isAbnormal(item) {
+  const label = normalizeDisplay(item?.judgmentLabel, '')
+  return label.includes('异常') || label.includes('超标') || label.includes('不合格')
+}
+
+function formatJudgment(item) {
+  if (!normalizeDisplay(item?.judgmentLabel, '')) {
+    return '-'
+  }
+  return isAbnormal(item) ? '超标' : '合格'
+}
+
+function formatRange(item) {
+  const range = normalizeDisplay(item?.standardRange, '')
+  const unit = normalizeDisplay(item?.unit, '')
+  if (!range) {
+    return '-'
+  }
+  if (!unit || unit === '-') {
+    return range
+  }
+  return range.includes(unit) ? range : `${range} ${unit}`
 }
 
 async function printDocument() {
@@ -311,14 +362,22 @@ defineExpose({
   background: linear-gradient(180deg, #edf3fb 0%, #e8eef8 100%);
 }
 
+.report-preview-shell--measure {
+  padding: 0;
+  background: transparent;
+}
+
 .report-paper {
+  position: relative;
   width: 210mm;
   min-height: 297mm;
   margin: 0 auto 18px;
-  padding: 10mm 11mm 10mm;
+  padding: 8mm 10mm 10mm;
   box-sizing: border-box;
+  border: 1px solid #6b7280;
   background: #ffffff;
-  color: #0f172a;
+  color: #202733;
+  font-family: "Microsoft YaHei", "SimSun", "SimHei", sans-serif;
   box-shadow: 0 14px 36px rgba(15, 23, 42, 0.14);
   break-after: page;
   page-break-after: always;
@@ -329,320 +388,264 @@ defineExpose({
   page-break-after: auto;
 }
 
-.report-preview-shell--measure {
-  padding: 0;
-  background: transparent;
-}
-
 .report-paper--measure {
   min-height: 0;
   margin: 0;
   box-shadow: none;
 }
 
-.paper-header {
-  display: grid;
-  grid-template-columns: 1fr 1.3fr 1fr;
-  gap: 10px;
-  align-items: start;
-  padding-bottom: 10px;
-  border-bottom: 2px solid #1d4ed8;
-}
-
-.paper-header__title {
+.report-header {
+  margin: -8mm -10mm 0;
+  padding: 5mm 8mm 4.5mm;
+  border-bottom: 1px solid #9ca3af;
   text-align: center;
+  background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
 }
 
-.paper-header__title h1 {
-  margin: 0;
-  font-size: 24px;
-  line-height: 1.25;
+.report-header h1 {
+  margin: 0 0 5.5mm;
+  font-size: 18px;
+  font-weight: 600;
   letter-spacing: 1px;
+  color: #172033;
 }
 
-.paper-header__title p {
-  margin: 6px 0 0;
-  font-size: 12px;
-  color: #64748b;
-}
-
-.paper-header__side {
+.report-meta {
   display: grid;
-  gap: 6px;
-  font-size: 12px;
-  color: #475569;
+  grid-template-columns: 1fr 1fr minmax(0, auto);
+  gap: 10mm;
+  text-align: left;
+  font-size: 14px;
+  color: #202733;
 }
 
-.paper-header__side--right {
-  text-align: right;
+.report-meta span {
+  white-space: nowrap;
 }
 
-.paper-section {
-  margin-top: 12px;
+.report-section {
+  margin-top: 7.2mm;
 }
 
-.paper-section h2 {
-  margin: 0 0 8px;
+.report-section h2 {
+  display: flex;
+  align-items: center;
+  gap: 2.5mm;
+  margin: 0 0 4mm;
   font-size: 15px;
-  color: #0f172a;
+  font-weight: 600;
+  color: #111827;
 }
 
-.paper-summary {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
+.report-section h2::before {
+  content: "";
+  width: 2.5mm;
+  height: 4mm;
+  border-radius: 1px;
+  background: #2f6f9f;
 }
 
-.summary-card {
-  min-height: 76px;
-  padding: 10px 12px;
-  border: 1px solid #d8e2f1;
-  border-radius: 10px;
-  background: linear-gradient(180deg, #f9fbff 0%, #f4f8ff 100%);
-}
-
-.summary-card span {
-  display: block;
-  font-size: 12px;
-  color: #64748b;
-}
-
-.summary-card strong {
-  display: block;
-  margin-top: 10px;
-  font-size: 22px;
-  color: #0f172a;
-}
-
-.summary-card .is-success {
-  color: #047857;
-}
-
-.summary-card .is-danger {
-  color: #dc2626;
-}
-
-.summary-card .is-text {
-  font-size: 13px;
-  line-height: 1.55;
-}
-
-.info-table,
-.result-table {
-  width: 100%;
-  border-collapse: collapse;
-  table-layout: fixed;
-}
-
-.info-table td,
-.result-table th,
-.result-table td {
-  border: 1px solid #d9e2f1;
-  padding: 7px 8px;
-  font-size: 11px;
-  line-height: 1.5;
-  vertical-align: top;
-  word-break: break-word;
-  overflow-wrap: anywhere;
-}
-
-.info-table td {
-  vertical-align: middle;
-}
-
-.info-table td.label {
-  width: 11%;
-  background: #f5f9ff;
-  text-align: center;
-  font-weight: 700;
-  color: #334155;
-}
-
-.label--wide {
-  width: 12%;
-}
-
-.result-table th {
-  background: #eef4ff;
-  text-align: center;
-  font-weight: 700;
-  color: #1e3a5f;
-  vertical-align: middle;
-}
-
-.result-table td {
+.sign-box {
+  position: relative;
+  border: 1px solid #8d96a3;
+  border-radius: 4px;
+  padding: 4mm;
   background: #ffffff;
 }
 
-.result-main-row:nth-of-type(4n + 1) td,
-.result-main-row:nth-of-type(4n + 2) td {
-  background: #fbfdff;
+.report-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  border: 1px solid #8d96a3;
 }
 
-.result-compare-row td {
-  background: #f8fbff;
+.report-table th,
+.report-table td {
+  border: 1px solid #9aa3af;
+  padding: 3.1mm 2.6mm;
+  text-align: center;
+  vertical-align: middle;
+  font-size: 13px;
+  line-height: 1.32;
+  word-break: break-word;
+}
+
+.report-table th {
+  font-weight: 600;
+  color: #172033;
+  background: #f3f7fb;
+}
+
+.info-table {
+  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+}
+
+.info-table th {
+  width: 18%;
+  color: #1f344d;
+  background: #f2f6fb;
+}
+
+.info-table td {
+  width: 32%;
+  text-align: left;
+  padding-left: 5mm;
+  color: #202733;
+  background: #ffffff;
 }
 
 .col-index {
-  width: 6%;
+  width: 11%;
 }
 
-.col-parameter {
-  width: 13%;
+.judge-cell {
+  font-weight: 600;
 }
 
-.col-unit {
-  width: 8%;
+.judge-cell.is-success {
+  color: #00a63e;
 }
 
-.col-method {
-  width: 18%;
+.judge-cell.is-danger {
+  color: #e60012;
 }
 
-.col-standard {
-  width: 13%;
+.basis-line {
+  margin: 6mm 0 0;
+  font-size: 14px;
 }
 
-.col-reference {
-  width: 14%;
+.overall-line {
+  margin: 3.2mm 0 0;
+  font-size: 14px;
+  font-weight: 600;
 }
 
-.col-value {
-  width: 8%;
+.detection-table th,
+.detection-table td {
+  padding: 3.2mm 2.4mm;
 }
 
-.col-judge {
-  width: 10%;
+.detection-table th:first-child,
+.detection-table td:first-child {
+  width: 22%;
 }
 
-.col-status {
-  width: 10%;
+.detection-table th:nth-child(2),
+.detection-table td:nth-child(2) {
+  width: 16%;
 }
 
-.cell-center {
+.detection-table th:nth-child(5),
+.detection-table td:nth-child(5) {
+  width: 11%;
+}
+
+.detection-table .merged-parameters {
   text-align: center;
-  vertical-align: middle !important;
+  line-height: 1.45;
+  color: #172033;
 }
 
-.compare-label {
+.sign-box {
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
+  padding: 0;
+}
+
+.sign-table {
+  width: 100%;
+}
+
+.sign-table th {
+  width: 22%;
+}
+
+.sign-table td {
+  text-align: left;
+  padding-left: 5mm;
+}
+
+.report-stamp {
+  position: absolute;
+  right: 8mm;
+  top: 50%;
+  width: 34mm;
+  height: 34mm;
+  display: grid;
+  place-items: center;
+  border: 2.4px solid rgba(230, 0, 18, 0.88);
+  border-radius: 50%;
+  color: rgba(230, 0, 18, 0.92);
+  transform: translateY(-50%) rotate(-12deg);
+  opacity: 0.9;
+  pointer-events: none;
+}
+
+.report-stamp::before {
+  content: "★";
+  position: absolute;
+  top: 10.5mm;
+  left: 0;
+  right: 0;
   text-align: center;
-  color: #475569;
-  font-weight: 700;
-  vertical-align: middle !important;
+  font-size: 14mm;
+  line-height: 1;
 }
 
-.state-tag {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 24px;
-  padding: 0 10px;
-  border-radius: 999px;
+.report-stamp span {
+  position: absolute;
+  top: 5.5mm;
   font-size: 11px;
   font-weight: 700;
+  letter-spacing: 1.4px;
 }
 
-.state-tag--success {
-  color: #047857;
-  background: rgba(4, 120, 87, 0.12);
+.report-stamp strong {
+  position: absolute;
+  bottom: 4mm;
+  font-size: 17px;
+  letter-spacing: 2px;
 }
 
-.state-tag--danger {
-  color: #dc2626;
-  background: rgba(220, 38, 38, 0.12);
+.note-list {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+  line-height: 2;
 }
 
-.state-tag--warning {
-  color: #b45309;
-  background: rgba(245, 158, 11, 0.16);
-}
-
-.state-tag--plain {
-  color: #475569;
-  background: #e2e8f0;
-}
-
-.text-success {
-  color: #047857;
-  font-weight: 700;
-}
-
-.text-danger {
-  color: #dc2626;
-  font-weight: 700;
-}
-
-.trace-text {
-  white-space: pre-wrap;
+.note-box {
+  border: 1px solid #8d96a3;
+  border-radius: 4px;
+  padding: 3.5mm 5mm;
+  background: #fbfdff;
 }
 
 .empty-box {
-  min-height: 120px;
+  min-height: 36mm;
   display: grid;
   place-items: center;
-  border: 1px dashed #cbd5e1;
-  border-radius: 12px;
+  border: 1px dashed #9ca3af;
   color: #64748b;
   font-size: 13px;
 }
 
-.paper-footer {
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  margin-top: 12px;
-  font-size: 11px;
-  color: #64748b;
-}
-
-@media (max-width: 1200px) {
+@media print {
   .report-preview-shell {
-    overflow-x: auto;
-    padding-left: 12px;
-    padding-right: 12px;
+    padding: 0;
+    background: transparent;
   }
 
   .report-paper {
-    min-width: 210mm;
-  }
-}
-</style>
-
-<style>
-@page {
-  size: A4 portrait;
-  margin: 8mm;
-}
-
-@media print {
-  body.report-printing {
-    background: #ffffff !important;
-  }
-
-  body.report-printing > * {
-    visibility: hidden !important;
-  }
-
-  body.report-printing .report-print-root,
-  body.report-printing .report-print-root * {
-    visibility: visible !important;
-  }
-
-  body.report-printing .report-print-root {
-    position: absolute !important;
-    inset: 0 !important;
-    width: 100% !important;
-    background: #ffffff !important;
-  }
-
-  body.report-printing .report-preview-shell {
-    padding: 0 !important;
-    background: #ffffff !important;
-  }
-
-  body.report-printing .report-paper {
-    margin: 0 auto !important;
-    box-shadow: none !important;
+    width: 210mm;
+    min-height: 297mm;
+    margin: 0;
+    box-shadow: none;
   }
 }
 </style>

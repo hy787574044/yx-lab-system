@@ -3,6 +3,8 @@ package com.yx.lab.modules.detection.controller;
 import com.yx.lab.common.constant.LabWorkflowConstants;
 import com.yx.lab.common.model.ApiResponse;
 import com.yx.lab.common.model.PageResult;
+import com.yx.lab.common.security.PermissionConstants;
+import com.yx.lab.common.security.RequirePermission;
 import com.yx.lab.common.util.ExcelExportUtil;
 import com.yx.lab.modules.detection.dto.DetectionAssignCommand;
 import com.yx.lab.modules.detection.dto.DetectionItemQuery;
@@ -36,6 +38,7 @@ import java.util.Arrays;
 @RequestMapping("/api/detections")
 @RequiredArgsConstructor
 @Tag(name = "检测流程管理")
+@RequirePermission(PermissionConstants.DETECTION_VIEW)
 public class DetectionWorkflowController {
 
     private final DetectionWorkflowService detectionWorkflowService;
@@ -144,6 +147,7 @@ public class DetectionWorkflowController {
      */
     @PostMapping("/{id}/assignDetectors")
     @Operation(summary = "分配检测员")
+    @RequirePermission(PermissionConstants.DETECTION_ASSIGN)
     public ApiResponse<Void> assignDetectors(@PathVariable Long id, @Valid @RequestBody DetectionAssignCommand command) {
         detectionWorkflowService.assignDetectors(id, command);
         return ApiResponse.successMessage("检测员分配成功");
@@ -154,6 +158,7 @@ public class DetectionWorkflowController {
      */
     @PostMapping("/submit")
     @Operation(summary = "提交检测结果")
+    @RequirePermission(PermissionConstants.DETECTION_SUBMIT)
     public ApiResponse<Void> submit(@Valid @RequestBody DetectionSubmitCommand command) {
         detectionWorkflowService.submit(command);
         return ApiResponse.successMessage("检测提交成功");

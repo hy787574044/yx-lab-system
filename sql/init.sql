@@ -215,6 +215,8 @@ CREATE TABLE lab_sampling_task (
     task_status VARCHAR(32),
     started_time DATETIME,
     onsite_metrics TEXT,
+    weather VARCHAR(64),
+    temperature VARCHAR(32),
     photo_urls TEXT,
     abandon_reason VARCHAR(500),
     finished_time DATETIME,

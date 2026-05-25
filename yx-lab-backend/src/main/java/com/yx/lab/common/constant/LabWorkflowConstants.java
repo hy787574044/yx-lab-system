@@ -324,7 +324,7 @@ public final class LabWorkflowConstants {
     }
 
     public static boolean canCompleteTask(String taskStatus) {
-        return SamplingTaskStatus.IN_PROGRESS.equals(taskStatus);
+        return COMPLETABLE_TASK_STATUSES.contains(taskStatus);
     }
 
     public static boolean canSubmitDetection(String sampleStatus) {

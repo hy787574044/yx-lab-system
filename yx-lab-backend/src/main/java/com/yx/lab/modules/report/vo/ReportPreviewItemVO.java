@@ -16,6 +16,15 @@ public class ReportPreviewItemVO {
     @Schema(description = "检测方法名称")
     private String methodName;
 
+    @Schema(description = "检测人员名称")
+    private String detectorName;
+
+    @Schema(description = "检测开始时间")
+    private String startTime;
+
+    @Schema(description = "检测完成时间")
+    private String endTime;
+
     @Schema(description = "单位")
     private String unit;
 

@@ -83,6 +83,18 @@ export const mobileLogoutApi = () => request.post('/api/mobile/logout')
  * @returns {Promise<any>} 驾驶舱总览数据。
  */
 export const dashboardApi = () => request.get('/api/dashboard/overview')
+/**
+ * 获取主任首页管理视角数据。
+ *
+ * @returns {Promise<any>} 主任首页数据。
+ */
+export const leaderDashboardApi = () => request.get('/api/dashboard/leaderOverview')
+/**
+ * 获取检测员首页工作台数据。
+ *
+ * @returns {Promise<any>} 检测员首页数据。
+ */
+export const detectorDashboardApi = () => request.get('/api/dashboard/detectorOverview')
 
 // 移动端闭环看板接口
 /**
@@ -146,6 +158,7 @@ export const resumeSamplingPlanApi = (id) => request.post(`/api/samplingPlans/${
  */
 export const fetchSamplingTasksApi = (params) => request.get('/api/samplingTasks', { params })
 export const exportSamplingTasksApi = (params) => downloadExcel('/api/samplingTasks/export', params, '采样任务.xlsx')
+export const fetchSamplingTaskDetailApi = (id) => request.get(`/api/samplingTasks/${id}`)
 export const updateSamplingTaskSealNoApi = (id, data) => request.post(`/api/samplingTasks/${id}/sealNo`, data)
 /**
  * 开始采样任务。

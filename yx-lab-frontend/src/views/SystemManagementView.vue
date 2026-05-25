@@ -25,7 +25,7 @@
         <div class="toolbar-panel">
           <div class="toolbar-row">
             <div class="toolbar-main">
-              <el-button type="primary" class="toolbar-primary-button" @click="openUserDialog()">新增用户</el-button>
+              <el-button v-permission="'system:write'" type="primary" class="toolbar-primary-button" @click="openUserDialog()">新增用户</el-button>
               <div class="toolbar-fields">
                 <label class="toolbar-field toolbar-field--medium">
                   <span>关键字</span>
@@ -88,8 +88,8 @@
             <el-table-column label="操作" width="180" fixed="right" header-cell-class-name="cell-center" class-name="cell-center">
               <template #default="{ row }">
                 <div class="table-action-row">
-                  <el-button link type="primary" @click="openUserDialog(row)">编辑</el-button>
-                  <el-button link type="danger" :disabled="String(row.id) === String(currentLoginUser.userId || '')" @click="removeUser(row)">删除</el-button>
+                  <el-button v-permission="'system:write'" link type="primary" @click="openUserDialog(row)">编辑</el-button>
+                  <el-button v-permission="'system:write'" link type="danger" :disabled="String(row.id) === String(currentLoginUser.userId || '')" @click="removeUser(row)">删除</el-button>
                 </div>
               </template>
             </el-table-column>
@@ -103,7 +103,7 @@
         <div class="toolbar-panel">
           <div class="toolbar-row">
             <div class="toolbar-main">
-              <el-button type="primary" class="toolbar-primary-button" @click="openOrgDialog()">新增机构</el-button>
+              <el-button v-permission="'system:write'" type="primary" class="toolbar-primary-button" @click="openOrgDialog()">新增机构</el-button>
               <div class="toolbar-fields">
                 <label class="toolbar-field toolbar-field--medium">
                   <span>关键字</span>
@@ -146,7 +146,7 @@
             <el-table-column label="状态" width="110" header-cell-class-name="cell-center" class-name="cell-center"><template #default="{ row }"><span :class="['status-chip', getStatusClassByValue(row.status)]">{{ getStatusLabelByValue(row.status) }}</span></template></el-table-column>
             <el-table-column prop="remark" label="备注" min-width="220" show-overflow-tooltip><template #default="{ row }">{{ row.remark || '-' }}</template></el-table-column>
             <el-table-column prop="updatedTime" label="更新时间" min-width="170"><template #default="{ row }">{{ row.updatedTime || '-' }}</template></el-table-column>
-            <el-table-column label="操作" width="170" fixed="right" header-cell-class-name="cell-center" class-name="cell-center"><template #default="{ row }"><div class="table-action-row"><el-button link type="primary" @click="openOrgDialog(row)">编辑</el-button><el-button link type="danger" @click="removeOrg(row)">删除</el-button></div></template></el-table-column>
+            <el-table-column label="操作" width="170" fixed="right" header-cell-class-name="cell-center" class-name="cell-center"><template #default="{ row }"><div class="table-action-row"><el-button v-permission="'system:write'" link type="primary" @click="openOrgDialog(row)">编辑</el-button><el-button v-permission="'system:write'" link type="danger" @click="removeOrg(row)">删除</el-button></div></template></el-table-column>
           </el-table>
           </div>
           <TablePagination v-model:current-page="orgQuery.pageNum" v-model:page-size="orgQuery.pageSize" :total="orgTotal" @change="loadOrgs" />
@@ -157,7 +157,7 @@
         <div class="toolbar-panel">
           <div class="toolbar-row">
             <div class="toolbar-main">
-              <el-button type="primary" class="toolbar-primary-button" @click="openDictDialog()">新增字典</el-button>
+              <el-button v-permission="'system:write'" type="primary" class="toolbar-primary-button" @click="openDictDialog()">新增字典</el-button>
               <div class="toolbar-fields">
                 <label class="toolbar-field toolbar-field--medium">
                   <span>关键字</span>
@@ -199,7 +199,7 @@
             <el-table-column label="状态" width="110" header-cell-class-name="cell-center" class-name="cell-center"><template #default="{ row }"><span :class="['status-chip', getStatusClassByValue(row.status)]">{{ getStatusLabelByValue(row.status) }}</span></template></el-table-column>
             <el-table-column prop="remark" label="备注" min-width="220" show-overflow-tooltip><template #default="{ row }">{{ row.remark || '-' }}</template></el-table-column>
             <el-table-column prop="updatedTime" label="更新时间" min-width="170"><template #default="{ row }">{{ row.updatedTime || '-' }}</template></el-table-column>
-            <el-table-column label="操作" width="170" fixed="right" header-cell-class-name="cell-center" class-name="cell-center"><template #default="{ row }"><div class="table-action-row"><el-button link type="primary" @click="openDictDialog(row)">编辑</el-button><el-button link type="danger" @click="removeDict(row)">删除</el-button></div></template></el-table-column>
+            <el-table-column label="操作" width="170" fixed="right" header-cell-class-name="cell-center" class-name="cell-center"><template #default="{ row }"><div class="table-action-row"><el-button v-permission="'system:write'" link type="primary" @click="openDictDialog(row)">编辑</el-button><el-button v-permission="'system:write'" link type="danger" @click="removeDict(row)">删除</el-button></div></template></el-table-column>
           </el-table>
           </div>
           <TablePagination v-model:current-page="dictQuery.pageNum" v-model:page-size="dictQuery.pageSize" :total="dictTotal" @change="loadDicts" />
@@ -210,7 +210,7 @@
         <div class="toolbar-panel">
           <div class="toolbar-row">
             <div class="toolbar-main">
-              <el-button type="primary" class="toolbar-primary-button" @click="openRoleDialog()">新增角色</el-button>
+              <el-button v-permission="'system:write'" type="primary" class="toolbar-primary-button" @click="openRoleDialog()">新增角色</el-button>
               <div class="toolbar-fields">
                 <label class="toolbar-field toolbar-field--medium">
                   <span>关键字</span>
@@ -251,7 +251,7 @@
             <el-table-column label="状态" width="110" header-cell-class-name="cell-center" class-name="cell-center"><template #default="{ row }"><span :class="['status-chip', getStatusClassByValue(row.status)]">{{ getStatusLabelByValue(row.status) }}</span></template></el-table-column>
             <el-table-column prop="remark" label="备注" min-width="220" show-overflow-tooltip><template #default="{ row }">{{ row.remark || '-' }}</template></el-table-column>
             <el-table-column prop="updatedTime" label="更新时间" min-width="170"><template #default="{ row }">{{ row.updatedTime || '-' }}</template></el-table-column>
-            <el-table-column label="操作" width="170" fixed="right" header-cell-class-name="cell-center" class-name="cell-center"><template #default="{ row }"><div class="table-action-row"><el-button link type="primary" @click="openRoleDialog(row)">编辑</el-button><el-button link type="danger" @click="removeRole(row)">删除</el-button></div></template></el-table-column>
+            <el-table-column label="操作" width="170" fixed="right" header-cell-class-name="cell-center" class-name="cell-center"><template #default="{ row }"><div class="table-action-row"><el-button v-permission="'system:write'" link type="primary" @click="openRoleDialog(row)">编辑</el-button><el-button v-permission="'system:write'" link type="danger" @click="removeRole(row)">删除</el-button></div></template></el-table-column>
           </el-table>
           </div>
           <TablePagination v-model:current-page="roleQuery.pageNum" v-model:page-size="roleQuery.pageSize" :total="roleTotal" @change="loadRoles" />
@@ -359,7 +359,7 @@
           <el-form-item class="form-span-2" label="备注" prop="remark"><el-input v-model="dictForm.remark" type="textarea" :rows="3" placeholder="请输入字典用途说明或维护备注" /></el-form-item>
         </div>
       </el-form>
-      <template #footer><el-button @click="dictDialogVisible = false">取消</el-button><el-button type="primary" :loading="savingDict" @click="submitDictForm">保存</el-button></template>
+      <template #footer><el-button @click="dictDialogVisible = false">取消</el-button><el-button v-permission="'system:write'" type="primary" :loading="savingDict" @click="submitDictForm">保存</el-button></template>
     </el-dialog>
 
     <el-dialog v-model="userDialogVisible" :title="userForm.id ? '编辑用户' : '新增用户'" width="760px" destroy-on-close @closed="resetUserForm">
@@ -394,7 +394,7 @@
           <el-form-item label="登录密码" prop="password" :required="!userForm.id"><el-input v-model="userForm.password" type="password" show-password :placeholder="userForm.id ? '留空表示不修改密码' : '请输入登录密码'" /></el-form-item>
         </div>
       </el-form>
-      <template #footer><el-button @click="userDialogVisible = false">取消</el-button><el-button type="primary" :loading="savingUser" @click="submitUserForm">保存</el-button></template>
+      <template #footer><el-button @click="userDialogVisible = false">取消</el-button><el-button v-permission="'system:write'" type="primary" :loading="savingUser" @click="submitUserForm">保存</el-button></template>
     </el-dialog>
 
     <el-dialog v-model="orgDialogVisible" :title="orgForm.id ? '编辑机构' : '新增机构'" width="760px" destroy-on-close @closed="resetOrgForm">
@@ -408,7 +408,7 @@
           <el-form-item class="form-span-2" label="备注" prop="remark"><el-input v-model="orgForm.remark" type="textarea" :rows="3" placeholder="请输入机构说明或使用备注" /></el-form-item>
         </div>
       </el-form>
-      <template #footer><el-button @click="orgDialogVisible = false">取消</el-button><el-button type="primary" :loading="savingOrg" @click="submitOrgForm">保存</el-button></template>
+      <template #footer><el-button @click="orgDialogVisible = false">取消</el-button><el-button v-permission="'system:write'" type="primary" :loading="savingOrg" @click="submitOrgForm">保存</el-button></template>
     </el-dialog>
 
     <el-dialog v-model="roleDialogVisible" :title="roleForm.id ? '编辑角色' : '新增角色'" width="760px" destroy-on-close @closed="resetRoleForm">
@@ -421,7 +421,7 @@
           <el-form-item class="form-span-2" label="备注" prop="remark"><el-input v-model="roleForm.remark" type="textarea" :rows="3" placeholder="请输入角色说明、职责边界或使用备注" /></el-form-item>
         </div>
       </el-form>
-      <template #footer><el-button @click="roleDialogVisible = false">取消</el-button><el-button type="primary" :loading="savingRole" @click="submitRoleForm">保存</el-button></template>
+      <template #footer><el-button @click="roleDialogVisible = false">取消</el-button><el-button v-permission="'system:write'" type="primary" :loading="savingRole" @click="submitRoleForm">保存</el-button></template>
     </el-dialog>
   </div>
 </template>

@@ -106,6 +106,7 @@
               <div class="table-action-row">
                 <el-button
                   v-if="isPendingRow(row)"
+                  v-permission="'review:audit'"
                   type="primary"
                   link
                   @click="openReviewDialog(row)"
@@ -114,6 +115,7 @@
                 </el-button>
                 <el-button
                   v-else
+                  v-permission="'review:view'"
                   type="primary"
                   link
                   @click="openReviewDialog(row, true)"
@@ -265,6 +267,7 @@
         <el-button @click="reviewDialogVisible = false">{{ reviewDialogReadonly ? '关闭' : '取消' }}</el-button>
         <el-button
           v-if="!reviewDialogReadonly"
+          v-permission="'review:audit'"
           type="primary"
           :loading="reviewSubmitting"
           @click="submitReviewDecision"

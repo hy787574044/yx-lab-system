@@ -98,10 +98,17 @@ async function submit() {
 }
 
 async function loadCaptcha() {
-  const result = await fetchCaptchaApi()
-  form.captchaId = result.captchaId || ''
-  form.captchaCode = ''
-  captchaImage.value = result.imageBase64 || ''
+  try {
+    const result = await fetchCaptchaApi()
+    form.captchaId = result.captchaId || ''
+    form.captchaCode = ''
+    captchaImage.value = result.imageBase64 || ''
+  } catch (error) {
+    form.captchaId = ''
+    form.captchaCode = ''
+    captchaImage.value = ''
+    console.warn('验证码加载失败，请确认后端服务是否启动。', error)
+  }
 }
 
 onMounted(loadCaptcha)

@@ -3,6 +3,8 @@ package com.yx.lab.modules.sample.controller;
 import com.yx.lab.common.model.ApiResponse;
 import com.yx.lab.common.model.PageResult;
 import com.yx.lab.common.constant.LabWorkflowConstants;
+import com.yx.lab.common.security.PermissionConstants;
+import com.yx.lab.common.security.RequirePermission;
 import com.yx.lab.common.util.ExcelExportUtil;
 import com.yx.lab.modules.sample.dto.MonitoringPointQuery;
 import com.yx.lab.modules.sample.dto.MonitoringPointSaveCommand;
@@ -30,6 +32,7 @@ import javax.validation.Valid;
 @RequestMapping("/api/monitoringPoints")
 @RequiredArgsConstructor
 @Tag(name = "监测点位管理")
+@RequirePermission(PermissionConstants.SYSTEM_VIEW)
 public class MonitoringPointController {
 
     private final MonitoringPointService monitoringPointService;
@@ -96,6 +99,7 @@ public class MonitoringPointController {
      */
     @PostMapping
     @Operation(summary = "新增监测点位")
+    @RequirePermission(PermissionConstants.SYSTEM_WRITE)
     public ApiResponse<Void> save(@Valid @RequestBody MonitoringPointSaveCommand command) {
         monitoringPointService.save(command);
         return ApiResponse.successMessage("新增成功");
@@ -110,6 +114,7 @@ public class MonitoringPointController {
      */
     @PostMapping("/{id}")
     @Operation(summary = "更新监测点位")
+    @RequirePermission(PermissionConstants.SYSTEM_WRITE)
     public ApiResponse<Void> update(@PathVariable Long id, @Valid @RequestBody MonitoringPointSaveCommand command) {
         monitoringPointService.update(id, command);
         return ApiResponse.successMessage("更新成功");
@@ -123,6 +128,7 @@ public class MonitoringPointController {
      */
     @PostMapping("/{id}/delete")
     @Operation(summary = "删除监测点位")
+    @RequirePermission(PermissionConstants.SYSTEM_WRITE)
     public ApiResponse<Void> delete(@PathVariable Long id) {
         monitoringPointService.delete(id);
         return ApiResponse.successMessage("删除成功");

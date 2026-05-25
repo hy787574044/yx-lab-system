@@ -10,6 +10,7 @@ import com.yx.lab.common.constant.LabWorkflowConstants;
 import com.yx.lab.common.exception.BusinessException;
 import com.yx.lab.common.model.PageResult;
 import com.yx.lab.common.security.CurrentUser;
+import com.yx.lab.common.security.DataScopeHelper;
 import com.yx.lab.common.security.SecurityContext;
 import com.yx.lab.common.util.PageUtils;
 import com.yx.lab.modules.detection.dto.DetectionAssignCommand;
@@ -78,6 +79,8 @@ public class DetectionWorkflowService {
     private final DetectionPendingFlowService detectionPendingFlowService;
 
     private final ObjectMapper objectMapper;
+
+    private final DataScopeHelper dataScopeHelper;
 
     /**
      * 分页查询检测主流程列表。
@@ -318,6 +321,7 @@ public class DetectionWorkflowService {
         String status = query == null ? null : query.getDetectionStatus();
         String scope = query == null ? null : query.getScope();
         Boolean mine = query == null ? null : query.getMine();
+        Long scopedDetectorId = resolveScopedDetectorId(currentUser, mine);
         LambdaQueryWrapper<DetectionRecord> wrapper = new LambdaQueryWrapper<DetectionRecord>()
                 .and(StrUtil.isNotBlank(keyword), condition -> condition
                         .like(DetectionRecord::getSampleNo, keyword)
@@ -325,9 +329,9 @@ public class DetectionWorkflowService {
                         .like(DetectionRecord::getSealNo, keyword)
                         .or()
                         .like(DetectionRecord::getDetectionTypeName, keyword))
-                .eq(Boolean.TRUE.equals(mine) && currentUser != null,
+                .eq(scopedDetectorId != null,
                         DetectionRecord::getDetectorId,
-                        currentUser == null ? null : currentUser.getUserId());
+                        scopedDetectorId);
         if (!ignoreStatusFilter && StrUtil.isNotBlank(status)) {
             wrapper.eq(DetectionRecord::getDetectionStatus, status);
         } else {
@@ -385,13 +389,14 @@ public class DetectionWorkflowService {
         String itemStatus = query == null ? null : query.getItemStatus();
         Boolean mine = query == null ? null : query.getMine();
         List<Long> matchedRecordIds = findMatchedRecordIds(keyword);
+        Long scopedDetectorId = resolveScopedDetectorId(currentUser, mine);
         LambdaQueryWrapper<DetectionItem> wrapper = new LambdaQueryWrapper<DetectionItem>()
                 .eq(StrUtil.isNotBlank(itemStatus) && !ignoreStatusFilter,
                         DetectionItem::getItemStatus,
                         itemStatus)
-                .eq(Boolean.TRUE.equals(mine) && currentUser != null,
+                .eq(scopedDetectorId != null,
                         DetectionItem::getDetectorId,
-                        currentUser == null ? null : currentUser.getUserId());
+                        scopedDetectorId);
         if (withOrder) {
             wrapper.orderByDesc(DetectionItem::getUpdatedTime)
                     .orderByDesc(DetectionItem::getCreatedTime);
@@ -429,6 +434,19 @@ public class DetectionWorkflowService {
                 .filter(id -> id != null)
                 .distinct()
                 .collect(Collectors.toList());
+    }
+
+    private Long resolveScopedDetectorId(CurrentUser currentUser, Boolean mine) {
+        if (Boolean.TRUE.equals(mine) && currentUser != null) {
+            return currentUser.getUserId();
+        }
+        if (dataScopeHelper.isAdmin()) {
+            return null;
+        }
+        if (dataScopeHelper.isRole("DETECTOR") && dataScopeHelper.currentUserId() != null) {
+            return dataScopeHelper.currentUserId();
+        }
+        return null;
     }
 
     private List<DetectionItemPageVO> buildDetectionItemPageList(List<DetectionItem> items) {

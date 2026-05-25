@@ -24,9 +24,10 @@
       <div class="toolbar-panel">
         <div class="toolbar-row">
           <div class="toolbar-main">
-            <el-button
-              v-if="baseScene.key === 'sample-login'"
-              type="primary"
+              <el-button
+                v-permission="'sample:write'"
+                v-if="baseScene.key === 'sample-login'"
+                type="primary"
               class="toolbar-primary-button"
               :disabled="!pendingLoggableTasks.length"
               @click="openLoginDialog()"
@@ -167,18 +168,22 @@
           </el-table-column>
           <el-table-column prop="samplingTime" label="计划采样时间" width="170" />
           <el-table-column prop="startedTime" label="开始时间" width="170" />
+          <el-table-column prop="finishedTime" label="完成时间" width="170" />
+          <el-table-column prop="weather" label="天气" width="110" />
+          <el-table-column prop="temperature" label="温度" width="110" />
           <el-table-column prop="abandonReason" label="废弃原因" min-width="160" show-overflow-tooltip />
           <el-table-column prop="remark" label="备注" min-width="180" show-overflow-tooltip />
           <el-table-column
-            v-if="baseScene.allowTaskActions"
             label="操作"
-            min-width="380"
+            :width="baseScene.allowTaskActions ? 460 : 120"
             fixed="right"
             class-name="cell-center"
           >
             <template #default="{ row }">
               <div class="action-row">
                 <el-button
+                  v-if="baseScene.allowTaskActions"
+                  v-permission="'samplingTask:write'"
                   size="small"
                   :loading="isRowActionLoading('task', 'seal', row.id)"
                   @click="editTaskSealNo(row)"
@@ -187,14 +192,19 @@
                   {{ row.sealNo ? '修改封签' : '录入封签' }}
                 </el-button>
                 <el-button
+                  v-if="baseScene.allowTaskActions"
+                  v-permission="'samplingTask:write'"
+                  type="primary"
                   size="small"
-                  :loading="isRowActionLoading('task', 'start', row.id)"
-                  @click="startTask(row)"
-                  :disabled="isRowActionLoading('task', 'seal', row.id) || row.taskStatus !== pendingTaskStatus"
+                  :loading="isRowActionLoading('task', 'complete', row.id)"
+                  :disabled="!isTaskCompleteEntryEnabled(row)"
+                  @click="openTaskCompleteDialog(row)"
                 >
-                  开始
+                  采样录入
                 </el-button>
                 <el-button
+                  v-if="baseScene.allowTaskActions"
+                  v-permission="'samplingTask:write'"
                   size="small"
                   :loading="isRowActionLoading('task', 'abandon', row.id)"
                   @click="abandonTask(row)"
@@ -203,6 +213,8 @@
                   废弃
                 </el-button>
                 <el-button
+                  v-if="baseScene.allowTaskActions"
+                  v-permission="'samplingTask:write'"
                   size="small"
                   :loading="isRowActionLoading('task', 'resume', row.id)"
                   @click="resumeTask(row)"
@@ -212,13 +224,9 @@
                 </el-button>
                 <el-button
                   size="small"
-                  type="primary"
-                  plain
-                  :loading="isRowActionLoading('task', 'complete', row.id)"
-                  @click="completeTask(row)"
-                  :disabled="isRowActionLoading('task', 'complete', row.id) || !completableTaskStatuses.includes(row.taskStatus)"
+                  @click="openTaskDetailDialog(row)"
                 >
-                  完成
+                  查看详情
                 </el-button>
               </div>
             </template>
@@ -313,7 +321,7 @@
       <div class="toolbar-panel">
         <div class="toolbar-row">
           <div class="toolbar-main">
-            <el-button type="primary" class="toolbar-primary-button" @click="createPlan">新增计划</el-button>
+            <el-button v-permission="'samplingPlan:write'" type="primary" class="toolbar-primary-button" @click="createPlan">新增计划</el-button>
             <div class="toolbar-fields">
               <label class="toolbar-field toolbar-field--medium">
                 <span>关键字</span>
@@ -391,6 +399,7 @@
               <template #default="{ row }">
                 <div class="action-row">
                   <el-button
+                    v-permission="'samplingPlan:write'"
                     size="small"
                     @click="openPlanEditDialog(row)"
                     :disabled="isRowActionLoading('plan', 'pause', row.id) || isRowActionLoading('plan', 'resume', row.id) || !actionablePlanStatuses.includes(row.planStatus)"
@@ -398,6 +407,7 @@
                     编辑
                   </el-button>
                   <el-button
+                    v-permission="'samplingPlan:write'"
                     size="small"
                     @click="openDispatchDialog(row)"
                     :disabled="dispatchSubmitting || !actionablePlanStatuses.includes(row.planStatus)"
@@ -405,6 +415,7 @@
                     派发
                   </el-button>
                   <el-button
+                    v-permission="'samplingPlan:write'"
                     size="small"
                     :loading="isRowActionLoading('plan', 'pause', row.id)"
                     @click="pausePlan(row)"
@@ -413,6 +424,7 @@
                     暂停
                   </el-button>
                   <el-button
+                    v-permission="'samplingPlan:write'"
                     size="small"
                     :loading="isRowActionLoading('plan', 'resume', row.id)"
                     @click="resumePlan(row)"
@@ -543,7 +555,93 @@
       </el-form>
       <template #footer>
         <el-button @click="planDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="submitting" @click="submitPlanForm">保存</el-button>
+        <el-button v-permission="'samplingPlan:write'" type="primary" :loading="submitting" @click="submitPlanForm">保存</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog
+      v-model="taskCompleteDialogVisible"
+      title="采样录入"
+      width="760px"
+      destroy-on-close
+      @closed="resetTaskCompleteDialog"
+    >
+      <el-form label-width="96px">
+        <div class="plan-form-grid">
+          <el-form-item label="任务编号">
+            <el-input :model-value="taskCompletePreview?.taskNo || '-'" readonly />
+          </el-form-item>
+          <el-form-item label="点位名称">
+            <el-input :model-value="taskCompletePreview?.pointName || '-'" readonly />
+          </el-form-item>
+          <el-form-item label="采样人员">
+            <el-input :model-value="taskCompletePreview?.samplerName || '-'" readonly />
+          </el-form-item>
+          <el-form-item label="样品类型">
+            <el-input :model-value="getEnumLabel(sampleTypeLabelMap, taskCompletePreview?.sampleType) || '-'" readonly />
+          </el-form-item>
+          <el-form-item label="封签编号" required>
+            <el-input v-model="taskCompleteForm.sealNo" placeholder="请输入采样封签号" />
+          </el-form-item>
+          <el-form-item label="天气">
+            <el-input v-model="taskCompleteForm.weather" placeholder="例如：晴、多云、小雨" />
+          </el-form-item>
+          <el-form-item label="温度">
+            <el-input v-model="taskCompleteForm.temperature" placeholder="例如：26℃" />
+          </el-form-item>
+          <el-form-item class="plan-form-span-2" label="现场照片">
+            <div class="sampling-photo-uploader">
+              <div v-if="taskCompletePhotoList.length" class="sampling-photo-list">
+                <div
+                  v-for="(photo, index) in taskCompletePhotoList"
+                  :key="`${photo.path}-${index}`"
+                  class="sampling-photo-card"
+                >
+                  <el-image
+                    v-if="photo.previewUrl"
+                    class="sampling-photo-card__image"
+                    :src="photo.previewUrl"
+                    :preview-src-list="taskCompletePreviewPhotoUrls"
+                    fit="cover"
+                  />
+                  <div v-else class="sampling-photo-card__placeholder">预览失败</div>
+                  <el-button text type="danger" size="small" @click="removeTaskCompletePhoto(index)">移除</el-button>
+                </div>
+              </div>
+              <el-upload
+                :auto-upload="false"
+                :show-file-list="false"
+                accept="image/png,image/jpeg,image/jpg,image/webp"
+                :on-change="handleTaskCompletePhotoChange"
+              >
+                <el-button :loading="taskCompletePhotoUploading">上传照片</el-button>
+              </el-upload>
+              <p class="sampling-photo-uploader__tip">支持 JPG、PNG、WEBP，多张照片会随采样完成信息一起保存。</p>
+            </div>
+          </el-form-item>
+          <el-form-item class="plan-form-span-2" label="现场指标">
+            <el-input
+              v-model="taskCompleteForm.onsiteMetrics"
+              type="textarea"
+              :rows="3"
+              placeholder="请输入现场检测指标、仪器读数或现场情况说明"
+            />
+          </el-form-item>
+          <el-form-item class="plan-form-span-2" label="备注">
+            <el-input v-model="taskCompleteForm.remark" type="textarea" :rows="3" placeholder="可补充采样过程、异常情况等说明" />
+          </el-form-item>
+        </div>
+      </el-form>
+      <template #footer>
+        <el-button :disabled="taskCompleteSubmitting" @click="taskCompleteDialogVisible = false">取消</el-button>
+        <el-button
+          v-permission="'samplingTask:write'"
+          type="primary"
+          :loading="taskCompleteSubmitting"
+          @click="submitTaskCompleteForm"
+        >
+          保存
+        </el-button>
       </template>
     </el-dialog>
 
@@ -585,7 +683,7 @@
       </el-form>
       <template #footer>
         <el-button :disabled="dispatchSubmitting" @click="dispatchDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="dispatchSubmitting" :disabled="dispatchSubmitting" @click="submitDispatchForm">确认派发</el-button>
+        <el-button v-permission="'samplingPlan:write'" type="primary" :loading="dispatchSubmitting" :disabled="dispatchSubmitting" @click="submitDispatchForm">确认派发</el-button>
       </template>
     </el-dialog>
 
@@ -697,7 +795,7 @@
                 <span class="login-config-panel__note">
                   {{ loginConfigPanelNote }}
                 </span>
-                <el-button v-if="!isLoginReadonly" type="primary" plain size="small" @click="appendLoginConfigRow">新增参数</el-button>
+                <el-button v-if="!isLoginReadonly" v-permission="'sample:write'" type="primary" plain size="small" @click="appendLoginConfigRow">新增参数</el-button>
               </div>
               <el-table
                 class="login-config-table"
@@ -759,7 +857,7 @@
                 <el-table-column v-if="!isLoginReadonly" label="操作" width="90" class-name="cell-center" header-cell-class-name="cell-center">
                   <template #default="{ $index }">
                     <div class="table-action-row">
-                      <el-button link type="danger" @click="removeLoginConfigRow($index)">删除</el-button>
+                      <el-button v-permission="'sample:write'" link type="danger" @click="removeLoginConfigRow($index)">删除</el-button>
                     </div>
                   </template>
                 </el-table-column>
@@ -837,7 +935,55 @@
       </el-form>
       <template #footer>
         <el-button @click="loginDialogVisible = false">{{ isLoginReadonly ? '关闭' : '取消' }}</el-button>
-        <el-button v-if="!isLoginReadonly" type="primary" :loading="submitting" @click="submitSampleLogin">保存</el-button>
+        <el-button v-if="!isLoginReadonly" v-permission="'sample:write'" type="primary" :loading="submitting" @click="submitSampleLogin">保存</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog
+      v-model="taskDetailDialogVisible"
+      title="采样任务详情"
+      width="760px"
+      destroy-on-close
+      @closed="resetTaskDetailDialog"
+    >
+      <div class="task-detail-grid">
+        <div><span>任务编号</span><strong>{{ taskDetail?.taskNo || '-' }}</strong></div>
+        <div><span>采样封签号</span><strong>{{ taskDetail?.sealNo || '-' }}</strong></div>
+        <div><span>点位名称</span><strong>{{ taskDetail?.pointName || '-' }}</strong></div>
+        <div><span>采样人员</span><strong>{{ taskDetail?.samplerName || '-' }}</strong></div>
+        <div><span>任务状态</span><strong>{{ getEnumLabel(taskStatusLabelMap, taskDetail?.taskStatus) }}</strong></div>
+        <div><span>完成时间</span><strong>{{ taskDetail?.finishedTime || '-' }}</strong></div>
+        <div><span>天气</span><strong>{{ taskDetail?.weather || '-' }}</strong></div>
+        <div><span>温度</span><strong>{{ taskDetail?.temperature || '-' }}</strong></div>
+      </div>
+      <div class="task-detail-block">
+        <span>现场指标</span>
+        <p>{{ taskDetail?.onsiteMetrics || '-' }}</p>
+      </div>
+      <div class="task-detail-block">
+        <span>现场照片</span>
+        <div v-if="taskDetailPhotos.length" class="task-detail-photo-list">
+          <template v-for="(photo, index) in taskDetailPhotos" :key="`${photo.path}-${index}`">
+            <el-image
+              v-if="photo.previewUrl"
+              class="task-detail-photo"
+              :src="photo.previewUrl"
+              :preview-src-list="taskDetailPhotoPreviewUrls"
+              fit="cover"
+            />
+            <div v-else class="task-detail-photo task-detail-photo--failed">
+              预览失败
+            </div>
+          </template>
+        </div>
+        <p v-else>暂无照片</p>
+      </div>
+      <div class="task-detail-block">
+        <span>备注</span>
+        <p>{{ taskDetail?.remark || '-' }}</p>
+      </div>
+      <template #footer>
+        <el-button @click="taskDetailDialogVisible = false">关闭</el-button>
       </template>
     </el-dialog>
   </div>
@@ -852,10 +998,12 @@ import { ElDatePicker } from 'element-plus/es/components/date-picker/index.mjs'
 import { ElDialog } from 'element-plus/es/components/dialog/index.mjs'
 import { ElForm, ElFormItem } from 'element-plus/es/components/form/index.mjs'
 import { ElInput } from 'element-plus/es/components/input/index.mjs'
+import { ElImage } from 'element-plus/es/components/image/index.mjs'
 import { ElMessage } from 'element-plus/es/components/message/index.mjs'
 import { ElMessageBox } from 'element-plus/es/components/message-box/index.mjs'
 import { ElOption, ElSelect } from 'element-plus/es/components/select/index.mjs'
 import { ElTable, ElTableColumn } from 'element-plus/es/components/table/index.mjs'
+import { ElUpload } from 'element-plus/es/components/upload/index.mjs'
 import TablePagination from '../components/common/TablePagination.vue'
 import {
   abandonSamplingTaskApi,
@@ -871,16 +1019,19 @@ import {
   fetchDetectionTypesApi,
   fetchFlowConfigOptionsApi,
   fetchSamplesApi,
+  fetchSamplingTaskDetailApi,
   fetchSamplingPlansApi,
   fetchSamplingTasksApi,
   fetchSystemUsersApi,
   loginSampleApi,
   pauseSamplingPlanApi,
+  previewStorageFileApi,
   resumeSamplingPlanApi,
   resumeSamplingTaskApi,
   startSamplingTaskApi,
   updateSamplingTaskSealNoApi,
-  updateSamplingPlanApi
+  updateSamplingPlanApi,
+  uploadStorageFileApi
 } from '../api/lab'
 import {
   activePlanStatus,
@@ -954,9 +1105,13 @@ const activeStatKey = ref('tasks:pending')
 const loginDialogVisible = ref(false)
 const loginDialogMode = ref('create')
 const planDialogVisible = ref(false)
+const taskCompleteDialogVisible = ref(false)
 const dispatchDialogVisible = ref(false)
+const taskDetailDialogVisible = ref(false)
 const editingPlanId = ref(null)
 const submitting = ref(false)
+const taskCompleteSubmitting = ref(false)
+const taskCompletePhotoUploading = ref(false)
 const dispatchSubmitting = ref(false)
 const rowActionLoading = reactive({})
 const monitoringPointOptions = ref([])
@@ -969,6 +1124,10 @@ const detectionMethodOptions = ref([])
 const reviewFlowOptions = ref([])
 const publishFlowOptions = ref([])
 const loginPreviewTaskLabel = ref('')
+const taskCompletePreview = ref(null)
+const taskCompletePhotoList = ref([])
+const taskDetailPhotoList = ref([])
+const taskDetail = ref(null)
 
 const loginForm = reactive({
   taskId: null,
@@ -992,6 +1151,14 @@ const loginForm = reactive({
   storageCondition: '',
   remark: ''
 })
+
+const taskCompletePreviewPhotoUrls = computed(() =>
+  taskCompletePhotoList.value.map((item) => item.previewUrl).filter(Boolean)
+)
+const taskDetailPhotos = computed(() => taskDetailPhotoList.value)
+const taskDetailPhotoPreviewUrls = computed(() =>
+  taskDetailPhotoList.value.map((item) => item.previewUrl).filter(Boolean)
+)
 
 const isLoginReadonly = computed(() => loginDialogMode.value === 'view')
 const loginDialogTitle = computed(() => isLoginReadonly.value ? '样品登记明细' : '样品登录')
@@ -1021,6 +1188,16 @@ const dispatchForm = reactive({
   samplingTime: '',
   samplerId: null,
   samplerName: ''
+})
+
+const taskCompleteForm = reactive({
+  taskId: null,
+  sealNo: '',
+  onsiteMetrics: '',
+  weather: '',
+  temperature: '',
+  photoUrls: '',
+  remark: ''
 })
 
 function toSafeNumber(value) {
@@ -1196,6 +1373,10 @@ function isTaskRegistered(task) {
     return true
   }
   return samples.value.some((sample) => sample.taskId === task.id)
+}
+
+function isTaskCompleteEntryEnabled(task) {
+  return [pendingTaskStatus, inProgressTaskStatus].includes(task?.taskStatus)
 }
 
 const pendingLoggableCount = computed(() =>
@@ -2053,6 +2234,72 @@ function parseBindingJson(value) {
   }
 }
 
+function parsePhotoUrls(value) {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => {
+        if (typeof item === 'string') {
+          return item.trim()
+        }
+        if (item && typeof item === 'object') {
+          return String(item.path || item.filePath || item.url || '').trim()
+        }
+        return String(item || '').trim()
+      })
+      .filter(Boolean)
+  }
+  const text = String(value || '').trim()
+  if (!text) {
+    return []
+  }
+  if (text.startsWith('[')) {
+    try {
+      const list = JSON.parse(text)
+      if (Array.isArray(list)) {
+        return list.map((item) => String(item || '').trim()).filter(Boolean)
+      }
+    } catch {
+      // Ignore malformed JSON and continue with separator parsing.
+    }
+  }
+  return String(value || '')
+    .split(/[,，\n\r;；]+/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+}
+
+function buildPhotoEntry(path) {
+  return {
+    path,
+    localPreview: false,
+    previewUrl: isDirectImageUrl(path) ? buildStoragePreviewUrl(path) : ''
+  }
+}
+
+function buildLocalPhotoEntry(path, file) {
+  return {
+    path,
+    localPreview: true,
+    previewUrl: URL.createObjectURL(file)
+  }
+}
+
+function buildStoragePreviewUrl(path) {
+  const value = String(path || '').trim()
+  if (!value) {
+    return ''
+  }
+  if (/^https?:\/\//i.test(value) || value.startsWith('blob:') || value.startsWith('data:')) {
+    return value
+  }
+  return `/api/storage/file?path=${encodeURIComponent(value)}`
+}
+
+function isDirectImageUrl(path) {
+  const value = String(path || '').trim()
+  return /^https?:\/\//i.test(value) || value.startsWith('blob:') || value.startsWith('data:')
+}
+
 function formatStandardRange(min, max, unit) {
   const suffix = unit ? ` ${unit}` : ''
   if (min != null && max != null) {
@@ -2284,21 +2531,180 @@ async function resumeTask(row) {
   }
 }
 
-async function completeTask(row) {
-  if (!beginRowAction('task', 'complete', row?.id)) {
+async function openTaskDetailDialog(row) {
+  if (!row?.id) {
+    return
+  }
+  const detail = await fetchSamplingTaskDetailApi(row.id)
+  taskDetail.value = detail || row
+  await resolveTaskDetailPhotos(extractTaskPhotoUrls(taskDetail.value))
+  taskDetailDialogVisible.value = true
+}
+
+function extractTaskPhotoUrls(task) {
+  return parsePhotoUrls(
+    task?.photoUrls
+    || task?.photo_urls
+    || task?.photoUrl
+    || task?.photo_url
+    || ''
+  )
+}
+
+function resetTaskCompleteForm() {
+  clearTaskCompletePhotoPreviewUrls()
+  taskCompletePreview.value = null
+  taskCompletePhotoList.value = []
+  taskCompleteForm.taskId = null
+  taskCompleteForm.sealNo = ''
+  taskCompleteForm.onsiteMetrics = ''
+  taskCompleteForm.weather = ''
+  taskCompleteForm.temperature = ''
+  taskCompleteForm.photoUrls = ''
+  taskCompleteForm.remark = ''
+}
+
+function resetTaskCompleteDialog() {
+  resetTaskCompleteForm()
+}
+
+function clearTaskCompletePhotoPreviewUrls() {
+  taskCompletePhotoList.value.forEach((item) => {
+    if (item.previewUrl?.startsWith('blob:')) {
+      URL.revokeObjectURL(item.previewUrl)
+    }
+  })
+}
+
+function resetTaskDetailDialog() {
+  taskDetail.value = null
+  taskDetailPhotoList.value.forEach((item) => {
+    if (item.previewUrl?.startsWith('blob:')) {
+      URL.revokeObjectURL(item.previewUrl)
+    }
+  })
+  taskDetailPhotoList.value = []
+}
+
+async function resolveTaskDetailPhotos(photoPaths) {
+  taskDetailPhotoList.value.forEach((item) => {
+    if (item.previewUrl?.startsWith('blob:')) {
+      URL.revokeObjectURL(item.previewUrl)
+    }
+  })
+  const entries = photoPaths.map(buildPhotoEntry)
+  taskDetailPhotoList.value = entries
+  await Promise.all(entries.map(async (item) => {
+    try {
+      const response = await previewStorageFileApi(item.path)
+      item.previewUrl = URL.createObjectURL(response.data)
+    } catch {
+      item.previewUrl = isDirectImageUrl(item.path) ? buildStoragePreviewUrl(item.path) : ''
+    }
+  }))
+}
+
+async function handleTaskCompletePhotoChange(file) {
+  const rawFile = file.raw
+  if (!rawFile) {
+    return
+  }
+  if (!rawFile.type?.startsWith('image/')) {
+    ElMessage.warning('请选择图片文件')
+    return
+  }
+  if (rawFile.size > 5 * 1024 * 1024) {
+    ElMessage.warning('图片不能超过 5MB')
+    return
+  }
+  taskCompletePhotoUploading.value = true
+  try {
+    const result = await uploadStorageFileApi(rawFile)
+    const filePath = String(result?.filePath || result?.data?.filePath || '').trim()
+    if (!filePath) {
+      ElMessage.error('图片上传失败')
+      return
+    }
+    taskCompleteForm.photoUrls = [...parsePhotoUrls(taskCompleteForm.photoUrls), filePath].join(',')
+    taskCompletePhotoList.value = [
+      ...taskCompletePhotoList.value,
+      buildLocalPhotoEntry(filePath, rawFile)
+    ]
+  } finally {
+    taskCompletePhotoUploading.value = false
+  }
+}
+
+function removeTaskCompletePhoto(index) {
+  const nextPhotoUrls = parsePhotoUrls(taskCompleteForm.photoUrls)
+  nextPhotoUrls.splice(index, 1)
+  taskCompleteForm.photoUrls = nextPhotoUrls.join(',')
+  const removed = taskCompletePhotoList.value.splice(index, 1)[0]
+  if (removed?.previewUrl?.startsWith('blob:')) {
+    URL.revokeObjectURL(removed.previewUrl)
+  }
+}
+
+async function openTaskCompleteDialog(row) {
+  if (!row?.id || !isTaskCompleteEntryEnabled(row)) {
+    return
+  }
+  if (!beginRowAction('task', 'complete', row.id)) {
     return
   }
   try {
+    const detail = await fetchSamplingTaskDetailApi(row.id)
+    const task = detail || row
+    taskCompletePreview.value = task
+    clearTaskCompletePhotoPreviewUrls()
+    taskCompletePhotoList.value = extractTaskPhotoUrls(task).map(buildPhotoEntry)
+    taskCompleteForm.taskId = task.id
+    taskCompleteForm.sealNo = task.sealNo || ''
+    taskCompleteForm.onsiteMetrics = task.onsiteMetrics || ''
+    taskCompleteForm.weather = task.weather || ''
+    taskCompleteForm.temperature = task.temperature || ''
+    taskCompleteForm.photoUrls = extractTaskPhotoUrls(task).join(',')
+    taskCompleteForm.remark = task.remark || ''
+    taskCompleteDialogVisible.value = true
+  } catch (error) {
+    ElMessage.error(error?.message || '获取采样录入信息失败')
+  } finally {
+    endRowAction('task', 'complete', row.id)
+  }
+}
+
+async function submitTaskCompleteForm() {
+  if (!taskCompleteForm.taskId) {
+    ElMessage.warning('请选择要录入的采样任务')
+    return
+  }
+  if (!String(taskCompleteForm.sealNo || '').trim()) {
+    ElMessage.warning('请先录入采样封签号')
+    return
+  }
+  taskCompleteSubmitting.value = true
+  try {
+    const task = taskCompletePreview.value
+    if (task?.taskStatus === pendingTaskStatus) {
+      await startSamplingTaskApi(task.id, {
+        sealNo: String(taskCompleteForm.sealNo || '').trim(),
+        remark: 'PC端采样录入时自动开始任务'
+      })
+    }
     await completeSamplingTaskApi({
-      taskId: row.id,
-      onsiteMetrics: 'pH=7.2；余氯=0.4；浊度=0.5',
-      remark: '现场采样完成'
+      taskId: taskCompleteForm.taskId,
+      sealNo: String(taskCompleteForm.sealNo || '').trim(),
+      onsiteMetrics: taskCompleteForm.onsiteMetrics,
+      weather: taskCompleteForm.weather,
+      temperature: taskCompleteForm.temperature,
+      photoUrls: taskCompleteForm.photoUrls,
+      remark: taskCompleteForm.remark
     })
-    ElMessage.success('采样任务已完成。')
-    taskQuery.pageNum = 1
+    taskCompleteDialogVisible.value = false
+    ElMessage.success('采样录入已保存。')
     await Promise.all([loadTasks(), loadPlans()])
   } finally {
-    endRowAction('task', 'complete', row?.id)
+    taskCompleteSubmitting.value = false
   }
 }
 
@@ -2584,6 +2990,111 @@ watch(() => route.fullPath, () => {
 .plan-sampler.is-empty {
   color: #d14343;
   font-weight: 600;
+}
+
+.task-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 16px;
+  margin-bottom: 16px;
+}
+
+.task-detail-grid div,
+.task-detail-block {
+  border: 1px solid var(--line-soft);
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: var(--bg-panel-soft);
+}
+
+.task-detail-grid span,
+.task-detail-block span {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--text-sub);
+  font-size: 12px;
+}
+
+.task-detail-grid strong,
+.task-detail-block p {
+  margin: 0;
+  color: var(--text-main);
+  line-height: 1.6;
+}
+
+.task-detail-block + .task-detail-block {
+  margin-top: 12px;
+}
+
+.task-detail-photo-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 10px;
+}
+
+.task-detail-photo {
+  width: 110px;
+  height: 110px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--line-soft);
+  background: var(--bg-panel-soft);
+}
+
+.sampling-photo-uploader {
+  display: grid;
+  gap: 10px;
+}
+
+.sampling-photo-uploader__tip {
+  margin: 0;
+  color: var(--text-light);
+  font-size: 12px;
+}
+
+.sampling-photo-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 10px;
+}
+
+.sampling-photo-card {
+  display: grid;
+  gap: 6px;
+  justify-items: center;
+}
+
+.sampling-photo-card__image,
+.sampling-photo-card__placeholder {
+  display: block;
+  width: 120px;
+  height: 120px;
+  border-radius: 12px;
+  border: 1px solid var(--line-soft);
+  background: var(--bg-panel-soft);
+  overflow: hidden;
+}
+
+.sampling-photo-card__image :deep(img),
+.task-detail-photo :deep(img) {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.sampling-photo-card__image :deep(.el-image__inner),
+.task-detail-photo :deep(.el-image__inner) {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.sampling-photo-card__placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-light);
+  font-size: 12px;
 }
 
 .plan-stats {

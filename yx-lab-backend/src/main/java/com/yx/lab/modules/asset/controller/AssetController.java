@@ -3,6 +3,8 @@ package com.yx.lab.modules.asset.controller;
 import com.yx.lab.common.model.ApiResponse;
 import com.yx.lab.common.model.PageResult;
 import com.yx.lab.common.constant.LabWorkflowConstants;
+import com.yx.lab.common.security.PermissionConstants;
+import com.yx.lab.common.security.RequirePermission;
 import com.yx.lab.common.util.ExcelExportUtil;
 import com.yx.lab.modules.asset.dto.DocumentQuery;
 import com.yx.lab.modules.asset.dto.DocumentSaveCommand;
@@ -48,6 +50,7 @@ import java.util.List;
 @RequestMapping("/api/assets")
 @RequiredArgsConstructor
 @Tag(name = "资产与文档管理")
+@RequirePermission(PermissionConstants.ASSET_VIEW)
 public class AssetController {
 
     private final InstrumentAssetService instrumentAssetService;
@@ -147,6 +150,7 @@ public class AssetController {
      */
     @PostMapping("/instruments")
     @Operation(summary = "新增仪器台账")
+    @RequirePermission(PermissionConstants.ASSET_WRITE)
     public ApiResponse<Void> saveInstrument(@Valid @RequestBody InstrumentSaveCommand command) {
         instrumentAssetService.saveInstrument(command);
         return ApiResponse.successMessage("\u65b0\u589e\u6210\u529f");
@@ -161,6 +165,7 @@ public class AssetController {
      */
     @PostMapping("/instruments/{id}")
     @Operation(summary = "更新仪器台账")
+    @RequirePermission(PermissionConstants.ASSET_WRITE)
     public ApiResponse<Void> updateInstrument(@PathVariable Long id, @Valid @RequestBody InstrumentSaveCommand command) {
         instrumentAssetService.updateInstrument(id, command);
         return ApiResponse.successMessage("\u66f4\u65b0\u6210\u529f");
@@ -174,6 +179,7 @@ public class AssetController {
      */
     @PostMapping("/instruments/{id}/delete")
     @Operation(summary = "删除仪器台账")
+    @RequirePermission(PermissionConstants.ASSET_WRITE)
     public ApiResponse<Void> deleteInstrument(@PathVariable Long id) {
         instrumentAssetService.deleteInstrument(id);
         return ApiResponse.successMessage("\u5220\u9664\u6210\u529f");
@@ -226,6 +232,7 @@ public class AssetController {
      */
     @PostMapping("/maintenances")
     @Operation(summary = "新增维保记录")
+    @RequirePermission(PermissionConstants.ASSET_WRITE)
     public ApiResponse<Void> saveMaintenance(@Valid @RequestBody InstrumentMaintenanceSaveCommand command) {
         instrumentAssetService.saveMaintenance(command);
         return ApiResponse.successMessage("\u65b0\u589e\u6210\u529f");
@@ -240,6 +247,7 @@ public class AssetController {
      */
     @PostMapping("/maintenances/{id}")
     @Operation(summary = "更新维保记录")
+    @RequirePermission(PermissionConstants.ASSET_WRITE)
     public ApiResponse<Void> updateMaintenance(@PathVariable Long id, @Valid @RequestBody InstrumentMaintenanceSaveCommand command) {
         instrumentAssetService.updateMaintenance(id, command);
         return ApiResponse.successMessage("\u66f4\u65b0\u6210\u529f");
@@ -253,6 +261,7 @@ public class AssetController {
      */
     @PostMapping("/maintenances/{id}/delete")
     @Operation(summary = "删除维保记录")
+    @RequirePermission(PermissionConstants.ASSET_WRITE)
     public ApiResponse<Void> deleteMaintenance(@PathVariable Long id) {
         instrumentAssetService.deleteMaintenance(id);
         return ApiResponse.successMessage("\u5220\u9664\u6210\u529f");
@@ -345,6 +354,7 @@ public class AssetController {
      */
     @PostMapping("/documents")
     @Operation(summary = "新增化验室文档")
+    @RequirePermission(PermissionConstants.ASSET_WRITE)
     public ApiResponse<Void> saveDocument(@Valid @RequestBody DocumentSaveCommand command) {
         assetDocumentService.saveDocument(command);
         return ApiResponse.successMessage("\u65b0\u589e\u6210\u529f");
@@ -359,6 +369,7 @@ public class AssetController {
      */
     @PostMapping("/documents/{id}")
     @Operation(summary = "更新化验室文档")
+    @RequirePermission(PermissionConstants.ASSET_WRITE)
     public ApiResponse<Void> updateDocument(@PathVariable Long id, @Valid @RequestBody DocumentSaveCommand command) {
         assetDocumentService.updateDocument(id, command);
         return ApiResponse.successMessage("\u66f4\u65b0\u6210\u529f");
@@ -372,6 +383,7 @@ public class AssetController {
      */
     @PostMapping("/documents/{id}/delete")
     @Operation(summary = "删除化验室文档")
+    @RequirePermission(PermissionConstants.ASSET_WRITE)
     public ApiResponse<Void> deleteDocument(@PathVariable Long id) {
         assetDocumentService.deleteDocumentWithPermission(id);
         return ApiResponse.successMessage("\u5220\u9664\u6210\u529f");

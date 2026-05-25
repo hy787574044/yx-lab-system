@@ -2,6 +2,8 @@ package com.yx.lab.modules.detection.controller;
 
 import com.yx.lab.common.model.ApiResponse;
 import com.yx.lab.common.model.PageResult;
+import com.yx.lab.common.security.PermissionConstants;
+import com.yx.lab.common.security.RequirePermission;
 import com.yx.lab.common.util.ExcelExportUtil;
 import com.yx.lab.modules.detection.dto.DetectionMethodQuery;
 import com.yx.lab.modules.detection.dto.DetectionMethodSaveCommand;
@@ -45,6 +47,7 @@ import java.util.List;
 @RequestMapping("/api/detectionConfig")
 @RequiredArgsConstructor
 @Tag(name = "检测配置管理")
+@RequirePermission(PermissionConstants.DETECTION_CONFIG_VIEW)
 public class DetectionConfigController {
 
     private final DetectionConfigService detectionConfigService;
@@ -93,6 +96,7 @@ public class DetectionConfigController {
      */
     @PostMapping("/types")
     @Operation(summary = "新增检测套餐")
+    @RequirePermission(PermissionConstants.DETECTION_CONFIG_WRITE)
     public ApiResponse<Void> saveType(@Valid @RequestBody DetectionTypeSaveCommand command) {
         detectionConfigService.saveType(command);
         return ApiResponse.successMessage("新增成功");
@@ -107,6 +111,7 @@ public class DetectionConfigController {
      */
     @PostMapping("/types/{id}")
     @Operation(summary = "更新检测套餐")
+    @RequirePermission(PermissionConstants.DETECTION_CONFIG_WRITE)
     public ApiResponse<Void> updateType(@PathVariable Long id, @Valid @RequestBody DetectionTypeSaveCommand command) {
         detectionConfigService.updateType(id, command);
         return ApiResponse.successMessage("更新成功");
@@ -120,6 +125,7 @@ public class DetectionConfigController {
      */
     @PostMapping("/types/{id}/delete")
     @Operation(summary = "删除检测套餐")
+    @RequirePermission(PermissionConstants.DETECTION_CONFIG_WRITE)
     public ApiResponse<Void> deleteType(@PathVariable Long id) {
         detectionConfigService.deleteType(id);
         return ApiResponse.successMessage("删除成功");
@@ -156,6 +162,7 @@ public class DetectionConfigController {
      */
     @PostMapping("/projectGroups")
     @Operation(summary = "新增检测项目组")
+    @RequirePermission(PermissionConstants.DETECTION_CONFIG_WRITE)
     public ApiResponse<Void> saveProjectGroup(@Valid @RequestBody DetectionProjectGroupSaveCommand command) {
         detectionConfigService.saveProjectGroup(command);
         return ApiResponse.successMessage("新增成功");
@@ -170,6 +177,7 @@ public class DetectionConfigController {
      */
     @PostMapping("/projectGroups/{id}")
     @Operation(summary = "更新检测项目组")
+    @RequirePermission(PermissionConstants.DETECTION_CONFIG_WRITE)
     public ApiResponse<Void> updateProjectGroup(@PathVariable Long id, @Valid @RequestBody DetectionProjectGroupSaveCommand command) {
         detectionConfigService.updateProjectGroup(id, command);
         return ApiResponse.successMessage("更新成功");
@@ -183,6 +191,7 @@ public class DetectionConfigController {
      */
     @PostMapping("/projectGroups/{id}/delete")
     @Operation(summary = "删除检测项目组")
+    @RequirePermission(PermissionConstants.DETECTION_CONFIG_WRITE)
     public ApiResponse<Void> deleteProjectGroup(@PathVariable Long id) {
         detectionConfigService.deleteProjectGroup(id);
         return ApiResponse.successMessage("删除成功");
@@ -235,6 +244,7 @@ public class DetectionConfigController {
      */
     @PostMapping("/parameters")
     @Operation(summary = "新增检测参数")
+    @RequirePermission(PermissionConstants.DETECTION_CONFIG_WRITE)
     public ApiResponse<Void> saveParameter(@Valid @RequestBody DetectionParameterSaveCommand command) {
         detectionConfigService.saveParameter(command);
         return ApiResponse.successMessage("新增成功");
@@ -249,6 +259,7 @@ public class DetectionConfigController {
      */
     @PostMapping("/parameters/{id}")
     @Operation(summary = "更新检测参数")
+    @RequirePermission(PermissionConstants.DETECTION_CONFIG_WRITE)
     public ApiResponse<Void> updateParameter(@PathVariable Long id, @Valid @RequestBody DetectionParameterSaveCommand command) {
         detectionConfigService.updateParameter(id, command);
         return ApiResponse.successMessage("更新成功");
@@ -262,6 +273,7 @@ public class DetectionConfigController {
      */
     @PostMapping("/parameters/{id}/delete")
     @Operation(summary = "删除检测参数")
+    @RequirePermission(PermissionConstants.DETECTION_CONFIG_WRITE)
     public ApiResponse<Void> deleteParameter(@PathVariable Long id) {
         detectionConfigService.deleteParameter(id);
         return ApiResponse.successMessage("删除成功");
@@ -288,6 +300,7 @@ public class DetectionConfigController {
      */
     @PostMapping("/parameterMethodBindings/{parameterId}")
     @Operation(summary = "保存检测参数方法绑定")
+    @RequirePermission(PermissionConstants.DETECTION_CONFIG_WRITE)
     public ApiResponse<Void> bindParameterMethods(@PathVariable Long parameterId,
                                                   @RequestBody(required = false) DetectionParameterMethodBindCommand command) {
         detectionConfigService.bindParameterMethods(parameterId, command);
@@ -352,6 +365,7 @@ public class DetectionConfigController {
      */
     @PostMapping("/methods")
     @Operation(summary = "新增检测方法")
+    @RequirePermission(PermissionConstants.DETECTION_CONFIG_WRITE)
     public ApiResponse<Void> saveMethod(@Valid @RequestBody DetectionMethodSaveCommand command) {
         detectionConfigService.saveMethod(command);
         return ApiResponse.successMessage("新增成功");
@@ -366,6 +380,7 @@ public class DetectionConfigController {
      */
     @PostMapping("/methods/{id}")
     @Operation(summary = "更新检测方法")
+    @RequirePermission(PermissionConstants.DETECTION_CONFIG_WRITE)
     public ApiResponse<Void> updateMethod(@PathVariable Long id, @Valid @RequestBody DetectionMethodSaveCommand command) {
         detectionConfigService.updateMethod(id, command);
         return ApiResponse.successMessage("更新成功");
@@ -379,6 +394,7 @@ public class DetectionConfigController {
      */
     @PostMapping("/methods/{id}/delete")
     @Operation(summary = "删除检测方法")
+    @RequirePermission(PermissionConstants.DETECTION_CONFIG_WRITE)
     public ApiResponse<Void> deleteMethod(@PathVariable Long id) {
         detectionConfigService.deleteMethod(id);
         return ApiResponse.successMessage("删除成功");
@@ -404,6 +420,7 @@ public class DetectionConfigController {
      */
     @PostMapping("/steps")
     @Operation(summary = "新增检测步骤")
+    @RequirePermission(PermissionConstants.DETECTION_CONFIG_WRITE)
     public ApiResponse<Void> saveStep(@Valid @RequestBody DetectionStepSaveCommand command) {
         detectionConfigService.saveStep(command);
         return ApiResponse.successMessage("新增成功");
@@ -418,6 +435,7 @@ public class DetectionConfigController {
      */
     @PostMapping("/steps/{id}")
     @Operation(summary = "更新检测步骤")
+    @RequirePermission(PermissionConstants.DETECTION_CONFIG_WRITE)
     public ApiResponse<Void> updateStep(@PathVariable Long id, @Valid @RequestBody DetectionStepSaveCommand command) {
         detectionConfigService.updateStep(id, command);
         return ApiResponse.successMessage("更新成功");
@@ -431,6 +449,7 @@ public class DetectionConfigController {
      */
     @PostMapping("/steps/{id}/delete")
     @Operation(summary = "删除检测步骤")
+    @RequirePermission(PermissionConstants.DETECTION_CONFIG_WRITE)
     public ApiResponse<Void> deleteStep(@PathVariable Long id) {
         detectionConfigService.deleteStep(id);
         return ApiResponse.successMessage("删除成功");

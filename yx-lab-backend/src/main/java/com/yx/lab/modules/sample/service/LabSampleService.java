@@ -10,6 +10,7 @@ import com.yx.lab.common.constant.LabWorkflowConstants;
 import com.yx.lab.common.exception.BusinessException;
 import com.yx.lab.common.model.PageResult;
 import com.yx.lab.common.security.CurrentUser;
+import com.yx.lab.common.security.DataScopeHelper;
 import com.yx.lab.common.security.SecurityContext;
 import com.yx.lab.common.util.PageUtils;
 import com.yx.lab.modules.detection.entity.DetectionMethod;
@@ -53,6 +54,8 @@ public class LabSampleService {
 
     private final ObjectMapper objectMapper;
 
+    private final DataScopeHelper dataScopeHelper;
+
     /**
      * 分页查询样品列表。
      *
@@ -71,8 +74,20 @@ public class LabSampleService {
                                 .like(LabSample::getPointName, query.getKeyword()))
                         .eq(StrUtil.isNotBlank(query.getSampleStatus()), LabSample::getSampleStatus, query.getSampleStatus())
                         .eq(StrUtil.isNotBlank(query.getSampleType()), LabSample::getSampleType, query.getSampleType())
+                        .eq(resolveScopedSamplerId() != null, LabSample::getSamplerId, resolveScopedSamplerId())
+                        .eq(dataScopeHelper.onlySelfScope(), LabSample::getCreatedBy, dataScopeHelper.currentUserId())
                         .orderByDesc(LabSample::getCreatedTime));
         return new PageResult<>(page.getTotal(), page.getRecords());
+    }
+
+    private Long resolveScopedSamplerId() {
+        if (dataScopeHelper.isAdmin()) {
+            return null;
+        }
+        if (dataScopeHelper.isRole("SAMPLER") && dataScopeHelper.currentUserId() != null) {
+            return dataScopeHelper.currentUserId();
+        }
+        return null;
     }
 
     /**

@@ -24,7 +24,7 @@
       <div class="toolbar-panel">
         <div class="toolbar-row">
           <div class="toolbar-main">
-            <el-button type="primary" class="toolbar-primary-button" @click="createTemplate">新增模板</el-button>
+            <el-button v-permission="'report:write'" type="primary" class="toolbar-primary-button" @click="createTemplate">新增模板</el-button>
             <div class="toolbar-fields">
               <label class="toolbar-field toolbar-field--wide">
                 <span>关键字</span>
@@ -112,9 +112,10 @@
           <el-table-column label="操作" min-width="240" fixed="right" header-cell-class-name="cell-center" class-name="cell-center">
             <template #default="{ row }">
               <div class="action-row">
-                <el-button size="small" @click="previewReport(row)">预览</el-button>
+                <el-button v-permission="'report:view'" size="small" @click="previewReport(row)">预览</el-button>
                 <el-button
                   size="small"
+                  v-permission="'report:view'"
                   :loading="String(downloadingReportId) === String(row.id)"
                   @click="downloadPdf(row)"
                 >
@@ -169,7 +170,7 @@
       />
       <div v-else class="preview-empty">正在加载报告文档...</div>
       <template #footer>
-        <el-button v-if="previewData" type="primary" plain @click="printPreview">打印</el-button>
+        <el-button v-if="previewData" v-permission="'report:view'" type="primary" plain @click="printPreview">打印</el-button>
         <el-button @click="closePreviewDialog">关闭</el-button>
       </template>
     </el-dialog>

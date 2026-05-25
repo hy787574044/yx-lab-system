@@ -1,15 +1,24 @@
 package com.yx.lab.modules.dashboard.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.yx.lab.common.constant.LabWorkflowConstants;
+import com.yx.lab.modules.detection.entity.DetectionItem;
 import com.yx.lab.modules.detection.entity.DetectionRecord;
+import com.yx.lab.modules.detection.mapper.DetectionItemMapper;
 import com.yx.lab.modules.detection.mapper.DetectionRecordMapper;
 import com.yx.lab.modules.report.entity.LabReport;
 import com.yx.lab.modules.report.mapper.LabReportMapper;
 import com.yx.lab.modules.sample.entity.LabSample;
 import com.yx.lab.modules.sample.mapper.LabSampleMapper;
+import com.yx.lab.modules.statistics.vo.StatisticsDimensionItemVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 首页看板统计查询服务，负责聚合各流程节点的核心计数。
@@ -21,6 +30,8 @@ public class DashboardQueryService {
     private final LabSampleMapper labSampleMapper;
 
     private final DetectionRecordMapper detectionRecordMapper;
+
+    private final DetectionItemMapper detectionItemMapper;
 
     private final LabReportMapper labReportMapper;
 
@@ -81,5 +92,168 @@ public class DashboardQueryService {
     public long abnormalResultTotal() {
         return detectionRecordMapper.selectCount(new LambdaQueryWrapper<DetectionRecord>()
                 .eq(DetectionRecord::getDetectionResult, LabWorkflowConstants.DetectionResult.ABNORMAL));
+    }
+
+    /**
+     * 按创建时间统计样品数量。
+     *
+     * @param startTime 起始时间
+     * @return 样品数量
+     */
+    public long sampleTotalFrom(LocalDateTime startTime) {
+        return labSampleMapper.selectCount(new LambdaQueryWrapper<LabSample>()
+                .ge(startTime != null, LabSample::getCreatedTime, startTime));
+    }
+
+    /**
+     * 按创建时间统计报告数量。
+     *
+     * @param startTime 起始时间
+     * @return 报告数量
+     */
+    public long reportTotalFrom(LocalDateTime startTime) {
+        return labReportMapper.selectCount(new LambdaQueryWrapper<LabReport>()
+                .ge(startTime != null, LabReport::getCreatedTime, startTime));
+    }
+
+    /**
+     * 按检测时间统计已完成检测数量。
+     *
+     * @param startTime 起始时间
+     * @return 检测数量
+     */
+    public long completedDetectionTotalFrom(LocalDateTime startTime) {
+        return detectionRecordMapper.selectCount(new LambdaQueryWrapper<DetectionRecord>()
+                .isNotNull(DetectionRecord::getDetectionResult)
+                .ge(startTime != null, DetectionRecord::getDetectionTime, startTime));
+    }
+
+    /**
+     * 统计实时进行中的样品数量。
+     *
+     * @return 进行中样品数量
+     */
+    public long runningSampleTotal() {
+        return detectionRecordMapper.selectCount(new LambdaQueryWrapper<DetectionRecord>()
+                .in(DetectionRecord::getDetectionStatus,
+                        LabWorkflowConstants.DetectionStatus.WAIT_ASSIGN,
+                        LabWorkflowConstants.DetectionStatus.WAIT_DETECT,
+                        LabWorkflowConstants.DetectionStatus.SUBMITTED,
+                        LabWorkflowConstants.DetectionStatus.REJECTED));
+    }
+
+    /**
+     * 统计实时超标预警数量。
+     *
+     * @return 超标预警数量
+     */
+    public long abnormalWarningTotal() {
+        return detectionRecordMapper.selectCount(new LambdaQueryWrapper<DetectionRecord>()
+                .eq(DetectionRecord::getDetectionResult, LabWorkflowConstants.DetectionResult.ABNORMAL)
+                .ne(DetectionRecord::getDetectionStatus, LabWorkflowConstants.DetectionStatus.APPROVED));
+    }
+
+    /**
+     * 按样品状态统计数量。
+     *
+     * @param sampleStatus 样品状态
+     * @return 数量
+     */
+    public long sampleStatusTotal(String sampleStatus) {
+        return labSampleMapper.selectCount(new LambdaQueryWrapper<LabSample>()
+                .eq(LabSample::getSampleStatus, sampleStatus));
+    }
+
+    /**
+     * 按检测状态统计数量。
+     *
+     * @param detectionStatus 检测状态
+     * @return 数量
+     */
+    public long detectionStatusTotal(String detectionStatus) {
+        return detectionRecordMapper.selectCount(new LambdaQueryWrapper<DetectionRecord>()
+                .eq(DetectionRecord::getDetectionStatus, detectionStatus));
+    }
+
+    /**
+     * 按报告状态统计数量。
+     *
+     * @param reportStatus 报告状态
+     * @return 数量
+     */
+    public long reportStatusTotal(String reportStatus) {
+        return labReportMapper.selectCount(new LambdaQueryWrapper<LabReport>()
+                .eq(LabReport::getReportStatus, reportStatus));
+    }
+
+    /**
+     * 按时间区间统计检测结果数量。
+     *
+     * @param result 检测结果
+     * @param startTime 起始时间
+     * @param endTime 结束时间
+     * @return 数量
+     */
+    public long detectionResultTotalBetween(String result, LocalDateTime startTime, LocalDateTime endTime) {
+        return detectionRecordMapper.selectCount(new LambdaQueryWrapper<DetectionRecord>()
+                .eq(DetectionRecord::getDetectionResult, result)
+                .ge(startTime != null, DetectionRecord::getDetectionTime, startTime)
+                .lt(endTime != null, DetectionRecord::getDetectionTime, endTime));
+    }
+
+    /**
+     * 统计超过指定时间仍未审核的检测记录。
+     *
+     * @param deadline 超时截止时间
+     * @return 超时数量
+     */
+    public long pendingReviewTimeoutTotal(LocalDateTime deadline) {
+        return detectionRecordMapper.selectCount(new LambdaQueryWrapper<DetectionRecord>()
+                .eq(DetectionRecord::getDetectionStatus, LabWorkflowConstants.DetectionStatus.SUBMITTED)
+                .le(deadline != null, DetectionRecord::getUpdatedTime, deadline));
+    }
+
+    /**
+     * 统计超标后超过指定时间仍未处理的检测记录。
+     *
+     * @param deadline 超时截止时间
+     * @return 超时数量
+     */
+    public long abnormalUnhandledTotal(LocalDateTime deadline) {
+        return detectionRecordMapper.selectCount(new LambdaQueryWrapper<DetectionRecord>()
+                .eq(DetectionRecord::getDetectionResult, LabWorkflowConstants.DetectionResult.ABNORMAL)
+                .in(DetectionRecord::getDetectionStatus,
+                        LabWorkflowConstants.DetectionStatus.SUBMITTED,
+                        LabWorkflowConstants.DetectionStatus.REJECTED)
+                .le(deadline != null, DetectionRecord::getUpdatedTime, deadline));
+    }
+
+    /**
+     * 统计检测员本月完成的检测项排行。
+     *
+     * @param startTime 起始时间
+     * @return 检测员工作量排行
+     */
+    public List<StatisticsDimensionItemVO> detectorWorkloadRanking(LocalDateTime startTime) {
+        QueryWrapper<DetectionItem> wrapper = new QueryWrapper<>();
+        wrapper.select("detector_name AS name", "COUNT(1) AS value")
+                .eq("deleted", 0)
+                .isNotNull("detector_name")
+                .ne("detector_name", "")
+                .ge(startTime != null, "updated_time", startTime)
+                .in("item_status",
+                        LabWorkflowConstants.DetectionStatus.SUBMITTED,
+                        LabWorkflowConstants.DetectionStatus.APPROVED)
+                .groupBy("detector_name")
+                .last("ORDER BY value DESC LIMIT 8");
+        return toDimensionItems(detectionItemMapper.selectMaps(wrapper));
+    }
+
+    private List<StatisticsDimensionItemVO> toDimensionItems(List<Map<String, Object>> rows) {
+        return rows.stream()
+                .map(row -> new StatisticsDimensionItemVO(
+                        String.valueOf(row.get("name")),
+                        ((Number) row.get("value")).longValue()))
+                .collect(Collectors.toList());
     }
 }

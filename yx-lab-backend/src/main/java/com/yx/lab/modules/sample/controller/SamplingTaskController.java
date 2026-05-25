@@ -3,6 +3,8 @@ package com.yx.lab.modules.sample.controller;
 import com.yx.lab.common.model.ApiResponse;
 import com.yx.lab.common.model.PageResult;
 import com.yx.lab.common.constant.LabWorkflowConstants;
+import com.yx.lab.common.security.PermissionConstants;
+import com.yx.lab.common.security.RequirePermission;
 import com.yx.lab.common.util.ExcelExportUtil;
 import com.yx.lab.modules.sample.dto.SamplingTaskActionCommand;
 import com.yx.lab.modules.sample.dto.SamplingTaskCompleteCommand;
@@ -33,6 +35,7 @@ import java.util.List;
 @RequestMapping("/api/samplingTasks")
 @RequiredArgsConstructor
 @Tag(name = "采样任务管理")
+@RequirePermission(PermissionConstants.SAMPLING_TASK_VIEW)
 public class SamplingTaskController {
 
     private final SamplingTaskService samplingTaskService;
@@ -111,6 +114,7 @@ public class SamplingTaskController {
      */
     @PostMapping("/{id}/sealNo")
     @Operation(summary = "录入采样任务封签号")
+    @RequirePermission(PermissionConstants.SAMPLING_TASK_WRITE)
     public ApiResponse<Void> updateSealNo(@PathVariable Long id,
                                           @Valid @RequestBody SamplingTaskSealNoCommand command) {
         samplingTaskService.updateSealNo(id, command);
@@ -126,6 +130,7 @@ public class SamplingTaskController {
      */
     @PostMapping("/{id}/start")
     @Operation(summary = "开始采样任务")
+    @RequirePermission(PermissionConstants.SAMPLING_TASK_WRITE)
     public ApiResponse<Void> start(@PathVariable Long id,
                                    @RequestBody(required = false) SamplingTaskActionCommand command) {
         samplingTaskService.start(id, command);
@@ -141,6 +146,7 @@ public class SamplingTaskController {
      */
     @PostMapping("/{id}/abandon")
     @Operation(summary = "废弃采样任务")
+    @RequirePermission(PermissionConstants.SAMPLING_TASK_WRITE)
     public ApiResponse<Void> abandon(@PathVariable Long id,
                                      @RequestBody(required = false) SamplingTaskActionCommand command) {
         samplingTaskService.abandon(id, command);
@@ -156,6 +162,7 @@ public class SamplingTaskController {
      */
     @PostMapping("/{id}/resume")
     @Operation(summary = "恢复采样任务")
+    @RequirePermission(PermissionConstants.SAMPLING_TASK_WRITE)
     public ApiResponse<Void> resume(@PathVariable Long id,
                                     @RequestBody(required = false) SamplingTaskActionCommand command) {
         samplingTaskService.resume(id, command);
@@ -170,6 +177,7 @@ public class SamplingTaskController {
      */
     @PostMapping("/complete")
     @Operation(summary = "完成采样任务")
+    @RequirePermission(PermissionConstants.SAMPLING_TASK_WRITE)
     public ApiResponse<Void> complete(@Valid @RequestBody SamplingTaskCompleteCommand command) {
         samplingTaskService.complete(command);
         return ApiResponse.successMessage("采样完成");

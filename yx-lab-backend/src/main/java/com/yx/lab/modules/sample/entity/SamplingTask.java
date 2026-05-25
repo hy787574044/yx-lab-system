@@ -80,6 +80,14 @@ public class SamplingTask extends BaseEntity {
     @TableField("onsite_metrics")
     private String onsiteMetrics;
 
+    @Schema(description = "现场天气情况")
+    @TableField("weather")
+    private String weather;
+
+    @Schema(description = "现场温度")
+    @TableField("temperature")
+    private String temperature;
+
     @Schema(description = "现场照片地址集合")
     @TableField("photo_urls")
     private String photoUrls;

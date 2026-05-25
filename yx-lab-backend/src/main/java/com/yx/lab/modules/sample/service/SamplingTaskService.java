@@ -7,6 +7,7 @@ import com.yx.lab.common.constant.LabWorkflowConstants;
 import com.yx.lab.common.exception.BusinessException;
 import com.yx.lab.common.model.PageResult;
 import com.yx.lab.common.security.CurrentUser;
+import com.yx.lab.common.security.DataScopeHelper;
 import com.yx.lab.common.security.SecurityContext;
 import com.yx.lab.common.util.PageUtils;
 import com.yx.lab.modules.sample.dto.SamplingTaskActionCommand;
@@ -37,6 +38,8 @@ public class SamplingTaskService {
 
     private final SamplingPlanService samplingPlanService;
 
+    private final DataScopeHelper dataScopeHelper;
+
     /**
      * 分页查询采样任务列表。
      *
@@ -49,9 +52,21 @@ public class SamplingTaskService {
                 new LambdaQueryWrapper<SamplingTask>()
                         .like(StrUtil.isNotBlank(query.getKeyword()), SamplingTask::getPointName, query.getKeyword())
                         .eq(StrUtil.isNotBlank(query.getTaskStatus()), SamplingTask::getTaskStatus, query.getTaskStatus())
-                        .eq(query.getSamplerId() != null, SamplingTask::getSamplerId, query.getSamplerId())
+                        .eq(resolveScopedSamplerId(query.getSamplerId()) != null,
+                                SamplingTask::getSamplerId,
+                                resolveScopedSamplerId(query.getSamplerId()))
                         .orderByDesc(SamplingTask::getCreatedTime));
         return new PageResult<>(page.getTotal(), page.getRecords());
+    }
+
+    private Long resolveScopedSamplerId(Long querySamplerId) {
+        if (dataScopeHelper.isAdmin()) {
+            return querySamplerId;
+        }
+        if (dataScopeHelper.isRole("SAMPLER") && dataScopeHelper.currentUserId() != null) {
+            return dataScopeHelper.currentUserId();
+        }
+        return querySamplerId;
     }
 
     /**
@@ -190,9 +205,22 @@ public class SamplingTaskService {
         }
 
         // 完成节点只沉淀现场采样结果与附件，样品主档在后续样品登录环节创建。
+        if (command != null && StrUtil.isNotBlank(command.getSealNo())) {
+            validateSealNoEditable(task);
+            applySealNo(task, command.getSealNo());
+        }
+        if (StrUtil.isBlank(task.getSealNo())) {
+            throw new BusinessException("完成采样前必须先录入封签号。");
+        }
+
         task.setOnsiteMetrics(command.getOnsiteMetrics());
+        task.setWeather(command.getWeather());
+        task.setTemperature(command.getTemperature());
         task.setPhotoUrls(command.getPhotoUrls());
         task.setRemark(command.getRemark());
+        if (task.getStartedTime() == null) {
+            task.setStartedTime(LocalDateTime.now());
+        }
         task.setTaskStatus(LabWorkflowConstants.SamplingTaskStatus.COMPLETED);
         task.setFinishedTime(LocalDateTime.now());
         samplingTaskMapper.updateById(task);

@@ -10,7 +10,13 @@ public class SamplingTaskCompleteCommand {
     @NotNull(message = "任务ID不能为空")
     private Long taskId;
 
+    private String sealNo;
+
     private String onsiteMetrics;
+
+    private String weather;
+
+    private String temperature;
 
     private String photoUrls;
 
