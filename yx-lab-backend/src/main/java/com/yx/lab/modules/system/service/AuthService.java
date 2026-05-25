@@ -16,6 +16,7 @@ import com.yx.lab.modules.system.entity.LabLoginLog;
 import com.yx.lab.modules.system.entity.LabUser;
 import com.yx.lab.modules.system.mapper.LabLoginLogMapper;
 import com.yx.lab.modules.system.mapper.LabUserMapper;
+import com.yx.lab.modules.system.vo.CaptchaVO;
 import com.yx.lab.modules.system.vo.LoginVO;
 import com.yx.lab.modules.system.vo.UserProfileVO;
 import lombok.RequiredArgsConstructor;
@@ -23,7 +24,17 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
+import javax.imageio.ImageIO;
+import java.awt.Color;
+import java.awt.Font;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
 import java.time.LocalDateTime;
+import java.util.Base64;
+import java.util.Locale;
+import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -36,6 +47,10 @@ public class AuthService {
 
     private static final String LOGIN_STATUS_SUCCESS = "SUCCESS";
     private static final String LOGIN_STATUS_FAILED = "FAILED";
+    private static final String CAPTCHA_REDIS_PREFIX = "lab:captcha:";
+    private static final String CAPTCHA_CHARS = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
+    private static final int CAPTCHA_EXPIRE_MINUTES = 3;
+    private static final Random CAPTCHA_RANDOM = new Random();
 
     private final LabUserMapper labUserMapper;
 
@@ -44,6 +59,69 @@ public class AuthService {
     private final StringRedisTemplate stringRedisTemplate;
 
     private final LabSecurityProperties securityProperties;
+
+    private void validateCaptcha(LoginRequest request) {
+        if (request == null || StrUtil.isBlank(request.getCaptchaId()) || StrUtil.isBlank(request.getCaptchaCode())) {
+            throw new BusinessException("请输入验证码");
+        }
+        String captchaKey = CAPTCHA_REDIS_PREFIX + request.getCaptchaId();
+        String cachedCode = stringRedisTemplate.opsForValue().get(captchaKey);
+        stringRedisTemplate.delete(captchaKey);
+        if (StrUtil.isBlank(cachedCode)) {
+            throw new BusinessException("验证码已过期，请刷新后重试");
+        }
+        String inputCode = StrUtil.trim(request.getCaptchaCode()).toUpperCase(Locale.ROOT);
+        if (!cachedCode.equalsIgnoreCase(inputCode)) {
+            throw new BusinessException("验证码错误");
+        }
+    }
+
+    private String createCaptchaCode() {
+        StringBuilder builder = new StringBuilder();
+        for (int i = 0; i < 4; i++) {
+            builder.append(CAPTCHA_CHARS.charAt(CAPTCHA_RANDOM.nextInt(CAPTCHA_CHARS.length())));
+        }
+        return builder.toString();
+    }
+
+    private String createCaptchaImage(String code) {
+        int width = 132;
+        int height = 42;
+        BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+        Graphics2D graphics = image.createGraphics();
+        try {
+            graphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            graphics.setColor(new Color(237, 247, 255));
+            graphics.fillRect(0, 0, width, height);
+            for (int i = 0; i < 8; i++) {
+                graphics.setColor(new Color(
+                        120 + CAPTCHA_RANDOM.nextInt(80),
+                        150 + CAPTCHA_RANDOM.nextInt(70),
+                        180 + CAPTCHA_RANDOM.nextInt(60)));
+                graphics.drawLine(
+                        CAPTCHA_RANDOM.nextInt(width),
+                        CAPTCHA_RANDOM.nextInt(height),
+                        CAPTCHA_RANDOM.nextInt(width),
+                        CAPTCHA_RANDOM.nextInt(height));
+            }
+            graphics.setFont(new Font("Arial", Font.BOLD, 26));
+            for (int i = 0; i < code.length(); i++) {
+                graphics.setColor(new Color(
+                        20 + CAPTCHA_RANDOM.nextInt(40),
+                        80 + CAPTCHA_RANDOM.nextInt(80),
+                        120 + CAPTCHA_RANDOM.nextInt(80)));
+                graphics.drawString(String.valueOf(code.charAt(i)), 18 + i * 26, 29 + CAPTCHA_RANDOM.nextInt(5));
+            }
+        } finally {
+            graphics.dispose();
+        }
+        try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+            ImageIO.write(image, "png", outputStream);
+            return "data:image/png;base64," + Base64.getEncoder().encodeToString(outputStream.toByteArray());
+        } catch (Exception e) {
+            throw new BusinessException("验证码生成失败");
+        }
+    }
 
     /**
      * 默认按 PC 端执行登录。
@@ -56,6 +134,22 @@ public class AuthService {
     }
 
     /**
+     * 生成登录验证码，并把答案短期存入缓存供登录校验。
+     *
+     * @return 验证码标识和图片
+     */
+    public CaptchaVO createCaptcha() {
+        String code = createCaptchaCode();
+        String captchaId = IdUtil.fastSimpleUUID();
+        stringRedisTemplate.opsForValue().set(
+                CAPTCHA_REDIS_PREFIX + captchaId,
+                code,
+                CAPTCHA_EXPIRE_MINUTES,
+                TimeUnit.MINUTES);
+        return new CaptchaVO(captchaId, createCaptchaImage(code));
+    }
+
+    /**
      * 按指定渠道执行登录。
      *
      * @param request 登录请求
@@ -63,6 +157,9 @@ public class AuthService {
      * @return 登录结果
      */
     public LoginVO login(LoginRequest request, String loginChannel) {
+        if ("PC".equalsIgnoreCase(loginChannel)) {
+            validateCaptcha(request);
+        }
         String username = request == null ? null : request.getUsername();
         LabUser user = labUserMapper.selectOne(new LambdaQueryWrapper<LabUser>()
                 .eq(LabUser::getUsername, username)

@@ -52,6 +52,12 @@ async function downloadExcel(url, params, fallbackName) {
  */
 export const loginApi = (data) => request.post('/api/auth/login', data)
 /**
+ * 获取登录验证码。
+ *
+ * @returns {Promise<any>} 验证码图片和标识。
+ */
+export const fetchCaptchaApi = () => request.get('/api/auth/captcha')
+/**
  * 移动端登录。
  *
  * @param {Object} data 登录请求体。

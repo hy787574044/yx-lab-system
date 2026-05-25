@@ -28,7 +28,21 @@
           <el-form-item label="密码" label-position="top">
             <el-input v-model="form.password" type="password" placeholder="请输入密码" show-password />
           </el-form-item>
-          <el-button type="primary" class="submit-btn" @click="submit">登录系统</el-button>
+          <el-form-item label="验证码" label-position="top">
+            <div class="captcha-row">
+              <el-input
+                v-model="form.captchaCode"
+                maxlength="4"
+                placeholder="请输入验证码"
+                @keyup.enter="submit"
+              />
+              <button class="captcha-image" type="button" title="点击刷新验证码" @click="loadCaptcha">
+                <img v-if="captchaImage" :src="captchaImage" alt="验证码" />
+                <span v-else>刷新</span>
+              </button>
+            </div>
+          </el-form-item>
+          <el-button type="primary" class="submit-btn" :loading="submitting" @click="submit">登录</el-button>
         </el-form>
 
         <div class="tips">默认账号：admin / Admin@123</div>
@@ -38,29 +52,59 @@
 </template>
 
 <script setup>
-import { reactive } from 'vue'
+import { onMounted, reactive, ref } from 'vue'
 import { ElButton } from 'element-plus/es/components/button/index.mjs'
 import { ElForm, ElFormItem } from 'element-plus/es/components/form/index.mjs'
 import { ElInput } from 'element-plus/es/components/input/index.mjs'
 import { ElMessage } from 'element-plus/es/components/message/index.mjs'
 import { useRouter } from 'vue-router'
-import { getMeApi, loginApi } from '../api/lab'
+import { fetchCaptchaApi, getMeApi, loginApi } from '../api/lab'
 import { setToken, setUser } from '../utils/auth'
 
 const router = useRouter()
+const submitting = ref(false)
+const captchaImage = ref('')
 const form = reactive({
   username: 'admin',
-  password: 'Admin@123'
+  password: 'Admin@123',
+  captchaId: '',
+  captchaCode: ''
 })
 
 async function submit() {
-  const loginResult = await loginApi(form)
-  setToken(loginResult.token)
-  const user = await getMeApi()
-  setUser(user)
-  ElMessage.success('登录成功')
-  router.push('/dashboard')
+  if (!form.username || !form.password || !form.captchaCode) {
+    ElMessage.warning('请填写用户名、密码和验证码')
+    return
+  }
+  submitting.value = true
+  try {
+    const loginResult = await loginApi({
+      username: form.username,
+      password: form.password,
+      captchaId: form.captchaId,
+      captchaCode: form.captchaCode
+    })
+    setToken(loginResult.token)
+    const user = await getMeApi()
+    setUser(user)
+    ElMessage.success('登录成功')
+    router.push('/dashboard')
+  } catch (error) {
+    form.captchaCode = ''
+    await loadCaptcha()
+  } finally {
+    submitting.value = false
+  }
 }
+
+async function loadCaptcha() {
+  const result = await fetchCaptchaApi()
+  form.captchaId = result.captchaId || ''
+  form.captchaCode = ''
+  captchaImage.value = result.imageBase64 || ''
+}
+
+onMounted(loadCaptcha)
 </script>
 
 <style scoped>
@@ -260,6 +304,36 @@ async function submit() {
 
 .login-form :deep(.el-input__wrapper) {
   min-height: 42px;
+}
+
+.captcha-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 132px;
+  gap: 10px;
+  align-items: center;
+}
+
+.captcha-image {
+  width: 132px;
+  height: 42px;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid rgba(70, 119, 161, 0.22);
+  border-radius: 10px;
+  background: #eef7ff;
+  cursor: pointer;
+}
+
+.captcha-image img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.captcha-image span {
+  color: #2f6f9f;
+  font-size: 13px;
 }
 
 .submit-btn {

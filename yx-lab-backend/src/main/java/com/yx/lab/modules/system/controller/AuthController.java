@@ -6,6 +6,7 @@ import com.yx.lab.modules.system.dto.LoginRequest;
 import com.yx.lab.modules.system.dto.PasswordChangeCommand;
 import com.yx.lab.modules.system.dto.UserProfileUpdateCommand;
 import com.yx.lab.modules.system.service.AuthService;
+import com.yx.lab.modules.system.vo.CaptchaVO;
 import com.yx.lab.modules.system.vo.LoginVO;
 import com.yx.lab.modules.system.vo.UserProfileVO;
 import io.swagger.v3.oas.annotations.Operation;
@@ -31,6 +32,17 @@ public class AuthController {
     private final AuthService authService;
 
     private final LabSecurityProperties securityProperties;
+
+    /**
+     * 获取登录验证码。
+     *
+     * @return 验证码图片和标识
+     */
+    @GetMapping("/captcha")
+    @Operation(summary = "获取登录验证码")
+    public ApiResponse<CaptchaVO> captcha() {
+        return ApiResponse.success(authService.createCaptcha());
+    }
 
     /**
      * PC 端登录。
