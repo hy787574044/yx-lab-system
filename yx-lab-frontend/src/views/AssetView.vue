@@ -473,6 +473,7 @@ import {
   updateInstrumentApi,
   uploadStorageFileApi
 } from '../api/lab'
+import { getPublicFileUrl } from '../config/appConfig'
 import {
   DEFAULT_PAGE_SIZE,
   getEnumLabel,
@@ -967,7 +968,7 @@ async function submitDocument() {
     const payload = { ...documentForm, viewerUserIds: [...documentForm.viewerUserIds] }
     if (selectedDocumentFile.value) {
       const uploadResult = await uploadStorageFileApi(selectedDocumentFile.value)
-      payload.fileUrl = uploadResult.filePath
+      payload.fileUrl = getPublicFileUrl(uploadResult?.fullUrl || uploadResult?.filePath || '')
       payload.fileSize = selectedDocumentFile.value.size
       payload.fileType = getFileExtension(selectedDocumentFile.value.name)
     }

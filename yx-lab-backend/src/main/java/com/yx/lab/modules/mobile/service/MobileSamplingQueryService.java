@@ -18,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -65,7 +66,6 @@ public class MobileSamplingQueryService {
                         LabWorkflowConstants.SamplingTaskStatus.PENDING,
                         LabWorkflowConstants.SamplingTaskStatus.IN_PROGRESS,
                         LabWorkflowConstants.SamplingTaskStatus.COMPLETED)
-                .orderByAsc(SamplingTask::getSamplingTime)
                 .orderByDesc(SamplingTask::getCreatedTime));
         if (tasks.isEmpty()) {
             return new PageResult<>(0L, Collections.emptyList());
@@ -82,6 +82,10 @@ public class MobileSamplingQueryService {
 
         List<MobileSamplingTodoVO> records = tasks.stream()
                 .filter(task -> shouldShow(task, sampleMap.get(task.getId())))
+                // 移动端采样待办优先展示仍需处理的任务，其次按最新下发时间倒序排列。
+                .sorted(Comparator
+                        .comparing((SamplingTask task) -> resolveTodoPriority(task, sampleMap.get(task.getId())))
+                        .thenComparing(SamplingTask::getCreatedTime, Comparator.nullsLast(Comparator.reverseOrder())))
                 .map(task -> toSamplingTodoVO(task, sampleMap.get(task.getId())))
                 .collect(Collectors.toList());
         return buildManualPageResult(records, query);
@@ -92,6 +96,16 @@ public class MobileSamplingQueryService {
             return true;
         }
         return LabWorkflowConstants.SamplingTaskStatus.COMPLETED.equals(task.getTaskStatus()) && sample == null;
+    }
+
+    private int resolveTodoPriority(SamplingTask task, LabSample sample) {
+        if (LabWorkflowConstants.TODO_TASK_STATUSES.contains(task.getTaskStatus())) {
+            return 0;
+        }
+        if (LabWorkflowConstants.SamplingTaskStatus.COMPLETED.equals(task.getTaskStatus()) && sample == null) {
+            return 1;
+        }
+        return 2;
     }
 
     private CurrentUser requireCurrentUser() {

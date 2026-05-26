@@ -468,6 +468,7 @@ import {
   updateSystemUserApi,
   uploadStorageFileApi
 } from '../api/lab'
+import { getPublicFileUrl } from '../config/appConfig'
 import { getUser, setUser } from '../utils/auth'
 import { labMenuGroups } from '../router/menuConfig'
 import { DEFAULT_PAGE_SIZE } from '../utils/labEnums'
@@ -1769,7 +1770,7 @@ async function submitUserForm() {
     let avatarUrl = String(userForm.avatarUrl || '').trim()
     if (selectedUserAvatarFile.value) {
       const uploadResult = await uploadStorageFileApi(selectedUserAvatarFile.value)
-      avatarUrl = uploadResult.filePath || ''
+      avatarUrl = getPublicFileUrl(uploadResult?.fullUrl || uploadResult?.filePath || '')
     }
     const payload = {
       username: String(userForm.username || '').trim(),

@@ -7,6 +7,22 @@ USE yx_lab;
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 
+-- 先清理业务数据，保留系统管理配置
+TRUNCATE TABLE lab_report_push_record;
+TRUNCATE TABLE lab_report;
+TRUNCATE TABLE lab_review_record;
+TRUNCATE TABLE lab_detection_item;
+TRUNCATE TABLE lab_detection_record;
+TRUNCATE TABLE lab_sample;
+TRUNCATE TABLE lab_sampling_task;
+TRUNCATE TABLE lab_sampling_plan;
+TRUNCATE TABLE lab_monitoring_point;
+TRUNCATE TABLE lab_instrument_maintenance;
+TRUNCATE TABLE lab_instrument;
+TRUNCATE TABLE lab_document_share;
+TRUNCATE TABLE lab_document;
+TRUNCATE TABLE lab_login_log;
+
 -- 取默认流程配置，方便样品登录、审核记录关联
 SELECT id INTO @reviewFlowId
 FROM lab_flow_config

@@ -223,6 +223,7 @@ import {
   Tickets
 } from '@element-plus/icons-vue'
 import { changeMyPasswordApi, logoutApi, previewStorageFileApi, updateMyProfileApi, uploadStorageFileApi } from '../../api/lab'
+import { getPublicFileUrl } from '../../config/appConfig'
 import { clearToken, getToken, getUser, setUser } from '../../utils/auth'
 import { labMenuGroups } from '../../router/menuConfig'
 import { getMenuPermissionCode } from '../../utils/menuPermission'
@@ -425,7 +426,7 @@ async function submitProfileForm() {
     let avatarUrl = profileForm.avatarUrl
     if (selectedAvatarFile.value) {
       const uploadResult = await uploadStorageFileApi(selectedAvatarFile.value)
-      avatarUrl = uploadResult.filePath || ''
+      avatarUrl = getPublicFileUrl(uploadResult?.fullUrl || uploadResult?.filePath || '')
     }
     const nextUser = await updateMyProfileApi({
       realName: String(profileForm.realName || '').trim(),

@@ -3,23 +3,51 @@ const PROD_API_BASE_URL = 'https://yangxin.yunhexx.com:8443'
 
 export const API_BASE_URL = import.meta.env.MODE === 'production' ? PROD_API_BASE_URL : DEV_API_BASE_URL
 
+function buildStorageFileUrl(filePath) {
+  const normalizedPath = String(filePath || '').trim().replace(/^\/+/, '')
+  if (!normalizedPath) {
+    return ''
+  }
+  const requestPath = `/api/storage/file?path=${encodeURIComponent(normalizedPath)}`
+  return API_BASE_URL === '/'
+    ? requestPath
+    : `${API_BASE_URL.replace(/\/$/, '')}${requestPath}`
+}
+
+function extractStorageFilePath(value) {
+  if (value.startsWith('/api/storage/file?path=') || value.startsWith('api/storage/file?path=')) {
+    const queryText = value.slice(value.indexOf('?') + 1)
+    return new URLSearchParams(queryText).get('path') || ''
+  }
+  if (/^https?:\/\//i.test(value)) {
+    try {
+      const url = new URL(value)
+      if (url.pathname === '/api/storage/file') {
+        return url.searchParams.get('path') || ''
+      }
+    } catch {
+      return ''
+    }
+  }
+  return ''
+}
+
 export function getPublicFileUrl(path) {
   const value = String(path || '').trim()
   if (!value) {
     return ''
   }
-  if (/^https?:\/\//i.test(value) || value.startsWith('blob:') || value.startsWith('data:')) {
+  if (value.startsWith('blob:') || value.startsWith('data:')) {
     return value
   }
-  if (value.startsWith('/api/storage/file?path=')) {
-    return API_BASE_URL === '/'
-      ? value
-      : `${API_BASE_URL.replace(/\/$/, '')}${value}`
+  const storageFilePath = extractStorageFilePath(value)
+  if (storageFilePath) {
+    return buildStorageFileUrl(storageFilePath)
   }
-  const normalizedPath = value.startsWith('/') ? value.slice(1) : value
-  return API_BASE_URL === '/'
-    ? `/api/storage/file?path=${encodeURIComponent(normalizedPath)}`
-    : `${API_BASE_URL.replace(/\/$/, '')}/api/storage/file?path=${encodeURIComponent(normalizedPath)}`
+  if (/^https?:\/\//i.test(value)) {
+    return value
+  }
+  return buildStorageFileUrl(value)
 }
 
 export function buildApiUrl(path) {
