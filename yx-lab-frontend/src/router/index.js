@@ -51,7 +51,7 @@ const routes = [
     path: '/login',
     meta: {
       title: '系统登录',
-      subtitle: '登录阳新化验室水质管理平台'
+      subtitle: '登录云河化验室水质管理平台'
     },
     component: () => import('../views/LoginView.vue')
   },
@@ -91,8 +91,8 @@ const router = createRouter({
 
 router.beforeEach((to, from, next) => {
   document.title = to.meta?.title
-    ? `${to.meta.title} - 阳新化验室水质管理平台`
-    : '阳新化验室水质管理平台'
+    ? `${to.meta.title} - 云河化验室水质管理平台`
+    : '云河化验室水质管理平台'
 
   if (to.path === '/login' || to.path === '/mobile/login') {
     next()

@@ -575,13 +575,13 @@ INSERT INTO lab_role (id, role_code, role_name, role_scope, status, remark, dele
 VALUES (905, 'REPORTER', '报告员', '报告闭环', 1, '负责正式报告生成、发布与推送', 0, 'system', 'system');
 
 INSERT INTO lab_org (id, org_code, org_name, parent_id, parent_name, org_type, status, remark, deleted, created_name, updated_name)
-VALUES (801, 'YX-LAB', '阳新实验室', NULL, NULL, '中心实验室', 1, '系统默认顶级机构', 0, 'system', 'system');
+VALUES (801, 'YX-LAB', '云河实验室', NULL, NULL, '中心实验室', 1, '系统默认顶级机构', 0, 'system', 'system');
 
 INSERT INTO lab_org (id, org_code, org_name, parent_id, parent_name, org_type, status, remark, deleted, created_name, updated_name)
-VALUES (802, 'YX-SAMPLE', '采样组', 801, '阳新实验室', '业务组', 1, '负责采样任务与样品登录', 0, 'system', 'system');
+VALUES (802, 'YX-SAMPLE', '采样组', 801, '云河实验室', '业务组', 1, '负责采样任务与样品登录', 0, 'system', 'system');
 
 INSERT INTO lab_org (id, org_code, org_name, parent_id, parent_name, org_type, status, remark, deleted, created_name, updated_name)
-VALUES (803, 'YX-DETECT', '检测审核组', 801, '阳新实验室', '业务组', 1, '负责检测、审核与报告发布', 0, 'system', 'system');
+VALUES (803, 'YX-DETECT', '检测审核组', 801, '云河实验室', '业务组', 1, '负责检测、审核与报告发布', 0, 'system', 'system');
 
 INSERT INTO lab_dict (id, dict_code, dict_name, module_name, item_text, status, remark, deleted, created_name, updated_name)
 VALUES (851, 'instrument_status', '设备状态字典', '仪器管理', '闲置\n使用中\n维保中\n停用', 1, '用于仪器设备状态展示与筛选', 0, 'system', 'system');
@@ -637,12 +637,12 @@ VALUES (1002, 'sampler', 'e86f78a8a3caf0b60d8e74e5942aa6d86dc150cd3c03338aef25b7
 INSERT INTO lab_user (id, username, password, real_name, role_code, phone, status, deleted, created_name, updated_name)
 VALUES (1003, 'reviewer', 'e86f78a8a3caf0b60d8e74e5942aa6d86dc150cd3c03338aef25b7d2d7e3acc7', '审核员', 'REVIEWER', '13800000002', 1, 0, 'system', 'system');
 
-UPDATE lab_user SET real_name = '系统管理员', org_id = 801, org_name = '阳新实验室' WHERE id = 1001;
+UPDATE lab_user SET real_name = '系统管理员', org_id = 801, org_name = '云河实验室' WHERE id = 1001;
 UPDATE lab_user SET real_name = '采样员', org_id = 802, org_name = '采样组' WHERE id = 1002;
 UPDATE lab_user SET real_name = '审核员', org_id = 803, org_name = '检测审核组' WHERE id = 1003;
 
 INSERT INTO lab_monitoring_point (id, point_name, longitude, latitude, region_name, service_population, frequency_type, owner_id, owner_name, contact_phone, point_type, point_status, created_name, updated_name)
-VALUES (2001, '城东水厂出厂水', '115.2121', '30.2211', '阳新县城东片区', 36000, 'DAILY', 1002, '采样员', '13800000001', 'FACTORY', 'ENABLED', 'system', 'system');
+VALUES (2001, '城东水厂出厂水', '115.2121', '30.2211', '云河县城东片区', 36000, 'DAILY', 1002, '采样员', '13800000001', 'FACTORY', 'ENABLED', 'system', 'system');
 
 INSERT INTO lab_detection_parameter (id, parameter_name, standard_min, standard_max, unit, exceed_rule, reference_standard, enabled, created_name, updated_name)
 VALUES

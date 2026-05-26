@@ -3,7 +3,7 @@
     <div class="mobile-login-card">
       <div class="mobile-login-head">
         <span class="mobile-login-tag">移动闭环</span>
-        <h1>阳新化验室移动工作台</h1>
+        <h1>云河化验室移动工作台</h1>
         <p>用手机完成采样、样品登录、检测提交、审核处理和报告回看。</p>
       </div>
 

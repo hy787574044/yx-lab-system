@@ -1,4 +1,4 @@
-﻿<template>
+﻿﻿﻿﻿﻿<template>
   <div :class="['content-grid', 'sampling-page', 'fixed-table-page', { 'sampling-page--plan': isPlanScene }]">
     <section v-if="!isPlanScene" class="glass-panel section-block fixed-table-section">
       <div class="section-head">
@@ -29,7 +29,6 @@
                 v-if="baseScene.key === 'sample-login'"
                 type="primary"
               class="toolbar-primary-button"
-              :disabled="!pendingLoggableTasks.length"
               @click="openLoginDialog()"
             >
               样品登录
@@ -2562,6 +2561,12 @@ function resetTaskCompleteForm() {
   taskCompleteForm.temperature = ''
   taskCompleteForm.photoUrls = ''
   taskCompleteForm.remark = ''
+  taskCompleteForm.address = ''
+  taskCompleteForm.latitude = ''
+  taskCompleteForm.longitude = ''
+  taskCompleteForm.address = ''
+  taskCompleteForm.latitude = ''
+  taskCompleteForm.longitude = ''
 }
 
 function resetTaskCompleteDialog() {
@@ -2698,7 +2703,10 @@ async function submitTaskCompleteForm() {
       weather: taskCompleteForm.weather,
       temperature: taskCompleteForm.temperature,
       photoUrls: taskCompleteForm.photoUrls,
-      remark: taskCompleteForm.remark
+      remark: taskCompleteForm.remark,
+      address: taskCompleteForm.address,
+      latitude: taskCompleteForm.latitude,
+      longitude: taskCompleteForm.longitude
     })
     taskCompleteDialogVisible.value = false
     ElMessage.success('采样录入已保存。')
@@ -2766,10 +2774,6 @@ function resetLoginForm() {
 }
 
 async function openLoginDialog(task = firstLoggableTask.value) {
-  if (!pendingLoggableTasks.value.length) {
-    ElMessage.warning('当前没有待登录的已完成采样任务')
-    return
-  }
   await Promise.all([loadDetectionProjects(), loadFlowOptions()])
   resetLoginForm()
   applyDefaultFlowSelections()
@@ -2869,7 +2873,11 @@ function formatPendingTaskLabel(task) {
 }
 
 async function submitSampleLogin() {
-  if (!loginForm.taskId || !loginForm.sealNo || !loginForm.pointId || !loginForm.pointName || !loginForm.sampleType || !loginForm.detectionTypeId || !loginForm.detectionItems || !loginForm.samplingTime) {
+  if (!loginForm.taskId) {
+    ElMessage.warning('没有可登录的任务，请先进行采样任务完成录入')
+    return
+  }
+  if (!loginForm.sealNo || !loginForm.pointId || !loginForm.pointName || !loginForm.sampleType || !loginForm.detectionTypeId || !loginForm.detectionItems || !loginForm.samplingTime) {
     ElMessage.warning('请完整填写样品登录信息')
     return
   }
@@ -3307,11 +3315,3 @@ watch(() => route.fullPath, () => {
   }
 }
 </style>
-
-
-
-
-
-
-
-

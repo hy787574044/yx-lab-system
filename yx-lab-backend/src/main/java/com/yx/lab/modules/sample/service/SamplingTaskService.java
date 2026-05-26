@@ -218,6 +218,9 @@ public class SamplingTaskService {
         task.setTemperature(command.getTemperature());
         task.setPhotoUrls(command.getPhotoUrls());
         task.setRemark(command.getRemark());
+        task.setAddress(command.getAddress());
+        task.setLatitude(command.getLatitude());
+        task.setLongitude(command.getLongitude());
         if (task.getStartedTime() == null) {
             task.setStartedTime(LocalDateTime.now());
         }

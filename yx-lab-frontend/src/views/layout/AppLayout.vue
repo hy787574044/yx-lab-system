@@ -5,7 +5,7 @@
         <button type="button" class="brand-panel" @click="goRoute('/dashboard')">
           <div class="brand-mark">YX</div>
           <div class="brand-copy">
-            <strong>阳新化验室水质管理平台</strong>
+            <strong>云河化验室水质管理平台</strong>
           </div>
         </button>
 

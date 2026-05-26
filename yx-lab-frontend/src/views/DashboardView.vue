@@ -2,7 +2,7 @@
   <div :class="['content-grid', 'dashboard-page', { 'dashboard-page--detector': viewMode === 'detector' }]" v-loading="loading">
     <section v-if="viewMode === 'leader'" class="glass-panel leader-hero">
       <div class="leader-hero__main">
-        <h3>化验室运行总览</h3>
+        <h3>化验室工作台</h3>
         <p>聚焦当前预警、质量趋势与流程节点进度，快速把握全局运行态势。</p>
         <div class="leader-hero__meta">
           <span>预警总量：{{ warningTotal }}</span>

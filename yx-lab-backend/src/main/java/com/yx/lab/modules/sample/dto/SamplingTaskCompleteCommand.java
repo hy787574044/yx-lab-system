@@ -21,4 +21,10 @@ public class SamplingTaskCompleteCommand {
     private String photoUrls;
 
     private String remark;
+
+    private String address;
+
+    private String latitude;
+
+    private String longitude;
 }

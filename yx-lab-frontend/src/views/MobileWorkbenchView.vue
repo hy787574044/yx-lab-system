@@ -1,4 +1,4 @@
-﻿<template>
+﻿﻿<template>
   <div class="mobile-shell">
     <header class="mobile-hero">
       <div class="hero-copy">
@@ -680,7 +680,7 @@ const stats = computed(() => [
 ])
 
 const tabOptions = computed(() => [
-  { value: 'overview', label: '总览', count: samplingTodoTotal.value + detectionTodoTotal.value + reviewTodoTotal.value },
+  { value: 'overview', label: '工作台', count: samplingTodoTotal.value + detectionTodoTotal.value + reviewTodoTotal.value },
   { value: 'sampling', label: '采样', count: samplingTodoTotal.value },
   { value: 'detection', label: '检测', count: detectionTodoTotal.value },
   { value: 'review', label: '审核', count: reviewTodoTotal.value },

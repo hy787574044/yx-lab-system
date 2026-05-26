@@ -791,7 +791,7 @@ public class ReportService {
                         .append("</tbody></table></section>");
             }
 
-            html.append("<footer class=\"paper-footer clearfix\"><span class=\"paper-footer__left\">阳新化验室管理系统通用报告模板</span><span class=\"paper-footer__right\">适配 A4 纵向打印，内容超出自动续页</span></footer>")
+            html.append("<footer class=\"paper-footer clearfix\"><span class=\"paper-footer__left\">云河化验室管理系统通用报告模板</span><span class=\"paper-footer__right\">适配 A4 纵向打印，内容超出自动续页</span></footer>")
                     .append("</section>");
         }
 

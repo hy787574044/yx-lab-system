@@ -133,7 +133,7 @@
               </tbody>
             </table>
             <div class="report-stamp">
-              <span>阳新化验报告</span>
+              <span>云河化验报告</span>
               <strong>化验室</strong>
             </div>
           </div>

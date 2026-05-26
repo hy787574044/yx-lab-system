@@ -104,4 +104,16 @@ public class SamplingTask extends BaseEntity {
     @Schema(description = "备注")
     @TableField("remark")
     private String remark;
+
+    @Schema(description = "坐标点名称")
+    @TableField("address")
+    private String address;
+
+    @Schema(description = "X坐标")
+    @TableField("latitude")
+    private String latitude;
+
+    @Schema(description = "Y坐标")
+    @TableField("longitude")
+    private String longitude;
 }

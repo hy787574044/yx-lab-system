@@ -1,15 +1,15 @@
 export const labMenuGroups = [
   {
     id: 'overview',
-    title: '运行总览',
+    title: '工作台总览',
     shortTitle: '总览',
     iconKey: 'DataAnalysis',
     defaultPath: '/dashboard',
     children: [
       {
         path: '/dashboard',
-        title: '运行总览',
-        shortTitle: '总览',
+        title: '工作台',
+        shortTitle: '工作台',
         subtitle: '统一查看样品、检测、审查与报告发布状态，便于快速识别当前业务处理进度。',
         componentKey: 'DashboardView'
       }

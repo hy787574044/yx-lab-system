@@ -118,8 +118,8 @@ VALUES
 -- 5. 监测点位、采样计划和采样任务。
 INSERT INTO lab_monitoring_point (id, point_name, longitude, latitude, region_name, service_population, frequency_type, owner_id, owner_name, contact_phone, point_type, point_status, deleted, created_by, created_name, created_time, updated_by, updated_name, updated_time)
 VALUES
-(740001, '城东水厂出厂水', '115.2121', '30.2211', '阳新县城东片区', 36000, 'DAILY', 1101, '陈采样', '13810001001', 'FACTORY', 'ENABLED', 0, 1001, '系统管理员', NOW() - INTERVAL 30 DAY, 1001, '系统管理员', NOW()),
-(740002, '城西水厂出厂水', '115.1781', '30.2051', '阳新县城西片区', 42000, 'DAILY', 1102, '李采样', '13810001002', 'FACTORY', 'ENABLED', 0, 1001, '系统管理员', NOW() - INTERVAL 28 DAY, 1001, '系统管理员', NOW()),
+(740001, '城东水厂出厂水', '115.2121', '30.2211', '云河县城东片区', 36000, 'DAILY', 1101, '陈采样', '13810001001', 'FACTORY', 'ENABLED', 0, 1001, '系统管理员', NOW() - INTERVAL 30 DAY, 1001, '系统管理员', NOW()),
+(740002, '城西水厂出厂水', '115.1781', '30.2051', '云河县城西片区', 42000, 'DAILY', 1102, '李采样', '13810001002', 'FACTORY', 'ENABLED', 0, 1001, '系统管理员', NOW() - INTERVAL 28 DAY, 1001, '系统管理员', NOW()),
 (740003, '富河原水取水口', '115.0912', '30.1548', '富河流域', 68000, 'WEEKLY', 1101, '陈采样', '13810001001', 'RAW', 'ENABLED', 0, 1001, '系统管理员', NOW() - INTERVAL 25 DAY, 1001, '系统管理员', NOW()),
 (740004, '兴国大道末梢点', '115.2266', '30.2199', '兴国大道', 12000, 'DAILY', 1102, '李采样', '13810001002', 'TERMINAL', 'ENABLED', 0, 1001, '系统管理员', NOW() - INTERVAL 18 DAY, 1001, '系统管理员', NOW()),
 (740005, '莲花湖社区末梢点', '115.2442', '30.2366', '莲花湖社区', 9800, 'WEEKLY', 1101, '陈采样', '13810001001', 'TERMINAL', 'ENABLED', 0, 1001, '系统管理员', NOW() - INTERVAL 15 DAY, 1001, '系统管理员', NOW()),
