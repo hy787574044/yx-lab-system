@@ -1278,3 +1278,27 @@ AggregateError [ECONNREFUSED]:
 AggregateError [ECONNREFUSED]: 
     at internalConnectMultiple (node:net:1142:49)
     at afterConnectMultiple (node:net:1723:7)
+[2m10:05:39[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/mobile/detection/todo?pageNum=1&pageSize=200[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+[2m10:05:39[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/mobile/sampling/todo?pageNum=1&pageSize=200[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+[2m10:05:39[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/mobile/detection/history?pageNum=1&pageSize=200[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+[2m10:05:39[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/mobile/review/todo?pageNum=1&pageSize=200[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+[2m10:05:39[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/mobile/review/history?pageNum=1&pageSize=200[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+[2m10:05:39[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/mobile/reports/mine?pageNum=1&pageSize=200[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)

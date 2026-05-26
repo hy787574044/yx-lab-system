@@ -1,4 +1,4 @@
-﻿﻿<template>
+﻿﻿﻿<template>
   <div class="mobile-shell">
     <header class="mobile-hero">
       <div class="hero-copy">
@@ -108,7 +108,7 @@
               </span>
             </div>
             <p>任务编号：{{ task.taskNo || '-' }}</p>
-            <p>封签编号：{{ task.sealNo || '待录入' }}</p>
+            <p>封签编号：{{ task.sealNo || task.seal_no || '待录入' }}</p>
             <p>计划时间：{{ task.samplingTime || '-' }}</p>
             <p>样品类型：{{ getEnumLabel(sampleTypeLabelMap, task.sampleType) }}</p>
             <p>检测项目组：{{ task.detectionItems || '-' }}</p>
@@ -895,8 +895,8 @@ async function abandonTask(task) {
 
 function openCompleteDialog(task) {
   completeForm.taskId = task.id
-  completeForm.sealNo = task.sealNo || ''
-  completeForm.onsiteMetrics = ''
+  completeForm.sealNo = task.sealNo || task.seal_no || ''
+  completeForm.onsiteMetrics = task.onsiteMetrics || task.onsite_metrics || ''
   completeForm.weather = task.weather || ''
   completeForm.temperature = task.temperature || ''
   completeForm.photoUrls = ''

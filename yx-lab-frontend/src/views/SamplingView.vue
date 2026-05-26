@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿<template>
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<template>
   <div :class="['content-grid', 'sampling-page', 'fixed-table-page', { 'sampling-page--plan': isPlanScene }]">
     <section v-if="!isPlanScene" class="glass-panel section-block fixed-table-section">
       <div class="section-head">
@@ -941,17 +941,22 @@
     <el-dialog
       v-model="taskDetailDialogVisible"
       title="采样任务详情"
-      width="760px"
+      width="600px"
+      top="5vh"
+      :lock-scroll="true"
       destroy-on-close
+      :modal-append-to-body="false"
+      :append-to-body="true"
+      class="task-detail-dialog"
       @closed="resetTaskDetailDialog"
     >
       <div class="task-detail-grid">
-        <div><span>任务编号</span><strong>{{ taskDetail?.taskNo || '-' }}</strong></div>
-        <div><span>采样封签号</span><strong>{{ taskDetail?.sealNo || '-' }}</strong></div>
-        <div><span>点位名称</span><strong>{{ taskDetail?.pointName || '-' }}</strong></div>
-        <div><span>采样人员</span><strong>{{ taskDetail?.samplerName || '-' }}</strong></div>
-        <div><span>任务状态</span><strong>{{ getEnumLabel(taskStatusLabelMap, taskDetail?.taskStatus) }}</strong></div>
-        <div><span>完成时间</span><strong>{{ taskDetail?.finishedTime || '-' }}</strong></div>
+        <div><span>任务编号</span><strong>{{ taskDetail?.taskNo || taskDetail?.task_no || '-' }}</strong></div>
+        <div><span>采样封签号</span><strong>{{ taskDetail?.sealNo || taskDetail?.seal_no || '-' }}</strong></div>
+        <div><span>点位名称</span><strong>{{ taskDetail?.pointName || taskDetail?.point_name || '-' }}</strong></div>
+        <div><span>采样人员</span><strong>{{ taskDetail?.samplerName || taskDetail?.sampler_name || '-' }}</strong></div>
+        <div><span>任务状态</span><strong>{{ getEnumLabel(taskStatusLabelMap, taskDetail?.taskStatus || taskDetail?.task_status) }}</strong></div>
+        <div><span>完成时间</span><strong>{{ taskDetail?.finishedTime || taskDetail?.finished_time || '-' }}</strong></div>
         <div><span>天气</span><strong>{{ taskDetail?.weather || '-' }}</strong></div>
         <div><span>温度</span><strong>{{ taskDetail?.temperature || '-' }}</strong></div>
       </div>
@@ -1106,6 +1111,8 @@ const loginDialogMode = ref('create')
 const planDialogVisible = ref(false)
 const taskCompleteDialogVisible = ref(false)
 const dispatchDialogVisible = ref(false)
+const mapSelectorVisible = ref(false)
+const mapSelectorValue = reactive({ address: '', latitude: '', longitude: '' })
 const taskDetailDialogVisible = ref(false)
 const editingPlanId = ref(null)
 const submitting = ref(false)
@@ -1196,7 +1203,10 @@ const taskCompleteForm = reactive({
   weather: '',
   temperature: '',
   photoUrls: '',
-  remark: ''
+  remark: '',
+  address: '',
+  latitude: '',
+  longitude: ''
 })
 
 function toSafeNumber(value) {
@@ -2564,13 +2574,88 @@ function resetTaskCompleteForm() {
   taskCompleteForm.address = ''
   taskCompleteForm.latitude = ''
   taskCompleteForm.longitude = ''
-  taskCompleteForm.address = ''
-  taskCompleteForm.latitude = ''
-  taskCompleteForm.longitude = ''
 }
 
 function resetTaskCompleteDialog() {
   resetTaskCompleteForm()
+}
+
+function openMapSelector() {
+  mapSelectorValue.address = taskCompleteForm.address
+  mapSelectorValue.latitude = taskCompleteForm.latitude
+  mapSelectorValue.longitude = taskCompleteForm.longitude
+  mapSelectorVisible.value = true
+  initMap()
+}
+
+function confirmMapSelection() {
+  taskCompleteForm.address = mapSelectorValue.address
+  taskCompleteForm.latitude = mapSelectorValue.latitude
+  taskCompleteForm.longitude = mapSelectorValue.longitude
+  mapSelectorVisible.value = false
+}
+
+let map = null
+let mapMarker = null
+
+function initMap() {
+  if (map) {
+    map.destroy()
+    map = null
+    mapMarker = null
+  }
+  if (!window.AMap) {
+    loadAMapScript()
+  } else {
+    createMap()
+  }
+}
+
+function loadAMapScript() {
+  const script = document.createElement('script')
+  script.src = 'https://webapi.amap.com/maps?v=2.0&key=da985cf3edbb156ab16aa5de2e8e954a&plugin=AMap.Geocoder'
+  script.onload = createMap
+  document.head.appendChild(script)
+}
+
+function createMap() {
+  const mapContainer = document.querySelector('.map-selector__container')
+  if (!mapContainer) return
+
+  map = new window.AMap.Map(mapContainer, {
+    center: mapSelectorValue.longitude && mapSelectorValue.latitude
+      ? [Number(mapSelectorValue.longitude), Number(mapSelectorValue.latitude)]
+      : [116.397428, 39.90923],
+    zoom: 15
+  })
+
+  map.on('click', async (e) => {
+    const lng = e.lnglat.getLng()
+    const lat = e.lnglat.getLat()
+
+    const geocoder = new window.AMap.Geocoder()
+    geocoder.getAddress([lng, lat], (status, res) => {
+      mapSelectorValue.address = res.regeocode?.formattedAddress || '未知地址'
+      mapSelectorValue.latitude = String(lat)
+      mapSelectorValue.longitude = String(lng)
+
+      if (mapMarker) {
+        mapMarker.setPosition([lng, lat])
+      } else {
+        mapMarker = new window.AMap.Marker({
+          position: [lng, lat],
+          map: map
+        })
+      }
+    })
+  })
+
+  if (mapSelectorValue.longitude && mapSelectorValue.latitude) {
+    mapMarker = new window.AMap.Marker({
+      position: [Number(mapSelectorValue.longitude), Number(mapSelectorValue.latitude)],
+      map: map
+    })
+  }
 }
 
 function clearTaskCompletePhotoPreviewUrls() {
@@ -2664,12 +2749,15 @@ async function openTaskCompleteDialog(row) {
     clearTaskCompletePhotoPreviewUrls()
     taskCompletePhotoList.value = extractTaskPhotoUrls(task).map(buildPhotoEntry)
     taskCompleteForm.taskId = task.id
-    taskCompleteForm.sealNo = task.sealNo || ''
-    taskCompleteForm.onsiteMetrics = task.onsiteMetrics || ''
+    taskCompleteForm.sealNo = task.sealNo || task.seal_no || ''
+    taskCompleteForm.onsiteMetrics = task.onsiteMetrics || task.onsite_metrics || ''
     taskCompleteForm.weather = task.weather || ''
     taskCompleteForm.temperature = task.temperature || ''
     taskCompleteForm.photoUrls = extractTaskPhotoUrls(task).join(',')
     taskCompleteForm.remark = task.remark || ''
+    taskCompleteForm.address = task.address || ''
+    taskCompleteForm.latitude = task.latitude || task.x_coordinate || ''
+    taskCompleteForm.longitude = task.longitude || task.y_coordinate || ''
     taskCompleteDialogVisible.value = true
   } catch (error) {
     ElMessage.error(error?.message || '获取采样录入信息失败')
@@ -3313,5 +3401,49 @@ watch(() => route.fullPath, () => {
   .plan-form-grid {
     grid-template-columns: 1fr;
   }
+}
+
+.coordinate-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.coordinate-fields {
+  display: flex;
+  gap: 12px;
+}
+
+.coordinate-field {
+  flex: 1;
+}
+
+:deep(.task-detail-dialog .el-dialog) {
+  margin-top: 5vh;
+}
+
+:deep(.task-detail-dialog .el-dialog__body) {
+  max-height: 50vh;
+  overflow-y: auto;
+}
+
+.map-selector {
+  display: flex;
+  flex-direction: column;
+  height: 400px;
+}
+
+.map-selector__container {
+  flex: 1;
+  width: 100%;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+}
+
+.map-selector__info {
+  padding: 12px;
+  background: #f5f5f5;
+  border-top: 1px solid #e0e0e0;
+  font-size: 14px;
 }
 </style>

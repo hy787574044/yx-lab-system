@@ -1,0 +1,129 @@
+<!-- src/components/MapSelector.vue -->
+<template>
+  <div class="map-selector">
+    <div ref="mapContainer" class="map-selector__container"></div>
+    <div class="map-selector__info">
+      <div>坐标点名称：{{ address }}</div>
+      <div>X坐标：{{ latitude }}</div>
+      <div>Y坐标：{{ longitude }}</div>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, onMounted, onUnmounted, watch } from 'vue'
+import AMapLoader from '@amap/amap-jsapi-loader'
+
+const props = defineProps({
+  modelValue: {
+    type: Object,
+    default: () => ({ address: '', latitude: '', longitude: '' })
+  }
+})
+
+const emit = defineEmits(['update:modelValue'])
+
+const mapContainer = ref(null)
+let map = null
+let marker = null
+
+const address = ref(props.modelValue.address)
+const latitude = ref(props.modelValue.latitude)
+const longitude = ref(props.modelValue.longitude)
+
+watch(() => props.modelValue, (newVal) => {
+  address.value = newVal.address
+  latitude.value = newVal.latitude
+  longitude.value = newVal.longitude
+  if (marker && newVal.latitude && newVal.longitude) {
+    marker.setPosition([Number(newVal.longitude), Number(newVal.latitude)])
+  }
+}, { deep: true })
+
+const updateValue = () => {
+  emit('update:modelValue', {
+    address: address.value,
+    latitude: latitude.value,
+    longitude: longitude.value
+  })
+}
+
+onMounted(async () => {
+  try {
+    const AMap = await AMapLoader.load({
+      key: 'da985cf3edbb156ab16aa5de2e8e954a',
+      version: '2.0',
+      plugins: ['AMap.Geocoder']
+    })
+
+    map = new AMap.Map(mapContainer.value, {
+      center: longitude.value && latitude.value
+          ? [Number(longitude.value), Number(latitude.value)]
+          : [116.397428, 39.90923],
+      zoom: 15
+    })
+
+    map.on('click', async (e) => {
+      const lng = e.lnglat.getLng()
+      const lat = e.lnglat.getLat()
+
+      const geocoder = new AMap.Geocoder()
+      const result = await new Promise((resolve) => {
+        geocoder.getAddress([lng, lat], (status, res) => {
+          resolve(res)
+        })
+      })
+
+      address.value = result.regeocode?.formattedAddress || '未知地址'
+      latitude.value = String(lat)
+      longitude.value = String(lng)
+
+      if (marker) {
+        marker.setPosition([lng, lat])
+      } else {
+        marker = new AMap.Marker({
+          position: [lng, lat],
+          map: map
+        })
+      }
+
+      updateValue()
+    })
+
+    if (longitude.value && latitude.value) {
+      marker = new AMap.Marker({
+        position: [Number(longitude.value), Number(latitude.value)],
+        map: map
+      })
+    }
+  } catch (error) {
+    console.error('地图加载失败:', error)
+  }
+})
+
+onUnmounted(() => {
+  if (map) {
+    map.destroy()
+  }
+})
+</script>
+
+<style scoped>
+.map-selector {
+  display: flex;
+  flex-direction: column;
+  height: 400px;
+}
+
+.map-selector__container {
+  flex: 1;
+  width: 100%;
+}
+
+.map-selector__info {
+  padding: 12px;
+  background: #f5f5f5;
+  border-top: 1px solid #e0e0e0;
+  font-size: 14px;
+}
+</style>

@@ -136,6 +136,8 @@ public class MobileSamplingQueryService {
             vo.setSampleStatus(sample.getSampleStatus());
             vo.setSampleLogged(Boolean.TRUE);
         } else {
+            // 如果没有样品，使用任务的封签号（支持提前录入封签号的场景）
+            vo.setSealNo(task.getSealNo());
             vo.setSampleLogged(Boolean.FALSE);
         }
         return vo;
