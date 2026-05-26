@@ -7,6 +7,7 @@ import com.yx.lab.common.constant.LabWorkflowConstants;
 import com.yx.lab.common.exception.BusinessException;
 import com.yx.lab.common.model.PageResult;
 import com.yx.lab.common.security.CurrentUser;
+import com.yx.lab.common.security.DataScopeHelper;
 import com.yx.lab.common.security.SecurityContext;
 import com.yx.lab.common.util.PageUtils;
 import com.yx.lab.modules.detection.dto.DetectionRecordQuery;
@@ -32,6 +33,8 @@ public class MobileReviewQueryService {
     private final DetectionRecordMapper detectionRecordMapper;
 
     private final ReviewRecordMapper reviewRecordMapper;
+
+    private final DataScopeHelper dataScopeHelper;
 
     /**
      * 分页查询当前审核人的审核历史。
@@ -66,6 +69,7 @@ public class MobileReviewQueryService {
      * @return 审核待办分页结果
      */
     public PageResult<MobileReviewTodoVO> reviewTodo(DetectionRecordQuery query) {
+        CurrentUser currentUser = requireCurrentUser();
         String keyword = query == null ? null : StrUtil.trim(query.getKeyword());
         Page<DetectionRecord> page = detectionRecordMapper.selectPage(
                 PageUtils.buildPage(query),
@@ -77,6 +81,9 @@ public class MobileReviewQueryService {
                                 .or()
                                 .like(DetectionRecord::getDetectionTypeName, keyword))
                         .eq(DetectionRecord::getDetectionStatus, LabWorkflowConstants.DetectionStatus.SUBMITTED)
+                        // 审查员只能查看分配给自己的审核任务
+                        .eq(dataScopeHelper.isRole("REVIEWER") && currentUser.getUserId() != null,
+                                DetectionRecord::getReviewerId, currentUser.getUserId())
                         .orderByDesc(DetectionRecord::getDetectionTime)
                         .orderByDesc(DetectionRecord::getCreatedTime));
         return new PageResult<>(page.getTotal(), page.getRecords().stream()

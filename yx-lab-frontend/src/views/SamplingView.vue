@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<template>
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<template>
   <div :class="['content-grid', 'sampling-page', 'fixed-table-page', { 'sampling-page--plan': isPlanScene }]">
     <section v-if="!isPlanScene" class="glass-panel section-block fixed-table-section">
       <div class="section-head">
@@ -952,7 +952,7 @@
     >
       <div class="task-detail-grid">
         <div><span>任务编号</span><strong>{{ taskDetail?.taskNo || taskDetail?.task_no || '-' }}</strong></div>
-        <div><span>采样封签号</span><strong>{{ taskDetail?.sealNo || taskDetail?.seal_no || '-' }}</strong></div>
+        <div><span>采样封签号</span><strong>{{ taskDetail?.sealNo || '-' }}</strong></div>
         <div><span>点位名称</span><strong>{{ taskDetail?.pointName || taskDetail?.point_name || '-' }}</strong></div>
         <div><span>采样人员</span><strong>{{ taskDetail?.samplerName || taskDetail?.sampler_name || '-' }}</strong></div>
         <div><span>任务状态</span><strong>{{ getEnumLabel(taskStatusLabelMap, taskDetail?.taskStatus || taskDetail?.task_status) }}</strong></div>

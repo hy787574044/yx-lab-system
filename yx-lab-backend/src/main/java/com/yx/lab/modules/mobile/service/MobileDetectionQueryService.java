@@ -7,6 +7,7 @@ import com.yx.lab.common.constant.LabWorkflowConstants;
 import com.yx.lab.common.exception.BusinessException;
 import com.yx.lab.common.model.PageResult;
 import com.yx.lab.common.security.CurrentUser;
+import com.yx.lab.common.security.DataScopeHelper;
 import com.yx.lab.common.security.SecurityContext;
 import com.yx.lab.common.util.PageUtils;
 import com.yx.lab.modules.detection.dto.DetectionRecordQuery;
@@ -35,6 +36,8 @@ public class MobileDetectionQueryService {
 
     private final DetectionRecordMapper detectionRecordMapper;
 
+    private final DataScopeHelper dataScopeHelper;
+
     /**
      * 分页查询移动端检测待办。
      *
@@ -42,6 +45,7 @@ public class MobileDetectionQueryService {
      * @return 检测待办分页结果
      */
     public PageResult<MobileDetectionTodoVO> detectionTodo(LabSampleQuery query) {
+        CurrentUser currentUser = requireCurrentUser();
         Page<LabSample> page = labSampleMapper.selectPage(
                 PageUtils.buildPage(query),
                 new LambdaQueryWrapper<LabSample>()
@@ -53,6 +57,9 @@ public class MobileDetectionQueryService {
                                 .like(LabSample::getPointName, StrUtil.trim(query.getKeyword())))
                         .eq(StrUtil.isNotBlank(query.getSampleStatus()), LabSample::getSampleStatus, query.getSampleStatus())
                         .eq(StrUtil.isNotBlank(query.getSampleType()), LabSample::getSampleType, query.getSampleType())
+                        // 检测员只能查看分配给自己的样品
+                        .eq(dataScopeHelper.isRole("DETECTOR") && currentUser.getUserId() != null,
+                                LabSample::getDetectorId, currentUser.getUserId())
                         .in(LabSample::getSampleStatus, LabWorkflowConstants.DETECTABLE_SAMPLE_STATUSES)
                         .orderByDesc(LabSample::getSealTime)
                         .orderByDesc(LabSample::getCreatedTime));
