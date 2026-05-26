@@ -15,8 +15,14 @@ import com.yx.lab.modules.asset.entity.Instrument;
 import com.yx.lab.modules.asset.entity.InstrumentMaintenance;
 import com.yx.lab.modules.asset.mapper.InstrumentMaintenanceMapper;
 import com.yx.lab.modules.asset.mapper.InstrumentMapper;
+import com.yx.lab.modules.sample.vo.StatusCountVO;
+import com.yx.lab.modules.storage.service.StorageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * 设备台账服务，统一处理设备档案与维修记录的维护。
@@ -28,6 +34,8 @@ public class InstrumentAssetService {
     private final InstrumentMapper instrumentMapper;
 
     private final InstrumentMaintenanceMapper maintenanceMapper;
+
+    private final StorageService storageService;
 
     /**
      * 分页查询设备台账列表。
@@ -50,7 +58,22 @@ public class InstrumentAssetService {
                         .eq(StrUtil.isNotBlank(query.getInstrumentStatus()), Instrument::getInstrumentStatus, query.getInstrumentStatus())
                         .like(StrUtil.isNotBlank(query.getManufacturer()), Instrument::getManufacturer, query.getManufacturer())
                         .orderByDesc(Instrument::getCreatedTime));
+        page.getRecords().forEach(this::normalizeInstrumentFileUrlsForView);
         return new PageResult<>(page.getTotal(), page.getRecords());
+    }
+
+    public List<StatusCountVO> instrumentStats() {
+        return java.util.Arrays.asList(
+                statusCount("ALL", countInstrumentsByStatus(null)),
+                statusCount(LabWorkflowConstants.InstrumentStatus.NORMAL,
+                        countInstrumentsByStatus(LabWorkflowConstants.InstrumentStatus.NORMAL)),
+                statusCount("INACTIVE",
+                        countInstrumentsByStatuses(java.util.Arrays.asList(
+                                LabWorkflowConstants.InstrumentStatus.DISABLED,
+                                LabWorkflowConstants.InstrumentStatus.MAINTENANCE))),
+                statusCount(LabWorkflowConstants.InstrumentStatus.CALIBRATING,
+                        countInstrumentsByStatus(LabWorkflowConstants.InstrumentStatus.CALIBRATING))
+        );
     }
 
     /**
@@ -60,7 +83,9 @@ public class InstrumentAssetService {
      * @return 设备详情
      */
     public Instrument instrumentDetail(Long id) {
-        return requireInstrument(id);
+        Instrument instrument = requireInstrument(id);
+        normalizeInstrumentFileUrlsForView(instrument);
+        return instrument;
     }
 
     /**
@@ -124,6 +149,18 @@ public class InstrumentAssetService {
         return new PageResult<>(page.getTotal(), page.getRecords());
     }
 
+    public List<StatusCountVO> maintenanceStats() {
+        LocalDateTime now = LocalDateTime.now();
+        return java.util.Arrays.asList(
+                statusCount("ALL", countMaintenances(null, null, null, false, null)),
+                statusCount("RECENT_7_DAYS", countMaintenances(now.minusDays(7), null, null, false, null)),
+                statusCount("CURRENT_MONTH", countMaintenances(
+                        now.withDayOfMonth(1).toLocalDate().atStartOfDay(), null, null, false, null)),
+                statusCount("EXTERNAL", countMaintenances(null, null, null, true, null)),
+                statusCount("HIGH_COST", countMaintenances(null, null, null, false, new BigDecimal("1000")))
+        );
+    }
+
     /**
      * 新增设备维修记录。
      *
@@ -156,6 +193,40 @@ public class InstrumentAssetService {
         maintenanceMapper.deleteById(requireMaintenance(id).getId());
     }
 
+    private StatusCountVO statusCount(String status, Long count) {
+        StatusCountVO vo = new StatusCountVO();
+        vo.setStatus(status);
+        vo.setCount(count == null ? 0L : count);
+        return vo;
+    }
+
+    private Long countInstrumentsByStatus(String status) {
+        Long count = instrumentMapper.selectCount(new LambdaQueryWrapper<Instrument>()
+                .eq(StrUtil.isNotBlank(status), Instrument::getInstrumentStatus, status));
+        return count == null ? 0L : count;
+    }
+
+    private Long countInstrumentsByStatuses(List<String> statuses) {
+        Long count = instrumentMapper.selectCount(new LambdaQueryWrapper<Instrument>()
+                .in(statuses != null && !statuses.isEmpty(), Instrument::getInstrumentStatus, statuses));
+        return count == null ? 0L : count;
+    }
+
+    private Long countMaintenances(LocalDateTime startTime,
+                                   LocalDateTime endTime,
+                                   Long instrumentId,
+                                   boolean external,
+                                   BigDecimal minCost) {
+        Long count = maintenanceMapper.selectCount(new LambdaQueryWrapper<InstrumentMaintenance>()
+                .eq(instrumentId != null, InstrumentMaintenance::getInstrumentId, instrumentId)
+                .ge(startTime != null, InstrumentMaintenance::getMaintenanceTime, startTime)
+                .lt(endTime != null, InstrumentMaintenance::getMaintenanceTime, endTime)
+                .isNotNull(external, InstrumentMaintenance::getMaintenanceCompany)
+                .ne(external, InstrumentMaintenance::getMaintenanceCompany, "")
+                .ge(minCost != null, InstrumentMaintenance::getMaintenanceCost, minCost));
+        return count == null ? 0L : count;
+    }
+
     private Instrument requireInstrument(Long id) {
         Instrument instrument = instrumentMapper.selectById(id);
         if (instrument == null) {
@@ -182,8 +253,14 @@ public class InstrumentAssetService {
         entity.setOwnerName(StrUtil.trim(command.getOwnerName()));
         entity.setInstrumentStatus(StrUtil.trim(command.getInstrumentStatus()));
         entity.setStorageLocation(StrUtil.trim(command.getStorageLocation()));
-        entity.setCertificateUrl(StrUtil.trim(command.getCertificateUrl()));
+        entity.setCertificateUrl(storageService.toFullUrl(command.getCertificateUrl()));
         entity.setRemark(StrUtil.trim(command.getRemark()));
+    }
+
+    private void normalizeInstrumentFileUrlsForView(Instrument entity) {
+        if (entity != null) {
+            entity.setCertificateUrl(storageService.toFullUrl(entity.getCertificateUrl()));
+        }
     }
 
     private void applyMaintenanceCommand(InstrumentMaintenance entity, InstrumentMaintenanceSaveCommand command) {

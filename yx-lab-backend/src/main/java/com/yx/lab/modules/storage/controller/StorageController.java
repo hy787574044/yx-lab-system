@@ -43,9 +43,11 @@ public class StorageController {
     @Operation(summary = "上传文件")
     public ApiResponse<Map<String, String>> upload(@RequestParam("file") MultipartFile file) throws IOException {
         String filePath = storageService.store(file);
+        String fullUrl = storageService.toFullUrl(filePath);
         Map<String, String> result = new LinkedHashMap<>();
-        result.put("filePath", filePath);
-        result.put("fullUrl", storageService.toFullUrl(filePath));
+        result.put("filePath", fullUrl);
+        result.put("fullUrl", fullUrl);
+        result.put("relativePath", filePath);
         return ApiResponse.success(result);
     }
 

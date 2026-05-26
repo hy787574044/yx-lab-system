@@ -13,6 +13,7 @@ import com.yx.lab.modules.report.entity.LabReport;
 import com.yx.lab.modules.report.entity.ReportTemplate;
 import com.yx.lab.modules.report.service.ReportService;
 import com.yx.lab.modules.report.vo.ReportPreviewVO;
+import com.yx.lab.modules.sample.vo.StatusCountVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -32,6 +33,7 @@ import org.springframework.web.bind.annotation.RestController;
 import javax.validation.Valid;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 /**
  * 报告控制器。
@@ -56,6 +58,12 @@ public class ReportController {
     @Operation(summary = "报告分页")
     public ApiResponse<PageResult<LabReport>> page(@Validated ReportQuery query) {
         return ApiResponse.success(reportService.page(query));
+    }
+
+    @GetMapping("/stats")
+    @Operation(summary = "鎶ュ憡鐘舵€佺粺璁?")
+    public ApiResponse<List<StatusCountVO>> stats() {
+        return ApiResponse.success(reportService.statusStats());
     }
 
     /**

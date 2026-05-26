@@ -18,6 +18,7 @@ import com.yx.lab.modules.sample.entity.LabSample;
 import com.yx.lab.modules.sample.entity.SamplingTask;
 import com.yx.lab.modules.sample.mapper.LabSampleMapper;
 import com.yx.lab.modules.sample.mapper.SamplingTaskMapper;
+import com.yx.lab.modules.sample.vo.StatusCountVO;
 import com.yx.lab.modules.storage.service.StorageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -61,7 +62,53 @@ public class SamplingTaskService {
                                 SamplingTask::getSamplerId,
                                 resolveScopedSamplerId(query.getSamplerId()))
                         .orderByDesc(SamplingTask::getCreatedTime));
+        page.getRecords().forEach(this::normalizeTaskFileUrlsForView);
         return new PageResult<>(page.getTotal(), page.getRecords());
+    }
+
+    /**
+     * 按任务状态统计当前用户可见范围内的采样任务数量。
+     *
+     * @return 状态数量列表
+     */
+    public List<StatusCountVO> statusStats() {
+        return Arrays.asList(
+                statusCount("ALL", countTasksByStatus(null)),
+                statusCount(LabWorkflowConstants.SamplingTaskStatus.PENDING,
+                        countTasksByStatus(LabWorkflowConstants.SamplingTaskStatus.PENDING)),
+                statusCount(LabWorkflowConstants.SamplingTaskStatus.IN_PROGRESS,
+                        countTasksByStatus(LabWorkflowConstants.SamplingTaskStatus.IN_PROGRESS)),
+                statusCount(LabWorkflowConstants.SamplingTaskStatus.COMPLETED,
+                        countTasksByStatus(LabWorkflowConstants.SamplingTaskStatus.COMPLETED)),
+                statusCount(LabWorkflowConstants.SamplingTaskStatus.ABANDONED,
+                        countTasksByStatus(LabWorkflowConstants.SamplingTaskStatus.ABANDONED)),
+                statusCount("UNLOGGED", countUnloggedCompletedTasks()));
+    }
+
+    private StatusCountVO statusCount(String status, Long count) {
+        StatusCountVO vo = new StatusCountVO();
+        vo.setStatus(status);
+        vo.setCount(count == null ? 0L : count);
+        return vo;
+    }
+
+    private Long countTasksByStatus(String taskStatus) {
+        return samplingTaskMapper.selectCount(new LambdaQueryWrapper<SamplingTask>()
+                .eq(StrUtil.isNotBlank(taskStatus), SamplingTask::getTaskStatus, taskStatus)
+                .eq(resolveScopedSamplerId(null) != null,
+                        SamplingTask::getSamplerId,
+                        resolveScopedSamplerId(null)));
+    }
+
+    private Long countUnloggedCompletedTasks() {
+        List<SamplingTask> completedTasks = samplingTaskMapper.selectList(new LambdaQueryWrapper<SamplingTask>()
+                .eq(SamplingTask::getTaskStatus, LabWorkflowConstants.SamplingTaskStatus.COMPLETED)
+                .eq(resolveScopedSamplerId(null) != null,
+                        SamplingTask::getSamplerId,
+                        resolveScopedSamplerId(null)));
+        return completedTasks.stream()
+                .filter(task -> !isTaskRegistered(task))
+                .count();
     }
 
     private Long resolveScopedSamplerId(Long querySamplerId) {
@@ -81,7 +128,9 @@ public class SamplingTaskService {
      * @return 采样任务详情
      */
     public SamplingTask detail(Long id) {
-        return requireTask(id);
+        SamplingTask task = requireTask(id);
+        normalizeTaskFileUrlsForView(task);
+        return task;
     }
 
     /**
@@ -91,10 +140,12 @@ public class SamplingTaskService {
      */
     public List<SamplingTask> todoMine() {
         CurrentUser currentUser = SecurityContext.getCurrentUser();
-        return samplingTaskMapper.selectList(new LambdaQueryWrapper<SamplingTask>()
+        List<SamplingTask> tasks = samplingTaskMapper.selectList(new LambdaQueryWrapper<SamplingTask>()
                 .eq(SamplingTask::getSamplerId, currentUser.getUserId())
                 .in(SamplingTask::getTaskStatus, LabWorkflowConstants.TODO_TASK_STATUSES)
                 .orderByAsc(SamplingTask::getSamplingTime));
+        tasks.forEach(this::normalizeTaskFileUrlsForView);
+        return tasks;
     }
 
     /**
@@ -250,6 +301,12 @@ public class SamplingTaskService {
                 .collect(Collectors.joining(","));
     }
 
+    private void normalizeTaskFileUrlsForView(SamplingTask task) {
+        if (task != null) {
+            task.setPhotoUrls(storageService.toFullUrls(task.getPhotoUrls()));
+        }
+    }
+
     private SamplingTask requireTask(Long id) {
         SamplingTask task = samplingTaskMapper.selectById(id);
         if (task == null) {
@@ -283,6 +340,19 @@ public class SamplingTaskService {
                 || LabWorkflowConstants.SampleRegisterStatus.REGISTERED.equals(task.getSampleRegisterStatus())) {
             throw new BusinessException("样品已完成登记，不能再修改任务封签号。");
         }
+    }
+
+    private boolean isTaskRegistered(SamplingTask task) {
+        if (task == null) {
+            return false;
+        }
+        if (task.getSampleId() != null
+                || LabWorkflowConstants.SampleRegisterStatus.REGISTERED.equals(task.getSampleRegisterStatus())) {
+            return true;
+        }
+        Long sampleCount = labSampleMapper.selectCount(new LambdaQueryWrapper<LabSample>()
+                .eq(LabSample::getTaskId, task.getId()));
+        return sampleCount != null && sampleCount > 0;
     }
 
     private void applySealNo(SamplingTask task, String sealNo) {

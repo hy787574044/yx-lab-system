@@ -220,6 +220,7 @@ import {
   deleteInstrumentMaintenanceApi,
   exportInstrumentMaintenancesApi,
   fetchInstrumentMaintenancesApi,
+  fetchInstrumentMaintenanceStatsApi,
   fetchInstrumentsApi,
   updateInstrumentMaintenanceApi
 } from '../api/lab'
@@ -241,6 +242,7 @@ const query = reactive({
 
 const records = ref([])
 const total = ref(0)
+const statCounts = ref({})
 const activeStatKey = ref('全部记录')
 const instrumentOptions = ref([])
 
@@ -272,6 +274,17 @@ function toSafeNumber(value) {
   return Number.isFinite(num) ? num : 0
 }
 
+function buildCountMap(items) {
+  return (items || []).reduce((result, item) => {
+    result[String(item.status || '')] = toSafeNumber(item.count)
+    return result
+  }, {})
+}
+
+function getCount(key) {
+  return toSafeNumber(statCounts.value[key])
+}
+
 function formatMoney(value) {
   const amount = toSafeNumber(value)
   return amount ? `¥${amount.toFixed(2)}` : '¥0.00'
@@ -290,52 +303,31 @@ const keywordFilteredRecords = computed(() => {
   ))
 })
 
-const recentCount = computed(() =>
-  keywordFilteredRecords.value.filter((item) => dayjs(item.maintenanceTime).isAfter(dayjs().subtract(7, 'day'))).length
-)
-
-const currentMonthCount = computed(() =>
-  keywordFilteredRecords.value.filter((item) => dayjs(item.maintenanceTime).isSame(dayjs(), 'month')).length
-)
-
-const externalCount = computed(() =>
-  keywordFilteredRecords.value.filter((item) => String(item.maintenanceCompany || '').trim()).length
-)
-
-const highCostCount = computed(() =>
-  keywordFilteredRecords.value.filter((item) => toSafeNumber(item.maintenanceCost) >= 1000).length
-)
-
 const stats = computed(() => [
   {
     label: '全部记录',
-    value: toSafeNumber(total.value),
+    value: getCount('ALL'),
     desc: '设备维修分页总量'
   },
   {
-    label: '本页记录',
-    value: keywordFilteredRecords.value.length,
-    desc: '当前分页已加载并筛选后的记录数'
-  },
-  {
     label: '最近7天',
-    value: recentCount.value,
-    desc: '当前页近 7 天内的维修记录'
+    value: getCount('RECENT_7_DAYS'),
+    desc: '近 7 天内的维修记录'
   },
   {
     label: '本月维修',
-    value: currentMonthCount.value,
-    desc: '当前页本月发生的维修记录'
+    value: getCount('CURRENT_MONTH'),
+    desc: '本月发生的维修记录'
   },
   {
     label: '外部维修',
-    value: externalCount.value,
-    desc: '当前页由外部维修公司处理的记录'
+    value: getCount('EXTERNAL'),
+    desc: '由外部维修公司处理的记录'
   },
   {
     label: '高成本维修',
-    value: highCostCount.value,
-    desc: '当前页维修费用不低于 1000 元的记录'
+    value: getCount('HIGH_COST'),
+    desc: '维修费用不低于 1000 元的记录'
   }
 ])
 
@@ -371,7 +363,7 @@ function syncInstrumentName() {
 function handleSearch() {
   query.pageNum = 1
   activeStatKey.value = '全部记录'
-  loadData()
+  Promise.all([loadData(), loadStats()])
 }
 
 function resetQuery() {
@@ -381,7 +373,7 @@ function resetQuery() {
   query.keyword = ''
   query.maintenanceCompany = ''
   activeStatKey.value = '全部记录'
-  loadData()
+  Promise.all([loadData(), loadStats()])
 }
 
 async function loadInstrumentOptions() {
@@ -407,6 +399,10 @@ async function loadData() {
   } finally {
     loading.value = false
   }
+}
+
+async function loadStats() {
+  statCounts.value = buildCountMap(await fetchInstrumentMaintenanceStatsApi())
 }
 
 async function handleExport() {
@@ -462,7 +458,7 @@ async function submitForm() {
     }
 
     dialogVisible.value = false
-    await loadData()
+    await Promise.all([loadData(), loadStats()])
   } finally {
     saving.value = false
   }
@@ -480,14 +476,14 @@ async function removeRow(row) {
     if (records.value.length === 1 && query.pageNum > 1) {
       query.pageNum -= 1
     }
-    await loadData()
+    await Promise.all([loadData(), loadStats()])
   } catch {
     // 用户取消删除时不处理
   }
 }
 
 onMounted(async () => {
-  await Promise.all([loadInstrumentOptions(), loadData()])
+  await Promise.all([loadInstrumentOptions(), loadData(), loadStats()])
 })
 </script>
 

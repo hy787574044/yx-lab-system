@@ -132,10 +132,6 @@
                 </tr>
               </tbody>
             </table>
-            <div class="report-stamp">
-              <span>云河化验报告</span>
-              <strong>化验室</strong>
-            </div>
           </div>
         </section>
 
@@ -568,48 +564,6 @@ defineExpose({
 .sign-table td {
   text-align: left;
   padding-left: 5mm;
-}
-
-.report-stamp {
-  position: absolute;
-  right: 8mm;
-  top: 50%;
-  width: 34mm;
-  height: 34mm;
-  display: grid;
-  place-items: center;
-  border: 2.4px solid rgba(230, 0, 18, 0.88);
-  border-radius: 50%;
-  color: rgba(230, 0, 18, 0.92);
-  transform: translateY(-50%) rotate(-12deg);
-  opacity: 0.9;
-  pointer-events: none;
-}
-
-.report-stamp::before {
-  content: "★";
-  position: absolute;
-  top: 10.5mm;
-  left: 0;
-  right: 0;
-  text-align: center;
-  font-size: 14mm;
-  line-height: 1;
-}
-
-.report-stamp span {
-  position: absolute;
-  top: 5.5mm;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 1.4px;
-}
-
-.report-stamp strong {
-  position: absolute;
-  bottom: 4mm;
-  font-size: 17px;
-  letter-spacing: 2px;
 }
 
 .note-list {

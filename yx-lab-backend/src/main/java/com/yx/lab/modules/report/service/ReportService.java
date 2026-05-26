@@ -27,6 +27,7 @@ import com.yx.lab.modules.review.mapper.ReviewRecordMapper;
 import com.yx.lab.modules.sample.entity.LabSample;
 import com.yx.lab.modules.sample.mapper.LabSampleMapper;
 import com.yx.lab.modules.sample.service.LabSampleService;
+import com.yx.lab.modules.sample.vo.StatusCountVO;
 import com.yx.lab.modules.storage.service.StorageService;
 import com.yx.lab.modules.system.entity.LabUser;
 import com.yx.lab.modules.system.service.FlowConfigManagementService;
@@ -40,18 +41,23 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
 public class ReportService {
 
-    private static final int PDF_FIRST_PAGE_ITEM_COUNT = 4;
+    private static final int PDF_FIRST_PAGE_ITEM_COUNT = 9;
 
-    private static final int PDF_OTHER_PAGE_ITEM_COUNT = 6;
+    private static final int PDF_OTHER_PAGE_ITEM_COUNT = 18;
 
     private final LabReportMapper labReportMapper;
 
@@ -80,6 +86,7 @@ public class ReportService {
      * @return 报告分页结果
      */
     public PageResult<LabReport> page(ReportQuery query) {
+        List<Long> scopedReportIds = resolveScopedReportIds();
         Page<LabReport> page = labReportMapper.selectPage(
                 PageUtils.buildPage(query),
                 new LambdaQueryWrapper<LabReport>()
@@ -91,10 +98,35 @@ public class ReportService {
                         .like(LabReport::getSampleNo, query.getKeyword()))
                         .eq(StrUtil.isNotBlank(query.getReportType()), LabReport::getReportType, query.getReportType())
                         .eq(StrUtil.isNotBlank(query.getReportStatus()), LabReport::getReportStatus, query.getReportStatus())
-                        .in(resolveScopedReportIds() != null, LabReport::getId, resolveScopedReportIds())
+                        .in(scopedReportIds != null, LabReport::getId, scopedReportIds)
                         .orderByDesc(LabReport::getGeneratedTime));
         page.getRecords().forEach(this::refreshStoredContentSnapshotIfNeeded);
         return new PageResult<>(page.getTotal(), page.getRecords());
+    }
+
+    public List<StatusCountVO> statusStats() {
+        return java.util.Arrays.asList(
+                statusCount("ALL", countReportsByStatus(null)),
+                statusCount(LabWorkflowConstants.ReportStatus.GENERATED,
+                        countReportsByStatus(LabWorkflowConstants.ReportStatus.GENERATED)),
+                statusCount(LabWorkflowConstants.ReportStatus.PUBLISHED,
+                        countReportsByStatus(LabWorkflowConstants.ReportStatus.PUBLISHED))
+        );
+    }
+
+    private StatusCountVO statusCount(String status, Long count) {
+        StatusCountVO vo = new StatusCountVO();
+        vo.setStatus(status);
+        vo.setCount(count == null ? 0L : count);
+        return vo;
+    }
+
+    private Long countReportsByStatus(String reportStatus) {
+        List<Long> scopedReportIds = resolveScopedReportIds();
+        Long count = labReportMapper.selectCount(new LambdaQueryWrapper<LabReport>()
+                .eq(StrUtil.isNotBlank(reportStatus), LabReport::getReportStatus, reportStatus)
+                .in(scopedReportIds != null, LabReport::getId, scopedReportIds));
+        return count == null ? 0L : count;
     }
 
     private List<Long> resolveScopedReportIds() {
@@ -306,7 +338,7 @@ public class ReportService {
      */
     public byte[] downloadPdf(Long id, Long requestedPageHeightMm) {
         ReportPreviewVO previewData = previewData(id);
-        String html = buildPreviewStyledHtml(previewData, requestedPageHeightMm);
+        String html = buildPrintDocumentHtml(previewData, requestedPageHeightMm);
         try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
             PdfRendererBuilder builder = new PdfRendererBuilder();
             builder.useFastMode();
@@ -402,7 +434,8 @@ public class ReportService {
         String safeSampleNo = sample == null ? "report" : StrUtil.blankToDefault(sample.getSampleNo(), "report");
         String fileName = "reports/" + safeSampleNo + "-" + System.currentTimeMillis() + ".html";
         try {
-            return storageService.storeText(fileName, buildDetailedReportHtml(report, sample, detectionRecord, detectionItems, latestReview));
+            String storedPath = storageService.storeText(fileName, buildDetailedReportHtml(report, sample, detectionRecord, detectionItems, latestReview));
+            return storageService.toFullUrl(storedPath);
         } catch (IOException ex) {
             throw new BusinessException("报告文件写入失败：" + ex.getMessage());
         }
@@ -799,6 +832,166 @@ public class ReportService {
         return html.toString();
     }
 
+    private String buildPrintDocumentHtml(ReportPreviewVO previewData, Long requestedPageHeightMm) {
+        ReportPreviewVO data = previewData == null ? new ReportPreviewVO() : previewData;
+        List<ReportPreviewPage> pages = splitPreviewPages(data);
+        int totalPages = pages.size();
+        long pageHeightMm = normalizePdfPageHeight(requestedPageHeightMm, 297L);
+        String title = "水质检测报告";
+
+        StringBuilder html = new StringBuilder(32768);
+        html.append("<!DOCTYPE html>")
+                .append("<html xmlns=\"http://www.w3.org/1999/xhtml\">")
+                .append("<head><meta charset=\"UTF-8\" /><title>")
+                .append(safeText(title))
+                .append("</title><style>")
+                .append("@page{size:210mm ").append(pageHeightMm).append("mm;margin:0;}")
+                .append("body{margin:0;background:#ffffff;font-family:'DengXian','Microsoft YaHei','SimSun','SimHei',sans-serif;color:#202733;}")
+                .append(".report-preview-shell{padding:0;background:#ffffff;}")
+                .append(".report-paper{position:relative;width:210mm;min-height:").append(pageHeightMm).append("mm;margin:0;padding:8mm 10mm 10mm;box-sizing:border-box;border:1px solid #6b7280;background:#ffffff;color:#202733;page-break-after:always;}")
+                .append(".report-paper--last{page-break-after:auto;}")
+                .append(".report-header{margin:-8mm -10mm 0;padding:5mm 8mm 4.5mm;border-bottom:1px solid #9ca3af;text-align:center;background:#fbfdff;}")
+                .append(".report-header h1{margin:0 0 5.5mm;font-size:18px;font-weight:600;letter-spacing:1px;color:#172033;}")
+                .append(".report-meta{display:table;width:100%;font-size:14px;color:#202733;text-align:left;}")
+                .append(".report-meta span{display:table-cell;white-space:nowrap;}")
+                .append(".report-meta span:nth-child(2){text-align:center;}")
+                .append(".report-meta span:nth-child(3){text-align:right;}")
+                .append(".report-section{margin-top:7.2mm;}")
+                .append(".report-section h2{margin:0 0 4mm;font-size:15px;font-weight:600;color:#111827;}")
+                .append(".report-section h2:before{content:'';display:inline-block;width:2.5mm;height:4mm;margin-right:2.5mm;border-radius:1px;background:#2f6f9f;vertical-align:-0.7mm;}")
+                .append(".report-table{width:100%;border-collapse:collapse;table-layout:fixed;border:1px solid #8d96a3;}")
+                .append(".report-table th,.report-table td{border:1px solid #9aa3af;padding:3.1mm 2.6mm;text-align:center;vertical-align:middle;font-size:13px;line-height:1.32;word-break:break-word;}")
+                .append(".report-table th{font-weight:600;color:#172033;background:#f3f7fb;}")
+                .append(".info-table{border:0;}")
+                .append(".info-table th{width:18%;color:#1f344d;background:#f2f6fb;}")
+                .append(".info-table td{width:32%;text-align:left;padding-left:5mm;color:#202733;background:#ffffff;}")
+                .append(".col-index{width:11%;}")
+                .append(".judge-cell{font-weight:600;}")
+                .append(".judge-cell.is-success{color:#00a63e;}")
+                .append(".judge-cell.is-danger{color:#e60012;}")
+                .append(".basis-line{margin:6mm 0 0;font-size:14px;}")
+                .append(".overall-line{margin:3.2mm 0 0;font-size:14px;font-weight:600;}")
+                .append(".detection-table th,.detection-table td{padding:3.2mm 2.4mm;}")
+                .append(".detection-table th:first-child,.detection-table td:first-child{width:22%;}")
+                .append(".detection-table th:nth-child(2),.detection-table td:nth-child(2){width:16%;}")
+                .append(".detection-table th:nth-child(5),.detection-table td:nth-child(5){width:11%;}")
+                .append(".merged-parameters{text-align:center;line-height:1.45;color:#172033;}")
+                .append(".sign-box{position:relative;min-height:0;overflow:hidden;padding:0;border:1px solid #8d96a3;border-radius:4px;background:#ffffff;}")
+                .append(".sign-table{border:0;}")
+                .append(".sign-table th,.sign-table td{height:12mm;}")
+                .append(".note-box{border:1px solid #9aa3af;background:#fbfdff;padding:4mm 5mm;}")
+                .append(".note-list{margin:0;padding-left:5mm;color:#202733;font-size:13px;line-height:1.85;}")
+                .append(".empty-box{min-height:28mm;display:block;padding-top:14mm;text-align:center;border:1px dashed #cbd5e1;border-radius:8px;color:#64748b;font-size:13px;box-sizing:border-box;}")
+                .append("</style></head><body><div class=\"report-preview-shell\">");
+
+        for (ReportPreviewPage page : pages) {
+            boolean isLastPage = page.getPageNo() == totalPages;
+            html.append("<section class=\"report-paper")
+                    .append(isLastPage ? " report-paper--last" : "")
+                    .append("\">")
+                    .append("<header class=\"report-header\"><h1>").append(safeText(title)).append("</h1>")
+                    .append("<div class=\"report-meta\"><span>报告编号：").append(safeText(buildReportNo(data))).append("</span>")
+                    .append("<span>生成日期：").append(safeText(toDateText(data.getGeneratedTime()))).append("</span>");
+            if (totalPages > 1) {
+                html.append("<span>第 ").append(page.getPageNo()).append(" / ").append(totalPages).append(" 页</span>");
+            } else {
+                html.append("<span></span>");
+            }
+            html.append("</div></header>");
+
+            if (page.getPageNo() == 1) {
+                html.append("<section class=\"report-section\"><h2>一、样品信息</h2>")
+                        .append("<table class=\"report-table info-table\"><tbody>")
+                        .append("<tr><th>样品编号</th><td>").append(safeText(data.getSampleNo())).append("</td><th>样品类型</th><td>")
+                        .append(safeText(data.getSampleTypeLabel())).append("</td></tr>")
+                        .append("<tr><th>采样点位</th><td>").append(safeText(data.getPointName())).append("</td><th>采样时间</th><td>")
+                        .append(safeText(data.getSamplingTime())).append("</td></tr>")
+                        .append("<tr><th>采样人员</th><td>").append(safeText(data.getSamplerName())).append("</td><th>质控品类</th><td>")
+                        .append(safeText(data.getQualityControlTypeLabel())).append("</td></tr>")
+                        .append("</tbody></table></section>");
+            }
+
+            html.append("<section class=\"report-section\"><h2>")
+                    .append(page.getPageNo() == 1 ? "二、参数信息" : "二、参数信息（续页）")
+                    .append("</h2>");
+            if (page.getItems().isEmpty()) {
+                html.append("<div class=\"empty-box\">当前报告暂无化验结果明细。</div>");
+            } else {
+                html.append("<table class=\"report-table parameter-table\"><thead><tr>")
+                        .append("<th class=\"col-index\">序号</th>")
+                        .append("<th>检测参数</th>")
+                        .append("<th>检测方法</th>")
+                        .append("<th>检测标准</th>")
+                        .append("<th>标准范围</th>")
+                        .append("<th>检测值</th>")
+                        .append("<th>检测结果</th>")
+                        .append("</tr></thead><tbody>");
+                for (int i = 0; i < page.getItems().size(); i++) {
+                    ReportPreviewItemVO item = page.getItems().get(i);
+                    boolean abnormal = isAbnormalJudgment(item);
+                    html.append("<tr>")
+                            .append("<td>").append(page.getStartIndex() + i + 1).append("</td>")
+                            .append("<td>").append(safeText(item.getParameterName())).append("</td>")
+                            .append("<td>").append(safeText(item.getMethodName())).append("</td>")
+                            .append("<td>").append(safeText(item.getReferenceStandard())).append("</td>")
+                            .append("<td>").append(safeText(formatPreviewRange(item))).append("</td>")
+                            .append("<td>").append(safeText(item.getResultValue())).append("</td>")
+                            .append("<td class=\"judge-cell ").append(abnormal ? "is-danger" : "is-success").append("\">")
+                            .append(safeText(formatPreviewJudgment(item))).append("</td>")
+                            .append("</tr>");
+                }
+                html.append("</tbody></table>");
+            }
+
+            if (isLastPage) {
+                html.append("<p class=\"basis-line\">判定依据：").append(safeText(resolveJudgmentBasis(data))).append("</p>")
+                        .append("<p class=\"overall-line\">整体评价：").append(safeText(buildOverallEvaluationText(data))).append("</p>");
+            }
+            html.append("</section>");
+
+            if (isLastPage) {
+                html.append("<section class=\"report-section\"><h2>三、检测信息</h2>")
+                        .append("<table class=\"report-table detection-table\"><thead><tr>")
+                        .append("<th>检测参数</th><th>检测人员</th><th>检测开始时间</th><th>检测完成时间</th><th>耗时</th>")
+                        .append("</tr></thead><tbody>");
+                for (DetectionSummaryRow row : buildDetectionRows(data)) {
+                    html.append("<tr>")
+                            .append("<td class=\"merged-parameters\">").append(safeText(row.getParameters())).append("</td>")
+                            .append("<td>").append(safeText(row.getDetectorName())).append("</td>")
+                            .append("<td>").append(safeText(row.getStartTime())).append("</td>")
+                            .append("<td>").append(safeText(row.getEndTime())).append("</td>")
+                            .append("<td>").append(safeText(row.getDuration())).append("</td>")
+                            .append("</tr>");
+                }
+                html.append("</tbody></table></section>");
+
+                html.append("<section class=\"report-section\"><h2>四、签审信息</h2>")
+                        .append("<div class=\"sign-box\"><table class=\"report-table sign-table\"><tbody>")
+                        .append("<tr><th>编制人员</th><td>").append(safeText(resolveCompilerName(data))).append("</td><th>审核人员</th><td>")
+                        .append(safeText(data.getReviewerName())).append("</td></tr>")
+                        .append("<tr><th>批准人员</th><td>").append(safeText(data.getPublishedByName())).append("</td><th>签发日期</th><td>")
+                        .append(safeText(resolveSignDate(data))).append("</td></tr>")
+                        .append("<tr><th>检测单位</th><td colspan=\"3\">云河水质化验室</td></tr>")
+                        .append("</tbody></table></div>")
+                        .append("</section>");
+
+                html.append("<section class=\"report-section\"><h2>五、备注声明</h2>")
+                        .append("<div class=\"note-box\"><ol class=\"note-list\">")
+                        .append("<li>本报告基于 GB/T 5750-2023 系列标准检测，判定依据为 GB 5749-2022。</li>")
+                        .append("<li>本报告经编制人、审核人、批准人签字，并加盖化验室印章后生效。</li>")
+                        .append("<li>未经本化验室书面批准，不得部分复制本报告。</li>")
+                        .append("<li>免责声明：本报告仅对本次送检样品及报告所列检测项目的检测结果负责。</li>")
+                        .append("<li>对本报告如有异议，请于收到报告之日起 7 日内向本化验室提出。</li>")
+                        .append("</ol></div></section>");
+            }
+
+            html.append("</section>");
+        }
+
+        html.append("</div></body></html>");
+        return html.toString();
+    }
+
     private List<ReportPreviewPage> splitPreviewPages(ReportPreviewVO previewData) {
         List<ReportPreviewItemVO> items = previewData == null || previewData.getItems() == null
                 ? Collections.emptyList()
@@ -849,6 +1042,184 @@ public class ReportService {
             return "state-tag--success";
         }
         return "state-tag--plain";
+    }
+
+    private String buildReportNo(ReportPreviewVO data) {
+        String dateText = toDateText(data == null ? null : data.getGeneratedTime()).replace("-", "");
+        if (StrUtil.isBlank(dateText) || "-".equals(dateText)) {
+            dateText = "00000000";
+        }
+        Long reportId = data == null ? null : data.getReportId();
+        String idText = reportId == null ? "001" : String.valueOf(reportId);
+        while (idText.length() < 3) {
+            idText = "0" + idText;
+        }
+        return "BG-" + dateText + "-" + idText;
+    }
+
+    private String toDateText(String value) {
+        String text = StrUtil.trimToEmpty(value);
+        return text.isEmpty() ? "-" : text.substring(0, Math.min(10, text.length()));
+    }
+
+    private String resolveJudgmentBasis(ReportPreviewVO data) {
+        return "GB 5749-2022《生活饮用水卫生标准》";
+    }
+
+    private String buildOverallEvaluationText(ReportPreviewVO data) {
+        List<ReportPreviewItemVO> items = data == null || data.getItems() == null
+                ? Collections.emptyList()
+                : data.getItems();
+        List<String> abnormalNames = new ArrayList<>();
+        for (ReportPreviewItemVO item : items) {
+            if (isAbnormalJudgment(item)) {
+                abnormalNames.add(StrUtil.blankToDefault(item.getParameterName(), "未知参数"));
+            }
+        }
+        if (abnormalNames.isEmpty()) {
+            return "本次检测项目均符合标准要求。";
+        }
+        return "存在 " + abnormalNames.size() + " 项不合格指标：" + String.join("、", abnormalNames) + "。";
+    }
+
+    private boolean isAbnormalJudgment(ReportPreviewItemVO item) {
+        String label = item == null ? "" : StrUtil.trimToEmpty(item.getJudgmentLabel());
+        return label.contains("异常") || label.contains("超标") || label.contains("不合格")
+                || label.contains("寮傚父") || label.contains("瓒呮爣") || label.contains("涓嶅悎鏍");
+    }
+
+    private String formatPreviewJudgment(ReportPreviewItemVO item) {
+        String label = item == null ? "" : StrUtil.trimToEmpty(item.getJudgmentLabel());
+        if (label.isEmpty() || "-".equals(label)) {
+            return "-";
+        }
+        return isAbnormalJudgment(item) ? "超标" : "合格";
+    }
+
+    private String formatPreviewRange(ReportPreviewItemVO item) {
+        String range = item == null ? "" : StrUtil.trimToEmpty(item.getStandardRange());
+        String unit = item == null ? "" : StrUtil.trimToEmpty(item.getUnit());
+        if (range.isEmpty() || "-".equals(range)) {
+            return "-";
+        }
+        if (unit.isEmpty() || "-".equals(unit) || range.contains(unit)) {
+            return range;
+        }
+        return range + " " + unit;
+    }
+
+    private List<DetectionSummaryRow> buildDetectionRows(ReportPreviewVO data) {
+        List<ReportPreviewItemVO> items = data == null || data.getItems() == null
+                ? Collections.emptyList()
+                : data.getItems();
+        Map<String, DetectionSummaryRow> rows = new LinkedHashMap<>();
+        for (ReportPreviewItemVO item : items) {
+            String detectorName = normalizeDetectorName(item == null ? null : item.getDetectorName());
+            if (StrUtil.isBlank(detectorName)) {
+                detectorName = "未指定";
+            }
+            DetectionSummaryRow row = rows.computeIfAbsent(detectorName, DetectionSummaryRow::new);
+            row.addParameter(StrUtil.blankToDefault(item == null ? null : item.getParameterName(), ""));
+            row.setStartTime(pickEarlierTime(row.getStartTimeRaw(), item == null ? null : item.getStartTime()));
+            row.setEndTime(pickLaterTime(row.getEndTimeRaw(), item == null ? null : item.getEndTime()));
+        }
+        if (rows.isEmpty()) {
+            DetectionSummaryRow row = new DetectionSummaryRow(StrUtil.blankToDefault(normalizeDetectorName(data == null ? null : data.getDetectorName()), "未指定"));
+            row.setParameters("-");
+            row.setStartTime(StrUtil.blankToDefault(data == null ? null : data.getDetectionTime(), ""));
+            row.setEndTime(StrUtil.blankToDefault(data == null ? null : data.getReviewTime(), row.getStartTimeRaw()));
+            rows.put(row.getDetectorName(), row);
+        }
+        List<DetectionSummaryRow> result = new ArrayList<>(rows.values());
+        result.forEach(row -> {
+            if (StrUtil.isBlank(row.getParameters())) {
+                row.setParameters("-");
+            }
+            row.setDisplayStartTime(StrUtil.blankToDefault(row.getStartTimeRaw(), "-"));
+            row.setDisplayEndTime(StrUtil.blankToDefault(row.getEndTimeRaw(), "-"));
+            row.setDuration(calculateDurationText(row.getStartTimeRaw(), row.getEndTimeRaw()));
+        });
+        result.sort((left, right) -> left.getDetectorName().compareTo(right.getDetectorName()));
+        return result;
+    }
+
+    private String normalizeDetectorName(String value) {
+        String name = StrUtil.trimToEmpty(value);
+        if ("-".equals(name) || name.contains("协同检测") || name.contains("鍗忓悓妫€娴")) {
+            return "";
+        }
+        return name;
+    }
+
+    private String pickEarlierTime(String left, String right) {
+        LocalDateTime leftTime = parsePreviewTime(left);
+        LocalDateTime rightTime = parsePreviewTime(right);
+        if (leftTime == null) {
+            return StrUtil.blankToDefault(right, left);
+        }
+        if (rightTime == null) {
+            return left;
+        }
+        return rightTime.isBefore(leftTime) ? right : left;
+    }
+
+    private String pickLaterTime(String left, String right) {
+        LocalDateTime leftTime = parsePreviewTime(left);
+        LocalDateTime rightTime = parsePreviewTime(right);
+        if (leftTime == null) {
+            return StrUtil.blankToDefault(right, left);
+        }
+        if (rightTime == null) {
+            return left;
+        }
+        return rightTime.isAfter(leftTime) ? right : left;
+    }
+
+    private LocalDateTime parsePreviewTime(String value) {
+        String text = StrUtil.trimToEmpty(value);
+        if (text.isEmpty() || "-".equals(text)) {
+            return null;
+        }
+        String normalized = text.replace('T', ' ');
+        try {
+            return LocalDateTime.parse(normalized, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+        } catch (DateTimeParseException ignored) {
+            try {
+                return LocalDateTime.parse(normalized, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
+            } catch (DateTimeParseException ignoredAgain) {
+                return null;
+            }
+        }
+    }
+
+    private String calculateDurationText(String startTime, String endTime) {
+        LocalDateTime start = parsePreviewTime(startTime);
+        LocalDateTime end = parsePreviewTime(endTime);
+        if (start == null || end == null || end.isBefore(start)) {
+            return "-";
+        }
+        long seconds = Duration.between(start, end).getSeconds();
+        return Math.max(0L, (seconds + 59L) / 60L) + " min";
+    }
+
+    private String resolveCompilerName(ReportPreviewVO data) {
+        String publisher = data == null ? null : data.getPublishedByName();
+        if (StrUtil.isNotBlank(publisher) && !"-".equals(publisher)) {
+            return publisher;
+        }
+        return StrUtil.blankToDefault(normalizeDetectorName(data == null ? null : data.getDetectorName()), "-");
+    }
+
+    private String resolveSignDate(ReportPreviewVO data) {
+        if (data == null) {
+            return "-";
+        }
+        String date = toDateText(data.getPublishedTime());
+        if (!"-".equals(date)) {
+            return date;
+        }
+        date = toDateText(data.getReviewTime());
+        return "-".equals(date) ? toDateText(data.getGeneratedTime()) : date;
     }
 
     private boolean containsText(String source, String text) {
@@ -912,6 +1283,89 @@ public class ReportService {
 
         public List<ReportPreviewItemVO> getItems() {
             return items;
+        }
+    }
+
+    private static class DetectionSummaryRow {
+
+        private final String detectorName;
+
+        private final List<String> parameterNames = new ArrayList<>();
+
+        private String parameters = "";
+
+        private String startTime = "";
+
+        private String endTime = "";
+
+        private String displayStartTime = "-";
+
+        private String displayEndTime = "-";
+
+        private String duration = "-";
+
+        private DetectionSummaryRow(String detectorName) {
+            this.detectorName = detectorName;
+        }
+
+        private void addParameter(String parameterName) {
+            if (StrUtil.isBlank(parameterName) || parameterNames.contains(parameterName)) {
+                return;
+            }
+            parameterNames.add(parameterName);
+            parameters = String.join("、", parameterNames);
+        }
+
+        public String getDetectorName() {
+            return detectorName;
+        }
+
+        public String getParameters() {
+            return parameters;
+        }
+
+        public void setParameters(String parameters) {
+            this.parameters = parameters;
+        }
+
+        public String getStartTimeRaw() {
+            return startTime;
+        }
+
+        public String getStartTime() {
+            return displayStartTime;
+        }
+
+        public void setStartTime(String startTime) {
+            this.startTime = StrUtil.blankToDefault(startTime, "");
+        }
+
+        public void setDisplayStartTime(String displayStartTime) {
+            this.displayStartTime = displayStartTime;
+        }
+
+        public String getEndTimeRaw() {
+            return endTime;
+        }
+
+        public String getEndTime() {
+            return displayEndTime;
+        }
+
+        public void setEndTime(String endTime) {
+            this.endTime = StrUtil.blankToDefault(endTime, "");
+        }
+
+        public void setDisplayEndTime(String displayEndTime) {
+            this.displayEndTime = displayEndTime;
+        }
+
+        public String getDuration() {
+            return duration;
+        }
+
+        public void setDuration(String duration) {
+            this.duration = duration;
         }
     }
 

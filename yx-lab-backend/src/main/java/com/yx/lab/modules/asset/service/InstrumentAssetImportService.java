@@ -8,6 +8,7 @@ import com.yx.lab.modules.asset.entity.Instrument;
 import com.yx.lab.modules.asset.mapper.InstrumentMapper;
 import com.yx.lab.modules.asset.vo.InstrumentImportErrorVO;
 import com.yx.lab.modules.asset.vo.InstrumentImportResultVO;
+import com.yx.lab.modules.storage.service.StorageService;
 import lombok.RequiredArgsConstructor;
 import org.apache.poi.ss.usermodel.BorderStyle;
 import org.apache.poi.ss.usermodel.Cell;
@@ -74,6 +75,8 @@ public class InstrumentAssetImportService {
     private static final Map<String, String> IMPORT_STATUS_ALIAS_MAP = createImportStatusAliasMap();
 
     private final InstrumentMapper instrumentMapper;
+
+    private final StorageService storageService;
 
     /**
      * 生成设备台账导入模板。
@@ -254,7 +257,7 @@ public class InstrumentAssetImportService {
         instrument.setPurchaseDate(purchaseDate);
         instrument.setServiceLifeYears(serviceLifeYears);
         instrument.setCalibrationCycle(calibrationCycle);
-        instrument.setCertificateUrl(certificateUrl);
+        instrument.setCertificateUrl(storageService.toFullUrl(certificateUrl));
         instrument.setRemark(remark);
         return instrument;
     }

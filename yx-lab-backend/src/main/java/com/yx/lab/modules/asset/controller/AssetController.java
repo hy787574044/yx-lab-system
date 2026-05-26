@@ -21,6 +21,7 @@ import com.yx.lab.modules.asset.vo.DocumentPreviewFile;
 import com.yx.lab.modules.asset.vo.DocumentUserOptionVO;
 import com.yx.lab.modules.asset.vo.InstrumentImportResultVO;
 import com.yx.lab.modules.asset.vo.LabDocumentVO;
+import com.yx.lab.modules.sample.vo.StatusCountVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -69,6 +70,12 @@ public class AssetController {
     @Operation(summary = "仪器台账分页")
     public ApiResponse<PageResult<Instrument>> instruments(@Validated InstrumentQuery query) {
         return ApiResponse.success(instrumentAssetService.instrumentPage(query));
+    }
+
+    @GetMapping("/instruments/stats")
+    @Operation(summary = "浠櫒鐘舵€佺粺璁?")
+    public ApiResponse<List<StatusCountVO>> instrumentStats() {
+        return ApiResponse.success(instrumentAssetService.instrumentStats());
     }
 
     /**
@@ -195,6 +202,12 @@ public class AssetController {
     @Operation(summary = "维保记录分页")
     public ApiResponse<PageResult<InstrumentMaintenance>> maintenances(@Validated MaintenanceQuery query) {
         return ApiResponse.success(instrumentAssetService.maintenancePage(query));
+    }
+
+    @GetMapping("/maintenances/stats")
+    @Operation(summary = "缁翠慨璁板綍缁熻")
+    public ApiResponse<List<StatusCountVO>> maintenanceStats() {
+        return ApiResponse.success(instrumentAssetService.maintenanceStats());
     }
 
     /**

@@ -20,6 +20,7 @@ import com.yx.lab.modules.system.mapper.LabUserMapper;
 import com.yx.lab.modules.system.vo.CaptchaVO;
 import com.yx.lab.modules.system.vo.LoginVO;
 import com.yx.lab.modules.system.vo.UserProfileVO;
+import com.yx.lab.modules.storage.service.StorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -62,6 +63,8 @@ public class AuthService {
     private final LabSecurityProperties securityProperties;
 
     private final PermissionService permissionService;
+
+    private final StorageService storageService;
 
     private void validateCaptcha(LoginRequest request) {
         if (request == null || StrUtil.isBlank(request.getCaptchaId()) || StrUtil.isBlank(request.getCaptchaCode())) {
@@ -207,7 +210,7 @@ public class AuthService {
                 .permissionCodes(currentUser.getPermissionCodes())
                 .dataScope(currentUser.getDataScope())
                 .phone(user.getPhone())
-                .avatarUrl(user.getAvatarUrl())
+                .avatarUrl(storageService.toFullUrl(user.getAvatarUrl()))
                 .build();
     }
 
@@ -231,7 +234,7 @@ public class AuthService {
         LabUser user = requireCurrentUserEntity();
         user.setRealName(StrUtil.trim(command.getRealName()));
         user.setPhone(StrUtil.trim(command.getPhone()));
-        user.setAvatarUrl(StrUtil.trim(command.getAvatarUrl()));
+        user.setAvatarUrl(storageService.toFullUrl(command.getAvatarUrl()));
         labUserMapper.updateById(user);
         refreshTokenUser(token, user);
         return buildProfile(user);
@@ -293,7 +296,7 @@ public class AuthService {
                 .permissionCodes(permissionService.resolvePermissions(user.getRoleCode()))
                 .dataScope(permissionService.resolveDataScope(user.getRoleCode()))
                 .phone(user.getPhone())
-                .avatarUrl(user.getAvatarUrl())
+                .avatarUrl(storageService.toFullUrl(user.getAvatarUrl()))
                 .status(user.getStatus())
                 .build();
     }

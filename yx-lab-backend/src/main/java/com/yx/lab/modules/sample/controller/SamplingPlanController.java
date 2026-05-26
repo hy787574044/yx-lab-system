@@ -11,6 +11,7 @@ import com.yx.lab.modules.sample.dto.SamplingPlanQuery;
 import com.yx.lab.modules.sample.dto.SamplingPlanSaveCommand;
 import com.yx.lab.modules.sample.entity.SamplingPlan;
 import com.yx.lab.modules.sample.service.SamplingPlanService;
+import com.yx.lab.modules.sample.vo.StatusCountVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.Valid;
+import java.util.List;
 
 /**
  * 采样计划控制器。
@@ -48,6 +50,17 @@ public class SamplingPlanController {
     @Operation(summary = "采样计划分页")
     public ApiResponse<PageResult<SamplingPlan>> page(@Validated SamplingPlanQuery query) {
         return ApiResponse.success(samplingPlanService.page(query));
+    }
+
+    /**
+     * 统计采样计划状态数量。
+     *
+     * @return 状态数量列表。
+     */
+    @GetMapping("/stats")
+    @Operation(summary = "采样计划状态统计")
+    public ApiResponse<List<StatusCountVO>> stats() {
+        return ApiResponse.success(samplingPlanService.statusStats());
     }
 
     /**

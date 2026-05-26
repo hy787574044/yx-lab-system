@@ -20,6 +20,7 @@ import com.yx.lab.modules.review.dto.ReviewItemCommand;
 import com.yx.lab.modules.review.dto.ReviewQuery;
 import com.yx.lab.modules.review.entity.ReviewRecord;
 import com.yx.lab.modules.review.mapper.ReviewRecordMapper;
+import com.yx.lab.modules.sample.vo.StatusCountVO;
 import com.yx.lab.modules.sample.entity.LabSample;
 import com.yx.lab.modules.sample.mapper.LabSampleMapper;
 import com.yx.lab.modules.sample.service.LabSampleService;
@@ -86,6 +87,39 @@ public class ReviewService {
                         .orderByDesc(ReviewRecord::getReviewTime));
         fillReviewRecordSummaries(page.getRecords());
         return new PageResult<>(page.getTotal(), page.getRecords());
+    }
+
+    public List<StatusCountVO> statusStats() {
+        Long pendingCount = detectionRecordMapper.selectCount(new LambdaQueryWrapper<DetectionRecord>()
+                .eq(DetectionRecord::getDetectionStatus, LabWorkflowConstants.DetectionStatus.SUBMITTED));
+        return java.util.Arrays.asList(
+                statusCount("ALL", safeCount(pendingCount) + countReviewsByResult(null)),
+                statusCount("PENDING", pendingCount),
+                statusCount(LabWorkflowConstants.ReviewResult.APPROVED,
+                        countReviewsByResult(LabWorkflowConstants.ReviewResult.APPROVED)),
+                statusCount(LabWorkflowConstants.ReviewResult.REJECTED,
+                        countReviewsByResult(LabWorkflowConstants.ReviewResult.REJECTED))
+        );
+    }
+
+    private StatusCountVO statusCount(String status, Long count) {
+        StatusCountVO vo = new StatusCountVO();
+        vo.setStatus(status);
+        vo.setCount(safeCount(count));
+        return vo;
+    }
+
+    private long safeCount(Long count) {
+        return count == null ? 0L : count;
+    }
+
+    private long countReviewsByResult(String reviewResult) {
+        CurrentUser currentUser = SecurityContext.getCurrentUser();
+        Long reviewerId = dataScopeHelper.onlySelfScope() && currentUser != null ? currentUser.getUserId() : null;
+        Long count = reviewRecordMapper.selectCount(new LambdaQueryWrapper<ReviewRecord>()
+                .eq(StrUtil.isNotBlank(reviewResult), ReviewRecord::getReviewResult, reviewResult)
+                .eq(reviewerId != null, ReviewRecord::getReviewerId, reviewerId));
+        return safeCount(count);
     }
 
     @Transactional(rollbackFor = Exception.class)

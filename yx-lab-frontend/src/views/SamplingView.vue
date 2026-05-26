@@ -310,11 +310,17 @@
       </div>
 
       <section class="stats-grid plan-stats">
-        <div v-for="item in planStats" :key="item.label" class="metric-card metric-card--static">
+        <button
+          v-for="item in planStats"
+          :key="item.key"
+          type="button"
+          :class="['metric-card', 'metric-card--action', { 'is-active': activeStatKey === item.key }]"
+          @click="handlePlanStatClick(item.key)"
+        >
           <span>{{ item.label }}</span>
           <strong>{{ item.value }}</strong>
           <p>{{ item.desc }}</p>
-        </div>
+        </button>
       </section>
 
       <div class="toolbar-panel">
@@ -448,8 +454,10 @@
 
     <el-dialog
       v-model="planDialogVisible"
+      class="sampling-form-dialog"
       :title="editingPlanId ? '编辑采样计划' : '新增采样计划'"
       width="760px"
+      align-center
       destroy-on-close
       @closed="resetPlanForm"
     >
@@ -560,8 +568,10 @@
 
     <el-dialog
       v-model="taskCompleteDialogVisible"
+      class="sampling-form-dialog"
       title="采样录入"
       width="760px"
+      align-center
       destroy-on-close
       @closed="resetTaskCompleteDialog"
     >
@@ -583,7 +593,22 @@
             <el-input v-model="taskCompleteForm.sealNo" placeholder="请输入采样封签号" />
           </el-form-item>
           <el-form-item label="天气">
-            <el-input v-model="taskCompleteForm.weather" placeholder="例如：晴、多云、小雨" />
+            <el-select
+              v-model="taskCompleteForm.weather"
+              allow-create
+              clearable
+              default-first-option
+              filterable
+              placeholder="请选择或输入天气"
+              style="width: 100%"
+            >
+              <el-option
+                v-for="option in weatherOptions"
+                :key="option.value"
+                :label="option.label"
+                :value="option.value"
+              />
+            </el-select>
           </el-form-item>
           <el-form-item label="温度">
             <el-input v-model="taskCompleteForm.temperature" placeholder="例如：26℃" />
@@ -646,8 +671,10 @@
 
     <el-dialog
       v-model="dispatchDialogVisible"
+      class="dispatch-plan-dialog"
       title="派发采样计划"
       width="560px"
+      align-center
       destroy-on-close
       @closed="resetDispatchForm"
     >
@@ -688,9 +715,10 @@
 
     <el-dialog
       v-model="loginDialogVisible"
-      class="sample-login-dialog"
+      class="sample-login-dialog sampling-form-dialog"
       :title="loginDialogTitle"
       width="1180px"
+      align-center
       destroy-on-close
       @closed="resetLoginForm"
     >
@@ -922,10 +950,44 @@
             />
           </el-form-item>
           <el-form-item label="天气">
-            <el-input v-model="loginForm.weather" :readonly="isLoginReadonly" placeholder="请输入采样时天气情况" />
+            <el-input v-if="isLoginReadonly" :model-value="loginForm.weather || '-'" readonly />
+            <el-select
+              v-else
+              v-model="loginForm.weather"
+              allow-create
+              clearable
+              default-first-option
+              filterable
+              placeholder="请选择或输入天气"
+              style="width: 100%"
+            >
+              <el-option
+                v-for="option in weatherOptions"
+                :key="option.value"
+                :label="option.label"
+                :value="option.value"
+              />
+            </el-select>
           </el-form-item>
           <el-form-item label="保存条件">
-            <el-input v-model="loginForm.storageCondition" :readonly="isLoginReadonly" placeholder="例如冷藏避光、常温送检" />
+            <el-input v-if="isLoginReadonly" :model-value="loginForm.storageCondition || '-'" readonly />
+            <el-select
+              v-else
+              v-model="loginForm.storageCondition"
+              allow-create
+              clearable
+              default-first-option
+              filterable
+              placeholder="请选择或输入保存条件"
+              style="width: 100%"
+            >
+              <el-option
+                v-for="option in storageConditionOptions"
+                :key="option.value"
+                :label="option.label"
+                :value="option.value"
+              />
+            </el-select>
           </el-form-item>
           <el-form-item label="备注">
             <el-input v-model="loginForm.remark" :readonly="isLoginReadonly" placeholder="可补充样品来源、容器信息等说明" />
@@ -940,6 +1002,7 @@
 
     <el-dialog
       v-model="taskDetailDialogVisible"
+      align-center
       title="采样任务详情"
       width="600px"
       top="5vh"
@@ -1009,12 +1072,12 @@ import { ElOption, ElSelect } from 'element-plus/es/components/select/index.mjs'
 import { ElTable, ElTableColumn } from 'element-plus/es/components/table/index.mjs'
 import { ElUpload } from 'element-plus/es/components/upload/index.mjs'
 import TablePagination from '../components/common/TablePagination.vue'
-import { getPublicFileUrl } from '../config/appConfig'
 import {
   abandonSamplingTaskApi,
   completeSamplingTaskApi,
   createSamplingPlanApi,
   dispatchSamplingPlanApi,
+  fetchDictItemsApi,
   exportSamplingPlansApi,
   exportSamplesApi,
   exportSamplingTasksApi,
@@ -1024,13 +1087,15 @@ import {
   fetchDetectionTypesApi,
   fetchFlowConfigOptionsApi,
   fetchSamplesApi,
+  fetchSampleStatsApi,
   fetchSamplingTaskDetailApi,
   fetchSamplingPlansApi,
+  fetchSamplingPlanStatsApi,
   fetchSamplingTasksApi,
+  fetchSamplingTaskStatsApi,
   fetchSystemUsersApi,
   loginSampleApi,
   pauseSamplingPlanApi,
-  previewStorageFileApi,
   resumeSamplingPlanApi,
   resumeSamplingTaskApi,
   startSamplingTaskApi,
@@ -1102,11 +1167,15 @@ const sampleQuery = reactive({
 
 const plans = ref([])
 const tasks = ref([])
+const loggableTasks = ref([])
 const samples = ref([])
 const planTotal = ref(0)
 const taskTotal = ref(0)
 const sampleTotal = ref(0)
-const activeStatKey = ref('tasks:pending')
+const planStatCounts = ref({})
+const taskStatCounts = ref({})
+const sampleStatCounts = ref({})
+const activeStatKey = ref('tasks:all')
 const loginDialogVisible = ref(false)
 const loginDialogMode = ref('create')
 const planDialogVisible = ref(false)
@@ -1115,6 +1184,8 @@ const dispatchDialogVisible = ref(false)
 const mapSelectorVisible = ref(false)
 const mapSelectorValue = reactive({ address: '', latitude: '', longitude: '' })
 const taskDetailDialogVisible = ref(false)
+const weatherOptions = ref([])
+const storageConditionOptions = ref([])
 const editingPlanId = ref(null)
 const submitting = ref(false)
 const taskCompleteSubmitting = ref(false)
@@ -1213,6 +1284,27 @@ const taskCompleteForm = reactive({
 function toSafeNumber(value) {
   const num = typeof value === 'number' ? value : Number.parseFloat(String(value ?? '').replace(/,/g, '').trim())
   return Number.isFinite(num) ? num : 0
+}
+
+function buildCountMap(items) {
+  return (items || []).reduce((result, item) => {
+    result[String(item.status || '')] = toSafeNumber(item.count)
+    return result
+  }, {})
+}
+
+function getCount(counts, key) {
+  return toSafeNumber(counts?.[key])
+}
+
+function normalizeDictOptions(items) {
+  return (items || [])
+    .map((item) => {
+      const label = String(item.label || item.value || '').trim()
+      const value = String(item.value || item.label || '').trim()
+      return label && value ? { label, value } : null
+    })
+    .filter(Boolean)
 }
 
 function buildRowActionKey(scope, action, id) {
@@ -1390,9 +1482,7 @@ function isTaskCompleteEntryEnabled(task) {
 }
 
 const pendingLoggableCount = computed(() =>
-  tasks.value.filter((item) =>
-    item.taskStatus === completedTaskStatus && !isTaskRegistered(item)
-  ).length
+  loggableTasks.value.length || getCount(taskStatCounts.value, 'UNLOGGED')
 )
 
 const firstCompletableTask = computed(() =>
@@ -1400,15 +1490,11 @@ const firstCompletableTask = computed(() =>
 )
 
 const firstLoggableTask = computed(() =>
-  tasks.value.find((item) =>
-    item.taskStatus === completedTaskStatus && !isTaskRegistered(item)
-  )
+  loggableTasks.value[0] || null
 )
 
 const pendingLoggableTasks = computed(() =>
-  tasks.value.filter((item) =>
-    item.taskStatus === completedTaskStatus && !isTaskRegistered(item)
-  )
+  loggableTasks.value
 )
 
 const activeMissingSamplerPlans = computed(() =>
@@ -1430,17 +1516,17 @@ const currentScene = computed(() => ({
     ? [
         {
           label: '启用中',
-          value: plans.value.filter((item) => item.planStatus === activePlanStatus).length,
+          value: getCount(planStatCounts.value, activePlanStatus),
           type: 'info'
         },
         {
           label: '待补采样员',
-          value: activeMissingSamplerPlans.value.length,
-          type: activeMissingSamplerPlans.value.length ? 'warning' : 'success'
+          value: getCount(planStatCounts.value, 'MISSING_SAMPLER'),
+          type: getCount(planStatCounts.value, 'MISSING_SAMPLER') ? 'warning' : 'success'
         },
         {
           label: '已派发',
-          value: plans.value.filter((item) => dispatchedPlanStatuses.includes(item.planStatus)).length,
+          value: dispatchedPlanStatuses.reduce((sum, status) => sum + getCount(planStatCounts.value, status), 0),
           type: 'success'
         }
       ]
@@ -1448,34 +1534,34 @@ const currentScene = computed(() => ({
     ? [
         {
           label: '待处理',
-          value: taskSceneRecords.value.filter((item) => item.taskStatus === pendingTaskStatus).length,
+          value: getCount(taskStatCounts.value, pendingTaskStatus),
           type: 'warning'
         },
         {
           label: '进行中',
-          value: taskSceneRecords.value.filter((item) => item.taskStatus === inProgressTaskStatus).length,
+          value: getCount(taskStatCounts.value, inProgressTaskStatus),
           type: 'info'
         },
         {
           label: '待样品登录',
-          value: pendingLoggableCount.value,
-          type: pendingLoggableCount.value ? 'warning' : 'success'
+          value: getCount(taskStatCounts.value, 'UNLOGGED'),
+          type: getCount(taskStatCounts.value, 'UNLOGGED') ? 'warning' : 'success'
         }
       ]
     : [
         {
           label: '已登记',
-          value: sampleSceneRecords.value.filter((item) => item.sampleStatus === loggedSampleStatus).length,
+          value: getCount(sampleStatCounts.value, loggedSampleStatus),
           type: 'info'
         },
         {
           label: '退回重检',
-          value: sampleSceneRecords.value.filter((item) => item.sampleStatus === retestSampleStatus).length,
-          type: sampleSceneRecords.value.some((item) => item.sampleStatus === retestSampleStatus) ? 'danger' : 'success'
+          value: getCount(sampleStatCounts.value, retestSampleStatus),
+          type: getCount(sampleStatCounts.value, retestSampleStatus) ? 'danger' : 'success'
         },
         {
           label: '已闭环',
-          value: sampleSceneRecords.value.filter((item) => item.sampleStatus === completedSampleStatus).length,
+          value: getCount(sampleStatCounts.value, completedSampleStatus),
           type: 'success'
         }
       ]
@@ -1491,37 +1577,37 @@ const currentStats = computed(() => {
       {
         key: 'tasks:all',
         label: baseScene.value.key === 'task-history' ? '历史任务' : '任务总览',
-        value: baseScene.value.key === 'task-ledger' ? toSafeNumber(taskTotal.value) : taskSceneRecords.value.length,
-        desc: baseScene.value.key === 'task-ledger' ? '采样任务台账总量' : '当前场景下已加载的任务记录'
+        value: getCount(taskStatCounts.value, 'ALL'),
+        desc: '采样任务台账总量'
       },
       {
         key: 'tasks:pending',
         label: '待处理',
-        value: taskSceneRecords.value.filter((item) => item.taskStatus === pendingTaskStatus).length,
+        value: getCount(taskStatCounts.value, pendingTaskStatus),
         desc: '尚未开始执行的采样任务'
       },
       {
         key: 'tasks:progress',
         label: '进行中',
-        value: taskSceneRecords.value.filter((item) => item.taskStatus === inProgressTaskStatus).length,
+        value: getCount(taskStatCounts.value, inProgressTaskStatus),
         desc: '正在现场执行的采样任务'
       },
       {
         key: 'tasks:completed',
         label: '已完成',
-        value: taskSceneRecords.value.filter((item) => item.taskStatus === completedTaskStatus).length,
+        value: getCount(taskStatCounts.value, completedTaskStatus),
         desc: '已经完成采样并可进入样品登录的任务'
       },
       {
         key: 'tasks:abandoned',
         label: '已废弃',
-        value: taskSceneRecords.value.filter((item) => item.taskStatus === abandonedTaskStatus).length,
+        value: getCount(taskStatCounts.value, abandonedTaskStatus),
         desc: '因现场条件等原因废弃的任务'
       },
       {
         key: 'tasks:unlogged',
         label: '待样品登录',
-        value: pendingLoggableCount.value,
+        value: getCount(taskStatCounts.value, 'UNLOGGED'),
         desc: '已完成采样但尚未生成样品的任务'
       }
     ]
@@ -1531,37 +1617,37 @@ const currentStats = computed(() => {
     {
       key: 'samples:all',
       label: baseScene.value.key === 'sample-ledger' ? '样品总量' : '样品总览',
-      value: baseScene.value.key === 'sample-ledger' ? toSafeNumber(sampleTotal.value) : sampleSceneRecords.value.length,
-      desc: baseScene.value.key === 'sample-ledger' ? '样品台账总量' : '当前场景下已加载的样品记录'
+      value: getCount(sampleStatCounts.value, 'ALL'),
+      desc: '样品台账总量'
     },
     {
       key: 'samples:logged',
       label: baseScene.value.key === 'sample-login' ? '已登记样品' : '登记完成',
-      value: sampleSceneRecords.value.filter((item) => item.sampleStatus === loggedSampleStatus).length,
+      value: getCount(sampleStatCounts.value, loggedSampleStatus),
       desc: '已经生成封签并等待后续检测的样品'
     },
     {
       key: 'samples:reviewing',
       label: '待审核',
-      value: sampleSceneRecords.value.filter((item) => item.sampleStatus === reviewingSampleStatus).length,
+      value: getCount(sampleStatCounts.value, reviewingSampleStatus),
       desc: '检测完成后进入审核流程的样品'
     },
     {
       key: 'samples:retest',
       label: '退回重检',
-      value: sampleSceneRecords.value.filter((item) => item.sampleStatus === retestSampleStatus).length,
+      value: getCount(sampleStatCounts.value, retestSampleStatus),
       desc: '被审核退回，等待重新检测的样品'
     },
     {
       key: 'samples:completed',
       label: '闭环完成',
-      value: sampleSceneRecords.value.filter((item) => item.sampleStatus === completedSampleStatus).length,
+      value: getCount(sampleStatCounts.value, completedSampleStatus),
       desc: '检测、审核已完成闭环的样品'
     },
     {
       key: 'samples:todo-login',
       label: '待登录任务',
-      value: pendingLoggableCount.value,
+      value: getCount(taskStatCounts.value, 'UNLOGGED'),
       desc: '已完成采样但尚未登记为样品的任务数量'
     }
   ]
@@ -1629,51 +1715,69 @@ const planStats = computed(() => [
   {
     key: 'plans:all',
     label: '计划总量',
-    value: toSafeNumber(planTotal.value),
+    value: getCount(planStatCounts.value, 'ALL'),
     desc: '周期采样计划台账总量'
   },
   {
     key: 'plans:active',
     label: '启用中',
-    value: plans.value.filter((item) => item.planStatus === activePlanStatus).length,
+    value: getCount(planStatCounts.value, activePlanStatus),
     desc: '当前处于启用状态的采样计划'
   },
   {
     key: 'plans:missing-sampler',
     label: '待补采样员',
-    value: activeMissingSamplerPlans.value.length,
+    value: getCount(planStatCounts.value, 'MISSING_SAMPLER'),
     desc: '已启用但未指定采样员，自动派发会跳过'
   },
   {
     key: 'plans:paused',
     label: '已暂停',
-    value: plans.value.filter((item) => item.planStatus === pausedPlanStatus).length,
+    value: getCount(planStatCounts.value, pausedPlanStatus),
     desc: '临时暂停执行的采样计划'
   },
   {
     key: 'plans:dispatched',
     label: '已派发',
-    value: plans.value.filter((item) => dispatchedPlanStatuses.includes(item.planStatus)).length,
+    value: dispatchedPlanStatuses.reduce((sum, status) => sum + getCount(planStatCounts.value, status), 0),
     desc: '已经生成采样任务的采样计划'
   },
   {
     key: 'plans:completed',
     label: '已完成',
-    value: plans.value.filter((item) => item.planStatus === completedPlanStatus).length,
+    value: getCount(planStatCounts.value, completedPlanStatus),
     desc: '已完成闭环的周期计划'
   }
 ])
 
 function syncRouteState() {
-  activeStatKey.value = baseScene.value.defaultStatKey
-  applyStatToCurrentSceneQuery(activeStatKey.value)
+  activeStatKey.value = getAllStatKeyForCurrentScene()
+  planQuery.planStatus = ''
+  taskQuery.taskStatus = ''
+  sampleQuery.sampleStatus = ''
+  if (isPlanScene.value) {
+    planQuery.pageNum = 1
+    return
+  }
+  if (isTaskScene.value) {
+    taskQuery.pageNum = 1
+    return
+  }
+  sampleQuery.pageNum = 1
 }
 
 function handleStatClick(key) {
-  const nextKey = activeStatKey.value === key ? baseScene.value.defaultStatKey : key
+  const nextKey = activeStatKey.value === key ? getAllStatKeyForCurrentScene() : key
   activeStatKey.value = nextKey
   applyStatToCurrentSceneQuery(nextKey)
   loadCurrentSceneData()
+}
+
+function handlePlanStatClick(key) {
+  const nextKey = activeStatKey.value === key ? 'plans:all' : key
+  activeStatKey.value = nextKey
+  applyStatToCurrentSceneQuery(nextKey)
+  loadPlans()
 }
 
 function applyStatToCurrentSceneQuery(key) {
@@ -1689,6 +1793,16 @@ function applyStatToCurrentSceneQuery(key) {
   }
   sampleQuery.sampleStatus = getSampleStatusByStatKey(key) || ''
   sampleQuery.pageNum = 1
+}
+
+function getAllStatKeyForCurrentScene() {
+  if (isPlanScene.value) {
+    return 'plans:all'
+  }
+  if (isTaskScene.value) {
+    return 'tasks:all'
+  }
+  return 'samples:all'
 }
 
 function getPlanStatusByStatKey(key) {
@@ -1734,7 +1848,7 @@ function syncActiveStatByCurrentQuery() {
     } else if (planQuery.planStatus === completedPlanStatus) {
       activeStatKey.value = 'plans:completed'
     } else {
-      activeStatKey.value = baseScene.value.defaultStatKey
+      activeStatKey.value = 'plans:all'
     }
     return
   }
@@ -1748,7 +1862,7 @@ function syncActiveStatByCurrentQuery() {
     } else if (taskQuery.taskStatus === abandonedTaskStatus) {
       activeStatKey.value = 'tasks:abandoned'
     } else {
-      activeStatKey.value = baseScene.value.defaultStatKey
+      activeStatKey.value = 'tasks:all'
     }
     return
   }
@@ -1761,7 +1875,7 @@ function syncActiveStatByCurrentQuery() {
   } else if (sampleQuery.sampleStatus === completedSampleStatus) {
     activeStatKey.value = 'samples:completed'
   } else {
-    activeStatKey.value = baseScene.value.defaultStatKey
+    activeStatKey.value = 'samples:all'
   }
 }
 
@@ -1775,10 +1889,28 @@ async function loadPlans() {
   planTotal.value = toSafeNumber(result.total)
 }
 
+async function loadPlanStats() {
+  planStatCounts.value = buildCountMap(await fetchSamplingPlanStatsApi())
+}
+
 async function loadTasks() {
   const result = await fetchSamplingTasksApi(taskQuery)
   tasks.value = result.records || []
   taskTotal.value = toSafeNumber(result.total)
+}
+
+async function loadTaskStats() {
+  taskStatCounts.value = buildCountMap(await fetchSamplingTaskStatsApi())
+}
+
+async function loadLoggableTasks() {
+  const result = await fetchSamplingTasksApi({
+    pageNum: 1,
+    pageSize: 500,
+    taskStatus: completedTaskStatus
+  })
+  const records = Array.isArray(result.records) ? result.records : []
+  loggableTasks.value = records.filter((item) => !isTaskRegistered(item))
 }
 
 async function loadSamples() {
@@ -1787,20 +1919,26 @@ async function loadSamples() {
   sampleTotal.value = toSafeNumber(result.total)
 }
 
+async function loadSampleStats() {
+  sampleStatCounts.value = buildCountMap(await fetchSampleStatsApi())
+}
+
 async function loadCurrentSceneData() {
   if (isPlanScene.value) {
-    await loadPlans()
+    await Promise.all([loadPlans(), loadPlanStats()])
     return
   }
   if (isTaskScene.value) {
-    await loadTasks()
+    await Promise.all([loadTasks(), loadTaskStats()])
     return
   }
   if (baseScene.value.key === 'sample-login') {
-    await Promise.all([loadTasks(), loadSamples()])
+    await Promise.all([loadSamples(), loadTaskStats(), loadSampleStats()])
+    await loadLoggableTasks()
     return
   }
-  await loadSamples()
+  await Promise.all([loadSamples(), loadSampleStats(), loadTaskStats()])
+  await loadLoggableTasks()
 }
 
 async function handleExportCurrentScene() {
@@ -1842,8 +1980,7 @@ function resetPlanQuery() {
   planQuery.planStatus = ''
   planQuery.samplerId = ''
   planQuery.pageNum = 1
-  activeStatKey.value = baseScene.value.defaultStatKey
-  applyStatToCurrentSceneQuery(activeStatKey.value)
+  activeStatKey.value = 'plans:all'
   loadPlans()
 }
 
@@ -1865,8 +2002,7 @@ function resetCurrentSceneQuery() {
     taskQuery.taskStatus = ''
     taskQuery.samplerId = ''
     taskQuery.pageNum = 1
-    activeStatKey.value = baseScene.value.defaultStatKey
-    applyStatToCurrentSceneQuery(activeStatKey.value)
+    activeStatKey.value = 'tasks:all'
     loadTasks()
     return
   }
@@ -1874,8 +2010,7 @@ function resetCurrentSceneQuery() {
   sampleQuery.sampleStatus = ''
   sampleQuery.sampleType = ''
   sampleQuery.pageNum = 1
-  activeStatKey.value = baseScene.value.defaultStatKey
-  applyStatToCurrentSceneQuery(activeStatKey.value)
+  activeStatKey.value = 'samples:all'
   loadSamples()
 }
 
@@ -1919,6 +2054,15 @@ function handleSamplerDropdownVisible(visible) {
   if (visible) {
     loadSamplers()
   }
+}
+
+async function loadSamplingDictOptions() {
+  const [weatherItems, storageItems] = await Promise.all([
+    fetchDictItemsApi('weather_condition'),
+    fetchDictItemsApi('storage_condition')
+  ])
+  weatherOptions.value = normalizeDictOptions(weatherItems)
+  storageConditionOptions.value = normalizeDictOptions(storageItems)
 }
 
 function handlePlanSamplerChange(userId) {
@@ -2057,7 +2201,7 @@ async function submitPlanForm() {
     planDialogVisible.value = false
     ElMessage.success(editingPlanId.value ? '采样计划已更新' : '采样计划已创建')
     planQuery.pageNum = 1
-    await loadPlans()
+    await Promise.all([loadPlans(), loadPlanStats()])
   } finally {
     submitting.value = false
   }
@@ -2101,7 +2245,7 @@ async function submitDispatchForm() {
     ElMessage.success('采样计划已派发，并已同步生成采样任务。')
     planQuery.pageNum = 1
     taskQuery.pageNum = 1
-    await Promise.all([loadPlans(), loadTasks()])
+    await Promise.all([loadPlans(), loadTasks(), loadPlanStats(), loadTaskStats()])
   } finally {
     dispatchSubmitting.value = false
   }
@@ -2118,7 +2262,7 @@ async function pausePlan(row) {
   try {
     await pauseSamplingPlanApi(row.id)
     ElMessage.success('采样计划已暂停。')
-    await loadPlans()
+    await Promise.all([loadPlans(), loadPlanStats()])
   } finally {
     endRowAction('plan', 'pause', row?.id)
   }
@@ -2131,7 +2275,7 @@ async function resumePlan(row) {
   try {
     await resumeSamplingPlanApi(row.id)
     ElMessage.success('采样计划已恢复。')
-    await loadPlans()
+    await Promise.all([loadPlans(), loadPlanStats()])
   } finally {
     endRowAction('plan', 'resume', row?.id)
   }
@@ -2493,7 +2637,7 @@ async function editTaskSealNo(row) {
     }
     await updateSamplingTaskSealNoApi(row.id, { sealNo })
     ElMessage.success('采样封签号已保存。')
-    await loadTasks()
+    await Promise.all([loadTasks(), loadTaskStats()])
   } finally {
     endRowAction('task', 'seal', row?.id)
   }
@@ -2516,7 +2660,7 @@ async function startTask(row) {
       remark: '采样任务开始执行'
     })
     ElMessage.success('采样任务已开始执行。')
-    await Promise.all([loadTasks(), loadPlans()])
+    await Promise.all([loadTasks(), loadPlans(), loadTaskStats(), loadPlanStats()])
   } finally {
     endRowAction('task', 'start', row?.id)
   }
@@ -2532,7 +2676,7 @@ async function abandonTask(row) {
       remark: '请确认现场情况后重新安排采样任务'
     })
     ElMessage.success('采样任务已废弃。')
-    await Promise.all([loadTasks(), loadPlans()])
+    await Promise.all([loadTasks(), loadPlans(), loadTaskStats(), loadPlanStats()])
   } finally {
     endRowAction('task', 'abandon', row?.id)
   }
@@ -2545,7 +2689,7 @@ async function resumeTask(row) {
   try {
     await resumeSamplingTaskApi(row.id, { remark: '采样任务恢复为待处理状态' })
     ElMessage.success('采样任务已恢复。')
-    await Promise.all([loadTasks(), loadPlans()])
+    await Promise.all([loadTasks(), loadPlans(), loadTaskStats(), loadPlanStats()])
   } finally {
     endRowAction('task', 'resume', row?.id)
   }
@@ -2693,16 +2837,7 @@ async function resolveTaskDetailPhotos(photoPaths) {
       URL.revokeObjectURL(item.previewUrl)
     }
   })
-  const entries = photoPaths.map(buildPhotoEntry)
-  taskDetailPhotoList.value = entries
-  await Promise.all(entries.map(async (item) => {
-    try {
-      const response = await previewStorageFileApi(item.path)
-      item.previewUrl = URL.createObjectURL(response.data)
-    } catch {
-      item.previewUrl = isDirectImageUrl(item.path) ? buildStoragePreviewUrl(item.path) : ''
-    }
-  }))
+  taskDetailPhotoList.value = photoPaths.map(buildPhotoEntry)
 }
 
 async function handleTaskCompletePhotoChange(file) {
@@ -2721,18 +2856,17 @@ async function handleTaskCompletePhotoChange(file) {
   taskCompletePhotoUploading.value = true
   try {
     const result = await uploadStorageFileApi(rawFile)
-    const filePath = String(
+    const publicFileUrl = String(
       result?.fullUrl
       || result?.data?.fullUrl
       || result?.filePath
       || result?.data?.filePath
       || ''
     ).trim()
-    if (!filePath) {
+    if (!publicFileUrl) {
       ElMessage.error('图片上传失败')
       return
     }
-    const publicFileUrl = getPublicFileUrl(filePath)
     taskCompleteForm.photoUrls = [...parsePhotoUrls(taskCompleteForm.photoUrls), publicFileUrl].join(',')
     taskCompletePhotoList.value = [
       ...taskCompletePhotoList.value,
@@ -2816,7 +2950,7 @@ async function submitTaskCompleteForm() {
     })
     taskCompleteDialogVisible.value = false
     ElMessage.success('采样录入已保存。')
-    await Promise.all([loadTasks(), loadPlans()])
+    await Promise.all([loadTasks(), loadPlans(), loadTaskStats(), loadPlanStats()])
   } finally {
     taskCompleteSubmitting.value = false
   }
@@ -2879,12 +3013,18 @@ function resetLoginForm() {
   loginForm.remark = ''
 }
 
-async function openLoginDialog(task = firstLoggableTask.value) {
+async function openLoginDialog(task = null) {
+  await Promise.all([loadSamples(), loadLoggableTasks(), loadTaskStats()])
+  const loggableTask = task || firstLoggableTask.value || pendingLoggableTasks.value[0]
+  if (!loggableTask) {
+    ElMessage.warning('没有可登录的任务，请先进行采样任务完成录入')
+    return
+  }
   await Promise.all([loadDetectionProjects(), loadFlowOptions()])
   resetLoginForm()
   applyDefaultFlowSelections()
   loginDialogMode.value = 'create'
-  applyTaskToLoginForm(task || pendingLoggableTasks.value[0])
+  applyTaskToLoginForm(loggableTask)
   loginDialogVisible.value = true
 }
 
@@ -3017,7 +3157,8 @@ async function submitSampleLogin() {
     loginDialogVisible.value = false
     ElMessage.success(`样品登录完成，封签编号：${sample?.sealNo || '-'}`)
     sampleQuery.pageNum = 1
-    await Promise.all([loadTasks(), loadSamples()])
+    await Promise.all([loadTasks(), loadSamples(), loadTaskStats(), loadSampleStats()])
+    await loadLoggableTasks()
   } finally {
     submitting.value = false
   }
@@ -3025,7 +3166,7 @@ async function submitSampleLogin() {
 
 onMounted(async () => {
   syncRouteState()
-  await loadCurrentSceneData()
+  await Promise.all([loadCurrentSceneData(), loadSamplingDictOptions()])
 })
 
 watch(() => route.fullPath, () => {
@@ -3265,9 +3406,27 @@ watch(() => route.fullPath, () => {
   line-height: 1.7;
 }
 
+:deep(.dispatch-plan-dialog .el-dialog__body) {
+  padding-bottom: 0;
+}
+
+:deep(.dispatch-plan-dialog .el-dialog__footer) {
+  padding-top: 8px;
+  padding-bottom: 16px;
+}
+
+:deep(.el-dialog.dispatch-plan-dialog),
+:deep(.dispatch-plan-dialog) {
+  min-height: auto;
+}
+
+:deep(.sampling-form-dialog .el-dialog__body) {
+  max-height: calc(100vh - 160px);
+  overflow-y: auto;
+}
+
 :deep(.sample-login-dialog) {
   width: min(1180px, calc(100vw - 40px));
-  margin-top: 8vh;
 }
 
 :deep(.sample-login-dialog .el-dialog__body) {
@@ -3392,7 +3551,6 @@ watch(() => route.fullPath, () => {
 @media (max-width: 900px) {
   :deep(.sample-login-dialog) {
     width: calc(100vw - 20px);
-    margin-top: 2vh;
   }
 
   :deep(.sample-login-dialog .el-dialog__body) {
@@ -3434,10 +3592,6 @@ watch(() => route.fullPath, () => {
 
 .coordinate-field {
   flex: 1;
-}
-
-:deep(.task-detail-dialog .el-dialog) {
-  margin-top: 5vh;
 }
 
 :deep(.task-detail-dialog .el-dialog__body) {

@@ -17,7 +17,7 @@
             v-for="item in processNodes.slice(0, 5)"
             :key="item.label"
             class="leader-hero__flow-item"
-            @click="goRoute(item.path)"
+            @click="goProcessRoute(item)"
           >
             {{ item.label }}
           </span>
@@ -75,7 +75,7 @@
           :key="item.label"
           type="button"
           :class="['process-node', { 'is-warning': item.warning }]"
-          @click="goRoute(item.path)"
+          @click="goProcessRoute(item)"
         >
           <span class="node-index">{{ item.index }}</span>
           <strong>{{ item.label }}</strong>
@@ -251,6 +251,19 @@ function goRoute(path) {
     return
   }
   router.push(path)
+}
+
+function goProcessRoute(item) {
+  const label = String(item?.label || '').trim()
+  if (item?.index === 1 || label === '样品登录') {
+    goRoute('/sample-login')
+    return
+  }
+  if (item?.index === 2 || label === '检测分样') {
+    goRoute('/detection-split')
+    return
+  }
+  goRoute(item?.path)
 }
 
 function formatResultValue(item) {

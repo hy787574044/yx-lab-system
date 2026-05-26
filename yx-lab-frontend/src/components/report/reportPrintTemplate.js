@@ -1,7 +1,7 @@
 export const REPORT_TEMPLATE = {
   title: '水质检测报告',
   reportNoPrefix: 'BG',
-  organizationName: '云河县水质化验室',
+  organizationName: '云河水质化验室',
   judgmentBasis: 'GB 5749-2022《生活饮用水卫生标准》',
   notes: [
     '本报告基于 GB/T 5750-2023 系列标准检测，判定依据为 GB 5749-2022。',

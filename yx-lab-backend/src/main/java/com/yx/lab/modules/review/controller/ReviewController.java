@@ -10,6 +10,7 @@ import com.yx.lab.modules.review.dto.ReviewCommand;
 import com.yx.lab.modules.review.dto.ReviewQuery;
 import com.yx.lab.modules.review.entity.ReviewRecord;
 import com.yx.lab.modules.review.service.ReviewService;
+import com.yx.lab.modules.sample.vo.StatusCountVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.Valid;
 import java.util.Arrays;
+import java.util.List;
 
 /**
  * 审核流程控制器。
@@ -46,6 +48,12 @@ public class ReviewController {
     @Operation(summary = "审核记录分页")
     public ApiResponse<PageResult<ReviewRecord>> page(@Validated ReviewQuery query) {
         return ApiResponse.success(reviewService.page(query));
+    }
+
+    @GetMapping("/stats")
+    @Operation(summary = "瀹℃牳鐘舵€佺粺璁?")
+    public ApiResponse<List<StatusCountVO>> stats() {
+        return ApiResponse.success(reviewService.statusStats());
     }
 
     /**

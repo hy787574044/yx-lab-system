@@ -1302,3 +1302,99 @@ AggregateError [ECONNREFUSED]:
 AggregateError [ECONNREFUSED]: 
     at internalConnectMultiple (node:net:1142:49)
     at afterConnectMultiple (node:net:1723:7)
+[2m19:45:02[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/samplingPlans?keyword=&planStatus=&samplerId=&pageNum=1&pageSize=30[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+[2m19:45:03[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/samplingPlans?keyword=&planStatus=&samplerId=&pageNum=1&pageSize=30[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+[2m19:45:04[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/samplingPlans?keyword=&planStatus=&samplerId=&pageNum=1&pageSize=30[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+[2m20:05:57[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/detections?pageNum=1&pageSize=30&keyword=&detectionStatus=SUBMITTED[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+[2m20:05:58[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/detections?pageNum=1&pageSize=30&keyword=&detectionStatus=SUBMITTED[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+[2m20:05:58[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/detections?pageNum=1&pageSize=30&keyword=&detectionStatus=SUBMITTED[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+[2m20:54:03[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/reviews?keyword=&pageNum=1&pageSize=30[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+[2m20:54:03[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/detections?pageNum=1&pageSize=30&keyword=&detectionStatus=SUBMITTED[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+[2m20:54:03[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/reviews/stats[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+[2m20:54:06[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/reviews?keyword=&pageNum=1&pageSize=30[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+[2m20:54:06[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/detections?pageNum=1&pageSize=30&keyword=&detectionStatus=SUBMITTED[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+[2m20:54:06[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/reviews/stats[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+[2m20:54:07[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/reviews?keyword=&pageNum=1&pageSize=30[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+[2m20:54:07[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/detections?pageNum=1&pageSize=30&keyword=&detectionStatus=SUBMITTED[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+[2m20:54:07[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/reviews/stats[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+[2m20:54:08[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/reviews?keyword=&pageNum=1&pageSize=30[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+[2m20:54:08[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/detections?pageNum=1&pageSize=30&keyword=&detectionStatus=SUBMITTED[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+[2m20:54:08[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/reviews/stats[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+[2m20:54:09[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/reviews?keyword=&pageNum=1&pageSize=30[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+[2m20:54:09[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/detections?pageNum=1&pageSize=30&keyword=&detectionStatus=SUBMITTED[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+[2m20:54:09[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/reviews/stats[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+[2m20:54:10[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/reviews?keyword=&pageNum=1&pageSize=30[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+[2m20:54:10[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/reviews/stats[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+[2m20:54:10[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/detections?pageNum=1&pageSize=30&keyword=&detectionStatus=SUBMITTED[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)

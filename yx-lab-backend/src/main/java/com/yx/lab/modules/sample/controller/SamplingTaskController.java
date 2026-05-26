@@ -12,6 +12,7 @@ import com.yx.lab.modules.sample.dto.SamplingTaskQuery;
 import com.yx.lab.modules.sample.dto.SamplingTaskSealNoCommand;
 import com.yx.lab.modules.sample.entity.SamplingTask;
 import com.yx.lab.modules.sample.service.SamplingTaskService;
+import com.yx.lab.modules.sample.vo.StatusCountVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -50,6 +51,17 @@ public class SamplingTaskController {
     @Operation(summary = "采样任务分页")
     public ApiResponse<PageResult<SamplingTask>> page(@Validated SamplingTaskQuery query) {
         return ApiResponse.success(samplingTaskService.page(query));
+    }
+
+    /**
+     * 统计采样任务状态数量。
+     *
+     * @return 状态数量列表。
+     */
+    @GetMapping("/stats")
+    @Operation(summary = "采样任务状态统计")
+    public ApiResponse<List<StatusCountVO>> stats() {
+        return ApiResponse.success(samplingTaskService.statusStats());
     }
 
     /**

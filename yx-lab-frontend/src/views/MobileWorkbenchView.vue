@@ -545,7 +545,6 @@ import {
   fetchReportPreviewDataApi,
   loginSampleApi,
   mobileLogoutApi,
-  previewStorageFileApi,
   startSamplingTaskApi,
   abandonSamplingTaskApi,
   completeSamplingTaskApi,
@@ -555,7 +554,6 @@ import {
   uploadStorageFileApi
 } from '../api/lab'
 import ReportPrintDocument from '../components/report/ReportPrintDocument.vue'
-import { getPublicFileUrl } from '../config/appConfig'
 import { clearToken, getUser, setUser } from '../utils/auth'
 import {
   approvedReviewResult,
@@ -735,7 +733,7 @@ async function submitProfileForm() {
     let avatarUrl = String(profileForm.avatarUrl || '').trim()
     if (selectedProfileAvatarFile.value) {
       const uploadResult = await uploadStorageFileApi(selectedProfileAvatarFile.value)
-      avatarUrl = getPublicFileUrl(uploadResult?.fullUrl || uploadResult?.filePath || '')
+      avatarUrl = uploadResult?.fullUrl || uploadResult?.filePath || ''
     }
     const nextUser = await updateMobileProfileApi({
       realName: String(profileForm.realName || '').trim(),
@@ -783,23 +781,15 @@ function clearProfileAvatarPreview() {
 }
 
 function clearCurrentUserAvatarSrc() {
-  if (currentUserAvatarSrc.value) {
+  if (currentUserAvatarSrc.value?.startsWith('blob:')) {
     URL.revokeObjectURL(currentUserAvatarSrc.value)
-    currentUserAvatarSrc.value = ''
   }
+  currentUserAvatarSrc.value = ''
 }
 
 async function loadCurrentUserAvatar() {
   clearCurrentUserAvatarSrc()
-  if (!currentUser.value?.avatarUrl) {
-    return
-  }
-  try {
-    const response = await previewStorageFileApi(currentUser.value.avatarUrl)
-    currentUserAvatarSrc.value = URL.createObjectURL(response.data)
-  } catch {
-    currentUserAvatarSrc.value = ''
-  }
+  currentUserAvatarSrc.value = String(currentUser.value?.avatarUrl || '').trim()
 }
 
 async function refreshAll() {

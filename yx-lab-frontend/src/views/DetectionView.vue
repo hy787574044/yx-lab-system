@@ -893,7 +893,7 @@ function getDetectionResultClass(row) {
 }
 
 function handleStatClick(key) {
-  const nextKey = activeStatKey.value === key ? baseScene.value.defaultStatKey : key
+  const nextKey = activeStatKey.value === key ? 'all' : key
   activeStatKey.value = nextKey
   query.detectionStatus = getDetectionStatusByStatKey(nextKey) || ''
   query.pageNum = 1
@@ -916,8 +916,8 @@ function resetQuery() {
 }
 
 function syncRouteState() {
-  activeStatKey.value = baseScene.value.defaultStatKey
-  query.detectionStatus = getDetectionStatusByStatKey(activeStatKey.value) || ''
+  activeStatKey.value = 'all'
+  query.detectionStatus = ''
   query.pageNum = 1
 }
 
@@ -1421,7 +1421,7 @@ async function submitDetectionResult() {
 }
 
 function getActiveDetectionStatusFilter() {
-  return query.detectionStatus || getDetectionStatusByStatKey(activeStatKey.value) || undefined
+  return query.detectionStatus || undefined
 }
 
 function getDetectionStatusByStatKey(key) {
@@ -1443,7 +1443,7 @@ function syncActiveStatByQuery() {
     approved: approvedDetectionStatus,
     rejected: rejectedDetectionStatus
   }).find(([, status]) => status === query.detectionStatus)
-  activeStatKey.value = matchedEntry?.[0] || baseScene.value.defaultStatKey
+  activeStatKey.value = matchedEntry?.[0] || 'all'
 }
 
 async function loadData() {
@@ -1455,9 +1455,7 @@ async function loadData() {
     mine: query.mine === '' ? undefined : query.mine
   }
   const summaryQuery = {
-    keyword: query.keyword,
-    scope: baseScene.value.key,
-    mine: query.mine === '' ? undefined : query.mine
+    scope: baseScene.value.key
   }
   const [detectionResult, summaryResult] = await Promise.all([
     fetchDetectionsApi(detectionQuery),

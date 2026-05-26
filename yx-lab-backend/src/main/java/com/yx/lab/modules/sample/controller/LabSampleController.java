@@ -11,6 +11,7 @@ import com.yx.lab.modules.sample.dto.LabSampleQuery;
 import com.yx.lab.modules.sample.dto.SampleLoginCommand;
 import com.yx.lab.modules.sample.entity.LabSample;
 import com.yx.lab.modules.sample.service.LabSampleService;
+import com.yx.lab.modules.sample.vo.StatusCountVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.Valid;
+import java.util.List;
 
 /**
  * 样品控制器。
@@ -48,6 +50,17 @@ public class LabSampleController {
     @Operation(summary = "样品分页")
     public ApiResponse<PageResult<LabSample>> page(@Validated LabSampleQuery query) {
         return ApiResponse.success(labSampleService.page(query));
+    }
+
+    /**
+     * 统计样品状态数量。
+     *
+     * @return 状态数量列表。
+     */
+    @GetMapping("/stats")
+    @Operation(summary = "样品状态统计")
+    public ApiResponse<List<StatusCountVO>> stats() {
+        return ApiResponse.success(labSampleService.statusStats());
     }
 
     /**

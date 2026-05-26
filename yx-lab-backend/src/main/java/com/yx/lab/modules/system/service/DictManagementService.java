@@ -10,6 +10,7 @@ import com.yx.lab.modules.system.dto.DictQuery;
 import com.yx.lab.modules.system.dto.DictSaveCommand;
 import com.yx.lab.modules.system.entity.LabDict;
 import com.yx.lab.modules.system.mapper.LabDictMapper;
+import com.yx.lab.modules.system.vo.DictItemVO;
 import com.yx.lab.modules.system.vo.LabDictVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -73,6 +74,31 @@ public class DictManagementService {
      */
     public LabDictVO detail(Long id) {
         return toVO(requireDict(id));
+    }
+
+    /**
+     * 按字典编码读取启用字典项，供业务表单下拉选择使用。
+     *
+     * @param dictCode 字典编码
+     * @return 字典项列表
+     */
+    public List<DictItemVO> items(String dictCode) {
+        ensureBuiltInDicts();
+        if (StrUtil.isBlank(dictCode)) {
+            return new ArrayList<>();
+        }
+        LabDict dict = labDictMapper.selectOne(new LambdaQueryWrapper<LabDict>()
+                .eq(LabDict::getDictCode, StrUtil.trim(dictCode))
+                .eq(LabDict::getStatus, 1)
+                .last("limit 1"));
+        if (dict == null || StrUtil.isBlank(dict.getItemText())) {
+            return new ArrayList<>();
+        }
+        return Arrays.stream(StrUtil.splitToArray(dict.getItemText(), '\n'))
+                .map(StrUtil::trim)
+                .filter(StrUtil::isNotBlank)
+                .map(this::toDictItemVO)
+                .collect(Collectors.toList());
     }
 
     /**
@@ -269,6 +295,25 @@ public class DictManagementService {
                         "QUALITY_CONTROL", "质控样"
                 )),
                 "系统内置：样品登录时用于标识本次样品的质控属性。"));
+        definitions.add(new BuiltInDictDefinition("weather_condition", "天气情况", "采样管理",
+                buildItemText(mapOf(
+                        "SUNNY", "晴",
+                        "CLOUDY", "多云",
+                        "OVERCAST", "阴",
+                        "LIGHT_RAIN", "小雨",
+                        "MODERATE_RAIN", "中雨",
+                        "HEAVY_RAIN", "大雨"
+                )),
+                "系统内置：采样录入、样品登录时可选的常用天气情况。"));
+        definitions.add(new BuiltInDictDefinition("storage_condition", "保存条件", "采样管理",
+                buildItemText(mapOf(
+                        "ROOM_TEMPERATURE", "常温送检",
+                        "REFRIGERATED", "冷藏保存",
+                        "LIGHT_PROOF", "避光保存",
+                        "REFRIGERATED_LIGHT_PROOF", "冷藏避光",
+                        "SEALED", "密封保存"
+                )),
+                "系统内置：样品保存与运输过程中的常用保存条件。"));
         definitions.add(new BuiltInDictDefinition("sample_status", "样品状态", "采样管理",
                 buildItemText(mapOf(
                         "LOGGED", "已登录",
@@ -335,6 +380,19 @@ public class DictManagementService {
             result.put(keyValues[index], keyValues[index + 1]);
         }
         return result;
+    }
+
+    private DictItemVO toDictItemVO(String itemText) {
+        DictItemVO vo = new DictItemVO();
+        int splitIndex = itemText.indexOf('=');
+        if (splitIndex >= 0) {
+            vo.setValue(StrUtil.trim(itemText.substring(splitIndex + 1)));
+            vo.setLabel(StrUtil.trim(itemText.substring(splitIndex + 1)));
+            return vo;
+        }
+        vo.setValue(itemText);
+        vo.setLabel(itemText);
+        return vo;
     }
 
     private static class BuiltInDictDefinition {

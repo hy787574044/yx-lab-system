@@ -10,6 +10,9 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URLDecoder;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -19,7 +22,7 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
- * 文件存储服务，统一处理上传目录定位、文件读写与删除。
+ * File storage service.
  */
 @Service
 @RequiredArgsConstructor
@@ -27,13 +30,6 @@ public class StorageService {
 
     private final LabStorageProperties storageProperties;
 
-    /**
-     * 保存上传文件并返回相对存储路径。
-     *
-     * @param file 上传文件
-     * @return 存储后的相对路径
-     * @throws IOException 文件写入异常
-     */
     public String store(MultipartFile file) throws IOException {
         Path uploadRoot = resolveUploadRoot();
         Files.createDirectories(uploadRoot);
@@ -44,48 +40,36 @@ public class StorageService {
         return fileName;
     }
 
-    /**
-     * 将相对路径转换为完整的文件URL。
-     *
-     * @param relativePath 相对路径
-     * @return 完整的文件URL
-     */
-    public String toFullUrl(String relativePath) {
-        if (StrUtil.isBlank(relativePath)) {
+    public String toFullUrl(String filePath) {
+        if (StrUtil.isBlank(filePath)) {
             return null;
         }
-        String normalizedPath = StrUtil.trim(relativePath);
-        // 如果已经是完整URL，直接返回
-        if (StrUtil.startWithIgnoreCase(normalizedPath, "http://")
-                || StrUtil.startWithIgnoreCase(normalizedPath, "https://")) {
-            return normalizedPath;
+        String normalizedInput = StrUtil.trim(filePath);
+        if (StrUtil.startWithIgnoreCase(normalizedInput, "blob:")
+                || StrUtil.startWithIgnoreCase(normalizedInput, "data:")) {
+            return normalizedInput;
         }
+
+        String storagePath = extractStoragePath(normalizedInput);
+        if (StrUtil.isBlank(storagePath) && isHttpUrl(normalizedInput)) {
+            return normalizedInput;
+        }
+
+        String fileReference = normalizeFileReference(StrUtil.blankToDefault(storagePath, normalizedInput));
+        if (StrUtil.isBlank(fileReference)) {
+            return null;
+        }
+
+        String requestPath = "api/storage/file?path=" + encodeQueryValue(fileReference);
         String baseUrl = normalizeBaseUrl();
-
-        // 兼容前端传入 /api/storage/file?path=xxx 或 api/storage/file?path=xxx 的场景，统一补成完整地址。
-        if (normalizedPath.startsWith("/api/storage/file?path=")
-                || normalizedPath.startsWith("api/storage/file?path=")) {
-            return prependBaseUrl(baseUrl, normalizedPath);
-        }
-
-        String path = normalizedPath.startsWith("/") ? normalizedPath.substring(1) : normalizedPath;
-        if (StrUtil.isBlank(baseUrl)) {
-            return "/api/storage/file?path=" + path;
-        }
-        return baseUrl + "api/storage/file?path=" + path;
+        return StrUtil.isBlank(baseUrl) ? "/" + requestPath : baseUrl + requestPath;
     }
 
-    /**
-     * 将逗号分隔的多个相对路径转换为完整URL。
-     *
-     * @param relativePaths 逗号分隔的相对路径
-     * @return 逗号分隔的完整URL
-     */
-    public String toFullUrls(String relativePaths) {
-        if (StrUtil.isBlank(relativePaths)) {
+    public String toFullUrls(String filePaths) {
+        if (StrUtil.isBlank(filePaths)) {
             return null;
         }
-        return Arrays.stream(relativePaths.split(","))
+        return Arrays.stream(filePaths.split(","))
                 .map(String::trim)
                 .filter(StrUtil::isNotBlank)
                 .map(this::toFullUrl)
@@ -94,37 +78,24 @@ public class StorageService {
                 .collect(Collectors.joining(","));
     }
 
-    private String normalizeBaseUrl() {
-        String baseUrl = StrUtil.blankToDefault(storageProperties.getFileBaseUrl(), "").trim();
-        if (baseUrl.isEmpty()) {
-            return "";
-        }
-        return baseUrl.endsWith("/") ? baseUrl : baseUrl + "/";
+    public boolean isSameStorageFile(String firstPath, String secondPath) {
+        String firstReference = resolveFileReference(firstPath);
+        String secondReference = resolveFileReference(secondPath);
+        return Objects.equals(firstReference, secondReference);
     }
 
-    private String prependBaseUrl(String baseUrl, String requestPath) {
-        String normalizedRequestPath = requestPath.startsWith("/")
-                ? requestPath.substring(1)
-                : requestPath;
-        if (StrUtil.isBlank(baseUrl)) {
-            return "/" + normalizedRequestPath;
-        }
-        return baseUrl + normalizedRequestPath;
-    }
-    /**
-     * 解析业务文件路径为本地绝对路径。
-     *
-     * @param filePath 业务侧保存的文件路径
-     * @return 本地绝对路径
-     */
     public Path resolvePath(String filePath) {
-        if (StrUtil.isBlank(filePath)) {
+        String fileReference = resolveFileReference(filePath);
+        if (StrUtil.isBlank(fileReference)) {
             return resolveUploadRoot();
         }
-        if (FileUtil.isAbsolutePath(filePath)) {
-            return FileUtil.file(filePath).toPath().normalize();
+        if (isHttpUrl(fileReference)) {
+            throw new IllegalArgumentException("Unsupported external file url: " + fileReference);
         }
-        Path normalizedPath = Paths.get(filePath).normalize();
+        if (FileUtil.isAbsolutePath(fileReference)) {
+            return FileUtil.file(fileReference).toPath().normalize();
+        }
+        Path normalizedPath = Paths.get(fileReference).normalize();
         Path configuredPath = Paths.get(getConfiguredUploadDir()).normalize();
         if (!configuredPath.isAbsolute() && normalizedPath.startsWith(configuredPath)) {
             return Paths.get(System.getProperty("user.dir")).toAbsolutePath().normalize()
@@ -134,12 +105,6 @@ public class StorageService {
         return resolveUploadRoot().resolve(normalizedPath).normalize();
     }
 
-    /**
-     * 按路径删除文件，文件不存在时直接忽略。
-     *
-     * @param filePath 业务侧保存的文件路径
-     * @throws IOException 文件删除异常
-     */
     public void deleteIfExists(String filePath) throws IOException {
         if (StrUtil.isBlank(filePath)) {
             return;
@@ -147,14 +112,6 @@ public class StorageService {
         Files.deleteIfExists(resolvePath(filePath));
     }
 
-    /**
-     * 将文本内容按相对路径写入存储目录。
-     *
-     * @param relativePath 相对存储路径
-     * @param content 文本内容
-     * @return 规范化后的相对路径
-     * @throws IOException 文件写入异常
-     */
     public String storeText(String relativePath, String content) throws IOException {
         Path targetPath = resolveWritePath(relativePath);
         Files.createDirectories(targetPath.getParent());
@@ -162,13 +119,6 @@ public class StorageService {
         return normalizeRelativePath(relativePath);
     }
 
-    /**
-     * 读取指定文件的完整字节数组。
-     *
-     * @param filePath 业务侧保存的文件路径
-     * @return 文件字节内容
-     * @throws IOException 文件读取异常
-     */
     public byte[] readAllBytes(String filePath) throws IOException {
         return Files.readAllBytes(resolvePath(filePath));
     }
@@ -189,6 +139,14 @@ public class StorageService {
         return StrUtil.blankToDefault(StrUtil.trim(storageProperties.getUploadDir()), "uploads");
     }
 
+    private String normalizeBaseUrl() {
+        String baseUrl = StrUtil.blankToDefault(storageProperties.getFileBaseUrl(), "").trim();
+        if (baseUrl.isEmpty()) {
+            return "";
+        }
+        return baseUrl.endsWith("/") ? baseUrl : baseUrl + "/";
+    }
+
     private Path resolveWritePath(String relativePath) {
         String normalizedPath = normalizeRelativePath(relativePath);
         return resolveUploadRoot().resolve(normalizedPath).normalize();
@@ -196,5 +154,93 @@ public class StorageService {
 
     private String normalizeRelativePath(String relativePath) {
         return StrUtil.blankToDefault(StrUtil.trim(relativePath), IdUtil.fastSimpleUUID()).replace("\\", "/");
+    }
+
+    private String resolveFileReference(String filePath) {
+        if (StrUtil.isBlank(filePath)) {
+            return null;
+        }
+        String normalizedInput = StrUtil.trim(filePath);
+        String storagePath = extractStoragePath(normalizedInput);
+        return normalizeFileReference(StrUtil.blankToDefault(storagePath, normalizedInput));
+    }
+
+    private String normalizeFileReference(String filePath) {
+        if (StrUtil.isBlank(filePath)) {
+            return null;
+        }
+        String normalizedPath = StrUtil.trim(filePath).replace("\\", "/");
+        if (!FileUtil.isAbsolutePath(normalizedPath)) {
+            while (normalizedPath.startsWith("/")) {
+                normalizedPath = normalizedPath.substring(1);
+            }
+        }
+        return StrUtil.blankToDefault(normalizedPath, null);
+    }
+
+    private String extractStoragePath(String value) {
+        if (StrUtil.isBlank(value)) {
+            return null;
+        }
+        String normalizedValue = StrUtil.trim(value);
+        String requestPath = normalizedValue;
+        String rawQuery = null;
+        if (isHttpUrl(normalizedValue)) {
+            try {
+                URI uri = URI.create(normalizedValue);
+                requestPath = uri.getPath();
+                rawQuery = uri.getRawQuery();
+            } catch (IllegalArgumentException exception) {
+                return null;
+            }
+        } else {
+            int queryIndex = normalizedValue.indexOf('?');
+            if (queryIndex >= 0) {
+                requestPath = normalizedValue.substring(0, queryIndex);
+                rawQuery = normalizedValue.substring(queryIndex + 1);
+            }
+        }
+        requestPath = StrUtil.blankToDefault(StrUtil.trim(requestPath), "");
+        while (requestPath.startsWith("/")) {
+            requestPath = requestPath.substring(1);
+        }
+        if (!"api/storage/file".equals(requestPath)) {
+            return null;
+        }
+        return extractQueryParam(rawQuery, "path");
+    }
+
+    private String extractQueryParam(String rawQuery, String key) {
+        if (StrUtil.isBlank(rawQuery)) {
+            return null;
+        }
+        return Arrays.stream(rawQuery.split("&"))
+                .map(item -> item.split("=", 2))
+                .filter(parts -> parts.length == 2 && key.equals(decodeQueryValue(parts[0])))
+                .map(parts -> decodeQueryValue(parts[1]))
+                .filter(StrUtil::isNotBlank)
+                .findFirst()
+                .orElse(null);
+    }
+
+    private boolean isHttpUrl(String value) {
+        return StrUtil.startWithIgnoreCase(value, "http://")
+                || StrUtil.startWithIgnoreCase(value, "https://");
+    }
+
+    private String encodeQueryValue(String value) {
+        try {
+            return URLEncoder.encode(value, StandardCharsets.UTF_8.name()).replace("+", "%20");
+        } catch (Exception exception) {
+            return value;
+        }
+    }
+
+    private String decodeQueryValue(String value) {
+        try {
+            return URLDecoder.decode(value, StandardCharsets.UTF_8.name());
+        } catch (Exception exception) {
+            return value;
+        }
     }
 }

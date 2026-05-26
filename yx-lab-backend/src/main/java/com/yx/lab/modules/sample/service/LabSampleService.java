@@ -25,6 +25,7 @@ import com.yx.lab.modules.sample.entity.LabSample;
 import com.yx.lab.modules.sample.entity.SamplingTask;
 import com.yx.lab.modules.sample.mapper.LabSampleMapper;
 import com.yx.lab.modules.sample.mapper.SamplingTaskMapper;
+import com.yx.lab.modules.sample.vo.StatusCountVO;
 import com.yx.lab.modules.system.entity.LabFlowConfig;
 import com.yx.lab.modules.system.mapper.LabFlowConfigMapper;
 import com.yx.lab.modules.system.service.FlowConfigManagementService;
@@ -78,6 +79,38 @@ public class LabSampleService {
                         .eq(dataScopeHelper.onlySelfScope(), LabSample::getCreatedBy, dataScopeHelper.currentUserId())
                         .orderByDesc(LabSample::getCreatedTime));
         return new PageResult<>(page.getTotal(), page.getRecords());
+    }
+
+    /**
+     * 按样品状态统计当前用户可见范围内的样品数量。
+     *
+     * @return 状态数量列表
+     */
+    public List<StatusCountVO> statusStats() {
+        return Arrays.asList(
+                statusCount("ALL", countSamplesByStatus(null)),
+                statusCount(LabWorkflowConstants.SampleStatus.LOGGED,
+                        countSamplesByStatus(LabWorkflowConstants.SampleStatus.LOGGED)),
+                statusCount(LabWorkflowConstants.SampleStatus.REVIEWING,
+                        countSamplesByStatus(LabWorkflowConstants.SampleStatus.REVIEWING)),
+                statusCount(LabWorkflowConstants.SampleStatus.RETEST,
+                        countSamplesByStatus(LabWorkflowConstants.SampleStatus.RETEST)),
+                statusCount(LabWorkflowConstants.SampleStatus.COMPLETED,
+                        countSamplesByStatus(LabWorkflowConstants.SampleStatus.COMPLETED)));
+    }
+
+    private StatusCountVO statusCount(String status, Long count) {
+        StatusCountVO vo = new StatusCountVO();
+        vo.setStatus(status);
+        vo.setCount(count == null ? 0L : count);
+        return vo;
+    }
+
+    private Long countSamplesByStatus(String sampleStatus) {
+        return labSampleMapper.selectCount(new LambdaQueryWrapper<LabSample>()
+                .eq(StrUtil.isNotBlank(sampleStatus), LabSample::getSampleStatus, sampleStatus)
+                .eq(resolveScopedSamplerId() != null, LabSample::getSamplerId, resolveScopedSamplerId())
+                .eq(dataScopeHelper.onlySelfScope(), LabSample::getCreatedBy, dataScopeHelper.currentUserId()));
     }
 
     private Long resolveScopedSamplerId() {

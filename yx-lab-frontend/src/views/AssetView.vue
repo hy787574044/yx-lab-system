@@ -271,7 +271,16 @@
             <el-input v-model="instrumentForm.calibrationCycle" placeholder="例如：12个月" />
           </el-form-item>
           <el-form-item label="证书地址" prop="certificateUrl">
-            <el-input v-model="instrumentForm.certificateUrl" placeholder="请输入证书文件地址" />
+            <div class="certificate-upload-field">
+              <el-input v-model="instrumentForm.certificateUrl" placeholder="请上传或输入证书文件地址" />
+              <el-upload
+                :auto-upload="false"
+                :show-file-list="false"
+                :on-change="handleInstrumentCertificateChange"
+              >
+                <el-button :loading="certificateUploading">上传证书</el-button>
+              </el-upload>
+            </div>
           </el-form-item>
           <el-form-item class="form-span-2" label="备注" prop="remark">
             <el-input v-model="instrumentForm.remark" type="textarea" :rows="3" placeholder="可填写设备补充说明" />
@@ -465,6 +474,7 @@ import {
   fetchDocumentsApi,
   fetchDocumentUsersApi,
   fetchInstrumentsApi,
+  fetchInstrumentStatsApi,
   getDocumentDetailApi,
   getInstrumentDetailApi,
   importInstrumentsApi,
@@ -473,7 +483,6 @@ import {
   updateInstrumentApi,
   uploadStorageFileApi
 } from '../api/lab'
-import { getPublicFileUrl } from '../config/appConfig'
 import {
   DEFAULT_PAGE_SIZE,
   getEnumLabel,
@@ -494,6 +503,7 @@ const showDocumentTab = computed(() => route.path !== '/instrument-ledger')
 const currentLedgerTitle = computed(() => (active.value === 'doc' ? '文档台账' : '设备台账'))
 const instrumentLoading = ref(false)
 const savingInstrument = ref(false)
+const certificateUploading = ref(false)
 const templateDownloading = ref(false)
 const importSubmitting = ref(false)
 const instrumentDialogVisible = ref(false)
@@ -501,6 +511,7 @@ const importDialogVisible = ref(false)
 const instrumentFormRef = ref()
 const instruments = ref([])
 const instrumentTotal = ref(0)
+const instrumentStatCounts = ref({})
 const importFileList = ref([])
 const selectedImportFile = ref(null)
 const importResult = ref(null)
@@ -537,6 +548,22 @@ function syncRouteState() {
 
 const currentStats = computed(() => (active.value === 'inst' ? instrumentStats.value : documentStats.value))
 
+function toSafeNumber(value) {
+  const num = typeof value === 'number' ? value : Number.parseFloat(String(value ?? '').replace(/,/g, '').trim())
+  return Number.isFinite(num) ? num : 0
+}
+
+function buildCountMap(items) {
+  return (items || []).reduce((result, item) => {
+    result[String(item.status || '')] = toSafeNumber(item.count)
+    return result
+  }, {})
+}
+
+function getInstrumentStatCount(key) {
+  return toSafeNumber(instrumentStatCounts.value[key])
+}
+
 const visibleInstruments = computed(() => {
   if (active.value !== 'inst') {
     return instruments.value
@@ -569,22 +596,22 @@ const visibleDocuments = computed(() => {
 const instrumentStats = computed(() => [
   {
     label: '设备总数',
-    value: instrumentTotal.value || 0,
+    value: getInstrumentStatCount('ALL'),
     desc: '设备台账内已登记设备数量'
   },
   {
     label: '正常设备',
-    value: countInstrumentByStatus(instrumentNormalStatus),
+    value: getInstrumentStatCount(instrumentNormalStatus),
     desc: '当前状态为正常的设备'
   },
   {
     label: '停用/维护',
-    value: countInstrumentByStatuses(inactiveInstrumentStatuses),
+    value: getInstrumentStatCount('INACTIVE'),
     desc: '处于停用或维护状态的设备'
   },
   {
     label: '待校准',
-    value: countInstrumentByStatus(instrumentCalibratingStatus),
+    value: getInstrumentStatCount(instrumentCalibratingStatus),
     desc: '待校准或需要重点关注的设备'
   }
 ])
@@ -668,6 +695,7 @@ const documentRules = {
 
 function resetInstrumentForm() {
   Object.assign(instrumentForm, emptyInstrumentForm())
+  certificateUploading.value = false
 }
 
 function resetDocumentForm() {
@@ -683,7 +711,7 @@ function resetInstrumentQuery() {
   instrumentQuery.instrumentStatus = ''
   instrumentQuery.manufacturer = ''
   activeStatKey.value = '设备总数'
-  loadInstruments()
+  Promise.all([loadInstruments(), loadInstrumentStats()])
 }
 
 function resetDocumentQuery() {
@@ -699,7 +727,7 @@ function resetDocumentQuery() {
 function handleInstrumentSearch() {
   instrumentQuery.pageNum = 1
   syncInstrumentActiveStatByQuery()
-  loadInstruments()
+  Promise.all([loadInstruments(), loadInstrumentStats()])
 }
 
 function handleDocumentSearch() {
@@ -719,7 +747,7 @@ function handleStatClick(item) {
     activeStatKey.value = nextLabel
     instrumentQuery.instrumentStatus = getInstrumentStatusByStatLabel(nextLabel) || ''
     instrumentQuery.pageNum = 1
-    loadInstruments()
+    Promise.all([loadInstruments(), loadInstrumentStats()])
     return
   }
 
@@ -805,14 +833,6 @@ function closePreviewDialog() {
   previewTitle.value = ''
 }
 
-function countInstrumentByStatus(status) {
-  return instruments.value.filter((item) => item.instrumentStatus === status).length
-}
-
-function countInstrumentByStatuses(statuses) {
-  return instruments.value.filter((item) => statuses.includes(item.instrumentStatus)).length
-}
-
 async function handleDownloadTemplate() {
   templateDownloading.value = true
   try {
@@ -845,7 +865,7 @@ async function submitImport() {
     if (result.allPassed) {
       ElMessage.success(`导入成功，新增 ${result.successCount} 条设备记录。`)
       closeImportDialog()
-      await loadInstruments()
+      await Promise.all([loadInstruments(), loadInstrumentStats()])
     } else {
       ElMessage.warning(`导入校验未通过，请处理 ${result.errors.length} 条错误后重试。`)
     }
@@ -863,6 +883,10 @@ async function loadInstruments() {
   } finally {
     instrumentLoading.value = false
   }
+}
+
+async function loadInstrumentStats() {
+  instrumentStatCounts.value = buildCountMap(await fetchInstrumentStatsApi())
 }
 
 async function loadDocuments() {
@@ -900,7 +924,7 @@ async function loadDocumentUsers() {
 
 async function loadCurrentAssetData() {
   if (showInstrumentTab.value) {
-    await loadInstruments()
+    await Promise.all([loadInstruments(), loadInstrumentStats()])
   }
   if (showDocumentTab.value) {
     await loadDocuments()
@@ -935,6 +959,26 @@ async function openDocumentDialog(id) {
   }
 }
 
+async function handleInstrumentCertificateChange(file) {
+  const rawFile = file.raw
+  if (!rawFile) {
+    return
+  }
+  certificateUploading.value = true
+  try {
+    const uploadResult = await uploadStorageFileApi(rawFile)
+    const fileUrl = uploadResult?.fullUrl || uploadResult?.filePath || ''
+    if (!fileUrl) {
+      ElMessage.error('证书上传失败。')
+      return
+    }
+    instrumentForm.certificateUrl = fileUrl
+    ElMessage.success('证书上传成功。')
+  } finally {
+    certificateUploading.value = false
+  }
+}
+
 async function submitInstrument() {
   await instrumentFormRef.value.validate()
   savingInstrument.value = true
@@ -951,7 +995,7 @@ async function submitInstrument() {
       ElMessage.success('设备已新增。')
     }
     instrumentDialogVisible.value = false
-    await loadInstruments()
+    await Promise.all([loadInstruments(), loadInstrumentStats()])
   } finally {
     savingInstrument.value = false
   }
@@ -968,7 +1012,7 @@ async function submitDocument() {
     const payload = { ...documentForm, viewerUserIds: [...documentForm.viewerUserIds] }
     if (selectedDocumentFile.value) {
       const uploadResult = await uploadStorageFileApi(selectedDocumentFile.value)
-      payload.fileUrl = getPublicFileUrl(uploadResult?.fullUrl || uploadResult?.filePath || '')
+      payload.fileUrl = uploadResult?.fullUrl || uploadResult?.filePath || ''
       payload.fileSize = selectedDocumentFile.value.size
       payload.fileType = getFileExtension(selectedDocumentFile.value.name)
     }
@@ -1030,7 +1074,7 @@ async function removeInstrument(row) {
     if (instruments.value.length === 1 && instrumentQuery.pageNum > 1) {
       instrumentQuery.pageNum -= 1
     }
-    await loadInstruments()
+    await Promise.all([loadInstruments(), loadInstrumentStats()])
   } catch {
     // 用户取消删除时不做处理。
   }
@@ -1159,6 +1203,20 @@ watch(() => route.fullPath, () => {
   grid-column: 1 / -1;
 }
 
+.certificate-upload-field {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+}
+
+.certificate-upload-field .el-input {
+  flex: 1;
+}
+
+.certificate-upload-field :deep(.el-upload) {
+  display: block;
+}
+
 .import-guide {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1254,6 +1312,10 @@ watch(() => route.fullPath, () => {
 
   .form-span-2 {
     grid-column: auto;
+  }
+
+  .certificate-upload-field {
+    flex-direction: column;
   }
 }
 </style>

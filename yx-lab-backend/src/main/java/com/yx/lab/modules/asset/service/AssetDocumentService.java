@@ -270,7 +270,7 @@ public class AssetDocumentService {
                 .documentCategory(document.getDocumentCategory())
                 .fileType(document.getFileType())
                 .fileSize(document.getFileSize())
-                .fileUrl(canManage ? document.getFileUrl() : null)
+                .fileUrl(canManage ? storageService.toFullUrl(document.getFileUrl()) : null)
                 .remark(document.getRemark())
                 .createdName(document.getCreatedName())
                 .createdTime(document.getCreatedTime())
@@ -285,7 +285,7 @@ public class AssetDocumentService {
         document.setDocumentCategory(StrUtil.trim(command.getDocumentCategory()));
         document.setFileType(StrUtil.blankToDefault(StrUtil.trim(command.getFileType()), ""));
         document.setFileSize(command.getFileSize());
-        document.setFileUrl(StrUtil.trim(command.getFileUrl()));
+        document.setFileUrl(storageService.toFullUrl(command.getFileUrl()));
         document.setRemark(StrUtil.trim(command.getRemark()));
         if (StrUtil.isBlank(document.getFileType())) {
             document.setFileType(detectFileType(document.getFileUrl()));
@@ -337,7 +337,7 @@ public class AssetDocumentService {
     }
 
     private String detectFileType(String fileUrl) {
-        String ext = StrUtil.subAfter(fileUrl, ".", true);
+        String ext = StrUtil.subAfter(resolveFileName(fileUrl), ".", true);
         return StrUtil.blankToDefault(ext, "").toLowerCase();
     }
 
@@ -383,7 +383,9 @@ public class AssetDocumentService {
     }
 
     private void deleteReplacedDocumentFile(String oldFileUrl, String newFileUrl) {
-        if (StrUtil.isBlank(oldFileUrl) || Objects.equals(oldFileUrl, newFileUrl)) {
+        if (StrUtil.isBlank(oldFileUrl)
+                || Objects.equals(oldFileUrl, newFileUrl)
+                || storageService.isSameStorageFile(oldFileUrl, newFileUrl)) {
             return;
         }
         deleteDocumentFileQuietly(oldFileUrl);
@@ -398,5 +400,20 @@ public class AssetDocumentService {
         } catch (IOException exception) {
             throw new BusinessException("Failed to delete document file: " + exception.getMessage());
         }
+    }
+
+    private String resolveFileName(String fileUrl) {
+        if (StrUtil.isBlank(fileUrl)) {
+            return "";
+        }
+        String value = StrUtil.trim(fileUrl);
+        int pathIndex = value.indexOf("?path=");
+        if (pathIndex >= 0) {
+            String pathPart = value.substring(pathIndex + 6);
+            int endIndex = pathPart.indexOf('&');
+            return endIndex >= 0 ? pathPart.substring(0, endIndex) : pathPart;
+        }
+        int slashIndex = value.lastIndexOf('/');
+        return slashIndex >= 0 ? value.substring(slashIndex + 1) : value;
     }
 }

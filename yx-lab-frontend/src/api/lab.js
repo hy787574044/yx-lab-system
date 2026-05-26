@@ -143,6 +143,7 @@ export const updateMonitoringPointApi = (id, data) => request.post(`/api/monitor
 
 // 采样计划
 export const fetchSamplingPlansApi = (params) => request.get('/api/samplingPlans', { params })
+export const fetchSamplingPlanStatsApi = () => request.get('/api/samplingPlans/stats')
 export const exportSamplingPlansApi = (params) => downloadExcel('/api/samplingPlans/export', params, '采样计划.xlsx')
 export const createSamplingPlanApi = (data) => request.post('/api/samplingPlans', data)
 export const updateSamplingPlanApi = (id, data) => request.post(`/api/samplingPlans/${id}`, data)
@@ -158,6 +159,7 @@ export const resumeSamplingPlanApi = (id) => request.post(`/api/samplingPlans/${
  * @returns {Promise<any>} 采样任务分页结果。
  */
 export const fetchSamplingTasksApi = (params) => request.get('/api/samplingTasks', { params })
+export const fetchSamplingTaskStatsApi = () => request.get('/api/samplingTasks/stats')
 export const exportSamplingTasksApi = (params) => downloadExcel('/api/samplingTasks/export', params, '采样任务.xlsx')
 export const fetchSamplingTaskDetailApi = (id) => request.get(`/api/samplingTasks/${id}`)
 export const updateSamplingTaskSealNoApi = (id, data) => request.post(`/api/samplingTasks/${id}/sealNo`, data)
@@ -201,6 +203,7 @@ export const completeSamplingTaskApi = (data) => request.post('/api/samplingTask
  * @returns {Promise<any>} 样品分页结果。
  */
 export const fetchSamplesApi = (params) => request.get('/api/samples', { params })
+export const fetchSampleStatsApi = () => request.get('/api/samples/stats')
 export const exportSamplesApi = (params) => downloadExcel('/api/samples/export', params, '样品台账.xlsx')
 /**
  * 提交样品登录。
@@ -380,6 +383,7 @@ export const submitDetectionApi = (data) => request.post('/api/detections/submit
  * @returns {Promise<any>} 审核记录分页结果。
  */
 export const fetchReviewsApi = (params) => request.get('/api/reviews', { params })
+export const fetchReviewStatsApi = () => request.get('/api/reviews/stats')
 export const exportReviewsApi = (params) => downloadExcel('/api/reviews/export', params, '结果审查.xlsx')
 /**
  * 提交审核结果。
@@ -397,6 +401,7 @@ export const submitReviewApi = (data) => request.post('/api/reviews', data)
  * @returns {Promise<any>} 报告分页结果。
  */
 export const fetchReportsApi = (params) => request.get('/api/reports', { params })
+export const fetchReportStatsApi = () => request.get('/api/reports/stats')
 export const exportReportsApi = (params) => downloadExcel('/api/reports/export', params, '报告台账.xlsx')
 /**
  * 获取报告模板分页。
@@ -464,6 +469,7 @@ export const previewReportApi = (id) => axios.get(`/api/reports/${id}/preview`, 
  * @returns {Promise<any>} 仪器台账分页结果。
  */
 export const fetchInstrumentsApi = (params) => request.get('/api/assets/instruments', { params })
+export const fetchInstrumentStatsApi = () => request.get('/api/assets/instruments/stats')
 export const exportInstrumentsApi = (params) => downloadExcel('/api/assets/instruments/export', params, '设备台账.xlsx')
 /**
  * 获取仪器详情。
@@ -479,6 +485,7 @@ export const getInstrumentDetailApi = (id) => request.get(`/api/assets/instrumen
  * @returns {Promise<any>} 设备维修分页结果。
  */
 export const fetchInstrumentMaintenancesApi = (params) => request.get('/api/assets/maintenances', { params })
+export const fetchInstrumentMaintenanceStatsApi = () => request.get('/api/assets/maintenances/stats')
 export const exportInstrumentMaintenancesApi = (params) => downloadExcel('/api/assets/maintenances/export', params, '设备维修.xlsx')
 /**
  * 新增设备维修记录。
@@ -665,6 +672,7 @@ export const createSystemOrgApi = (data) => request.post('/api/system/orgs', dat
 export const updateSystemOrgApi = (id, data) => request.post(`/api/system/orgs/${id}`, data)
 export const deleteSystemOrgApi = (id) => request.post(`/api/system/orgs/${id}/delete`)
 export const fetchSystemDictsApi = (params) => request.get('/api/system/dicts', { params })
+export const fetchDictItemsApi = (dictCode) => request.get(`/api/dicts/${dictCode}/items`)
 export const exportSystemDictsApi = (params) => downloadExcel('/api/system/dicts/export', params, '数据字典.xlsx')
 export const getSystemDictDetailApi = (id) => request.get(`/api/system/dicts/${id}`)
 export const createSystemDictApi = (data) => request.post('/api/system/dicts', data)

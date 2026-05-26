@@ -295,6 +295,7 @@ import {
   exportReviewsApi,
   fetchDetectionDetailApi,
   fetchDetectionsApi,
+  fetchReviewStatsApi,
   fetchReviewsApi,
   submitReviewApi
 } from '../api/lab'
@@ -330,7 +331,8 @@ const reviewRecords = ref([])
 const pendingDetections = ref([])
 const total = ref(0)
 const pendingTotal = ref(0)
-const activeStatKey = ref('pending')
+const statCounts = ref({})
+const activeStatKey = ref('all')
 const loading = ref(false)
 const reviewDialogVisible = ref(false)
 const reviewSubmitting = ref(false)
@@ -350,6 +352,17 @@ const reviewDialogReadonly = ref(false)
 function toSafeNumber(value) {
   const num = typeof value === 'number' ? value : Number.parseFloat(String(value ?? '').replace(/,/g, '').trim())
   return Number.isFinite(num) ? num : 0
+}
+
+function buildCountMap(items) {
+  return (items || []).reduce((result, item) => {
+    result[String(item.status || '')] = toSafeNumber(item.count)
+    return result
+  }, {})
+}
+
+function getCount(key) {
+  return toSafeNumber(statCounts.value[key])
 }
 
 const sceneMap = {
@@ -462,27 +475,25 @@ const currentStats = computed(() => [
   {
     key: 'all',
     label: baseScene.value.key === 'review-ledger' ? '台账总量' : '审查总览',
-    value: baseScene.value.key === 'review-ledger'
-      ? toSafeNumber(total.value)
-      : mappedPendingRows.value.length + reviewRecords.value.length,
+    value: getCount('ALL'),
     desc: baseScene.value.key === 'review-ledger' ? '审查台账总量' : '当前场景已加载的审查记录'
   },
   {
     key: 'pending',
     label: '待审核',
-    value: baseScene.value.key === 'review-result' ? pendingTotal.value : mappedPendingRows.value.length,
+    value: getCount('PENDING'),
     desc: '检测结果已提交，等待审查人员完成整单审核'
   },
   {
     key: 'approved',
     label: '审核通过',
-    value: approvedRows.value.length,
+    value: getCount(approvedReviewResult),
     desc: '全部子流程均已审核通过，可继续进入报告环节'
   },
   {
     key: 'rejected',
     label: '审核驳回',
-    value: rejectedRows.value.length,
+    value: getCount(rejectedReviewResult),
     desc: '存在审核不通过子流程，主流程已退回流程分析重检'
   }
 ])
@@ -537,7 +548,7 @@ const reviewDialogNote = computed(() => (
 ))
 
 function handleStatClick(key) {
-  const nextKey = activeStatKey.value === key ? baseScene.value.defaultStatKey : key
+  const nextKey = activeStatKey.value === key ? 'all' : key
   activeStatKey.value = nextKey
   query.reviewResult = getReviewResultByStatKey(nextKey) || ''
   query.pageNum = 1
@@ -560,8 +571,8 @@ function resetQuery() {
 }
 
 function syncRouteState() {
-  activeStatKey.value = baseScene.value.defaultStatKey
-  query.reviewResult = getReviewResultByStatKey(activeStatKey.value) || ''
+  activeStatKey.value = 'all'
+  query.reviewResult = ''
   query.pageNum = 1
 }
 
@@ -579,7 +590,7 @@ function syncActiveStatByQuery() {
   } else if (query.reviewResult === rejectedReviewResult) {
     activeStatKey.value = 'rejected'
   } else {
-    activeStatKey.value = baseScene.value.defaultStatKey
+    activeStatKey.value = 'all'
   }
 }
 
@@ -807,7 +818,7 @@ async function submitReviewDecision() {
     })
     reviewDialogVisible.value = false
     ElMessage.success(anyRejected ? '审核已提交，主流程已退回流程分析' : '审核已提交，主流程全部通过')
-    await loadData()
+    await Promise.all([loadData(), loadStats()])
   } finally {
     reviewSubmitting.value = false
   }
@@ -857,15 +868,13 @@ async function loadData() {
   }
 }
 
+async function loadStats() {
+  statCounts.value = buildCountMap(await fetchReviewStatsApi())
+}
+
 function resolveReviewResultFilter() {
   if (query.reviewResult) {
     return query.reviewResult
-  }
-  if (activeStatKey.value === 'approved') {
-    return approvedReviewResult
-  }
-  if (activeStatKey.value === 'rejected') {
-    return rejectedReviewResult
   }
   return undefined
 }
@@ -894,12 +903,12 @@ async function handleExport() {
 
 onMounted(async () => {
   syncRouteState()
-  await loadData()
+  await Promise.all([loadData(), loadStats()])
 })
 
 watch(() => route.fullPath, () => {
   syncRouteState()
-  loadData()
+  Promise.all([loadData(), loadStats()])
 })
 </script>
 
@@ -1026,17 +1035,36 @@ watch(() => route.fullPath, () => {
 
 
 .review-action-button {
+  position: relative;
   min-width: 72px;
-  transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+  font-weight: 600;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
 }
 
 .review-action-button.is-active {
-  box-shadow: 0 10px 24px color-mix(in srgb, var(--brand) 22%, transparent);
+  padding-left: 24px;
+  color: #ffffff;
+  border-color: var(--brand);
+  background: var(--brand);
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--brand) 30%, transparent);
   transform: translateY(-1px);
 }
 
+.review-action-button.is-active::before {
+  content: "✓";
+  position: absolute;
+  left: 9px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1;
+}
+
 .review-action-button--danger.is-active {
-  box-shadow: 0 10px 24px rgba(220, 38, 38, 0.2);
+  border-color: #dc2626;
+  background: #dc2626;
+  box-shadow: 0 10px 24px rgba(220, 38, 38, 0.28);
 }
 
 .review-item-fixed {

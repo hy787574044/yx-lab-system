@@ -175,19 +175,11 @@
       </template>
     </el-dialog>
 
-    <div class="report-measure-shell" aria-hidden="true">
-      <ReportPrintDocument
-        v-if="measurePreviewData"
-        ref="measureReportPrintRef"
-        :preview-data="measurePreviewData"
-        single-page
-      />
-    </div>
   </div>
 </template>
 
 <script setup>
-import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { ElButton } from 'element-plus/es/components/button/index.mjs'
 import { ElDialog } from 'element-plus/es/components/dialog/index.mjs'
 import { ElInput } from 'element-plus/es/components/input/index.mjs'
@@ -201,6 +193,7 @@ import {
   exportReportsApi,
   fetchReportsApi,
   fetchReportPreviewDataApi,
+  fetchReportStatsApi
 } from '../api/lab'
 import TablePagination from '../components/common/TablePagination.vue'
 import ReportPrintDocument from '../components/report/ReportPrintDocument.vue'
@@ -229,6 +222,7 @@ const query = reactive({
 const loading = ref(false)
 const reports = ref([])
 const total = ref(0)
+const statCounts = ref({})
 const activeStatKey = ref('all')
 const vLoading = ElLoadingDirective
 
@@ -237,24 +231,37 @@ const previewData = ref(null)
 const previewTitle = ref('')
 const previewError = ref('')
 const reportPrintRef = ref(null)
-const measureReportPrintRef = ref(null)
-const measurePreviewData = ref(null)
 const downloadingReportId = ref('')
 
+function toSafeNumber(value) {
+  const num = typeof value === 'number' ? value : Number.parseFloat(String(value ?? '').replace(/,/g, '').trim())
+  return Number.isFinite(num) ? num : 0
+}
+
+function buildCountMap(items) {
+  return (items || []).reduce((result, item) => {
+    result[String(item.status || '')] = toSafeNumber(item.count)
+    return result
+  }, {})
+}
+
+function getCount(key) {
+  return toSafeNumber(statCounts.value[key])
+}
+
 const stats = computed(() => [
-  { key: 'all', label: '报告总数', value: total.value, desc: '报告台账记录总量' },
-  { key: 'page', label: '本页记录', value: reports.value.length, desc: '当前分页加载的报告数量' },
+  { key: 'all', label: '报告总数', value: getCount('ALL'), desc: '报告台账记录总量' },
   {
     key: 'generated',
     label: '待发布',
-    value: reports.value.filter((item) => item.reportStatus === generatedReportStatus).length,
-    desc: '当前页已生成但尚未正式发布的报告'
+    value: getCount(generatedReportStatus),
+    desc: '已生成但尚未正式发布的报告'
   },
   {
     key: 'published',
     label: '已发布',
-    value: reports.value.filter((item) => item.reportStatus === publishedReportStatus).length,
-    desc: '当前页已进入正式发布状态的报告'
+    value: getCount(publishedReportStatus),
+    desc: '已进入正式发布状态的报告'
   }
 ])
 
@@ -317,6 +324,10 @@ async function loadReports() {
   }
 }
 
+async function loadReportStats() {
+  statCounts.value = buildCountMap(await fetchReportStatsApi())
+}
+
 async function handleExport() {
   try {
     await exportReportsApi(query)
@@ -334,6 +345,7 @@ async function createTemplate() {
     templateContent: '月报模板内容：${sampleNo} / ${sealNo} - ${detectionResult}'
   })
   ElMessage.success('模板已创建。')
+  await loadReportStats()
 }
 
 /*
@@ -371,13 +383,7 @@ function printPreview() {
 async function downloadPdf(row) {
   downloadingReportId.value = row.id
   try {
-    const preview = await fetchReportPreviewDataApi(row.id)
-    measurePreviewData.value = preview
-    await nextTick()
-    await waitForMeasureRender()
-    const measuredHeightPx = measureReportPrintRef.value?.measureHeightPx?.() || 0
-    const pageHeightMm = measuredHeightPx > 0 ? Math.ceil((measuredHeightPx * 25.4) / 96) + 2 : undefined
-    const response = await downloadReportPdfApi(row.id, pageHeightMm)
+    const response = await downloadReportPdfApi(row.id)
     const blobUrl = window.URL.createObjectURL(response.data)
     const disposition = response.headers['content-disposition'] || ''
     const utf8Match = disposition.match(/filename\*=UTF-8''([^;]+)/i)
@@ -398,17 +404,8 @@ async function downloadPdf(row) {
   } catch (error) {
     ElMessage.error(error?.message || '下载 PDF 失败')
   } finally {
-    measurePreviewData.value = null
     downloadingReportId.value = ''
   }
-}
-
-function waitForMeasureRender() {
-  return new Promise((resolve) => {
-    requestAnimationFrame(() => {
-      requestAnimationFrame(resolve)
-    })
-  })
 }
 
 function closePreviewDialog() {
@@ -418,7 +415,9 @@ function closePreviewDialog() {
   previewError.value = ''
 }
 
-onMounted(loadReports)
+onMounted(() => {
+  Promise.all([loadReports(), loadReportStats()])
+})
 onBeforeUnmount(() => {
   previewData.value = null
 })
@@ -476,15 +475,6 @@ onBeforeUnmount(() => {
   flex-wrap: nowrap;
   gap: 8px;
   white-space: nowrap;
-}
-
-.report-measure-shell {
-  position: fixed;
-  left: -100000px;
-  top: 0;
-  z-index: -1;
-  visibility: hidden;
-  pointer-events: none;
 }
 
 .ledger-table-card {

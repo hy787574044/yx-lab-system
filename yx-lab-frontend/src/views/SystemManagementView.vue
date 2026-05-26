@@ -461,14 +461,12 @@ import {
   fetchSystemRoleOptionsApi,
   fetchSystemRolesApi,
   fetchSystemUsersApi,
-  previewStorageFileApi,
   updateSystemDictApi,
   updateSystemOrgApi,
   updateSystemRoleApi,
   updateSystemUserApi,
   uploadStorageFileApi
 } from '../api/lab'
-import { getPublicFileUrl } from '../config/appConfig'
 import { getUser, setUser } from '../utils/auth'
 import { labMenuGroups } from '../router/menuConfig'
 import { DEFAULT_PAGE_SIZE } from '../utils/labEnums'
@@ -1770,7 +1768,7 @@ async function submitUserForm() {
     let avatarUrl = String(userForm.avatarUrl || '').trim()
     if (selectedUserAvatarFile.value) {
       const uploadResult = await uploadStorageFileApi(selectedUserAvatarFile.value)
-      avatarUrl = getPublicFileUrl(uploadResult?.fullUrl || uploadResult?.filePath || '')
+      avatarUrl = uploadResult?.fullUrl || uploadResult?.filePath || ''
     }
     const payload = {
       username: String(userForm.username || '').trim(),
@@ -1833,10 +1831,10 @@ function clearUserAvatarPreview() {
 }
 
 function clearExistingUserAvatarPreview() {
-  if (userExistingAvatarPreviewUrl.value) {
+  if (userExistingAvatarPreviewUrl.value?.startsWith('blob:')) {
     URL.revokeObjectURL(userExistingAvatarPreviewUrl.value)
-    userExistingAvatarPreviewUrl.value = ''
   }
+  userExistingAvatarPreviewUrl.value = ''
 }
 
 async function loadUserFormAvatar(avatarUrl) {
@@ -1844,13 +1842,8 @@ async function loadUserFormAvatar(avatarUrl) {
   if (!avatarUrl) {
     return
   }
-  try {
-    const response = await previewStorageFileApi(avatarUrl)
-    if (String(userForm.avatarUrl || '') === String(avatarUrl || '')) {
-      userExistingAvatarPreviewUrl.value = URL.createObjectURL(response.data)
-    }
-  } catch {
-    userExistingAvatarPreviewUrl.value = ''
+  if (String(userForm.avatarUrl || '') === String(avatarUrl || '')) {
+    userExistingAvatarPreviewUrl.value = String(avatarUrl || '').trim()
   }
 }
 

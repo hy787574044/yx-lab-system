@@ -15,6 +15,7 @@ import com.yx.lab.modules.sample.entity.SamplingPlan;
 import com.yx.lab.modules.sample.entity.SamplingTask;
 import com.yx.lab.modules.sample.mapper.SamplingPlanMapper;
 import com.yx.lab.modules.sample.mapper.SamplingTaskMapper;
+import com.yx.lab.modules.sample.vo.StatusCountVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -59,6 +60,54 @@ public class SamplingPlanService {
                                 resolveScopedSamplerId(query.getSamplerId()))
                         .orderByDesc(SamplingPlan::getCreatedTime));
         return new PageResult<>(page.getTotal(), page.getRecords());
+    }
+
+    /**
+     * 按计划状态统计当前用户可见范围内的采样计划数量。
+     *
+     * @return 状态数量列表
+     */
+    public List<StatusCountVO> statusStats() {
+        return java.util.Arrays.asList(
+                statusCount("ALL", countPlansByStatus(null)),
+                statusCount(LabWorkflowConstants.SamplingPlanStatus.ACTIVE,
+                        countPlansByStatus(LabWorkflowConstants.SamplingPlanStatus.ACTIVE)),
+                statusCount("MISSING_SAMPLER", countActiveMissingSamplerPlans()),
+                statusCount(LabWorkflowConstants.SamplingPlanStatus.PAUSED,
+                        countPlansByStatus(LabWorkflowConstants.SamplingPlanStatus.PAUSED)),
+                statusCount(LabWorkflowConstants.SamplingPlanStatus.DISPATCHED,
+                        countPlansByStatus(LabWorkflowConstants.SamplingPlanStatus.DISPATCHED)),
+                statusCount(LabWorkflowConstants.SamplingPlanStatus.COMPLETED,
+                        countPlansByStatus(LabWorkflowConstants.SamplingPlanStatus.COMPLETED)));
+    }
+
+    private StatusCountVO statusCount(String status, Long count) {
+        StatusCountVO vo = new StatusCountVO();
+        vo.setStatus(status);
+        vo.setCount(count == null ? 0L : count);
+        return vo;
+    }
+
+    private Long countPlansByStatus(String planStatus) {
+        return samplingPlanMapper.selectCount(new LambdaQueryWrapper<SamplingPlan>()
+                .eq(StrUtil.isNotBlank(planStatus), SamplingPlan::getPlanStatus, planStatus)
+                .eq(resolveScopedSamplerId(null) != null,
+                        SamplingPlan::getSamplerId,
+                        resolveScopedSamplerId(null)));
+    }
+
+    private Long countActiveMissingSamplerPlans() {
+        return samplingPlanMapper.selectCount(new LambdaQueryWrapper<SamplingPlan>()
+                .eq(SamplingPlan::getPlanStatus, LabWorkflowConstants.SamplingPlanStatus.ACTIVE)
+                .and(wrapper -> wrapper
+                        .isNull(SamplingPlan::getSamplerId)
+                        .or()
+                        .isNull(SamplingPlan::getSamplerName)
+                        .or()
+                        .eq(SamplingPlan::getSamplerName, ""))
+                .eq(resolveScopedSamplerId(null) != null,
+                        SamplingPlan::getSamplerId,
+                        resolveScopedSamplerId(null)));
     }
 
     private Long resolveScopedSamplerId(Long querySamplerId) {

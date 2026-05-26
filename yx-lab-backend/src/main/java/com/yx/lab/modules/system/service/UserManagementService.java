@@ -15,6 +15,7 @@ import com.yx.lab.modules.system.entity.LabOrg;
 import com.yx.lab.modules.system.entity.LabUser;
 import com.yx.lab.modules.system.mapper.LabUserMapper;
 import com.yx.lab.modules.system.vo.LabUserVO;
+import com.yx.lab.modules.storage.service.StorageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -33,6 +34,8 @@ public class UserManagementService {
     private final RoleManagementService roleManagementService;
 
     private final OrgManagementService orgManagementService;
+
+    private final StorageService storageService;
 
     /**
      * 分页查询用户列表。
@@ -149,7 +152,7 @@ public class UserManagementService {
         entity.setOrgName(org.getOrgName());
         entity.setRoleCode(StrUtil.trim(command.getRoleCode()));
         entity.setPhone(StrUtil.trim(command.getPhone()));
-        entity.setAvatarUrl(StrUtil.trim(command.getAvatarUrl()));
+        entity.setAvatarUrl(storageService.toFullUrl(command.getAvatarUrl()));
         entity.setStatus(command.getStatus());
     }
 
@@ -162,7 +165,7 @@ public class UserManagementService {
         vo.setOrgName(entity.getOrgName());
         vo.setRoleCode(entity.getRoleCode());
         vo.setPhone(entity.getPhone());
-        vo.setAvatarUrl(entity.getAvatarUrl());
+        vo.setAvatarUrl(storageService.toFullUrl(entity.getAvatarUrl()));
         vo.setStatus(entity.getStatus());
         vo.setCreatedName(entity.getCreatedName());
         vo.setCreatedTime(entity.getCreatedTime());

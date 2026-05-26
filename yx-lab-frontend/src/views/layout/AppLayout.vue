@@ -8,11 +8,6 @@
             <strong>云河化验室水质管理平台</strong>
           </div>
         </button>
-
-        <button type="button" class="top-level-entry" @click="goRoute('/dashboard')">
-          <span class="top-level-entry__label">一级菜单</span>
-          <strong>水质管理</strong>
-        </button>
       </div>
 
       <div class="topbar-right">
@@ -88,12 +83,6 @@
 
     <div class="layout-main">
       <aside class="sidebar">
-        <div class="sidebar-head">
-          <span class="sidebar-head__caption">功能导航</span>
-          <strong>水质管理</strong>
-          <p>左侧按业务模块展开原一级菜单与二级菜单。</p>
-        </div>
-
         <div class="sidebar-body">
           <el-menu
             ref="menuRef"
@@ -118,12 +107,6 @@
               </el-menu-item>
             </el-sub-menu>
           </el-menu>
-        </div>
-
-        <div class="sidebar-footer">
-          <span>当前模块</span>
-          <strong>{{ currentPrimaryMenu?.title || '-' }}</strong>
-          <p>{{ currentSecondaryMenu?.title || '-' }}</p>
         </div>
       </aside>
 
@@ -222,9 +205,8 @@ import {
   SetUp,
   Tickets
 } from '@element-plus/icons-vue'
-import { changeMyPasswordApi, logoutApi, previewStorageFileApi, updateMyProfileApi, uploadStorageFileApi } from '../../api/lab'
-import { getPublicFileUrl } from '../../config/appConfig'
-import { clearToken, getToken, getUser, setUser } from '../../utils/auth'
+import { changeMyPasswordApi, logoutApi, updateMyProfileApi, uploadStorageFileApi } from '../../api/lab'
+import { clearToken, getUser, setUser } from '../../utils/auth'
 import { labMenuGroups } from '../../router/menuConfig'
 import { getMenuPermissionCode } from '../../utils/menuPermission'
 
@@ -329,13 +311,7 @@ const currentPrimaryMenu = computed(() => (
   || primaryMenus.value.find((item) => item.children.some((child) => child.path === route.path))
   || primaryMenus.value[0]
 ))
-const currentSecondaryMenus = computed(() => currentPrimaryMenu.value?.children || [])
 const defaultOpenMenuIds = computed(() => currentPrimaryMenu.value?.id ? [currentPrimaryMenu.value.id] : [])
-const currentSecondaryMenu = computed(() => (
-  currentSecondaryMenus.value.find((item) => item.path === route.path)
-  || currentSecondaryMenus.value[0]
-  || { title: route.meta?.title || '页面' }
-))
 
 function applyTheme(themeId) {
   const matchedTheme = themeOptions.find((item) => item.id === themeId) || themeOptions[0]
@@ -426,7 +402,7 @@ async function submitProfileForm() {
     let avatarUrl = profileForm.avatarUrl
     if (selectedAvatarFile.value) {
       const uploadResult = await uploadStorageFileApi(selectedAvatarFile.value)
-      avatarUrl = getPublicFileUrl(uploadResult?.fullUrl || uploadResult?.filePath || '')
+      avatarUrl = uploadResult?.fullUrl || uploadResult?.filePath || ''
     }
     const nextUser = await updateMyProfileApi({
       realName: String(profileForm.realName || '').trim(),
@@ -474,23 +450,15 @@ function clearAvatarPreview() {
 }
 
 function clearUserAvatarSrc() {
-  if (userAvatarSrc.value) {
+  if (userAvatarSrc.value?.startsWith('blob:')) {
     URL.revokeObjectURL(userAvatarSrc.value)
-    userAvatarSrc.value = ''
   }
+  userAvatarSrc.value = ''
 }
 
 async function loadUserAvatar() {
   clearUserAvatarSrc()
-  if (!user.value.avatarUrl || !getToken()) {
-    return
-  }
-  try {
-    const response = await previewStorageFileApi(user.value.avatarUrl)
-    userAvatarSrc.value = URL.createObjectURL(response.data)
-  } catch {
-    userAvatarSrc.value = ''
-  }
+  userAvatarSrc.value = String(user.value.avatarUrl || '').trim()
 }
 
 async function submitPasswordForm() {
@@ -626,29 +594,6 @@ onBeforeUnmount(() => {
 .brand-copy strong {
   font-size: 16px;
   font-weight: 600;
-}
-
-.top-level-entry {
-  min-width: 150px;
-  display: grid;
-  gap: 4px;
-  padding: 10px 16px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.12);
-  color: #ffffff;
-  text-align: left;
-  cursor: pointer;
-}
-
-.top-level-entry__label {
-  color: rgba(255, 255, 255, 0.72);
-  font-size: 12px;
-}
-
-.top-level-entry strong {
-  font-size: 16px;
-  line-height: 1.2;
 }
 
 .topbar-action {
@@ -847,45 +792,9 @@ onBeforeUnmount(() => {
   color: #d4dbeb;
   display: flex;
   flex-direction: column;
-  padding: 18px 0 12px;
-  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.04);
+  padding: 12px 0;
+  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.04), 10px 0 26px rgba(16, 35, 78, 0.08);
   overflow: hidden;
-}
-
-.sidebar-head {
-  display: grid;
-  gap: 6px;
-  padding: 0 18px 14px;
-}
-
-.sidebar-head__caption,
-.sidebar-footer span {
-  color: #8b95af;
-  font-size: 12px;
-  letter-spacing: 1px;
-}
-
-.sidebar-head strong,
-.sidebar-footer strong {
-  color: #ffffff;
-  font-size: 15px;
-  font-weight: 600;
-}
-
-.sidebar-head p,
-.sidebar-footer p {
-  margin: 0;
-  color: #8b95af;
-  font-size: 12px;
-  line-height: 1.7;
-}
-
-.sidebar-footer {
-  margin-top: auto;
-  padding: 16px 18px 6px;
-  display: grid;
-  gap: 4px;
-  flex-shrink: 0;
 }
 
 .sidebar-body {
@@ -895,6 +804,7 @@ onBeforeUnmount(() => {
   overflow-x: hidden;
   scrollbar-gutter: stable;
   overscroll-behavior: contain;
+  padding: 4px 0;
 }
 
 .workspace {
@@ -933,19 +843,25 @@ onBeforeUnmount(() => {
 }
 
 :deep(.menu-panel .el-sub-menu__title) {
-  height: 46px;
-  margin: 0 0 6px;
-  padding-left: 18px !important;
+  height: 48px;
+  margin: 0 8px 6px;
+  padding-left: 14px !important;
+  border-radius: 10px;
   color: #ffffff;
   font-weight: 600;
 }
 
 :deep(.menu-panel .el-menu-item) {
-  height: 42px;
-  margin: 0 0 4px;
+  height: 40px;
+  margin: 0 8px 5px;
   padding-left: 46px !important;
-  border-left: 3px solid transparent;
+  border-left: 0;
+  border-radius: 10px;
   color: #d4dbeb;
+}
+
+:deep(.menu-panel .el-sub-menu__title:hover) {
+  background: var(--bg-sidebar-hover);
 }
 
 :deep(.menu-panel .el-menu-item:hover) {
@@ -955,7 +871,7 @@ onBeforeUnmount(() => {
 
 :deep(.menu-panel .el-menu-item.is-active) {
   background: var(--bg-sidebar-active);
-  border-left-color: var(--brand);
+  box-shadow: inset 3px 0 0 var(--brand);
   color: #ffffff;
 }
 
