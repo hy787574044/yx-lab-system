@@ -21,6 +21,8 @@ import com.yx.lab.modules.review.mapper.ReviewRecordMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.stream.Collectors;
 
 /**
@@ -71,6 +73,19 @@ public class MobileReviewQueryService {
     public PageResult<MobileReviewTodoVO> reviewTodo(DetectionRecordQuery query) {
         CurrentUser currentUser = requireCurrentUser();
         String keyword = query == null ? null : StrUtil.trim(query.getKeyword());
+        
+        // 获取当前审查员待审核的检测记录ID列表
+        List<Long> pendingRecordIds = reviewRecordMapper.selectList(new LambdaQueryWrapper<ReviewRecord>()
+                        .eq(ReviewRecord::getReviewerId, currentUser.getUserId())
+                        .isNull(ReviewRecord::getReviewResult))
+                .stream()
+                .map(ReviewRecord::getDetectionRecordId)
+                .collect(Collectors.toList());
+        
+        if (pendingRecordIds.isEmpty()) {
+            return new PageResult<>(0L, Collections.emptyList());
+        }
+        
         Page<DetectionRecord> page = detectionRecordMapper.selectPage(
                 PageUtils.buildPage(query),
                 new LambdaQueryWrapper<DetectionRecord>()
@@ -82,8 +97,7 @@ public class MobileReviewQueryService {
                                 .like(DetectionRecord::getDetectionTypeName, keyword))
                         .eq(DetectionRecord::getDetectionStatus, LabWorkflowConstants.DetectionStatus.SUBMITTED)
                         // 审查员只能查看分配给自己的审核任务
-                        .eq(dataScopeHelper.isRole("REVIEWER") && currentUser.getUserId() != null,
-                                DetectionRecord::getReviewerId, currentUser.getUserId())
+                        .in(DetectionRecord::getId, pendingRecordIds)
                         .orderByDesc(DetectionRecord::getDetectionTime)
                         .orderByDesc(DetectionRecord::getCreatedTime));
         return new PageResult<>(page.getTotal(), page.getRecords().stream()

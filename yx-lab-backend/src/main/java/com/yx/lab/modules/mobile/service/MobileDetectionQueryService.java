@@ -7,7 +7,6 @@ import com.yx.lab.common.constant.LabWorkflowConstants;
 import com.yx.lab.common.exception.BusinessException;
 import com.yx.lab.common.model.PageResult;
 import com.yx.lab.common.security.CurrentUser;
-import com.yx.lab.common.security.DataScopeHelper;
 import com.yx.lab.common.security.SecurityContext;
 import com.yx.lab.common.util.PageUtils;
 import com.yx.lab.modules.detection.dto.DetectionRecordQuery;
@@ -36,8 +35,6 @@ public class MobileDetectionQueryService {
 
     private final DetectionRecordMapper detectionRecordMapper;
 
-    private final DataScopeHelper dataScopeHelper;
-
     /**
      * 分页查询移动端检测待办。
      *
@@ -46,6 +43,22 @@ public class MobileDetectionQueryService {
      */
     public PageResult<MobileDetectionTodoVO> detectionTodo(LabSampleQuery query) {
         CurrentUser currentUser = requireCurrentUser();
+        
+        // 获取当前检测员待检测的样品ID列表
+        List<Long> pendingSampleIds = detectionRecordMapper.selectList(new LambdaQueryWrapper<DetectionRecord>()
+                        .eq(DetectionRecord::getDetectorId, currentUser.getUserId())
+                        .in(DetectionRecord::getDetectionStatus,
+                                LabWorkflowConstants.DetectionStatus.WAIT_ASSIGN,
+                                LabWorkflowConstants.DetectionStatus.WAIT_DETECT))
+                .stream()
+                .map(DetectionRecord::getSampleId)
+                .filter(id -> id != null)
+                .collect(Collectors.toList());
+        
+        if (pendingSampleIds.isEmpty()) {
+            return new PageResult<>(0L, Collections.emptyList());
+        }
+        
         Page<LabSample> page = labSampleMapper.selectPage(
                 PageUtils.buildPage(query),
                 new LambdaQueryWrapper<LabSample>()
@@ -58,8 +71,7 @@ public class MobileDetectionQueryService {
                         .eq(StrUtil.isNotBlank(query.getSampleStatus()), LabSample::getSampleStatus, query.getSampleStatus())
                         .eq(StrUtil.isNotBlank(query.getSampleType()), LabSample::getSampleType, query.getSampleType())
                         // 检测员只能查看分配给自己的样品
-                        .eq(dataScopeHelper.isRole("DETECTOR") && currentUser.getUserId() != null,
-                                LabSample::getDetectorId, currentUser.getUserId())
+                        .in(LabSample::getId, pendingSampleIds)
                         .in(LabSample::getSampleStatus, LabWorkflowConstants.DETECTABLE_SAMPLE_STATUSES)
                         .orderByDesc(LabSample::getSealTime)
                         .orderByDesc(LabSample::getCreatedTime));
