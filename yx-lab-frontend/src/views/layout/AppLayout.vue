@@ -102,12 +102,13 @@
             router
             unique-opened
             :collapse-transition="false"
+            :active-text-color="'#4080ff'"
             class="menu-panel"
           >
             <el-sub-menu v-for="group in primaryMenus" :key="group.id" :index="group.id">
               <template #title>
-                <el-icon>
-                  <component :is="iconMap[group.iconKey]" />
+                <el-icon :key="group.id + '-icon'">
+                  <component :is="iconMap[group.iconKey]" :key="group.iconKey" />
                 </el-icon>
                 <span>{{ group.title }}</span>
               </template>

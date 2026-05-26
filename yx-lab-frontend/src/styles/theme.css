@@ -1107,6 +1107,30 @@ textarea {
   box-shadow: var(--shadow-md);
 }
 
+/* 禁用菜单过渡效果，防止图标闪烁 */
+.menu-panel {
+  transition: none !important;
+}
+
+.menu-panel .el-menu-item,
+.menu-panel .el-sub-menu__title {
+  transition: none !important;
+}
+
+.menu-panel .el-icon,
+.menu-panel .el-icon svg {
+  transition: none !important;
+}
+
+.menu-panel .el-menu-item-group,
+.menu-panel .el-menu--collapse {
+  transition: none !important;
+}
+
+.menu-panel .el-sub-menu__icon-arrow {
+  transition: none !important;
+}
+
 .el-dialog__header {
   margin-right: 0;
   padding: 16px 18px 12px;
