@@ -27,7 +27,11 @@ public class MobileReviewTodoVO {
 
     private String detectionResult;
 
+    private String detectionResultDesc;
+
     private String abnormalRemark;
 
     private String detectionStatus;
+
+    private String detectionStatusDesc;
 }

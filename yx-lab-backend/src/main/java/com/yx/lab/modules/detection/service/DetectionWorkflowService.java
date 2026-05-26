@@ -479,6 +479,7 @@ public class DetectionWorkflowService {
             vo.setDetectorId(item.getDetectorId());
             vo.setDetectorName(item.getDetectorName());
             vo.setItemStatus(item.getItemStatus());
+            vo.setItemStatusDesc(LabWorkflowConstants.getDetectionStatusLabel(item.getItemStatus()));
             vo.setExceedFlag(item.getExceedFlag());
             vo.setAbnormalRemark(record == null ? null : record.getAbnormalRemark());
             vo.setUpdatedTime(item.getUpdatedTime());

@@ -30,6 +30,7 @@ logging:
 lab:
   storage:
     upload-dir: /home/resource
+    file-base-url: https://yangxin.yunhexx.com:8443
   unified:
     base-url: http://172.168.1.55:8187
     api-token:

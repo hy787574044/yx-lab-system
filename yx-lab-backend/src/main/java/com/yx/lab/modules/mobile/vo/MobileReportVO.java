@@ -20,6 +20,8 @@ public class MobileReportVO {
 
     private String reportStatus;
 
+    private String reportStatusDesc;
+
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime generatedTime;
 

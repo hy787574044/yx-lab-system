@@ -3,6 +3,7 @@ package com.yx.lab.modules.mobile.service;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.yx.lab.common.constant.LabWorkflowConstants;
 import com.yx.lab.common.exception.BusinessException;
 import com.yx.lab.common.model.PageResult;
 import com.yx.lab.common.security.CurrentUser;
@@ -107,6 +108,7 @@ public class MobileReportQueryService {
         vo.setSampleNo(report.getSampleNo());
         vo.setSealNo(report.getSealNo());
         vo.setReportStatus(report.getReportStatus());
+        vo.setReportStatusDesc(LabWorkflowConstants.getReportStatusLabel(report.getReportStatus()));
         vo.setGeneratedTime(report.getGeneratedTime());
         vo.setPublishedTime(report.getPublishedTime());
         vo.setPublishedByName(report.getPublishedByName());

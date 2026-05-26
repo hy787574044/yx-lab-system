@@ -18,12 +18,15 @@ import com.yx.lab.modules.sample.entity.LabSample;
 import com.yx.lab.modules.sample.entity.SamplingTask;
 import com.yx.lab.modules.sample.mapper.LabSampleMapper;
 import com.yx.lab.modules.sample.mapper.SamplingTaskMapper;
+import com.yx.lab.modules.storage.service.StorageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * 采样任务服务，负责现场采样任务的执行、封签号维护和状态流转。
@@ -37,6 +40,8 @@ public class SamplingTaskService {
     private final LabSampleMapper labSampleMapper;
 
     private final SamplingPlanService samplingPlanService;
+
+    private final StorageService storageService;
 
     private final DataScopeHelper dataScopeHelper;
 
@@ -216,7 +221,8 @@ public class SamplingTaskService {
         task.setOnsiteMetrics(command.getOnsiteMetrics());
         task.setWeather(command.getWeather());
         task.setTemperature(command.getTemperature());
-        task.setPhotoUrls(command.getPhotoUrls());
+        // 采样完成时统一把图片地址规范成完整URL后入库，便于PC和移动端直接回显。
+        task.setPhotoUrls(normalizePhotoUrls(command.getPhotoUrls()));
         task.setRemark(command.getRemark());
         task.setAddress(command.getAddress());
         task.setLatitude(command.getLatitude());
@@ -229,6 +235,19 @@ public class SamplingTaskService {
         samplingTaskMapper.updateById(task);
 
         samplingPlanService.refreshPlanStatusAfterTaskChange(task.getPlanId());
+    }
+
+    private String normalizePhotoUrls(String photoUrls) {
+        if (StrUtil.isBlank(photoUrls)) {
+            return null;
+        }
+        return Arrays.stream(photoUrls.split(","))
+                .map(String::trim)
+                .filter(StrUtil::isNotBlank)
+                .map(storageService::toFullUrl)
+                .filter(StrUtil::isNotBlank)
+                .distinct()
+                .collect(Collectors.joining(","));
     }
 
     private SamplingTask requireTask(Long id) {

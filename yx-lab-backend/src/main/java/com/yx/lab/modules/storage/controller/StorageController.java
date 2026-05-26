@@ -16,6 +16,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.net.URLConnection;
+import java.util.LinkedHashMap;
 import java.util.Collections;
 import java.util.Map;
 
@@ -42,7 +43,10 @@ public class StorageController {
     @Operation(summary = "上传文件")
     public ApiResponse<Map<String, String>> upload(@RequestParam("file") MultipartFile file) throws IOException {
         String filePath = storageService.store(file);
-        return ApiResponse.success(Collections.singletonMap("filePath", filePath));
+        Map<String, String> result = new LinkedHashMap<>();
+        result.put("filePath", filePath);
+        result.put("fullUrl", storageService.toFullUrl(filePath));
+        return ApiResponse.success(result);
     }
 
     /**

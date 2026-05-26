@@ -21,6 +21,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
                         "/api/auth/login",
                         "/api/auth/mobileLogin",
                         "/api/auth/captcha",
+                        "/api/storage/file",
                         "/error",
                         "/swagger-ui/**",
                         "/swagger-ui.html",

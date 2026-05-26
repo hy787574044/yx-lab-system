@@ -687,12 +687,27 @@ export const uploadStorageFileApi = (file) => {
     }
   })
 }
-export const previewStorageFileApi = (path) => axios.get('/api/storage/file', {
-  baseURL: API_BASE_URL,
-  params: { path },
-  responseType: 'blob',
-  headers: getToken() ? { Authorization: `Bearer ${getToken()}` } : {}
-})
+export const previewStorageFileApi = (path) => {
+  const value = String(path || '').trim()
+  const headers = getToken() ? { Authorization: `Bearer ${getToken()}` } : {}
+  if (/^https?:\/\//i.test(value)) {
+    return axios.get(value, { responseType: 'blob', headers })
+  }
+  if (value.startsWith('/api/storage/file?path=') || value.startsWith('api/storage/file?path=')) {
+    const requestUrl = value.startsWith('/') ? value : `/${value}`
+    return axios.get(requestUrl, {
+      baseURL: API_BASE_URL,
+      responseType: 'blob',
+      headers
+    })
+  }
+  return axios.get('/api/storage/file', {
+    baseURL: API_BASE_URL,
+    params: { path: value },
+    responseType: 'blob',
+    headers
+  })
+}
 /**
  * 预览化验室文档文件流。
  *

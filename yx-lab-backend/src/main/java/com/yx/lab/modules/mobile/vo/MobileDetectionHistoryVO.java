@@ -22,7 +22,11 @@ public class MobileDetectionHistoryVO {
 
     private String detectionResult;
 
+    private String detectionResultDesc;
+
     private String detectionStatus;
+
+    private String detectionStatusDesc;
 
     private String abnormalRemark;
 

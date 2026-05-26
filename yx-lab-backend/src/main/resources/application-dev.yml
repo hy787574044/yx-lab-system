@@ -15,6 +15,7 @@ mybatis-plus:
   configuration:
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
 
+
 springdoc:
   api-docs:
     enabled: true
@@ -30,6 +31,7 @@ logging:
 lab:
   storage:
     upload-dir: ./uploads
+    file-base-url: http://localhost:9010
   unified:
     base-url: http://172.168.1.55:8187
     api-token:

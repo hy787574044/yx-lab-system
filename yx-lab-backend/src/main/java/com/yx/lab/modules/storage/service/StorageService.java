@@ -14,6 +14,9 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 /**
  * 文件存储服务，统一处理上传目录定位、文件读写与删除。
@@ -41,6 +44,73 @@ public class StorageService {
         return fileName;
     }
 
+    /**
+     * 将相对路径转换为完整的文件URL。
+     *
+     * @param relativePath 相对路径
+     * @return 完整的文件URL
+     */
+    public String toFullUrl(String relativePath) {
+        if (StrUtil.isBlank(relativePath)) {
+            return null;
+        }
+        String normalizedPath = StrUtil.trim(relativePath);
+        // 如果已经是完整URL，直接返回
+        if (StrUtil.startWithIgnoreCase(normalizedPath, "http://")
+                || StrUtil.startWithIgnoreCase(normalizedPath, "https://")) {
+            return normalizedPath;
+        }
+        String baseUrl = normalizeBaseUrl();
+
+        // 兼容前端传入 /api/storage/file?path=xxx 或 api/storage/file?path=xxx 的场景，统一补成完整地址。
+        if (normalizedPath.startsWith("/api/storage/file?path=")
+                || normalizedPath.startsWith("api/storage/file?path=")) {
+            return prependBaseUrl(baseUrl, normalizedPath);
+        }
+
+        String path = normalizedPath.startsWith("/") ? normalizedPath.substring(1) : normalizedPath;
+        if (StrUtil.isBlank(baseUrl)) {
+            return "/api/storage/file?path=" + path;
+        }
+        return baseUrl + "api/storage/file?path=" + path;
+    }
+
+    /**
+     * 将逗号分隔的多个相对路径转换为完整URL。
+     *
+     * @param relativePaths 逗号分隔的相对路径
+     * @return 逗号分隔的完整URL
+     */
+    public String toFullUrls(String relativePaths) {
+        if (StrUtil.isBlank(relativePaths)) {
+            return null;
+        }
+        return Arrays.stream(relativePaths.split(","))
+                .map(String::trim)
+                .filter(StrUtil::isNotBlank)
+                .map(this::toFullUrl)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.joining(","));
+    }
+
+    private String normalizeBaseUrl() {
+        String baseUrl = StrUtil.blankToDefault(storageProperties.getFileBaseUrl(), "").trim();
+        if (baseUrl.isEmpty()) {
+            return "";
+        }
+        return baseUrl.endsWith("/") ? baseUrl : baseUrl + "/";
+    }
+
+    private String prependBaseUrl(String baseUrl, String requestPath) {
+        String normalizedRequestPath = requestPath.startsWith("/")
+                ? requestPath.substring(1)
+                : requestPath;
+        if (StrUtil.isBlank(baseUrl)) {
+            return "/" + normalizedRequestPath;
+        }
+        return baseUrl + normalizedRequestPath;
+    }
     /**
      * 解析业务文件路径为本地绝对路径。
      *

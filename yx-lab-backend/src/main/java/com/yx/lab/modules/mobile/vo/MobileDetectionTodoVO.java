@@ -18,9 +18,13 @@ public class MobileDetectionTodoVO {
 
     private String sampleType;
 
+    private String sampleTypeDesc;
+
     private String detectionItems;
 
     private String sampleStatus;
+
+    private String sampleStatusDesc;
 
     private String resultSummary;
 

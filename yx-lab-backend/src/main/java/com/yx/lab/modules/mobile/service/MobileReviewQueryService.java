@@ -123,6 +123,7 @@ public class MobileReviewQueryService {
         vo.setReviewerName(record.getReviewerName());
         vo.setReviewTime(record.getReviewTime());
         vo.setReviewResult(record.getReviewResult());
+        vo.setReviewResultDesc(LabWorkflowConstants.getReviewResultLabel(record.getReviewResult()));
         vo.setRejectReason(record.getRejectReason());
         vo.setReviewRemark(record.getReviewRemark());
         return vo;
@@ -139,8 +140,10 @@ public class MobileReviewQueryService {
         vo.setDetectorId(record.getDetectorId());
         vo.setDetectorName(record.getDetectorName());
         vo.setDetectionResult(record.getDetectionResult());
+        vo.setDetectionResultDesc(LabWorkflowConstants.getDetectionResultLabel(record.getDetectionResult()));
         vo.setAbnormalRemark(record.getAbnormalRemark());
         vo.setDetectionStatus(record.getDetectionStatus());
+        vo.setDetectionStatusDesc(LabWorkflowConstants.getDetectionStatusLabel(record.getDetectionStatus()));
         return vo;
     }
 }

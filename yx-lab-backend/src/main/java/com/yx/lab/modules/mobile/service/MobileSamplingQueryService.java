@@ -13,6 +13,7 @@ import com.yx.lab.modules.sample.entity.LabSample;
 import com.yx.lab.modules.sample.entity.SamplingTask;
 import com.yx.lab.modules.sample.mapper.LabSampleMapper;
 import com.yx.lab.modules.sample.mapper.SamplingTaskMapper;
+import com.yx.lab.modules.storage.service.StorageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -34,6 +35,8 @@ public class MobileSamplingQueryService {
     private final SamplingTaskMapper samplingTaskMapper;
 
     private final LabSampleMapper labSampleMapper;
+
+    private final StorageService storageService;
 
     /**
      * 分页查询当前采样员的移动端采样待办。
@@ -123,17 +126,23 @@ public class MobileSamplingQueryService {
         vo.setSamplerId(task.getSamplerId());
         vo.setSamplerName(task.getSamplerName());
         vo.setSampleType(task.getSampleType());
+        vo.setSampleTypeDesc(LabWorkflowConstants.getSampleTypeLabel(task.getSampleType()));
         vo.setDetectionItems(task.getDetectionItems());
         vo.setTaskStatus(task.getTaskStatus());
+        vo.setTaskStatusDesc(LabWorkflowConstants.getSamplingTaskStatusLabel(task.getTaskStatus()));
         vo.setTaskSealNo(task.getSealNo());
         vo.setSampleRegisterStatus(task.getSampleRegisterStatus());
+        vo.setSampleRegisterStatusDesc(LabWorkflowConstants.getSampleRegisterStatusLabel(task.getSampleRegisterStatus()));
         vo.setFinishedTime(task.getFinishedTime());
         vo.setRemark(task.getRemark());
+        // 将相对路径转换为完整URL
+        vo.setPhotoUrls(storageService.toFullUrls(task.getPhotoUrls()));
         if (sample != null) {
             vo.setSampleId(sample.getId());
             vo.setSampleNo(sample.getSampleNo());
             vo.setSealNo(sample.getSealNo());
             vo.setSampleStatus(sample.getSampleStatus());
+            vo.setSampleStatusDesc(LabWorkflowConstants.getSampleStatusLabel(sample.getSampleStatus()));
             vo.setSampleLogged(Boolean.TRUE);
         } else {
             // 如果没有样品，使用任务的封签号（支持提前录入封签号的场景）

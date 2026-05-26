@@ -124,8 +124,10 @@ public class MobileDetectionQueryService {
         vo.setSealNo(sample.getSealNo());
         vo.setPointName(sample.getPointName());
         vo.setSampleType(sample.getSampleType());
+        vo.setSampleTypeDesc(LabWorkflowConstants.getSampleTypeLabel(sample.getSampleType()));
         vo.setDetectionItems(sample.getDetectionItems());
         vo.setSampleStatus(sample.getSampleStatus());
+        vo.setSampleStatusDesc(LabWorkflowConstants.getSampleStatusLabel(sample.getSampleStatus()));
         vo.setResultSummary(sample.getResultSummary());
         vo.setSamplerName(sample.getSamplerName());
         vo.setSamplingTime(sample.getSamplingTime());
@@ -142,7 +144,9 @@ public class MobileDetectionQueryService {
         vo.setDetectionTypeId(record.getDetectionTypeId());
         vo.setDetectionTypeName(record.getDetectionTypeName());
         vo.setDetectionResult(record.getDetectionResult());
+        vo.setDetectionResultDesc(LabWorkflowConstants.getDetectionResultLabel(record.getDetectionResult()));
         vo.setDetectionStatus(record.getDetectionStatus());
+        vo.setDetectionStatusDesc(LabWorkflowConstants.getDetectionStatusLabel(record.getDetectionStatus()));
         vo.setAbnormalRemark(record.getAbnormalRemark());
         vo.setDetectionTime(record.getDetectionTime());
         return vo;

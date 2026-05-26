@@ -555,6 +555,7 @@ import {
   uploadStorageFileApi
 } from '../api/lab'
 import ReportPrintDocument from '../components/report/ReportPrintDocument.vue'
+import { getPublicFileUrl } from '../config/appConfig'
 import { clearToken, getUser, setUser } from '../utils/auth'
 import {
   approvedReviewResult,
@@ -734,7 +735,7 @@ async function submitProfileForm() {
     let avatarUrl = String(profileForm.avatarUrl || '').trim()
     if (selectedProfileAvatarFile.value) {
       const uploadResult = await uploadStorageFileApi(selectedProfileAvatarFile.value)
-      avatarUrl = uploadResult.filePath || ''
+      avatarUrl = getPublicFileUrl(uploadResult?.fullUrl || uploadResult?.filePath || '')
     }
     const nextUser = await updateMobileProfileApi({
       realName: String(profileForm.realName || '').trim(),

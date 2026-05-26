@@ -25,6 +25,8 @@ public class MobileReviewHistoryVO {
 
     private String reviewResult;
 
+    private String reviewResultDesc;
+
     private String rejectReason;
 
     private String reviewRemark;

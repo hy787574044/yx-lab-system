@@ -1009,6 +1009,7 @@ import { ElOption, ElSelect } from 'element-plus/es/components/select/index.mjs'
 import { ElTable, ElTableColumn } from 'element-plus/es/components/table/index.mjs'
 import { ElUpload } from 'element-plus/es/components/upload/index.mjs'
 import TablePagination from '../components/common/TablePagination.vue'
+import { getPublicFileUrl } from '../config/appConfig'
 import {
   abandonSamplingTaskApi,
   completeSamplingTaskApi,
@@ -2298,7 +2299,13 @@ function buildStoragePreviewUrl(path) {
   if (!value) {
     return ''
   }
-  if (/^https?:\/\//i.test(value) || value.startsWith('blob:') || value.startsWith('data:')) {
+  if (
+    /^https?:\/\//i.test(value)
+    || value.startsWith('blob:')
+    || value.startsWith('data:')
+    || value.startsWith('/api/storage/file?path=')
+    || value.startsWith('api/storage/file?path=')
+  ) {
     return value
   }
   return `/api/storage/file?path=${encodeURIComponent(value)}`
@@ -2306,7 +2313,11 @@ function buildStoragePreviewUrl(path) {
 
 function isDirectImageUrl(path) {
   const value = String(path || '').trim()
-  return /^https?:\/\//i.test(value) || value.startsWith('blob:') || value.startsWith('data:')
+  return /^https?:\/\//i.test(value)
+    || value.startsWith('blob:')
+    || value.startsWith('data:')
+    || value.startsWith('/api/storage/file?path=')
+    || value.startsWith('api/storage/file?path=')
 }
 
 function formatStandardRange(min, max, unit) {
@@ -2710,15 +2721,22 @@ async function handleTaskCompletePhotoChange(file) {
   taskCompletePhotoUploading.value = true
   try {
     const result = await uploadStorageFileApi(rawFile)
-    const filePath = String(result?.filePath || result?.data?.filePath || '').trim()
+    const filePath = String(
+      result?.fullUrl
+      || result?.data?.fullUrl
+      || result?.filePath
+      || result?.data?.filePath
+      || ''
+    ).trim()
     if (!filePath) {
       ElMessage.error('图片上传失败')
       return
     }
-    taskCompleteForm.photoUrls = [...parsePhotoUrls(taskCompleteForm.photoUrls), filePath].join(',')
+    const publicFileUrl = getPublicFileUrl(filePath)
+    taskCompleteForm.photoUrls = [...parsePhotoUrls(taskCompleteForm.photoUrls), publicFileUrl].join(',')
     taskCompletePhotoList.value = [
       ...taskCompletePhotoList.value,
-      buildLocalPhotoEntry(filePath, rawFile)
+      buildLocalPhotoEntry(publicFileUrl, rawFile)
     ]
   } finally {
     taskCompletePhotoUploading.value = false

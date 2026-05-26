@@ -27,13 +27,19 @@ public class MobileSamplingTodoVO {
 
     private String sampleType;
 
+    private String sampleTypeDesc;
+
     private String detectionItems;
 
     private String taskStatus;
 
+    private String taskStatusDesc;
+
     private String taskSealNo;
 
     private String sampleRegisterStatus;
+
+    private String sampleRegisterStatusDesc;
 
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime finishedTime;
@@ -48,5 +54,12 @@ public class MobileSamplingTodoVO {
 
     private String sampleStatus;
 
+    private String sampleStatusDesc;
+
     private Boolean sampleLogged;
+
+    /**
+     * 现场照片地址集合（逗号分隔的完整URL）
+     */
+    private String photoUrls;
 }

@@ -52,6 +52,8 @@ public class DetectionItemPageVO {
 
     private String itemStatus;
 
+    private String itemStatusDesc;
+
     private Integer exceedFlag;
 
     private String abnormalRemark;
