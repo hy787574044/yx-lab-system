@@ -202,9 +202,9 @@
               </span>
             </template>
           </el-table-column>
-          <el-table-column label="审核操作" min-width="220">
+          <el-table-column label="审核操作" min-width="220" class-name="cell-center">
             <template #default="{ row }">
-              <div v-if="canReviewItem(row)" class="review-item-actions">
+              <div v-if="canReviewItem(row)" class="table-action-row">
                 <el-button
                   :type="'primary'"
                   :plain="row.reviewResultDraft !== approvedReviewResult"
@@ -1023,10 +1023,7 @@ watch(() => route.fullPath, () => {
   margin-top: 4px;
 }
 
-.review-item-actions {
-  display: flex;
-  gap: 8px;
-}
+
 
 .review-action-button {
   min-width: 72px;

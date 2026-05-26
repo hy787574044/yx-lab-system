@@ -83,7 +83,7 @@
             <el-table-column prop="remark" label="备注" min-width="220" show-overflow-tooltip>
               <template #default="{ row }">{{ row.remark || '-' }}</template>
             </el-table-column>
-            <el-table-column label="操作" width="360" fixed="right" header-cell-class-name="cell-center" class-name="cell-center">
+            <el-table-column label="操作" width="450" fixed="right" header-cell-class-name="cell-center" class-name="cell-center">
               <template #default="{ row }">
                 <div class="table-action-row">
                   <el-button link type="primary" @click="openFlowDialog(row)">编辑</el-button>
