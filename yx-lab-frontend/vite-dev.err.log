@@ -539,3 +539,662 @@ AggregateError [ECONNREFUSED]:
 AggregateError [ECONNREFUSED]: 
     at internalConnectMultiple (node:net:1142:49)
     at afterConnectMultiple (node:net:1723:7)
+[2m17:37:46[22m [31m[1m[vite][22m[39m [31mInternal server error: Element is missing end tag.[39m
+  Plugin: [35mvite:vue[39m
+  File: [36mE:/share/yx-lab-system/yx-lab-frontend/src/views/MobileWorkbenchView.vue[39m:7:9
+[33m  5  |          <span class="hero-tag">绉诲姩绔棴鐜?/span>
+  6  |          <h1>浠庨噰鏍峰埌鎶ュ憡锛屼竴閮ㄦ墜鏈哄畬鎴愭祦杞?/h1>
+  7  |          <p>鑱氱劍寰呭姙銆佸揩閫熸彁浜ゃ€佸嵆鏃跺洖鐪嬶紝闈㈠悜鐜板満浜哄憳涓庡鏍镐汉鍛樼殑杞婚噺宸ヤ綔鍙般€?/p>
+     |           ^
+  8  |        </div>
+  9  |  [39m
+      at createCompilerError (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1378:17)
+      at emitError (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3014:5)
+      at Object.onclosetag (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:2381:13)
+      at Tokenizer.stateInClosingTagName (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:799:16)
+      at Tokenizer.parse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1157:16)
+      at Object.baseParse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3053:13)
+      at Object.parse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-dom\dist\compiler-dom.cjs.js:910:23)
+      at Object.parse$1 [as parse] (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-sfc\dist\compiler-sfc.cjs.js:1824:24)
+      at createDescriptor (file:///E:/share/yx-lab-system/yx-lab-frontend/node_modules/@vitejs/plugin-vue/dist/index.mjs:71:43)
+      at handleHotUpdate (file:///E:/share/yx-lab-system/yx-lab-frontend/node_modules/@vitejs/plugin-vue/dist/index.mjs:2198:26)
+[2m17:37:46[22m [31m[1m[vite][22m[39m [31mInternal server error: Element is missing end tag.[39m
+  Plugin: [35mvite:vue[39m
+  File: [36mE:/share/yx-lab-system/yx-lab-frontend/src/views/MobileWorkbenchView.vue[39m:7:9
+[33m  5  |          <span class="hero-tag">绉诲姩绔棴鐜?/span>
+  6  |          <h1>浠庨噰鏍峰埌鎶ュ憡锛屼竴閮ㄦ墜鏈哄畬鎴愭祦杞?/h1>
+  7  |          <p>鑱氱劍寰呭姙銆佸揩閫熸彁浜ゃ€佸嵆鏃跺洖鐪嬶紝闈㈠悜鐜板満浜哄憳涓庡鏍镐汉鍛樼殑杞婚噺宸ヤ綔鍙般€?/p>
+     |           ^
+  8  |        </div>
+  9  |  [39m
+      at createCompilerError (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1378:17)
+      at emitError (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3014:5)
+      at Object.onclosetag (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:2381:13)
+      at Tokenizer.stateInClosingTagName (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:799:16)
+      at Tokenizer.parse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1157:16)
+      at Object.baseParse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3053:13)
+      at Object.parse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-dom\dist\compiler-dom.cjs.js:910:23)
+      at Object.parse$1 [as parse] (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-sfc\dist\compiler-sfc.cjs.js:1824:24)
+      at createDescriptor (file:///E:/share/yx-lab-system/yx-lab-frontend/node_modules/@vitejs/plugin-vue/dist/index.mjs:71:43)
+      at handleHotUpdate (file:///E:/share/yx-lab-system/yx-lab-frontend/node_modules/@vitejs/plugin-vue/dist/index.mjs:2198:26)
+[2m17:38:04[22m [31m[1m[vite][22m[39m [31mInternal server error: Element is missing end tag.[39m
+  Plugin: [35mvite:vue[39m
+  File: [36mE:/share/yx-lab-system/yx-lab-frontend/src/views/MobileWorkbenchView.vue[39m:7:9
+[33m  5  |          <span class="hero-tag">绉诲姩绔棴鐜?/span>
+  6  |          <h1>浠庨噰鏍峰埌鎶ュ憡锛屼竴閮ㄦ墜鏈哄畬鎴愭祦杞?/h1>
+  7  |          <p>鑱氱劍寰呭姙銆佸揩閫熸彁浜ゃ€佸嵆鏃跺洖鐪嬶紝闈㈠悜鐜板満浜哄憳涓庡鏍镐汉鍛樼殑杞婚噺宸ヤ綔鍙般€?/p>
+     |           ^
+  8  |        </div>
+  9  |  [39m
+      at createCompilerError (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1378:17)
+      at emitError (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3014:5)
+      at Object.onclosetag (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:2381:13)
+      at Tokenizer.stateInClosingTagName (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:799:16)
+      at Tokenizer.parse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1157:16)
+      at Object.baseParse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3053:13)
+      at Object.parse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-dom\dist\compiler-dom.cjs.js:910:23)
+      at Object.parse$1 [as parse] (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-sfc\dist\compiler-sfc.cjs.js:1824:24)
+      at createDescriptor (file:///E:/share/yx-lab-system/yx-lab-frontend/node_modules/@vitejs/plugin-vue/dist/index.mjs:71:43)
+      at handleHotUpdate (file:///E:/share/yx-lab-system/yx-lab-frontend/node_modules/@vitejs/plugin-vue/dist/index.mjs:2198:26)
+[2m17:38:06[22m [31m[1m[vite][22m[39m [31mInternal server error: Element is missing end tag.[39m
+  Plugin: [35mvite:vue[39m
+  File: [36mE:/share/yx-lab-system/yx-lab-frontend/src/views/MobileWorkbenchView.vue[39m:7:9
+[33m  5  |          <span class="hero-tag">绉诲姩绔棴鐜?/span>
+  6  |          <h1>浠庨噰鏍峰埌鎶ュ憡锛屼竴閮ㄦ墜鏈哄畬鎴愭祦杞?/h1>
+  7  |          <p>鑱氱劍寰呭姙銆佸揩閫熸彁浜ゃ€佸嵆鏃跺洖鐪嬶紝闈㈠悜鐜板満浜哄憳涓庡鏍镐汉鍛樼殑杞婚噺宸ヤ綔鍙般€?/p>
+     |           ^
+  8  |        </div>
+  9  |  [39m
+      at createCompilerError (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1378:17)
+      at emitError (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3014:5)
+      at Object.onclosetag (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:2381:13)
+      at Tokenizer.stateInClosingTagName (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:799:16)
+      at Tokenizer.parse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1157:16)
+      at Object.baseParse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3053:13)
+      at Object.parse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-dom\dist\compiler-dom.cjs.js:910:23)
+      at Object.parse$1 [as parse] (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-sfc\dist\compiler-sfc.cjs.js:1824:24)
+      at createDescriptor (file:///E:/share/yx-lab-system/yx-lab-frontend/node_modules/@vitejs/plugin-vue/dist/index.mjs:71:43)
+      at handleHotUpdate (file:///E:/share/yx-lab-system/yx-lab-frontend/node_modules/@vitejs/plugin-vue/dist/index.mjs:2198:26)
+[2m17:38:07[22m [31m[1m[vite][22m[39m [31mInternal server error: Element is missing end tag.[39m
+  Plugin: [35mvite:vue[39m
+  File: [36mE:/share/yx-lab-system/yx-lab-frontend/src/views/MobileWorkbenchView.vue[39m:7:9
+[33m  5  |          <span class="hero-tag">绉诲姩绔棴鐜?/span>
+  6  |          <h1>浠庨噰鏍峰埌鎶ュ憡锛屼竴閮ㄦ墜鏈哄畬鎴愭祦杞?/h1>
+  7  |          <p>鑱氱劍寰呭姙銆佸揩閫熸彁浜ゃ€佸嵆鏃跺洖鐪嬶紝闈㈠悜鐜板満浜哄憳涓庡鏍镐汉鍛樼殑杞婚噺宸ヤ綔鍙般€?/p>
+     |           ^
+  8  |        </div>
+  9  |  [39m
+      at createCompilerError (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1378:17)
+      at emitError (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3014:5)
+      at Object.onclosetag (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:2381:13)
+      at Tokenizer.stateInClosingTagName (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:799:16)
+      at Tokenizer.parse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1157:16)
+      at Object.baseParse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3053:13)
+      at Object.parse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-dom\dist\compiler-dom.cjs.js:910:23)
+      at Object.parse$1 [as parse] (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-sfc\dist\compiler-sfc.cjs.js:1824:24)
+      at createDescriptor (file:///E:/share/yx-lab-system/yx-lab-frontend/node_modules/@vitejs/plugin-vue/dist/index.mjs:71:43)
+      at handleHotUpdate (file:///E:/share/yx-lab-system/yx-lab-frontend/node_modules/@vitejs/plugin-vue/dist/index.mjs:2198:26)
+[2m17:38:08[22m [31m[1m[vite][22m[39m [31mInternal server error: Element is missing end tag.[39m
+  Plugin: [35mvite:vue[39m
+  File: [36mE:/share/yx-lab-system/yx-lab-frontend/src/views/MobileWorkbenchView.vue[39m:7:9
+[33m  5  |          <span class="hero-tag">绉诲姩绔棴鐜?/span>
+  6  |          <h1>浠庨噰鏍峰埌鎶ュ憡锛屼竴閮ㄦ墜鏈哄畬鎴愭祦杞?/h1>
+  7  |          <p>鑱氱劍寰呭姙銆佸揩閫熸彁浜ゃ€佸嵆鏃跺洖鐪嬶紝闈㈠悜鐜板満浜哄憳涓庡鏍镐汉鍛樼殑杞婚噺宸ヤ綔鍙般€?/p>
+     |           ^
+  8  |        </div>
+  9  |  [39m
+      at createCompilerError (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1378:17)
+      at emitError (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3014:5)
+      at Object.onclosetag (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:2381:13)
+      at Tokenizer.stateInClosingTagName (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:799:16)
+      at Tokenizer.parse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1157:16)
+      at Object.baseParse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3053:13)
+      at Object.parse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-dom\dist\compiler-dom.cjs.js:910:23)
+      at Object.parse$1 [as parse] (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-sfc\dist\compiler-sfc.cjs.js:1824:24)
+      at createDescriptor (file:///E:/share/yx-lab-system/yx-lab-frontend/node_modules/@vitejs/plugin-vue/dist/index.mjs:71:43)
+      at handleHotUpdate (file:///E:/share/yx-lab-system/yx-lab-frontend/node_modules/@vitejs/plugin-vue/dist/index.mjs:2198:26)
+[2m17:38:09[22m [31m[1m[vite][22m[39m [31mInternal server error: Element is missing end tag.[39m
+  Plugin: [35mvite:vue[39m
+  File: [36mE:/share/yx-lab-system/yx-lab-frontend/src/views/MobileWorkbenchView.vue[39m:7:9
+[33m  5  |          <span class="hero-tag">绉诲姩绔棴鐜?/span>
+  6  |          <h1>浠庨噰鏍峰埌鎶ュ憡锛屼竴閮ㄦ墜鏈哄畬鎴愭祦杞?/h1>
+  7  |          <p>鑱氱劍寰呭姙銆佸揩閫熸彁浜ゃ€佸嵆鏃跺洖鐪嬶紝闈㈠悜鐜板満浜哄憳涓庡鏍镐汉鍛樼殑杞婚噺宸ヤ綔鍙般€?/p>
+     |           ^
+  8  |        </div>
+  9  |  [39m
+      at createCompilerError (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1378:17)
+      at emitError (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3014:5)
+      at Object.onclosetag (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:2381:13)
+      at Tokenizer.stateInClosingTagName (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:799:16)
+      at Tokenizer.parse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1157:16)
+      at Object.baseParse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3053:13)
+      at Object.parse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-dom\dist\compiler-dom.cjs.js:910:23)
+      at Object.parse$1 [as parse] (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-sfc\dist\compiler-sfc.cjs.js:1824:24)
+      at createDescriptor (file:///E:/share/yx-lab-system/yx-lab-frontend/node_modules/@vitejs/plugin-vue/dist/index.mjs:71:43)
+      at handleHotUpdate (file:///E:/share/yx-lab-system/yx-lab-frontend/node_modules/@vitejs/plugin-vue/dist/index.mjs:2198:26)
+[2m17:38:10[22m [31m[1m[vite][22m[39m [31mInternal server error: Element is missing end tag.[39m
+  Plugin: [35mvite:vue[39m
+  File: [36mE:/share/yx-lab-system/yx-lab-frontend/src/views/MobileWorkbenchView.vue[39m:7:9
+[33m  5  |          <span class="hero-tag">绉诲姩绔棴鐜?/span>
+  6  |          <h1>浠庨噰鏍峰埌鎶ュ憡锛屼竴閮ㄦ墜鏈哄畬鎴愭祦杞?/h1>
+  7  |          <p>鑱氱劍寰呭姙銆佸揩閫熸彁浜ゃ€佸嵆鏃跺洖鐪嬶紝闈㈠悜鐜板満浜哄憳涓庡鏍镐汉鍛樼殑杞婚噺宸ヤ綔鍙般€?/p>
+     |           ^
+  8  |        </div>
+  9  |  [39m
+      at createCompilerError (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1378:17)
+      at emitError (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3014:5)
+      at Object.onclosetag (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:2381:13)
+      at Tokenizer.stateInClosingTagName (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:799:16)
+      at Tokenizer.parse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1157:16)
+      at Object.baseParse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3053:13)
+      at Object.parse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-dom\dist\compiler-dom.cjs.js:910:23)
+      at Object.parse$1 [as parse] (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-sfc\dist\compiler-sfc.cjs.js:1824:24)
+      at createDescriptor (file:///E:/share/yx-lab-system/yx-lab-frontend/node_modules/@vitejs/plugin-vue/dist/index.mjs:71:43)
+      at handleHotUpdate (file:///E:/share/yx-lab-system/yx-lab-frontend/node_modules/@vitejs/plugin-vue/dist/index.mjs:2198:26)
+[2m17:38:10[22m [31m[1m[vite][22m[39m [31mInternal server error: Element is missing end tag.[39m
+  Plugin: [35mvite:vue[39m
+  File: [36mE:/share/yx-lab-system/yx-lab-frontend/src/views/MobileWorkbenchView.vue[39m:7:9
+[33m  5  |          <span class="hero-tag">绉诲姩绔棴鐜?/span>
+  6  |          <h1>浠庨噰鏍峰埌鎶ュ憡锛屼竴閮ㄦ墜鏈哄畬鎴愭祦杞?/h1>
+  7  |          <p>鑱氱劍寰呭姙銆佸揩閫熸彁浜ゃ€佸嵆鏃跺洖鐪嬶紝闈㈠悜鐜板満浜哄憳涓庡鏍镐汉鍛樼殑杞婚噺宸ヤ綔鍙般€?/p>
+     |           ^
+  8  |        </div>
+  9  |  [39m
+      at createCompilerError (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1378:17)
+      at emitError (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3014:5)
+      at Object.onclosetag (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:2381:13)
+      at Tokenizer.stateInClosingTagName (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:799:16)
+      at Tokenizer.parse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1157:16)
+      at Object.baseParse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3053:13)
+      at Object.parse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-dom\dist\compiler-dom.cjs.js:910:23)
+      at Object.parse$1 [as parse] (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-sfc\dist\compiler-sfc.cjs.js:1824:24)
+      at createDescriptor (file:///E:/share/yx-lab-system/yx-lab-frontend/node_modules/@vitejs/plugin-vue/dist/index.mjs:71:43)
+      at handleHotUpdate (file:///E:/share/yx-lab-system/yx-lab-frontend/node_modules/@vitejs/plugin-vue/dist/index.mjs:2198:26)
+[2m17:38:10[22m [31m[1m[vite][22m[39m [31mInternal server error: Element is missing end tag.[39m
+  Plugin: [35mvite:vue[39m
+  File: [36mE:/share/yx-lab-system/yx-lab-frontend/src/views/MobileWorkbenchView.vue[39m:7:9
+[33m  5  |          <span class="hero-tag">绉诲姩绔棴鐜?/span>
+  6  |          <h1>浠庨噰鏍峰埌鎶ュ憡锛屼竴閮ㄦ墜鏈哄畬鎴愭祦杞?/h1>
+  7  |          <p>鑱氱劍寰呭姙銆佸揩閫熸彁浜ゃ€佸嵆鏃跺洖鐪嬶紝闈㈠悜鐜板満浜哄憳涓庡鏍镐汉鍛樼殑杞婚噺宸ヤ綔鍙般€?/p>
+     |           ^
+  8  |        </div>
+  9  |  [39m
+      at createCompilerError (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1378:17)
+      at emitError (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3014:5)
+      at Object.onclosetag (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:2381:13)
+      at Tokenizer.stateInClosingTagName (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:799:16)
+      at Tokenizer.parse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1157:16)
+      at Object.baseParse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3053:13)
+      at Object.parse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-dom\dist\compiler-dom.cjs.js:910:23)
+      at Object.parse$1 [as parse] (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-sfc\dist\compiler-sfc.cjs.js:1824:24)
+      at createDescriptor (file:///E:/share/yx-lab-system/yx-lab-frontend/node_modules/@vitejs/plugin-vue/dist/index.mjs:71:43)
+      at handleHotUpdate (file:///E:/share/yx-lab-system/yx-lab-frontend/node_modules/@vitejs/plugin-vue/dist/index.mjs:2198:26)
+[2m17:38:10[22m [31m[1m[vite][22m[39m [31mInternal server error: Element is missing end tag.[39m
+  Plugin: [35mvite:vue[39m
+  File: [36mE:/share/yx-lab-system/yx-lab-frontend/src/views/MobileWorkbenchView.vue[39m:7:9
+[33m  5  |          <span class="hero-tag">绉诲姩绔棴鐜?/span>
+  6  |          <h1>浠庨噰鏍峰埌鎶ュ憡锛屼竴閮ㄦ墜鏈哄畬鎴愭祦杞?/h1>
+  7  |          <p>鑱氱劍寰呭姙銆佸揩閫熸彁浜ゃ€佸嵆鏃跺洖鐪嬶紝闈㈠悜鐜板満浜哄憳涓庡鏍镐汉鍛樼殑杞婚噺宸ヤ綔鍙般€?/p>
+     |           ^
+  8  |        </div>
+  9  |  [39m
+      at createCompilerError (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1378:17)
+      at emitError (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3014:5)
+      at Object.onclosetag (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:2381:13)
+      at Tokenizer.stateInClosingTagName (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:799:16)
+      at Tokenizer.parse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1157:16)
+      at Object.baseParse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3053:13)
+      at Object.parse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-dom\dist\compiler-dom.cjs.js:910:23)
+      at Object.parse$1 [as parse] (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-sfc\dist\compiler-sfc.cjs.js:1824:24)
+      at createDescriptor (file:///E:/share/yx-lab-system/yx-lab-frontend/node_modules/@vitejs/plugin-vue/dist/index.mjs:71:43)
+      at handleHotUpdate (file:///E:/share/yx-lab-system/yx-lab-frontend/node_modules/@vitejs/plugin-vue/dist/index.mjs:2198:26)
+[2m17:38:10[22m [31m[1m[vite][22m[39m [31mInternal server error: Element is missing end tag.[39m
+  Plugin: [35mvite:vue[39m
+  File: [36mE:/share/yx-lab-system/yx-lab-frontend/src/views/MobileWorkbenchView.vue[39m:7:9
+[33m  5  |          <span class="hero-tag">绉诲姩绔棴鐜?/span>
+  6  |          <h1>浠庨噰鏍峰埌鎶ュ憡锛屼竴閮ㄦ墜鏈哄畬鎴愭祦杞?/h1>
+  7  |          <p>鑱氱劍寰呭姙銆佸揩閫熸彁浜ゃ€佸嵆鏃跺洖鐪嬶紝闈㈠悜鐜板満浜哄憳涓庡鏍镐汉鍛樼殑杞婚噺宸ヤ綔鍙般€?/p>
+     |           ^
+  8  |        </div>
+  9  |  [39m
+      at createCompilerError (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1378:17)
+      at emitError (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3014:5)
+      at Object.onclosetag (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:2381:13)
+      at Tokenizer.stateInClosingTagName (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:799:16)
+      at Tokenizer.parse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1157:16)
+      at Object.baseParse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3053:13)
+      at Object.parse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-dom\dist\compiler-dom.cjs.js:910:23)
+      at Object.parse$1 [as parse] (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-sfc\dist\compiler-sfc.cjs.js:1824:24)
+      at createDescriptor (file:///E:/share/yx-lab-system/yx-lab-frontend/node_modules/@vitejs/plugin-vue/dist/index.mjs:71:43)
+      at handleHotUpdate (file:///E:/share/yx-lab-system/yx-lab-frontend/node_modules/@vitejs/plugin-vue/dist/index.mjs:2198:26)
+[2m17:38:11[22m [31m[1m[vite][22m[39m [31mInternal server error: Element is missing end tag.[39m
+  Plugin: [35mvite:vue[39m
+  File: [36mE:/share/yx-lab-system/yx-lab-frontend/src/views/MobileWorkbenchView.vue[39m:7:9
+[33m  5  |          <span class="hero-tag">绉诲姩绔棴鐜?/span>
+  6  |          <h1>浠庨噰鏍峰埌鎶ュ憡锛屼竴閮ㄦ墜鏈哄畬鎴愭祦杞?/h1>
+  7  |          <p>鑱氱劍寰呭姙銆佸揩閫熸彁浜ゃ€佸嵆鏃跺洖鐪嬶紝闈㈠悜鐜板満浜哄憳涓庡鏍镐汉鍛樼殑杞婚噺宸ヤ綔鍙般€?/p>
+     |           ^
+  8  |        </div>
+  9  |  [39m
+      at createCompilerError (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1378:17)
+      at emitError (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3014:5)
+      at Object.onclosetag (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:2381:13)
+      at Tokenizer.stateInClosingTagName (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:799:16)
+      at Tokenizer.parse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1157:16)
+      at Object.baseParse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3053:13)
+      at Object.parse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-dom\dist\compiler-dom.cjs.js:910:23)
+      at Object.parse$1 [as parse] (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-sfc\dist\compiler-sfc.cjs.js:1824:24)
+      at createDescriptor (file:///E:/share/yx-lab-system/yx-lab-frontend/node_modules/@vitejs/plugin-vue/dist/index.mjs:71:43)
+      at handleHotUpdate (file:///E:/share/yx-lab-system/yx-lab-frontend/node_modules/@vitejs/plugin-vue/dist/index.mjs:2198:26)
+[2m17:39:04[22m [31m[1m[vite][22m[39m [31mInternal server error: Element is missing end tag.[39m
+  Plugin: [35mvite:vue[39m
+  File: [36mE:/share/yx-lab-system/yx-lab-frontend/src/views/MobileWorkbenchView.vue[39m:7:9
+[33m  5  |          <span class="hero-tag">绉诲姩绔棴鐜?/span>
+  6  |          <h1>浠庨噰鏍峰埌鎶ュ憡锛屼竴閮ㄦ墜鏈哄畬鎴愭祦杞?/h1>
+  7  |          <p>鑱氱劍寰呭姙銆佸揩閫熸彁浜ゃ€佸嵆鏃跺洖鐪嬶紝闈㈠悜鐜板満浜哄憳涓庡鏍镐汉鍛樼殑杞婚噺宸ヤ綔鍙般€?/p>
+     |           ^
+  8  |        </div>
+  9  |  [39m
+      at createCompilerError (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1378:17)
+      at emitError (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3014:5)
+      at Object.onclosetag (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:2381:13)
+      at Tokenizer.stateInClosingTagName (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:799:16)
+      at Tokenizer.parse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1157:16)
+      at Object.baseParse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3053:13)
+      at Object.parse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-dom\dist\compiler-dom.cjs.js:910:23)
+      at Object.parse$1 [as parse] (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-sfc\dist\compiler-sfc.cjs.js:1824:24)
+      at createDescriptor (file:///E:/share/yx-lab-system/yx-lab-frontend/node_modules/@vitejs/plugin-vue/dist/index.mjs:71:43)
+      at handleHotUpdate (file:///E:/share/yx-lab-system/yx-lab-frontend/node_modules/@vitejs/plugin-vue/dist/index.mjs:2198:26)
+[2m17:39:05[22m [31m[1m[vite][22m[39m [31mInternal server error: Element is missing end tag.[39m
+  Plugin: [35mvite:vue[39m
+  File: [36mE:/share/yx-lab-system/yx-lab-frontend/src/views/MobileWorkbenchView.vue[39m:7:9
+[33m  5  |          <span class="hero-tag">绉诲姩绔棴鐜?/span>
+  6  |          <h1>浠庨噰鏍峰埌鎶ュ憡锛屼竴閮ㄦ墜鏈哄畬鎴愭祦杞?/h1>
+  7  |          <p>鑱氱劍寰呭姙銆佸揩閫熸彁浜ゃ€佸嵆鏃跺洖鐪嬶紝闈㈠悜鐜板満浜哄憳涓庡鏍镐汉鍛樼殑杞婚噺宸ヤ綔鍙般€?/p>
+     |           ^
+  8  |        </div>
+  9  |  [39m
+      at createCompilerError (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1378:17)
+      at emitError (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3014:5)
+      at Object.onclosetag (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:2381:13)
+      at Tokenizer.stateInClosingTagName (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:799:16)
+      at Tokenizer.parse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1157:16)
+      at Object.baseParse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3053:13)
+      at Object.parse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-dom\dist\compiler-dom.cjs.js:910:23)
+      at Object.parse$1 [as parse] (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-sfc\dist\compiler-sfc.cjs.js:1824:24)
+      at createDescriptor (file:///E:/share/yx-lab-system/yx-lab-frontend/node_modules/@vitejs/plugin-vue/dist/index.mjs:71:43)
+      at handleHotUpdate (file:///E:/share/yx-lab-system/yx-lab-frontend/node_modules/@vitejs/plugin-vue/dist/index.mjs:2198:26)
+[2m17:43:21[22m [31m[1m[vite][22m[39m [31mInternal server error: Element is missing end tag.[39m
+  Plugin: [35mvite:vue[39m
+  File: [36mE:/share/yx-lab-system/yx-lab-frontend/src/views/MobileWorkbenchView.vue[39m:7:9
+[33m  5  |          <span class="hero-tag">绉诲姩绔棴鐜?/span>
+  6  |          <h1>浠庨噰鏍峰埌鎶ュ憡锛屼竴閮ㄦ墜鏈哄畬鎴愭祦杞?/h1>
+  7  |          <p>鑱氱劍寰呭姙銆佸揩閫熸彁浜ゃ€佸嵆鏃跺洖鐪嬶紝闈㈠悜鐜板満浜哄憳涓庡鏍镐汉鍛樼殑杞婚噺宸ヤ綔鍙般€?/p>
+     |           ^
+  8  |        </div>
+  9  |  [39m
+      at createCompilerError (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1378:17)
+      at emitError (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3014:5)
+      at Object.onclosetag (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:2381:13)
+      at Tokenizer.stateInClosingTagName (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:799:16)
+      at Tokenizer.parse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1157:16)
+      at Object.baseParse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3053:13)
+      at Object.parse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-dom\dist\compiler-dom.cjs.js:910:23)
+      at Object.parse$1 [as parse] (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-sfc\dist\compiler-sfc.cjs.js:1824:24)
+      at createDescriptor (file:///E:/share/yx-lab-system/yx-lab-frontend/node_modules/@vitejs/plugin-vue/dist/index.mjs:71:43)
+      at handleHotUpdate (file:///E:/share/yx-lab-system/yx-lab-frontend/node_modules/@vitejs/plugin-vue/dist/index.mjs:2198:26)
+[2m17:43:44[22m [31m[1m[vite][22m[39m [31mInternal server error: Element is missing end tag.[39m
+  Plugin: [35mvite:vue[39m
+  File: [36mE:/share/yx-lab-system/yx-lab-frontend/src/views/MobileWorkbenchView.vue[39m:7:9
+[33m  5  |          <span class="hero-tag">绉诲姩绔棴鐜?/span>
+  6  |          <h1>浠庨噰鏍峰埌鎶ュ憡锛屼竴閮ㄦ墜鏈哄畬鎴愭祦杞?/h1>
+  7  |          <p>鑱氱劍寰呭姙銆佸揩閫熸彁浜ゃ€佸嵆鏃跺洖鐪嬶紝闈㈠悜鐜板満浜哄憳涓庡鏍镐汉鍛樼殑杞婚噺宸ヤ綔鍙般€?/p>
+     |           ^
+  8  |        </div>
+  9  |  [39m
+      at createCompilerError (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1378:17)
+      at emitError (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3014:5)
+      at Object.onclosetag (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:2381:13)
+      at Tokenizer.stateInClosingTagName (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:799:16)
+      at Tokenizer.parse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1157:16)
+      at Object.baseParse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3053:13)
+      at Object.parse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-dom\dist\compiler-dom.cjs.js:910:23)
+      at Object.parse$1 [as parse] (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-sfc\dist\compiler-sfc.cjs.js:1824:24)
+      at createDescriptor (file:///E:/share/yx-lab-system/yx-lab-frontend/node_modules/@vitejs/plugin-vue/dist/index.mjs:71:43)
+      at handleHotUpdate (file:///E:/share/yx-lab-system/yx-lab-frontend/node_modules/@vitejs/plugin-vue/dist/index.mjs:2198:26)
+[2m17:47:44[22m [31m[1m[vite][22m[39m [31mInternal server error: Element is missing end tag.[39m
+  Plugin: [35mvite:vue[39m
+  File: [36mE:/share/yx-lab-system/yx-lab-frontend/src/views/MobileWorkbenchView.vue[39m:7:9
+[33m  5  |          <span class="hero-tag">绉诲姩绔棴鐜?/span>
+  6  |          <h1>浠庨噰鏍峰埌鎶ュ憡锛屼竴閮ㄦ墜鏈哄畬鎴愭祦杞?/h1>
+  7  |          <p>鑱氱劍寰呭姙銆佸揩閫熸彁浜ゃ€佸嵆鏃跺洖鐪嬶紝闈㈠悜鐜板満浜哄憳涓庡鏍镐汉鍛樼殑杞婚噺宸ヤ綔鍙般€?/p>
+     |           ^
+  8  |        </div>
+  9  |  [39m
+      at createCompilerError (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1378:17)
+      at emitError (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3014:5)
+      at Object.onclosetag (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:2381:13)
+      at Tokenizer.stateInClosingTagName (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:799:16)
+      at Tokenizer.parse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1157:16)
+      at Object.baseParse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3053:13)
+      at Object.parse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-dom\dist\compiler-dom.cjs.js:910:23)
+      at Object.parse$1 [as parse] (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-sfc\dist\compiler-sfc.cjs.js:1824:24)
+      at createDescriptor (file:///E:/share/yx-lab-system/yx-lab-frontend/node_modules/@vitejs/plugin-vue/dist/index.mjs:71:43)
+      at handleHotUpdate (file:///E:/share/yx-lab-system/yx-lab-frontend/node_modules/@vitejs/plugin-vue/dist/index.mjs:2198:26)
+[2m17:48:08[22m [31m[1m[vite][22m[39m [31mInternal server error: Element is missing end tag.[39m
+  Plugin: [35mvite:vue[39m
+  File: [36mE:/share/yx-lab-system/yx-lab-frontend/src/views/MobileWorkbenchView.vue[39m:7:9
+[33m  5  |          <span class="hero-tag">绉诲姩绔棴鐜?/span>
+  6  |          <h1>浠庨噰鏍峰埌鎶ュ憡锛屼竴閮ㄦ墜鏈哄畬鎴愭祦杞?/h1>
+  7  |          <p>鑱氱劍寰呭姙銆佸揩閫熸彁浜ゃ€佸嵆鏃跺洖鐪嬶紝闈㈠悜鐜板満浜哄憳涓庡鏍镐汉鍛樼殑杞婚噺宸ヤ綔鍙般€?/p>
+     |           ^
+  8  |        </div>
+  9  |  [39m
+      at createCompilerError (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1378:17)
+      at emitError (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3014:5)
+      at Object.onclosetag (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:2381:13)
+      at Tokenizer.stateInClosingTagName (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:799:16)
+      at Tokenizer.parse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1157:16)
+      at Object.baseParse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3053:13)
+      at Object.parse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-dom\dist\compiler-dom.cjs.js:910:23)
+      at Object.parse$1 [as parse] (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-sfc\dist\compiler-sfc.cjs.js:1824:24)
+      at createDescriptor (file:///E:/share/yx-lab-system/yx-lab-frontend/node_modules/@vitejs/plugin-vue/dist/index.mjs:71:43)
+      at handleHotUpdate (file:///E:/share/yx-lab-system/yx-lab-frontend/node_modules/@vitejs/plugin-vue/dist/index.mjs:2198:26)
+[2m17:48:13[22m [31m[1m[vite][22m[39m [31mInternal server error: Element is missing end tag.[39m
+  Plugin: [35mvite:vue[39m
+  File: [36mE:/share/yx-lab-system/yx-lab-frontend/src/views/MobileWorkbenchView.vue[39m:7:9
+[33m  5  |          <span class="hero-tag">绉诲姩绔棴鐜?/span>
+  6  |          <h1>浠庨噰鏍峰埌鎶ュ憡锛屼竴閮ㄦ墜鏈哄畬鎴愭祦杞?/h1>
+  7  |          <p>鑱氱劍寰呭姙銆佸揩閫熸彁浜ゃ€佸嵆鏃跺洖鐪嬶紝闈㈠悜鐜板満浜哄憳涓庡鏍镐汉鍛樼殑杞婚噺宸ヤ綔鍙般€?/p>
+     |           ^
+  8  |        </div>
+  9  |  [39m
+      at createCompilerError (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1378:17)
+      at emitError (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3014:5)
+      at Object.onclosetag (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:2381:13)
+      at Tokenizer.stateInClosingTagName (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:799:16)
+      at Tokenizer.parse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1157:16)
+      at Object.baseParse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3053:13)
+      at Object.parse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-dom\dist\compiler-dom.cjs.js:910:23)
+      at Object.parse$1 [as parse] (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-sfc\dist\compiler-sfc.cjs.js:1824:24)
+      at createDescriptor (file:///E:/share/yx-lab-system/yx-lab-frontend/node_modules/@vitejs/plugin-vue/dist/index.mjs:71:43)
+      at handleHotUpdate (file:///E:/share/yx-lab-system/yx-lab-frontend/node_modules/@vitejs/plugin-vue/dist/index.mjs:2198:26)
+[2m17:54:54[22m [31m[1m[vite][22m[39m [31mInternal server error: Element is missing end tag.[39m
+  Plugin: [35mvite:vue[39m
+  File: [36mE:/share/yx-lab-system/yx-lab-frontend/src/views/MobileWorkbenchView.vue[39m:7:9
+[33m  5  |          <span class="hero-tag">绉诲姩绔棴鐜?/span>
+  6  |          <h1>浠庨噰鏍峰埌鎶ュ憡锛屼竴閮ㄦ墜鏈哄畬鎴愭祦杞?/h1>
+  7  |          <p>鑱氱劍寰呭姙銆佸揩閫熸彁浜ゃ€佸嵆鏃跺洖鐪嬶紝闈㈠悜鐜板満浜哄憳涓庡鏍镐汉鍛樼殑杞婚噺宸ヤ綔鍙般€?/p>
+     |           ^
+  8  |        </div>
+  9  |  [39m
+      at createCompilerError (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1378:17)
+      at emitError (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3014:5)
+      at Object.onclosetag (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:2381:13)
+      at Tokenizer.stateInClosingTagName (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:799:16)
+      at Tokenizer.parse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1157:16)
+      at Object.baseParse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3053:13)
+      at Object.parse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-dom\dist\compiler-dom.cjs.js:910:23)
+      at Object.parse$1 [as parse] (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-sfc\dist\compiler-sfc.cjs.js:1824:24)
+      at createDescriptor (file:///E:/share/yx-lab-system/yx-lab-frontend/node_modules/@vitejs/plugin-vue/dist/index.mjs:71:43)
+      at handleHotUpdate (file:///E:/share/yx-lab-system/yx-lab-frontend/node_modules/@vitejs/plugin-vue/dist/index.mjs:2198:26)
+[2m17:55:45[22m [31m[1m[vite][22m[39m [31mInternal server error: Error parsing JavaScript expression: Unterminated string constant. (1:49)[39m
+  Plugin: [35mvite:vue[39m
+  File: [36mE:/share/yx-lab-system/yx-lab-frontend/src/views/MobileWorkbenchView.vue[39m:17:24
+[33m  15 |            </div>
+  16 |            <div>
+  17 |              <strong>{{ currentUser.realName || currentUser.username || '鏈櫥褰曠敤鎴? }}</strong>
+     |                          ^
+  18 |              <p>{{ currentUser.roleCode || 'LAB_USER' }}</p>
+  19 |            </div>[39m
+      at createCompilerError (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1378:17)
+      at emitError (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3014:5)
+      at createExp (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3007:7)
+      at Object.oninterpolation (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:2351:16)
+      at Tokenizer.stateInterpolationClose (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:596:18)
+      at Tokenizer.parse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1097:16)
+      at Object.baseParse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3053:13)
+      at Object.parse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-dom\dist\compiler-dom.cjs.js:910:23)
+      at Object.parse$1 [as parse] (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-sfc\dist\compiler-sfc.cjs.js:1824:24)
+      at createDescriptor (file:///E:/share/yx-lab-system/yx-lab-frontend/node_modules/@vitejs/plugin-vue/dist/index.mjs:71:43)
+[2m17:55:47[22m [31m[1m[vite][22m[39m [31mInternal server error: Error parsing JavaScript expression: Unterminated string constant. (1:49)[39m
+  Plugin: [35mvite:vue[39m
+  File: [36mE:/share/yx-lab-system/yx-lab-frontend/src/views/MobileWorkbenchView.vue[39m:17:24
+[33m  15 |            </div>
+  16 |            <div>
+  17 |              <strong>{{ currentUser.realName || currentUser.username || '鏈櫥褰曠敤鎴? }}</strong>
+     |                          ^
+  18 |              <p>{{ currentUser.roleCode || 'LAB_USER' }}</p>
+  19 |            </div>[39m
+      at createCompilerError (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1378:17)
+      at emitError (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3014:5)
+      at createExp (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3007:7)
+      at Object.oninterpolation (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:2351:16)
+      at Tokenizer.stateInterpolationClose (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:596:18)
+      at Tokenizer.parse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1097:16)
+      at Object.baseParse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3053:13)
+      at Object.parse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-dom\dist\compiler-dom.cjs.js:910:23)
+      at Object.parse$1 [as parse] (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-sfc\dist\compiler-sfc.cjs.js:1824:24)
+      at createDescriptor (file:///E:/share/yx-lab-system/yx-lab-frontend/node_modules/@vitejs/plugin-vue/dist/index.mjs:71:43)
+[2m17:55:56[22m [31m[1m[vite][22m[39m [31mInternal server error: Error parsing JavaScript expression: Unterminated string constant. (1:49)[39m
+  Plugin: [35mvite:vue[39m
+  File: [36mE:/share/yx-lab-system/yx-lab-frontend/src/views/MobileWorkbenchView.vue[39m:17:24
+[33m  15 |            </div>
+  16 |            <div>
+  17 |              <strong>{{ currentUser.realName || currentUser.username || '鏈櫥褰曠敤鎴? }}</strong>
+     |                          ^
+  18 |              <p>{{ currentUser.roleCode || 'LAB_USER' }}</p>
+  19 |            </div>[39m
+      at createCompilerError (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1378:17)
+      at emitError (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3014:5)
+      at createExp (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3007:7)
+      at Object.oninterpolation (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:2351:16)
+      at Tokenizer.stateInterpolationClose (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:596:18)
+      at Tokenizer.parse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1097:16)
+      at Object.baseParse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3053:13)
+      at Object.parse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-dom\dist\compiler-dom.cjs.js:910:23)
+      at Object.parse$1 [as parse] (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-sfc\dist\compiler-sfc.cjs.js:1824:24)
+      at createDescriptor (file:///E:/share/yx-lab-system/yx-lab-frontend/node_modules/@vitejs/plugin-vue/dist/index.mjs:71:43)
+[2m17:57:10[22m [31m[1m[vite][22m[39m [31mInternal server error: Error parsing JavaScript expression: Unterminated string constant. (1:49)[39m
+  Plugin: [35mvite:vue[39m
+  File: [36mE:/share/yx-lab-system/yx-lab-frontend/src/views/MobileWorkbenchView.vue[39m:17:24
+[33m  15 |            </div>
+  16 |            <div>
+  17 |              <strong>{{ currentUser.realName || currentUser.username || '鏈櫥褰曠敤鎴? }}</strong>
+     |                          ^
+  18 |              <p>{{ currentUser.roleCode || 'LAB_USER' }}</p>
+  19 |            </div>[39m
+      at createCompilerError (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1378:17)
+      at emitError (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3014:5)
+      at createExp (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3007:7)
+      at Object.oninterpolation (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:2351:16)
+      at Tokenizer.stateInterpolationClose (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:596:18)
+      at Tokenizer.parse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1097:16)
+      at Object.baseParse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3053:13)
+      at Object.parse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-dom\dist\compiler-dom.cjs.js:910:23)
+      at Object.parse$1 [as parse] (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-sfc\dist\compiler-sfc.cjs.js:1824:24)
+      at createDescriptor (file:///E:/share/yx-lab-system/yx-lab-frontend/node_modules/@vitejs/plugin-vue/dist/index.mjs:71:43)
+[2m17:58:40[22m [31m[1m[vite][22m[39m [31mInternal server error: Element is missing end tag.[39m
+  Plugin: [35mvite:vue[39m
+  File: [36mE:/share/yx-lab-system/yx-lab-frontend/src/views/MobileWorkbenchView.vue[39m:100:11
+[33m  98 |          <div class="section-headline">
+  99 |            <h3>閲囨牱寰呭姙</h3>
+  100|            <span class="section-tip">宸插畬鎴愪絾鏈櫥褰曟牱鍝佺殑浠诲姟涔熶細鍑虹幇鍦ㄨ繖閲?/span>
+     |             ^
+  101|          </div>
+  102|          <div v-if="samplingTodos.length" class="card-stack">[39m
+      at createCompilerError (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1378:17)
+      at emitError (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3014:5)
+      at Object.onclosetag (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:2381:13)
+      at Tokenizer.stateInClosingTagName (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:799:16)
+      at Tokenizer.parse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1157:16)
+      at Object.baseParse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3053:13)
+      at Object.parse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-dom\dist\compiler-dom.cjs.js:910:23)
+      at Object.parse$1 [as parse] (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-sfc\dist\compiler-sfc.cjs.js:1824:24)
+      at createDescriptor (file:///E:/share/yx-lab-system/yx-lab-frontend/node_modules/@vitejs/plugin-vue/dist/index.mjs:71:43)
+      at handleHotUpdate (file:///E:/share/yx-lab-system/yx-lab-frontend/node_modules/@vitejs/plugin-vue/dist/index.mjs:2198:26)
+[2m17:58:40[22m [31m[1m[vite][22m[39m [31mInternal server error: Element is missing end tag.[39m
+  Plugin: [35mvite:vue[39m
+  File: [36mE:/share/yx-lab-system/yx-lab-frontend/src/views/MobileWorkbenchView.vue[39m:100:11
+[33m  98 |          <div class="section-headline">
+  99 |            <h3>閲囨牱寰呭姙</h3>
+  100|            <span class="section-tip">宸插畬鎴愪絾鏈櫥褰曟牱鍝佺殑浠诲姟涔熶細鍑虹幇鍦ㄨ繖閲?/span>
+     |             ^
+  101|          </div>
+  102|          <div v-if="samplingTodos.length" class="card-stack">[39m
+      at createCompilerError (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1378:17)
+      at emitError (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3014:5)
+      at Object.onclosetag (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:2381:13)
+      at Tokenizer.stateInClosingTagName (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:799:16)
+      at Tokenizer.parse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1157:16)
+      at Object.baseParse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3053:13)
+      at Object.parse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-dom\dist\compiler-dom.cjs.js:910:23)
+      at Object.parse$1 [as parse] (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-sfc\dist\compiler-sfc.cjs.js:1824:24)
+      at createDescriptor (file:///E:/share/yx-lab-system/yx-lab-frontend/node_modules/@vitejs/plugin-vue/dist/index.mjs:71:43)
+      at handleHotUpdate (file:///E:/share/yx-lab-system/yx-lab-frontend/node_modules/@vitejs/plugin-vue/dist/index.mjs:2198:26)
+[2m17:58:40[22m [31m[1m[vite][22m[39m [31mInternal server error: Element is missing end tag.[39m
+  Plugin: [35mvite:vue[39m
+  File: [36mE:/share/yx-lab-system/yx-lab-frontend/src/views/MobileWorkbenchView.vue[39m:100:11
+[33m  98 |          <div class="section-headline">
+  99 |            <h3>閲囨牱寰呭姙</h3>
+  100|            <span class="section-tip">宸插畬鎴愪絾鏈櫥褰曟牱鍝佺殑浠诲姟涔熶細鍑虹幇鍦ㄨ繖閲?/span>
+     |             ^
+  101|          </div>
+  102|          <div v-if="samplingTodos.length" class="card-stack">[39m
+      at createCompilerError (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1378:17)
+      at emitError (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3014:5)
+      at Object.onclosetag (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:2381:13)
+      at Tokenizer.stateInClosingTagName (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:799:16)
+      at Tokenizer.parse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1157:16)
+      at Object.baseParse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3053:13)
+      at Object.parse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-dom\dist\compiler-dom.cjs.js:910:23)
+      at Object.parse$1 [as parse] (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-sfc\dist\compiler-sfc.cjs.js:1824:24)
+      at createDescriptor (file:///E:/share/yx-lab-system/yx-lab-frontend/node_modules/@vitejs/plugin-vue/dist/index.mjs:71:43)
+      at handleHotUpdate (file:///E:/share/yx-lab-system/yx-lab-frontend/node_modules/@vitejs/plugin-vue/dist/index.mjs:2198:26)
+[2m17:58:40[22m [31m[1m[vite][22m[39m [31mInternal server error: Element is missing end tag.[39m
+  Plugin: [35mvite:vue[39m
+  File: [36mE:/share/yx-lab-system/yx-lab-frontend/src/views/MobileWorkbenchView.vue[39m:100:11
+[33m  98 |          <div class="section-headline">
+  99 |            <h3>閲囨牱寰呭姙</h3>
+  100|            <span class="section-tip">宸插畬鎴愪絾鏈櫥褰曟牱鍝佺殑浠诲姟涔熶細鍑虹幇鍦ㄨ繖閲?/span>
+     |             ^
+  101|          </div>
+  102|          <div v-if="samplingTodos.length" class="card-stack">[39m
+      at createCompilerError (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1378:17)
+      at emitError (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3014:5)
+      at Object.onclosetag (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:2381:13)
+      at Tokenizer.stateInClosingTagName (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:799:16)
+      at Tokenizer.parse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1157:16)
+      at Object.baseParse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3053:13)
+      at Object.parse (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-dom\dist\compiler-dom.cjs.js:910:23)
+      at Object.parse$1 [as parse] (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@vue\compiler-sfc\dist\compiler-sfc.cjs.js:1824:24)
+      at createDescriptor (file:///E:/share/yx-lab-system/yx-lab-frontend/node_modules/@vitejs/plugin-vue/dist/index.mjs:71:43)
+      at handleHotUpdate (file:///E:/share/yx-lab-system/yx-lab-frontend/node_modules/@vitejs/plugin-vue/dist/index.mjs:2198:26)
+[2m18:08:50[22m [31m[1m[vite][22m[39m [31mInternal server error: [vue/compiler-sfc] Unterminated regular expression. (173:12)
+
+E:/share/yx-lab-system/yx-lab-frontend/src/views/MobileWorkbenchView.vue
+690|  function parseDetectionItemsText(value) {
+691|    return String(value || '')
+692|      .split(/[锛?銆乚/)
+   |              ^
+693|      .map((item) => item.trim())
+694|      .filter(Boolean)[39m
+  Plugin: [35mvite:vue[39m
+  File: [36mE:/share/yx-lab-system/yx-lab-frontend/src/views/MobileWorkbenchView.vue[39m:173:12
+[33m  138|                  type="primary"
+  139|                  @click="openLoginDialog(task)"
+  140|                >
+     |              ^
+  141|                  样品登录
+  142|                </el-button>[39m
+      at constructor (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@babel\parser\lib\index.js:365:19)
+      at Parser.raise (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@babel\parser\lib\index.js:6616:19)
+      at Parser.readRegexp (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@babel\parser\lib\index.js:6345:20)
+      at Parser.parseExprAtom (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@babel\parser\lib\index.js:11330:16)
+      at Parser.parseExprSubscripts (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@babel\parser\lib\index.js:11098:23)
+      at Parser.parseUpdate (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@babel\parser\lib\index.js:11083:21)
+      at Parser.parseMaybeUnary (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@babel\parser\lib\index.js:11063:23)
+      at Parser.parseMaybeUnaryOrPrivate (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@babel\parser\lib\index.js:10916:61)
+      at Parser.parseExprOps (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@babel\parser\lib\index.js:10921:23)
+      at Parser.parseMaybeConditional (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@babel\parser\lib\index.js:10898:23)
+[2m18:08:51[22m [31m[1m[vite][22m[39m [31mInternal server error: [vue/compiler-sfc] Unterminated regular expression. (173:12)
+
+E:/share/yx-lab-system/yx-lab-frontend/src/views/MobileWorkbenchView.vue
+690|  function parseDetectionItemsText(value) {
+691|    return String(value || '')
+692|      .split(/[锛?銆乚/)
+   |              ^
+693|      .map((item) => item.trim())
+694|      .filter(Boolean)[39m
+  Plugin: [35mvite:vue[39m
+  File: [36mE:/share/yx-lab-system/yx-lab-frontend/src/views/MobileWorkbenchView.vue[39m:173:12
+[33m  138|                  type="primary"
+  139|                  @click="openLoginDialog(task)"
+  140|                >
+     |              ^
+  141|                  样品登录
+  142|                </el-button>[39m
+      at constructor (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@babel\parser\lib\index.js:365:19)
+      at Parser.raise (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@babel\parser\lib\index.js:6616:19)
+      at Parser.readRegexp (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@babel\parser\lib\index.js:6345:20)
+      at Parser.parseExprAtom (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@babel\parser\lib\index.js:11330:16)
+      at Parser.parseExprSubscripts (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@babel\parser\lib\index.js:11098:23)
+      at Parser.parseUpdate (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@babel\parser\lib\index.js:11083:21)
+      at Parser.parseMaybeUnary (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@babel\parser\lib\index.js:11063:23)
+      at Parser.parseMaybeUnaryOrPrivate (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@babel\parser\lib\index.js:10916:61)
+      at Parser.parseExprOps (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@babel\parser\lib\index.js:10921:23)
+      at Parser.parseMaybeConditional (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@babel\parser\lib\index.js:10898:23)
+[2m18:08:51[22m [31m[1m[vite][22m[39m [31mInternal server error: [vue/compiler-sfc] Unterminated regular expression. (173:12)
+
+E:/share/yx-lab-system/yx-lab-frontend/src/views/MobileWorkbenchView.vue
+690|  function parseDetectionItemsText(value) {
+691|    return String(value || '')
+692|      .split(/[锛?銆乚/)
+   |              ^
+693|      .map((item) => item.trim())
+694|      .filter(Boolean)[39m
+  Plugin: [35mvite:vue[39m
+  File: [36mE:/share/yx-lab-system/yx-lab-frontend/src/views/MobileWorkbenchView.vue[39m:173:12
+[33m  138|                  type="primary"
+  139|                  @click="openLoginDialog(task)"
+  140|                >
+     |              ^
+  141|                  样品登录
+  142|                </el-button>[39m
+      at constructor (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@babel\parser\lib\index.js:365:19)
+      at Parser.raise (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@babel\parser\lib\index.js:6616:19)
+      at Parser.readRegexp (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@babel\parser\lib\index.js:6345:20)
+      at Parser.parseExprAtom (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@babel\parser\lib\index.js:11330:16)
+      at Parser.parseExprSubscripts (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@babel\parser\lib\index.js:11098:23)
+      at Parser.parseUpdate (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@babel\parser\lib\index.js:11083:21)
+      at Parser.parseMaybeUnary (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@babel\parser\lib\index.js:11063:23)
+      at Parser.parseMaybeUnaryOrPrivate (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@babel\parser\lib\index.js:10916:61)
+      at Parser.parseExprOps (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@babel\parser\lib\index.js:10921:23)
+      at Parser.parseMaybeConditional (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@babel\parser\lib\index.js:10898:23)
+[2m18:08:52[22m [31m[1m[vite][22m[39m [31mInternal server error: [vue/compiler-sfc] Unterminated regular expression. (173:12)
+
+E:/share/yx-lab-system/yx-lab-frontend/src/views/MobileWorkbenchView.vue
+690|  function parseDetectionItemsText(value) {
+691|    return String(value || '')
+692|      .split(/[锛?銆乚/)
+   |              ^
+693|      .map((item) => item.trim())
+694|      .filter(Boolean)[39m
+  Plugin: [35mvite:vue[39m
+  File: [36mE:/share/yx-lab-system/yx-lab-frontend/src/views/MobileWorkbenchView.vue[39m:173:12
+[33m  138|                  type="primary"
+  139|                  @click="openLoginDialog(task)"
+  140|                >
+     |              ^
+  141|                  样品登录
+  142|                </el-button>[39m
+      at constructor (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@babel\parser\lib\index.js:365:19)
+      at Parser.raise (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@babel\parser\lib\index.js:6616:19)
+      at Parser.readRegexp (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@babel\parser\lib\index.js:6345:20)
+      at Parser.parseExprAtom (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@babel\parser\lib\index.js:11330:16)
+      at Parser.parseExprSubscripts (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@babel\parser\lib\index.js:11098:23)
+      at Parser.parseUpdate (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@babel\parser\lib\index.js:11083:21)
+      at Parser.parseMaybeUnary (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@babel\parser\lib\index.js:11063:23)
+      at Parser.parseMaybeUnaryOrPrivate (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@babel\parser\lib\index.js:10916:61)
+      at Parser.parseExprOps (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@babel\parser\lib\index.js:10921:23)
+      at Parser.parseMaybeConditional (E:\share\yx-lab-system\yx-lab-frontend\node_modules\@babel\parser\lib\index.js:10898:23)

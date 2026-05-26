@@ -1,6 +1,7 @@
 import axios from 'axios'
 import request from './http'
 import { getToken } from '../utils/auth'
+import { API_BASE_URL } from '../config/appConfig'
 
 function resolveDownloadFilename(contentDisposition, fallbackName = '数据导出.xlsx') {
   if (!contentDisposition) {
@@ -20,7 +21,7 @@ function resolveDownloadFilename(contentDisposition, fallbackName = '数据导�
 async function downloadExcel(url, params, fallbackName) {
   const token = getToken()
   const response = await axios.get(url, {
-    baseURL: '/',
+    baseURL: API_BASE_URL,
     params,
     responseType: 'blob',
     timeout: 30000,
@@ -687,6 +688,7 @@ export const uploadStorageFileApi = (file) => {
   })
 }
 export const previewStorageFileApi = (path) => axios.get('/api/storage/file', {
+  baseURL: API_BASE_URL,
   params: { path },
   responseType: 'blob',
   headers: getToken() ? { Authorization: `Bearer ${getToken()}` } : {}
@@ -698,6 +700,7 @@ export const previewStorageFileApi = (path) => axios.get('/api/storage/file', {
  * @returns {Promise<import('axios').AxiosResponse<Blob>>} 文档预览响应。
  */
 export const previewDocumentApi = (id) => axios.get(`/api/assets/documents/${id}/preview`, {
+  baseURL: API_BASE_URL,
   responseType: 'blob',
   headers: getToken() ? { Authorization: `Bearer ${getToken()}` } : {}
 })

@@ -2,9 +2,10 @@ import axios from 'axios'
 import { ElMessage } from 'element-plus/es/components/message/index.mjs'
 import router from '../router'
 import { clearToken, getToken } from '../utils/auth'
+import { API_BASE_URL } from '../config/appConfig'
 
 const request = axios.create({
-  baseURL: '/',
+  baseURL: API_BASE_URL,
   timeout: 15000
 })
 
