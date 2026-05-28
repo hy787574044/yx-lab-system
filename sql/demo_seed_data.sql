@@ -16,6 +16,7 @@ DELETE FROM lab_sample;
 DELETE FROM lab_sampling_task;
 DELETE FROM lab_sampling_plan;
 DELETE FROM lab_monitoring_point;
+DELETE FROM lab_detection_method_instrument_model_binding;
 DELETE FROM lab_instrument_maintenance;
 DELETE FROM lab_instrument;
 DELETE FROM lab_document_share;
@@ -24,6 +25,7 @@ DELETE FROM lab_document;
 -- 2. 清理本脚本维护的演示检测配置，避免重复执行时唯一键冲突。
 DELETE FROM lab_detection_step WHERE id BETWEEN 730000 AND 739999;
 DELETE FROM lab_detection_type WHERE id BETWEEN 720000 AND 729999 OR type_name IN ('出厂水常规九项', '原水重点五项', '管网末梢四项', '应急复检套餐');
+DELETE FROM lab_detection_method_instrument_model_binding WHERE id BETWEEN 711000 AND 711999;
 DELETE FROM lab_detection_method
 WHERE id BETWEEN 710000 AND 719999
    OR method_code LIKE 'DEMO-%'
@@ -87,18 +89,18 @@ VALUES
 (700009, '锰', 0.00, 0.10, 'mg/L', 'GREATER_THAN_MAX', 'GB 5749-2022', 1, '金属指标', 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
 (700010, '耗氧量', 0.00, 3.00, 'mg/L', 'GREATER_THAN_MAX', 'GB 5749-2022', 1, '有机污染综合指标', 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW());
 
-INSERT INTO lab_detection_method (id, method_name, method_code, parameter_id, parameter_name, standard_code, method_basis, apply_scope, enabled, remark, deleted, created_by, created_name, created_time, updated_by, updated_name, updated_time)
+INSERT INTO lab_detection_method (id, method_name, method_code, parameter_id, parameter_name, standard_code, sample_volume, method_basis, apply_scope, enabled, remark, deleted, created_by, created_name, created_time, updated_by, updated_name, updated_time)
 VALUES
-(710001, '玻璃电极法', 'DEMO-PH-01', 700001, 'pH', 'GB/T 5750.4', '校准 pH 计后直接测定，记录温度补偿后的稳定读数。', '出厂水、原水、管网水 pH 检测', 1, '演示方法', 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
-(710002, '散射光浊度法', 'DEMO-TURB-01', 700002, '浊度', 'GB/T 5750.4', '摇匀样品后加入比色皿，使用浊度仪读取 NTU 值。', '生活饮用水浊度检测', 1, '演示方法', 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
-(710003, 'DPD 分光光度法', 'DEMO-CL-01', 700003, '余氯', 'GB/T 5750.11', '加入 DPD 试剂显色，在规定波长下测定吸光度并换算浓度。', '出厂水和管网水余氯检测', 1, '演示方法', 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
-(710004, '纳氏试剂分光光度法', 'DEMO-NH3N-01', 700004, '氨氮', 'HJ 535', '样品经预处理后加入纳氏试剂显色，使用分光光度计测定。', '原水和异常复检样品氨氮检测', 1, '演示方法', 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
-(710005, '铂钴标准比色法', 'DEMO-COLOR-01', 700005, '色度', 'GB/T 5750.4', '与铂钴标准色列比对，读取最接近色度值。', '感官指标检测', 1, '演示方法', 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
-(710006, '嗅味直接判断法', 'DEMO-ODOR-01', 700006, '臭和味', 'GB/T 5750.4', '按标准温度条件嗅辨并记录等级。', '感官指标检测', 1, '演示方法', 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
-(710007, '目视观察法', 'DEMO-VISIBLE-01', 700007, '肉眼可见物', 'GB/T 5750.4', '取样后在自然光下目视观察是否存在可见悬浮物。', '感官指标检测', 1, '演示方法', 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
-(710008, '原子吸收分光光度法-铁', 'DEMO-FE-01', 700008, '铁', 'GB/T 5750.6', '消解后使用原子吸收分光光度计测定铁含量。', '金属指标检测', 1, '演示方法', 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
-(710009, '原子吸收分光光度法-锰', 'DEMO-MN-01', 700009, '锰', 'GB/T 5750.6', '消解后使用原子吸收分光光度计测定锰含量。', '金属指标检测', 1, '演示方法', 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
-(710010, '酸性高锰酸钾滴定法', 'DEMO-CODMN-01', 700010, '耗氧量', 'GB/T 5750.7', '酸性条件下高锰酸钾氧化，滴定计算耗氧量。', '有机污染综合检测', 1, '演示方法', 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW());
+(710001, '玻璃电极法', 'DEMO-PH-01', 700001, 'pH', 'GB/T 5750.4', '100mL', '校准 pH 计后直接测定，记录温度补偿后的稳定读数。', '出厂水、原水、管网水 pH 检测', 1, '演示方法', 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
+(710002, '散射光浊度法', 'DEMO-TURB-01', 700002, '浊度', 'GB/T 5750.4', '50mL', '摇匀样品后加入比色皿，使用浊度仪读取 NTU 值。', '生活饮用水浊度检测', 1, '演示方法', 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
+(710003, 'DPD 分光光度法', 'DEMO-CL-01', 700003, '余氯', 'GB/T 5750.11', '10mL', '加入 DPD 试剂显色，在规定波长下测定吸光度并换算浓度。', '出厂水和管网水余氯检测', 1, '演示方法', 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
+(710004, '纳氏试剂分光光度法', 'DEMO-NH3N-01', 700004, '氨氮', 'HJ 535', '50mL', '样品经预处理后加入纳氏试剂显色，使用分光光度计测定。', '原水和异常复检样品氨氮检测', 1, '演示方法', 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
+(710005, '铂钴标准比色法', 'DEMO-COLOR-01', 700005, '色度', 'GB/T 5750.4', '50mL', '与铂钴标准色列比对，读取最接近色度值。', '感官指标检测', 1, '演示方法', 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
+(710006, '嗅味直接判断法', 'DEMO-ODOR-01', 700006, '臭和味', 'GB/T 5750.4', '250mL', '按标准温度条件嗅辨并记录等级。', '感官指标检测', 1, '演示方法', 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
+(710007, '目视观察法', 'DEMO-VISIBLE-01', 700007, '肉眼可见物', 'GB/T 5750.4', '250mL', '取样后在自然光下目视观察是否存在可见悬浮物。', '感官指标检测', 1, '演示方法', 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
+(710008, '原子吸收分光光度法-铁', 'DEMO-FE-01', 700008, '铁', 'GB/T 5750.6', '100mL', '消解后使用原子吸收分光光度计测定铁含量。', '金属指标检测', 1, '演示方法', 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
+(710009, '原子吸收分光光度法-锰', 'DEMO-MN-01', 700009, '锰', 'GB/T 5750.6', '100mL', '消解后使用原子吸收分光光度计测定锰含量。', '金属指标检测', 1, '演示方法', 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
+(710010, '酸性高锰酸钾滴定法', 'DEMO-CODMN-01', 700010, '耗氧量', 'GB/T 5750.7', '100mL', '酸性条件下高锰酸钾氧化，滴定计算耗氧量。', '有机污染综合检测', 1, '演示方法', 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW());
 
 INSERT INTO lab_detection_type (id, type_name, group_id, group_name, detector_id, detector_name, parameter_ids, parameter_names, parameter_method_bindings, enabled, remark, deleted, created_by, created_name, created_time, updated_by, updated_name, updated_time)
 VALUES
@@ -208,6 +210,15 @@ VALUES
 (830002, '浊度仪', '2100Q', 'HACH', CURDATE() - INTERVAL 600 DAY, 6, '6个月', '赵检测', 'NORMAL', '理化室 A-02', NULL, '现场与实验室浊度检测。', 0, 1001, '系统管理员', NOW() - INTERVAL 55 DAY, 1001, '系统管理员', NOW()),
 (830003, 'pH 计', 'SevenCompact', '梅特勒', CURDATE() - INTERVAL 500 DAY, 5, '6个月', '周检测', 'CALIBRATING', '理化室 A-03', NULL, '正在校准，演示校准状态。', 0, 1001, '系统管理员', NOW() - INTERVAL 50 DAY, 1001, '系统管理员', NOW()),
 (830004, '原子吸收分光光度计', 'AA-7000', '岛津', CURDATE() - INTERVAL 1200 DAY, 10, '12个月', '王检测', 'MAINTENANCE', '金属室 B-01', NULL, '用于铁、锰检测，当前维修中。', 0, 1001, '系统管理员', NOW() - INTERVAL 48 DAY, 1001, '系统管理员', NOW());
+
+INSERT INTO lab_detection_method_instrument_model_binding (id, method_id, method_name, instrument_model, manufacturer, instrument_count, remark, deleted, created_by, created_name, created_time, updated_by, updated_name, updated_time)
+VALUES
+(711001, 710001, '玻璃电极法', 'SevenCompact', '梅特勒', 1, '演示：pH 方法绑定 pH 计型号。', 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
+(711002, 710002, '散射光浊度法', '2100Q', 'HACH', 1, '演示：浊度方法绑定浊度仪型号。', 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
+(711003, 710003, 'DPD 分光光度法', 'UV-2600i', '岛津', 1, '演示：余氯方法绑定分光光度计型号。', 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
+(711004, 710004, '纳氏试剂分光光度法', 'UV-2600i', '岛津', 1, '演示：氨氮方法绑定分光光度计型号。', 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
+(711005, 710008, '原子吸收分光光度法-铁', 'AA-7000', '岛津', 1, '演示：铁方法绑定原子吸收型号。', 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
+(711006, 710009, '原子吸收分光光度法-锰', 'AA-7000', '岛津', 1, '演示：锰方法绑定原子吸收型号。', 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW());
 
 INSERT INTO lab_instrument_maintenance (id, instrument_id, instrument_name, maintenance_time, maintenance_reason, maintainer_name, maintenance_company, maintenance_result, maintenance_cost, remark, deleted, created_by, created_name, created_time, updated_by, updated_name, updated_time)
 VALUES
@@ -321,7 +332,7 @@ SELECT
 FROM tmp_demo_seq
 WHERE n <= 120;
 
-INSERT INTO lab_detection_method (id, method_name, method_code, parameter_id, parameter_name, standard_code, method_basis, apply_scope, enabled, remark, deleted, created_by, created_name, created_time, updated_by, updated_name, updated_time)
+INSERT INTO lab_detection_method (id, method_name, method_code, parameter_id, parameter_name, standard_code, sample_volume, method_basis, apply_scope, enabled, remark, deleted, created_by, created_name, created_time, updated_by, updated_name, updated_time)
 SELECT
     711000 + n,
     CONCAT('演示检测方法-', LPAD(n, 3, '0')),
@@ -329,6 +340,7 @@ SELECT
     701000 + n,
     CONCAT('演示参数', LPAD(n, 3, '0')),
     CONCAT('DEMO/STD-', LPAD(n, 3, '0')),
+    CONCAT(50 + MOD(n, 5) * 50, 'mL'),
     '按检测步骤完成样品预处理、仪器校准、读数记录与结果复核。',
     '用于批量演示数据的水质检测方法。',
     1,
@@ -747,6 +759,7 @@ SELECT 'users' AS module_name, COUNT(*) AS total FROM lab_user WHERE deleted = 0
 UNION ALL SELECT 'detection_project_groups', COUNT(*) FROM lab_detection_project_group WHERE deleted = 0
 UNION ALL SELECT 'detection_parameters', COUNT(*) FROM lab_detection_parameter WHERE deleted = 0
 UNION ALL SELECT 'detection_methods', COUNT(*) FROM lab_detection_method WHERE deleted = 0
+UNION ALL SELECT 'method_instrument_model_bindings', COUNT(*) FROM lab_detection_method_instrument_model_binding WHERE deleted = 0
 UNION ALL SELECT 'detection_types', COUNT(*) FROM lab_detection_type WHERE deleted = 0
 UNION ALL SELECT 'detection_steps', COUNT(*) FROM lab_detection_step WHERE deleted = 0
 UNION ALL SELECT 'monitoring_points', COUNT(*) FROM lab_monitoring_point WHERE deleted = 0

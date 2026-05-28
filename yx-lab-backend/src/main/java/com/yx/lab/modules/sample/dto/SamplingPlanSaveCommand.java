@@ -6,6 +6,7 @@ import lombok.Data;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 public class SamplingPlanSaveCommand {
@@ -33,6 +34,13 @@ public class SamplingPlanSaveCommand {
 
     @NotBlank(message = "样品类型不能为空")
     private String sampleType;
+
+    @NotNull(message = "检测套餐不能为空")
+    private Long detectionTypeId;
+
+    private String detectionTypeName;
+
+    private List<SampleDetectionConfigItem> detectionConfigItems;
 
     private String cycleType;
 

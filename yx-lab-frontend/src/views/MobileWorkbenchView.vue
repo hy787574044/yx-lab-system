@@ -111,7 +111,7 @@
             <p>封签编号：{{ task.sealNo || task.seal_no || '待录入' }}</p>
             <p>计划时间：{{ task.samplingTime || '-' }}</p>
             <p>样品类型：{{ getEnumLabel(sampleTypeLabelMap, task.sampleType) }}</p>
-            <p>检测项目组：{{ task.detectionItems || '-' }}</p>
+            <p>检测项目组：{{ task.detectionTypeName || task.detectionItems || '-' }}</p>
             <p v-if="task.sampleLogged">已登录样品：{{ task.sampleNo || '-' }}</p>
             <p v-else-if="task.taskStatus === completedTaskStatus" class="warn-text">采样已完成，请尽快进行样品登录</p>
             <div class="card-actions">
@@ -164,7 +164,7 @@
             <p>封签编号：{{ sample.sealNo || '-' }}</p>
             <p>点位名称：{{ sample.pointName || '-' }}</p>
             <p>采样人员：{{ sample.samplerName || '-' }}</p>
-            <p>检测项目组：{{ sample.detectionItems || '-' }}</p>
+            <p>检测项目组：{{ sample.detectionTypeName || sample.detectionItems || '-' }}</p>
             <p v-if="sample.resultSummary">当前摘要：{{ translateWorkflowText(sample.resultSummary) }}</p>
             <div class="card-actions">
               <el-button size="small" type="primary" @click="openDetectionDialog(sample)">提交检测</el-button>
@@ -341,21 +341,43 @@
             />
           </el-select>
         </el-form-item>
-        <el-form-item label="检测项目组" required>
-          <el-select
-            v-model="loginForm.detectionItems"
-            clearable
-            filterable
-            placeholder="请选择检测项目组"
-            style="width: 100%"
-          >
-            <el-option
-              v-for="item in enabledDetectionTypes"
-              :key="item.id"
-              :label="item.typeName"
-              :value="item.typeName"
-            />
-          </el-select>
+        <el-form-item label="检测套餐" required>
+          <el-input :model-value="loginForm.detectionTypeName || loginForm.detectionItems || '-'" readonly />
+        </el-form-item>
+        <el-form-item v-if="loginForm.detectionTypeId" label="检测参数明细">
+          <div class="mobile-config-panel">
+            <el-table
+              v-if="loginDetectionConfigRows.length"
+              class="mobile-config-table"
+              :data="loginDetectionConfigRows"
+              size="small"
+              border
+            >
+              <el-table-column label="检测参数" min-width="140">
+                <template #default="{ row }">
+                  <span>{{ row.parameterName || '-' }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="标准范围" min-width="120">
+                <template #default="{ row }">
+                  {{ formatStandardRange(row.standardMin, row.standardMax, row.unit) }}
+                </template>
+              </el-table-column>
+              <el-table-column prop="referenceStandard" label="检测标准" min-width="160" show-overflow-tooltip>
+                <template #default="{ row }">
+                  <span>{{ row.referenceStandard || '-' }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="检测方法" min-width="150" show-overflow-tooltip>
+                <template #default="{ row }">
+                  <span>{{ row.methodName || '-' }}</span>
+                </template>
+              </el-table-column>
+            </el-table>
+            <div v-else class="mobile-config-empty">
+              当前任务未携带检测参数明细，请检查采样计划中的检测套餐配置。
+            </div>
+          </div>
         </el-form-item>
         <el-form-item label="采样时间" required>
           <el-date-picker
@@ -633,6 +655,10 @@ const loginForm = reactive({
   sampleType: '',
   qualityControlType: '',
   detectionItems: '',
+  detectionTypeId: null,
+  detectionTypeName: '',
+  detectionConfigSnapshot: '',
+  detectionConfigItems: [],
   samplingTime: '',
   samplerId: null,
   samplerName: '',
@@ -678,6 +704,8 @@ const stats = computed(() => [
   { label: '我的报告', value: reportTotal.value, desc: '正式报告在线预览' }
 ])
 
+const loginDetectionConfigRows = computed(() => loginForm.detectionConfigItems)
+
 const tabOptions = computed(() => [
   { value: 'overview', label: '工作台', count: samplingTodoTotal.value + detectionTodoTotal.value + reviewTodoTotal.value },
   { value: 'sampling', label: '采样', count: samplingTodoTotal.value },
@@ -691,6 +719,32 @@ function parseDetectionItemsText(value) {
     .split(/[,，、;；\n\r]+/)
     .map((item) => item.trim())
     .filter(Boolean)
+}
+
+function parseDetectionConfigSnapshot(snapshot) {
+  const text = String(snapshot || '').trim()
+  if (!text) {
+    return []
+  }
+  try {
+    const list = JSON.parse(text)
+    return Array.isArray(list)
+      ? list
+        .filter((item) => item && (item.parameterId || item.parameterName || item.methodId || item.methodName))
+        .map((item) => ({
+          parameterId: item.parameterId || item.parameter_id || null,
+          parameterName: item.parameterName || item.parameter_name || '',
+          unit: item.unit || '',
+          standardMin: item.standardMin ?? item.standard_min ?? null,
+          standardMax: item.standardMax ?? item.standard_max ?? null,
+          referenceStandard: item.referenceStandard || item.reference_standard || '',
+          methodId: item.methodId || item.method_id || null,
+          methodName: item.methodName || item.method_name || ''
+        }))
+      : []
+  } catch {
+    return []
+  }
 }
 
 function matchDetectionTypesForSample(sample) {
@@ -940,7 +994,11 @@ async function openLoginDialog(task) {
   loginForm.pointName = task.pointName || ''
   loginForm.sampleType = task.sampleType || ''
   loginForm.qualityControlType = ''
-  loginForm.detectionItems = String(task.detectionItems || '').trim()
+  loginForm.detectionItems = String(task.detectionTypeName || task.detectionItems || '').trim()
+  loginForm.detectionTypeId = task.detectionTypeId || null
+  loginForm.detectionTypeName = task.detectionTypeName || task.detectionItems || ''
+  loginForm.detectionConfigSnapshot = task.detectionConfigSnapshot || ''
+  loginForm.detectionConfigItems = parseDetectionConfigSnapshot(task.detectionConfigSnapshot)
   loginForm.samplingTime = task.samplingTime || dayjs().format('YYYY-MM-DD HH:mm:ss')
   loginForm.samplerId = task.samplerId || currentUser.value.userId || currentUser.value.id || null
   loginForm.samplerName = task.samplerName || currentUser.value.realName || currentUser.value.username || ''
@@ -957,6 +1015,10 @@ function resetLoginForm() {
   loginForm.sampleType = ''
   loginForm.qualityControlType = ''
   loginForm.detectionItems = ''
+  loginForm.detectionTypeId = null
+  loginForm.detectionTypeName = ''
+  loginForm.detectionConfigSnapshot = ''
+  loginForm.detectionConfigItems = []
   loginForm.samplingTime = ''
   loginForm.samplerId = null
   loginForm.samplerName = ''
@@ -966,7 +1028,7 @@ function resetLoginForm() {
 }
 
 async function submitSampleLogin() {
-  if (!loginForm.taskId || !loginForm.pointId || !loginForm.pointName || !loginForm.sampleType || !loginForm.detectionItems || !loginForm.samplingTime) {
+  if (!loginForm.taskId || !loginForm.pointId || !loginForm.pointName || !loginForm.sampleType || !loginForm.detectionTypeId || !loginForm.detectionItems || !loginForm.samplingTime) {
     ElMessage.warning('请完整填写样品登录信息')
     return
   }
@@ -974,7 +1036,19 @@ async function submitSampleLogin() {
   try {
     const sample = await loginSampleApi({
       ...loginForm,
-      detectionItems: String(loginForm.detectionItems || '').trim()
+      detectionItems: String(loginForm.detectionItems || '').trim(),
+      detectionTypeId: loginForm.detectionTypeId,
+      detectionTypeName: loginForm.detectionTypeName,
+      detectionConfigItems: loginForm.detectionConfigItems.map((item) => ({
+        parameterId: item.parameterId,
+        parameterName: item.parameterName,
+        unit: item.unit,
+        standardMin: item.standardMin,
+        standardMax: item.standardMax,
+        referenceStandard: item.referenceStandard,
+        methodId: item.methodId,
+        methodName: item.methodName
+      }))
     })
     loginDialogVisible.value = false
     ElMessage.success(`样品登录完成，封签编号：${sample?.sealNo || '-'}`)

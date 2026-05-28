@@ -31,6 +31,12 @@ public class MobileSamplingTodoVO {
 
     private String detectionItems;
 
+    private Long detectionTypeId;
+
+    private String detectionTypeName;
+
+    private String detectionConfigSnapshot;
+
     private String taskStatus;
 
     private String taskStatusDesc;

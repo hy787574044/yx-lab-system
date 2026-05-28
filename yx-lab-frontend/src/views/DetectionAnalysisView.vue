@@ -30,7 +30,7 @@
                 <el-input
                   v-model="query.keyword"
                   clearable
-                  placeholder="请输入样品编号、封签编号、检测套餐、检测参数、检测方法或检测人员"
+                  placeholder="请输入样品编号、检测参数、检测方法或检测人员"
                   @keyup.enter="handleSearch"
                 />
               </label>
@@ -76,8 +76,6 @@
             empty-text="暂无检测分析子流程数据"
           >
             <el-table-column prop="sampleNo" label="样品编号" min-width="150" />
-            <el-table-column prop="sealNo" label="封签编号" min-width="150" />
-            <el-table-column prop="detectionTypeName" label="检测套餐" min-width="170" show-overflow-tooltip />
             <el-table-column prop="parameterName" label="检测参数" min-width="150" show-overflow-tooltip />
             <el-table-column prop="methodName" label="检测方法" min-width="180" show-overflow-tooltip>
               <template #default="{ row }">{{ row.methodName || '-' }}</template>
@@ -155,7 +153,6 @@
       <div class="result-dialog">
         <div class="result-dialog__summary">
           <span class="binding-editor__chip">样品编号<strong>{{ resultForm.sampleNo || '-' }}</strong></span>
-          <span class="binding-editor__chip">检测套餐<strong>{{ resultForm.detectionTypeName || '-' }}</strong></span>
           <span class="binding-editor__chip">检测参数<strong>{{ resultForm.parameterName || '-' }}</strong></span>
           <span class="binding-editor__chip">检测人员<strong>{{ resultForm.detectorName || '-' }}</strong></span>
         </div>
@@ -205,6 +202,15 @@
               :rows="1"
               :readonly="resultDialogReadonly"
               placeholder="如有异常项，可补充现场化验情况、复核说明或异常原因"
+            />
+          </el-form-item>
+          <el-form-item label="备注" class="result-remark-item">
+            <el-input
+              v-model="resultForm.remark"
+              type="textarea"
+              :rows="1"
+              :readonly="resultDialogReadonly"
+              placeholder="请输入备注信息"
             />
           </el-form-item>
         </el-form>
@@ -298,6 +304,7 @@ const resultForm = reactive({
   detectorName: '',
   resultValue: null,
   abnormalRemark: '',
+  remark: '',
   itemStatus: ''
 })
 
@@ -470,6 +477,7 @@ function resetResultForm() {
   resultForm.detectorName = ''
   resultForm.resultValue = null
   resultForm.abnormalRemark = ''
+  resultForm.remark = ''
   resultForm.itemStatus = ''
 }
 
@@ -493,6 +501,7 @@ function openResultDialog(row) {
   resultForm.detectorName = row.detectorName || ''
   resultForm.resultValue = row.resultValue == null ? null : Number(row.resultValue)
   resultForm.abnormalRemark = row.abnormalRemark || ''
+  resultForm.remark = row.remark || ''
   resultForm.itemStatus = row.itemStatus || ''
   resultDialogVisible.value = true
 }
@@ -516,6 +525,7 @@ async function submitDetectionResult() {
       detectionTypeId: resultForm.detectionTypeId,
       detectionTypeName: resultForm.detectionTypeName,
       abnormalRemark: resultForm.abnormalRemark,
+      remark: resultForm.remark,
       items: [{
         parameterId: resultForm.parameterId,
         parameterName: resultForm.parameterName,

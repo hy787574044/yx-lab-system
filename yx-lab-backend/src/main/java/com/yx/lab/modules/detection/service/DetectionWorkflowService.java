@@ -224,6 +224,7 @@ public class DetectionWorkflowService {
                     command.getItems(),
                     currentUser,
                     command.getAbnormalRemark(),
+                    command.getRemark(),
                     command.getItemId());
             return;
         }
@@ -236,7 +237,7 @@ public class DetectionWorkflowService {
             throw new BusinessException("当前样品已存在已提交的检测记录，请勿重复提交");
         }
         validateDetectorBinding(usableType, currentUser);
-        insertSubmittedRecord(sample, usableType, configuredParameters, itemMap, currentUser, command.getAbnormalRemark());
+        insertSubmittedRecord(sample, usableType, configuredParameters, itemMap, currentUser, command.getAbnormalRemark(), command.getRemark());
     }
 
     private DetectionRecord resolvePendingRecord(DetectionSubmitCommand command, LabSample sample) {
@@ -270,6 +271,7 @@ public class DetectionWorkflowService {
                                      List<DetectionItemCommand> submittedItems,
                                      CurrentUser currentUser,
                                      String abnormalRemark,
+                                     String remark,
                                      Long expectedItemId) {
         List<DetectionItem> pendingItems = detectionItemMapper.selectList(new LambdaQueryWrapper<DetectionItem>()
                 .eq(DetectionItem::getRecordId, record.getId())
@@ -307,6 +309,7 @@ public class DetectionWorkflowService {
         if (StrUtil.isNotBlank(abnormalRemark)) {
             record.setAbnormalRemark(StrUtil.trim(abnormalRemark));
         }
+        record.setRemark(StrUtil.trim(remark));
         // 主流程的检测员、状态和结果，统一根据全部子流程的最新状态重新汇总。
         applyRecordDetectorSummary(record, pendingItems, currentUser);
         applyPendingRecordStatus(record, sample, pendingItems, currentUser);
@@ -482,6 +485,7 @@ public class DetectionWorkflowService {
             vo.setItemStatusDesc(LabWorkflowConstants.getDetectionStatusLabel(item.getItemStatus()));
             vo.setExceedFlag(item.getExceedFlag());
             vo.setAbnormalRemark(record == null ? null : record.getAbnormalRemark());
+            vo.setRemark(record == null ? null : record.getRemark());
             vo.setUpdatedTime(item.getUpdatedTime());
             return vo;
         }).collect(Collectors.toList());
@@ -507,7 +511,8 @@ public class DetectionWorkflowService {
                                        List<DetectionParameter> configuredParameters,
                                        Map<Long, DetectionItemCommand> itemMap,
                                        CurrentUser currentUser,
-                                       String abnormalRemark) {
+                                       String abnormalRemark,
+                                       String remark) {
         // 兼容旧的整单提交模式：直接生成一条主流程和完整的参数结果明细。
         DetectionRecord record = new DetectionRecord();
         record.setSampleId(sample.getId());
@@ -519,6 +524,7 @@ public class DetectionWorkflowService {
         record.setDetectorId(currentUser.getUserId());
         record.setDetectorName(currentUser.getRealName());
         record.setAbnormalRemark(StrUtil.trim(abnormalRemark));
+        record.setRemark(StrUtil.trim(remark));
         record.setDetectionStatus(LabWorkflowConstants.DetectionStatus.SUBMITTED);
         record.setDetectionResult(buildResult(configuredParameters, itemMap));
         detectionRecordMapper.insert(record);

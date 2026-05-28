@@ -10,7 +10,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yx.lab.common.exception.BusinessException;
 import com.yx.lab.common.model.PageResult;
 import com.yx.lab.common.util.PageUtils;
+import com.yx.lab.modules.asset.entity.Instrument;
+import com.yx.lab.modules.asset.mapper.InstrumentMapper;
 import com.yx.lab.modules.detection.dto.DetectionMethodQuery;
+import com.yx.lab.modules.detection.dto.DetectionMethodInstrumentModelBindCommand;
 import com.yx.lab.modules.detection.dto.DetectionMethodSaveCommand;
 import com.yx.lab.modules.detection.dto.DetectionParameterQuery;
 import com.yx.lab.modules.detection.dto.DetectionParameterMethodBindCommand;
@@ -24,12 +27,14 @@ import com.yx.lab.modules.detection.dto.DetectionTypeParameterMethodBindingItem;
 import com.yx.lab.modules.detection.dto.DetectionTypeSaveCommand;
 import com.yx.lab.modules.detection.entity.DetectionItem;
 import com.yx.lab.modules.detection.entity.DetectionMethod;
+import com.yx.lab.modules.detection.entity.DetectionMethodInstrumentModelBinding;
 import com.yx.lab.modules.detection.entity.DetectionParameter;
 import com.yx.lab.modules.detection.entity.DetectionProjectGroup;
 import com.yx.lab.modules.detection.entity.DetectionRecord;
 import com.yx.lab.modules.detection.entity.DetectionStep;
 import com.yx.lab.modules.detection.entity.DetectionType;
 import com.yx.lab.modules.detection.mapper.DetectionItemMapper;
+import com.yx.lab.modules.detection.mapper.DetectionMethodInstrumentModelBindingMapper;
 import com.yx.lab.modules.detection.mapper.DetectionMethodMapper;
 import com.yx.lab.modules.detection.mapper.DetectionParameterMapper;
 import com.yx.lab.modules.detection.mapper.DetectionProjectGroupMapper;
@@ -37,7 +42,9 @@ import com.yx.lab.modules.detection.mapper.DetectionRecordMapper;
 import com.yx.lab.modules.detection.mapper.DetectionStepMapper;
 import com.yx.lab.modules.detection.mapper.DetectionTypeMapper;
 import com.yx.lab.modules.detection.vo.DetectionDetectorOptionVO;
+import com.yx.lab.modules.detection.vo.DetectionMethodInstrumentModelBindingVO;
 import com.yx.lab.modules.detection.vo.DetectionParameterMethodBindingVO;
+import com.yx.lab.modules.detection.vo.InstrumentModelOptionVO;
 import com.yx.lab.modules.system.entity.LabUser;
 import com.yx.lab.modules.system.mapper.LabUserMapper;
 import lombok.RequiredArgsConstructor;
@@ -70,6 +77,8 @@ public class DetectionConfigService {
 
     private final DetectionMethodMapper detectionMethodMapper;
 
+    private final DetectionMethodInstrumentModelBindingMapper detectionMethodInstrumentModelBindingMapper;
+
     private final DetectionProjectGroupMapper detectionProjectGroupMapper;
 
     private final DetectionStepMapper detectionStepMapper;
@@ -79,6 +88,8 @@ public class DetectionConfigService {
     private final DetectionItemMapper detectionItemMapper;
 
     private final LabUserMapper labUserMapper;
+
+    private final InstrumentMapper instrumentMapper;
 
     private final ObjectMapper objectMapper;
 
@@ -214,8 +225,13 @@ public class DetectionConfigService {
      * @param query 查询条件
      * @return 检测方法分页结果
      */
-    public PageResult<DetectionMethod> methodPage(DetectionMethodQuery query) {
+    public PageResult<DetectionMethodInstrumentModelBindingVO> methodPage(DetectionMethodQuery query) {
         String keyword = StrUtil.trim(query.getKeyword());
+        List<Long> boundMethodIds = listBoundInstrumentModelMethodIds();
+        String bindingStatus = StrUtil.trim(query.getBindingStatus());
+        if ("BOUND".equalsIgnoreCase(bindingStatus) && boundMethodIds.isEmpty()) {
+            return new PageResult<>(0L, new ArrayList<>());
+        }
         Page<DetectionMethod> page = detectionMethodMapper.selectPage(
                 PageUtils.buildPage(query),
                 new LambdaQueryWrapper<DetectionMethod>()
@@ -228,6 +244,8 @@ public class DetectionConfigService {
                                 .or()
                                 .like(DetectionMethod::getStandardCode, keyword)
                                 .or()
+                                .like(DetectionMethod::getSampleVolume, keyword)
+                                .or()
                                 .like(DetectionMethod::getMethodBasis, keyword)
                                 .or()
                                 .like(DetectionMethod::getApplyScope, keyword)
@@ -235,8 +253,84 @@ public class DetectionConfigService {
                                 .like(DetectionMethod::getRemark, keyword))
                         .eq(query.getParameterId() != null, DetectionMethod::getParameterId, query.getParameterId())
                         .eq(query.getEnabled() != null, DetectionMethod::getEnabled, query.getEnabled())
+                        .in("BOUND".equalsIgnoreCase(bindingStatus), DetectionMethod::getId, boundMethodIds)
+                        .notIn("UNBOUND".equalsIgnoreCase(bindingStatus) && !boundMethodIds.isEmpty(), DetectionMethod::getId, boundMethodIds)
                         .orderByDesc(DetectionMethod::getCreatedTime));
-        return new PageResult<>(page.getTotal(), page.getRecords());
+        List<DetectionMethodInstrumentModelBindingVO> records = buildMethodBindingVOs(page.getRecords());
+        return new PageResult<>(page.getTotal(), records);
+    }
+
+    public PageResult<DetectionMethodInstrumentModelBindingVO> methodInstrumentModelBindingPage(DetectionMethodQuery query) {
+        return methodPage(query);
+    }
+
+    public List<InstrumentModelOptionVO> instrumentModelOptions() {
+        List<Instrument> instruments = instrumentMapper.selectList(new LambdaQueryWrapper<Instrument>()
+                .isNotNull(Instrument::getInstrumentModel)
+                .orderByAsc(Instrument::getInstrumentModel)
+                .orderByAsc(Instrument::getManufacturer));
+        Map<String, InstrumentModelOptionVO> optionMap = new LinkedHashMap<>();
+        for (Instrument instrument : instruments) {
+            String model = StrUtil.trim(instrument.getInstrumentModel());
+            if (StrUtil.isBlank(model)) {
+                continue;
+            }
+            String manufacturer = StrUtil.blankToDefault(StrUtil.trim(instrument.getManufacturer()), "");
+            String key = buildInstrumentModelKey(model, manufacturer);
+            InstrumentModelOptionVO option = optionMap.computeIfAbsent(key, ignored -> {
+                InstrumentModelOptionVO vo = new InstrumentModelOptionVO();
+                vo.setInstrumentModel(model);
+                vo.setManufacturer(manufacturer);
+                vo.setInstrumentCount(0);
+                vo.setLabel(buildInstrumentModelLabel(model, manufacturer));
+                return vo;
+            });
+            option.setInstrumentCount(option.getInstrumentCount() + 1);
+        }
+        return new ArrayList<>(optionMap.values());
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void bindMethodInstrumentModels(Long methodId, DetectionMethodInstrumentModelBindCommand command) {
+        DetectionMethod method = requireMethod(methodId);
+        List<DetectionMethodInstrumentModelBindCommand.Item> items = command == null || command.getItems() == null
+                ? Collections.emptyList()
+                : command.getItems();
+        Map<String, InstrumentModelOptionVO> optionMap = instrumentModelOptions().stream()
+                .collect(Collectors.toMap(
+                        item -> buildInstrumentModelKey(item.getInstrumentModel(), item.getManufacturer()),
+                        item -> item,
+                        (left, right) -> left,
+                        LinkedHashMap::new
+                ));
+        Map<String, DetectionMethodInstrumentModelBindCommand.Item> normalizedItems = new LinkedHashMap<>();
+        for (DetectionMethodInstrumentModelBindCommand.Item item : items) {
+            if (item == null || StrUtil.isBlank(item.getInstrumentModel())) {
+                continue;
+            }
+            String model = StrUtil.trim(item.getInstrumentModel());
+            String manufacturer = StrUtil.blankToDefault(StrUtil.trim(item.getManufacturer()), "");
+            String key = buildInstrumentModelKey(model, manufacturer);
+            if (!optionMap.containsKey(key)) {
+                throw new BusinessException("设备型号不存在或已无在库设备：" + buildInstrumentModelLabel(model, manufacturer));
+            }
+            normalizedItems.putIfAbsent(key, item);
+        }
+
+        clearMethodInstrumentModelBindings(methodId);
+        for (DetectionMethodInstrumentModelBindCommand.Item item : normalizedItems.values()) {
+            String model = StrUtil.trim(item.getInstrumentModel());
+            String manufacturer = StrUtil.blankToDefault(StrUtil.trim(item.getManufacturer()), "");
+            InstrumentModelOptionVO option = optionMap.get(buildInstrumentModelKey(model, manufacturer));
+            DetectionMethodInstrumentModelBinding binding = new DetectionMethodInstrumentModelBinding();
+            binding.setMethodId(method.getId());
+            binding.setMethodName(method.getMethodName());
+            binding.setInstrumentModel(option.getInstrumentModel());
+            binding.setManufacturer(StrUtil.blankToDefault(option.getManufacturer(), ""));
+            binding.setInstrumentCount(option.getInstrumentCount());
+            binding.setRemark(StrUtil.trim(item.getRemark()));
+            detectionMethodInstrumentModelBindingMapper.insert(binding);
+        }
     }
 
     /**
@@ -466,6 +560,7 @@ public class DetectionConfigService {
         validateMethod(entity, id);
         detectionMethodMapper.updateById(entity);
         syncTypeMethodBindingsByMethodId(id);
+        syncMethodInstrumentModelBindingNames(id, entity.getMethodName());
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -479,6 +574,7 @@ public class DetectionConfigService {
         if (isMethodReferencedByType(entity.getId())) {
             throw new BusinessException("当前检测方法已被检测套餐引用，请先调整检测套餐后再删除");
         }
+        clearMethodInstrumentModelBindings(entity.getId());
         detectionMethodMapper.deleteById(entity.getId());
     }
 
@@ -593,10 +689,25 @@ public class DetectionConfigService {
         entity.setMethodName(StrUtil.trim(command.getMethodName()));
         entity.setMethodCode(StrUtil.trim(command.getMethodCode()));
         entity.setStandardCode(StrUtil.trim(command.getStandardCode()));
+        entity.setSampleVolume(normalizeSampleVolume(command.getSampleVolume()));
         entity.setMethodBasis(StrUtil.trim(command.getMethodBasis()));
         entity.setApplyScope(StrUtil.trim(command.getApplyScope()));
         entity.setEnabled(command.getEnabled());
         entity.setRemark(StrUtil.trim(command.getRemark()));
+    }
+
+    private String normalizeSampleVolume(String value) {
+        String text = StrUtil.trim(value);
+        if (StrUtil.isBlank(text)) {
+            return "";
+        }
+        String numberText = text.replaceAll("\\s+", "")
+                .replaceAll("(?i)ml$", "")
+                .replaceAll("毫升$", "");
+        if (!numberText.matches("\\d+(\\.\\d+)?")) {
+            throw new BusinessException("取样体积只能填写数字");
+        }
+        return numberText + "mL";
     }
 
     private void applyStepCommand(DetectionStep entity, DetectionStepSaveCommand command) {
@@ -1283,5 +1394,107 @@ public class DetectionConfigService {
                 .collect(Collectors.joining("、")));
         vo.setMethodCount(bindingMethods.size());
         return vo;
+    }
+
+    private List<Long> listBoundInstrumentModelMethodIds() {
+        List<DetectionMethodInstrumentModelBinding> bindings = detectionMethodInstrumentModelBindingMapper.selectList(
+                new LambdaQueryWrapper<DetectionMethodInstrumentModelBinding>()
+                        .select(DetectionMethodInstrumentModelBinding::getMethodId)
+                        .isNotNull(DetectionMethodInstrumentModelBinding::getMethodId)
+        );
+        return bindings.stream()
+                .map(DetectionMethodInstrumentModelBinding::getMethodId)
+                .filter(id -> id != null)
+                .distinct()
+                .collect(Collectors.toList());
+    }
+
+    private List<DetectionMethodInstrumentModelBindingVO> buildMethodBindingVOs(List<DetectionMethod> methods) {
+        List<DetectionMethod> methodRows = methods == null ? Collections.emptyList() : methods;
+        if (methodRows.isEmpty()) {
+            return new ArrayList<>();
+        }
+        List<Long> methodIds = methodRows.stream()
+                .map(DetectionMethod::getId)
+                .collect(Collectors.toList());
+        Map<Long, List<DetectionMethodInstrumentModelBinding>> bindingMap = detectionMethodInstrumentModelBindingMapper.selectList(
+                        new LambdaQueryWrapper<DetectionMethodInstrumentModelBinding>()
+                                .in(DetectionMethodInstrumentModelBinding::getMethodId, methodIds)
+                                .orderByAsc(DetectionMethodInstrumentModelBinding::getInstrumentModel)
+                                .orderByAsc(DetectionMethodInstrumentModelBinding::getManufacturer))
+                .stream()
+                .collect(Collectors.groupingBy(DetectionMethodInstrumentModelBinding::getMethodId, LinkedHashMap::new, Collectors.toList()));
+        Map<String, InstrumentModelOptionVO> currentOptionMap = instrumentModelOptions().stream()
+                .collect(Collectors.toMap(
+                        item -> buildInstrumentModelKey(item.getInstrumentModel(), item.getManufacturer()),
+                        item -> item,
+                        (left, right) -> left,
+                        LinkedHashMap::new
+                ));
+        return methodRows.stream()
+                .map(method -> toMethodBindingVO(method, bindingMap.get(method.getId()), currentOptionMap))
+                .collect(Collectors.toList());
+    }
+
+    private DetectionMethodInstrumentModelBindingVO toMethodBindingVO(DetectionMethod method,
+                                                                      List<DetectionMethodInstrumentModelBinding> bindings,
+                                                                      Map<String, InstrumentModelOptionVO> currentOptionMap) {
+        DetectionMethodInstrumentModelBindingVO vo = new DetectionMethodInstrumentModelBindingVO();
+        vo.setId(method.getId());
+        vo.setMethodName(method.getMethodName());
+        vo.setMethodCode(method.getMethodCode());
+        vo.setParameterId(method.getParameterId());
+        vo.setParameterName(method.getParameterName());
+        vo.setStandardCode(method.getStandardCode());
+        vo.setSampleVolume(method.getSampleVolume());
+        vo.setMethodBasis(method.getMethodBasis());
+        vo.setApplyScope(method.getApplyScope());
+        vo.setEnabled(method.getEnabled());
+        vo.setRemark(method.getRemark());
+        vo.setUpdatedTime(method.getUpdatedTime());
+
+        List<DetectionMethodInstrumentModelBinding> bindingRows = bindings == null ? Collections.emptyList() : bindings;
+        for (DetectionMethodInstrumentModelBinding binding : bindingRows) {
+            InstrumentModelOptionVO currentOption = currentOptionMap.get(buildInstrumentModelKey(binding.getInstrumentModel(), binding.getManufacturer()));
+            if (currentOption != null) {
+                binding.setInstrumentCount(currentOption.getInstrumentCount());
+            }
+        }
+        vo.setInstrumentModelBindings(new ArrayList<>(bindingRows));
+        vo.setInstrumentModelCount(bindingRows.size());
+        vo.setInstrumentModelNames(bindingRows.stream()
+                .map(item -> buildInstrumentModelLabel(item.getInstrumentModel(), item.getManufacturer()))
+                .collect(Collectors.joining("、")));
+        return vo;
+    }
+
+    private void clearMethodInstrumentModelBindings(Long methodId) {
+        if (methodId == null) {
+            return;
+        }
+        detectionMethodInstrumentModelBindingMapper.delete(new LambdaQueryWrapper<DetectionMethodInstrumentModelBinding>()
+                .eq(DetectionMethodInstrumentModelBinding::getMethodId, methodId));
+    }
+
+    private void syncMethodInstrumentModelBindingNames(Long methodId, String methodName) {
+        if (methodId == null) {
+            return;
+        }
+        detectionMethodInstrumentModelBindingMapper.update(
+                null,
+                new LambdaUpdateWrapper<DetectionMethodInstrumentModelBinding>()
+                        .eq(DetectionMethodInstrumentModelBinding::getMethodId, methodId)
+                        .set(DetectionMethodInstrumentModelBinding::getMethodName, StrUtil.trim(methodName))
+        );
+    }
+
+    private String buildInstrumentModelKey(String instrumentModel, String manufacturer) {
+        return StrUtil.trim(instrumentModel) + "||" + StrUtil.blankToDefault(StrUtil.trim(manufacturer), "");
+    }
+
+    private String buildInstrumentModelLabel(String instrumentModel, String manufacturer) {
+        String model = StrUtil.blankToDefault(StrUtil.trim(instrumentModel), "-");
+        String maker = StrUtil.trim(manufacturer);
+        return StrUtil.isBlank(maker) ? model : model + " / " + maker;
     }
 }

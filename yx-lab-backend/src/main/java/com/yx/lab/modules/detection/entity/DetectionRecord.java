@@ -59,6 +59,10 @@ public class DetectionRecord extends BaseEntity {
     @TableField("abnormal_remark")
     private String abnormalRemark;
 
+    @Schema(description = "备注")
+    @TableField("remark")
+    private String remark;
+
     @Schema(description = "检测流程状态")
     @TableField("detection_status")
     private String detectionStatus;

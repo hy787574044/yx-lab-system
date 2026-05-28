@@ -1398,3 +1398,23 @@ AggregateError [ECONNREFUSED]:
 AggregateError [ECONNREFUSED]: 
     at internalConnectMultiple (node:net:1142:49)
     at afterConnectMultiple (node:net:1723:7)
+[2m21:24:39[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/samples?keyword=&sampleStatus=&sampleType=&pageNum=1&pageSize=30[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+[2m21:24:39[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/samplingTasks/stats[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+[2m21:24:39[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/samples/stats[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+[2m21:24:39[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/dicts/weather_condition/items[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)
+[2m21:24:39[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/dicts/storage_condition/items[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1142:49)
+    at afterConnectMultiple (node:net:1723:7)

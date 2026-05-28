@@ -17,6 +17,7 @@ TRUNCATE TABLE lab_sample;
 TRUNCATE TABLE lab_sampling_task;
 TRUNCATE TABLE lab_sampling_plan;
 TRUNCATE TABLE lab_monitoring_point;
+TRUNCATE TABLE lab_detection_method_instrument_model_binding;
 TRUNCATE TABLE lab_instrument_maintenance;
 TRUNCATE TABLE lab_instrument;
 TRUNCATE TABLE lab_document_share;
@@ -68,6 +69,7 @@ DELETE FROM lab_sample WHERE id BETWEEN 970001 AND 970010;
 DELETE FROM lab_sampling_task WHERE id BETWEEN 960001 AND 960020;
 DELETE FROM lab_sampling_plan WHERE id BETWEEN 950001 AND 950020;
 DELETE FROM lab_monitoring_point WHERE id BETWEEN 940001 AND 940020;
+DELETE FROM lab_detection_method_instrument_model_binding WHERE id BETWEEN 831001 AND 831020;
 DELETE FROM lab_instrument_maintenance WHERE id BETWEEN 840001 AND 840020;
 DELETE FROM lab_instrument WHERE id BETWEEN 830001 AND 830020;
 DELETE FROM lab_document_share WHERE id BETWEEN 860001 AND 860020;
@@ -215,6 +217,18 @@ VALUES
 (830003, 'pH计', 'SevenCompact', '梅特勒', DATE_SUB(CURDATE(), INTERVAL 500 DAY), 5, '6个月', '周检测', 'MAINTENANCE', '理化室A-03', NULL, '设备维修演示。', 0, 1001, '系统管理员', NOW() - INTERVAL 50 DAY, 1001, '系统管理员', NOW() - INTERVAL 1 DAY),
 (830004, '原子吸收分光光度计', 'AA-7000', '岛津', DATE_SUB(CURDATE(), INTERVAL 1200 DAY), 10, '12个月', '王检测', 'CALIBRATING', '金属室B-01', NULL, '校准中演示。', 0, 1001, '系统管理员', NOW() - INTERVAL 48 DAY, 1001, '系统管理员', NOW() - INTERVAL 1 DAY);
 
+INSERT INTO lab_detection_method_instrument_model_binding (
+    id, method_id, method_name, instrument_model, manufacturer, instrument_count, remark,
+    deleted, created_by, created_name, created_time, updated_by, updated_name, updated_time
+)
+VALUES
+(831001, 710001, '玻璃电极法', 'SevenCompact', '梅特勒', 1, '演示：pH 方法绑定 pH 计型号。', 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
+(831002, 710002, '散射光浊度法', '2100Q', 'HACH', 1, '演示：浊度方法绑定浊度仪型号。', 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
+(831003, 710003, 'DPD 分光光度法', 'UV-2600i', '岛津', 1, '演示：余氯方法绑定分光光度计型号。', 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
+(831004, 710004, '纳氏试剂分光光度法', 'UV-2600i', '岛津', 1, '演示：氨氮方法绑定分光光度计型号。', 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
+(831005, 710008, '原子吸收分光光度法-铁', 'AA-7000', '岛津', 1, '演示：铁方法绑定原子吸收型号。', 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
+(831006, 710009, '原子吸收分光光度法-锰', 'AA-7000', '岛津', 1, '演示：锰方法绑定原子吸收型号。', 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW());
+
 INSERT INTO lab_instrument_maintenance (
     id, instrument_id, instrument_name, maintenance_time, maintenance_reason, maintainer_name,
     maintenance_company, maintenance_result, maintenance_cost, remark, deleted,
@@ -269,6 +283,7 @@ UNION ALL SELECT 'lab_detection_item', COUNT(*) FROM lab_detection_item WHERE id
 UNION ALL SELECT 'lab_review_record', COUNT(*) FROM lab_review_record WHERE id BETWEEN 800001 AND 800020
 UNION ALL SELECT 'lab_report', COUNT(*) FROM lab_report WHERE id BETWEEN 810001 AND 810020
 UNION ALL SELECT 'lab_report_push_record', COUNT(*) FROM lab_report_push_record WHERE id BETWEEN 820001 AND 820020
+UNION ALL SELECT 'lab_detection_method_instrument_model_binding', COUNT(*) FROM lab_detection_method_instrument_model_binding WHERE id BETWEEN 831001 AND 831020
 UNION ALL SELECT 'lab_instrument', COUNT(*) FROM lab_instrument WHERE id BETWEEN 830001 AND 830020
 UNION ALL SELECT 'lab_instrument_maintenance', COUNT(*) FROM lab_instrument_maintenance WHERE id BETWEEN 840001 AND 840020
 UNION ALL SELECT 'lab_document', COUNT(*) FROM lab_document WHERE id BETWEEN 850001 AND 850020

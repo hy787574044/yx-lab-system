@@ -56,6 +56,18 @@ public class SamplingPlan extends BaseEntity {
     @TableField("sample_type")
     private String sampleType;
 
+    @Schema(description = "检测套餐ID")
+    @TableField("detection_type_id")
+    private Long detectionTypeId;
+
+    @Schema(description = "检测套餐名称")
+    @TableField("detection_type_name")
+    private String detectionTypeName;
+
+    @Schema(description = "检测配置快照")
+    @TableField("detection_config_snapshot")
+    private String detectionConfigSnapshot;
+
     @Schema(description = "周期类型")
     @TableField("cycle_type")
     private String cycleType;

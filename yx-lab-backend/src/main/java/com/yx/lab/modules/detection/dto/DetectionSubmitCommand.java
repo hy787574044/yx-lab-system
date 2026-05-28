@@ -24,6 +24,8 @@ public class DetectionSubmitCommand {
 
     private String abnormalRemark;
 
+    private String remark;
+
     @Valid
     @NotEmpty(message = "检测项不能为空")
     private List<DetectionItemCommand> items;

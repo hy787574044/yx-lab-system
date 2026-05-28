@@ -35,6 +35,10 @@ public class DetectionMethod extends BaseEntity {
     @TableField("standard_code")
     private String standardCode;
 
+    @Schema(description = "取样体积")
+    @TableField("sample_volume")
+    private String sampleVolume;
+
     @Schema(description = "检测步骤")
     @TableField("method_basis")
     private String methodBasis;

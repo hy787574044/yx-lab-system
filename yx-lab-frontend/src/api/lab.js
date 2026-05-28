@@ -322,6 +322,9 @@ export const exportDetectionParametersApi = (params) => downloadExcel('/api/dete
  */
 export const fetchDetectionMethodsApi = (params) => request.get('/api/detectionConfig/methods', { params })
 export const exportDetectionMethodsApi = (params) => downloadExcel('/api/detectionConfig/methods/export', params, '检测方法.xlsx')
+export const fetchInstrumentModelOptionsApi = () => request.get('/api/detectionConfig/instrumentModelOptions')
+export const fetchDetectionMethodInstrumentModelBindingsApi = (params) => request.get('/api/detectionConfig/methodInstrumentModelBindings', { params })
+export const saveDetectionMethodInstrumentModelBindingsApi = (methodId, data) => request.post(`/api/detectionConfig/methodInstrumentModelBindings/${methodId}`, data)
 /**
  * 新增检测方法。
  * @param {Object} data 检测方法表单。

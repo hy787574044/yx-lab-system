@@ -8,7 +8,7 @@
 --   lab_report_template
 --
 -- 清理：
---   监测点位、采样计划、采样任务、样品、检测流程、审核、报告、设备、维修、文档、推送、登录日志。
+--   监测点位、采样计划、采样任务、样品、检测流程、审核、报告、方法设备绑定、设备、维修、文档、推送、登录日志。
 --
 -- 执行前建议先备份数据库：
 --   mysqldump -h <host> -u<user> -p <database> > yx_lab_backup_before_clear.sql
@@ -31,6 +31,7 @@ TRUNCATE TABLE lab_sampling_plan;
 TRUNCATE TABLE lab_monitoring_point;
 
 -- 设备、维修、文档台账。
+TRUNCATE TABLE lab_detection_method_instrument_model_binding;
 TRUNCATE TABLE lab_instrument_maintenance;
 TRUNCATE TABLE lab_instrument;
 TRUNCATE TABLE lab_document_share;
@@ -51,9 +52,9 @@ UNION ALL SELECT 'lab_sample', COUNT(*) FROM lab_sample
 UNION ALL SELECT 'lab_sampling_task', COUNT(*) FROM lab_sampling_task
 UNION ALL SELECT 'lab_sampling_plan', COUNT(*) FROM lab_sampling_plan
 UNION ALL SELECT 'lab_monitoring_point', COUNT(*) FROM lab_monitoring_point
+UNION ALL SELECT 'lab_detection_method_instrument_model_binding', COUNT(*) FROM lab_detection_method_instrument_model_binding
 UNION ALL SELECT 'lab_instrument_maintenance', COUNT(*) FROM lab_instrument_maintenance
 UNION ALL SELECT 'lab_instrument', COUNT(*) FROM lab_instrument
 UNION ALL SELECT 'lab_document_share', COUNT(*) FROM lab_document_share
 UNION ALL SELECT 'lab_document', COUNT(*) FROM lab_document
 UNION ALL SELECT 'lab_login_log', COUNT(*) FROM lab_login_log;
-

@@ -15,6 +15,8 @@ public class DetectionMethodSaveCommand {
 
     private String standardCode;
 
+    private String sampleVolume;
+
     private String methodBasis;
 
     private String applyScope;

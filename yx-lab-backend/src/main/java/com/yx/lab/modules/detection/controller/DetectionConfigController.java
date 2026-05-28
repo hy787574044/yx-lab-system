@@ -6,6 +6,7 @@ import com.yx.lab.common.security.PermissionConstants;
 import com.yx.lab.common.security.RequirePermission;
 import com.yx.lab.common.util.ExcelExportUtil;
 import com.yx.lab.modules.detection.dto.DetectionMethodQuery;
+import com.yx.lab.modules.detection.dto.DetectionMethodInstrumentModelBindCommand;
 import com.yx.lab.modules.detection.dto.DetectionMethodSaveCommand;
 import com.yx.lab.modules.detection.dto.DetectionParameterMethodBindCommand;
 import com.yx.lab.modules.detection.dto.DetectionParameterQuery;
@@ -23,7 +24,9 @@ import com.yx.lab.modules.detection.entity.DetectionStep;
 import com.yx.lab.modules.detection.entity.DetectionType;
 import com.yx.lab.modules.detection.service.DetectionConfigService;
 import com.yx.lab.modules.detection.vo.DetectionDetectorOptionVO;
+import com.yx.lab.modules.detection.vo.DetectionMethodInstrumentModelBindingVO;
 import com.yx.lab.modules.detection.vo.DetectionParameterMethodBindingVO;
+import com.yx.lab.modules.detection.vo.InstrumentModelOptionVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -315,8 +318,14 @@ public class DetectionConfigController {
      */
     @GetMapping("/methods")
     @Operation(summary = "检测方法分页")
-    public ApiResponse<PageResult<DetectionMethod>> methodPage(@Validated DetectionMethodQuery query) {
+    public ApiResponse<PageResult<DetectionMethodInstrumentModelBindingVO>> methodPage(@Validated DetectionMethodQuery query) {
         return ApiResponse.success(detectionConfigService.methodPage(query));
+    }
+
+    @GetMapping("/methodInstrumentModelBindings")
+    @Operation(summary = "检测方法设备型号绑定分页")
+    public ApiResponse<PageResult<DetectionMethodInstrumentModelBindingVO>> methodInstrumentModelBindingPage(@Validated DetectionMethodQuery query) {
+        return ApiResponse.success(detectionConfigService.methodInstrumentModelBindingPage(query));
     }
 
     /**
@@ -334,15 +343,17 @@ public class DetectionConfigController {
                 "检测方法",
                 detectionConfigService.methodPage(query).getRecords(),
                 java.util.Arrays.asList(
-                        ExcelExportUtil.column("检测方法名称", DetectionMethod::getMethodName),
-                        ExcelExportUtil.column("方法编码", DetectionMethod::getMethodCode),
-                        ExcelExportUtil.column("标准编号", DetectionMethod::getStandardCode),
-                        ExcelExportUtil.column("已绑定参数", DetectionMethod::getParameterName),
-                        ExcelExportUtil.column("检测步骤", DetectionMethod::getMethodBasis),
-                        ExcelExportUtil.column("适用范围", DetectionMethod::getApplyScope),
+                        ExcelExportUtil.column("检测方法名称", DetectionMethodInstrumentModelBindingVO::getMethodName),
+                        ExcelExportUtil.column("方法编码", DetectionMethodInstrumentModelBindingVO::getMethodCode),
+                        ExcelExportUtil.column("标准编号", DetectionMethodInstrumentModelBindingVO::getStandardCode),
+                        ExcelExportUtil.column("取样体积", DetectionMethodInstrumentModelBindingVO::getSampleVolume),
+                        ExcelExportUtil.column("已绑定参数", DetectionMethodInstrumentModelBindingVO::getParameterName),
+                        ExcelExportUtil.column("绑定设备型号", DetectionMethodInstrumentModelBindingVO::getInstrumentModelNames),
+                        ExcelExportUtil.column("检测步骤", DetectionMethodInstrumentModelBindingVO::getMethodBasis),
+                        ExcelExportUtil.column("适用范围", DetectionMethodInstrumentModelBindingVO::getApplyScope),
                         ExcelExportUtil.column("状态", item -> item.getEnabled() != null && item.getEnabled() == 1 ? "启用" : "停用"),
-                        ExcelExportUtil.column("备注", DetectionMethod::getRemark),
-                        ExcelExportUtil.column("更新时间", DetectionMethod::getUpdatedTime)
+                        ExcelExportUtil.column("备注", DetectionMethodInstrumentModelBindingVO::getRemark),
+                        ExcelExportUtil.column("更新时间", DetectionMethodInstrumentModelBindingVO::getUpdatedTime)
                 ));
     }
 
@@ -355,6 +366,21 @@ public class DetectionConfigController {
     @Operation(summary = "获取检测方法选项")
     public ApiResponse<List<DetectionMethod>> methodOptions() {
         return ApiResponse.success(detectionConfigService.methodOptions());
+    }
+
+    @GetMapping("/instrumentModelOptions")
+    @Operation(summary = "获取设备型号选项")
+    public ApiResponse<List<InstrumentModelOptionVO>> instrumentModelOptions() {
+        return ApiResponse.success(detectionConfigService.instrumentModelOptions());
+    }
+
+    @PostMapping("/methodInstrumentModelBindings/{methodId}")
+    @Operation(summary = "保存检测方法设备型号绑定")
+    @RequirePermission(PermissionConstants.DETECTION_CONFIG_WRITE)
+    public ApiResponse<Void> bindMethodInstrumentModels(@PathVariable Long methodId,
+                                                        @RequestBody(required = false) DetectionMethodInstrumentModelBindCommand command) {
+        detectionConfigService.bindMethodInstrumentModels(methodId, command);
+        return ApiResponse.successMessage("保存成功");
     }
 
     /**

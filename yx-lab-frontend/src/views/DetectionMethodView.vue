@@ -59,12 +59,23 @@
                   <el-option label="停用" :value="0" />
                 </el-select>
               </label>
+              <label class="toolbar-field">
+                <span>绑定状态</span>
+                <el-select
+                  v-model="query.bindingStatus"
+                  clearable
+                  placeholder="请选择绑定状态"
+                >
+                  <el-option label="已绑定型号" value="BOUND" />
+                  <el-option label="未绑定型号" value="UNBOUND" />
+                </el-select>
+              </label>
               <label class="toolbar-field toolbar-field--medium">
                 <span>关键字</span>
                 <el-input
                   v-model="query.keyword"
                   clearable
-                  placeholder="请输入检测方法名称、编码、标准编号、检测步骤或备注"
+                  placeholder="请输入检测方法名称、编码、标准编号、取样体积、检测步骤或备注"
                   @keyup.enter="handleSearch"
                 />
               </label>
@@ -88,12 +99,48 @@
           height="100%"
           empty-text="暂无检测方法数据"
         >
-          <el-table-column prop="methodName" label="检测方法名称" min-width="180" />
+          <el-table-column label="方法设备关系" min-width="360">
+            <template #default="{ row }">
+              <div class="binding-tree">
+                <div class="binding-tree__parameter">
+                  <span class="binding-tree__dash">-</span>
+                  <span class="binding-tree__parameter-name">{{ row.methodName || '-' }}</span>
+                </div>
+                <div v-if="getMethodBoundModels(row).length" class="binding-tree__children">
+                  <div
+                    v-for="model in getMethodBoundModels(row)"
+                    :key="`${row.id}-${buildInstrumentModelKey(model)}`"
+                    class="binding-tree__method"
+                  >
+                    <span class="binding-tree__dash binding-tree__dash--child">-</span>
+                    <span class="binding-tree__method-name">{{ formatInstrumentModelLabel(model) }}</span>
+                    <span class="binding-tree__count">在库 {{ model.instrumentCount || 0 }} 台</span>
+                    <el-button
+                      v-permission="'detectionConfig:write'"
+                      link
+                      type="danger"
+                      class="binding-tree__action"
+                      @click="removeSingleMethodModelBinding(row, model)"
+                    >
+                      解除绑定
+                    </el-button>
+                  </div>
+                </div>
+                <div v-else class="binding-tree__method binding-tree__method--empty">
+                  <span class="binding-tree__dash">-</span>
+                  <span>当前未绑定设备型号</span>
+                </div>
+              </div>
+            </template>
+          </el-table-column>
           <el-table-column prop="methodCode" label="方法编码" min-width="140">
             <template #default="{ row }">{{ row.methodCode || '-' }}</template>
           </el-table-column>
           <el-table-column prop="standardCode" label="标准编号" min-width="160">
             <template #default="{ row }">{{ row.standardCode || '-' }}</template>
+          </el-table-column>
+          <el-table-column prop="sampleVolume" label="取样体积" min-width="120">
+            <template #default="{ row }">{{ row.sampleVolume || '-' }}</template>
           </el-table-column>
           <el-table-column prop="parameterName" label="已绑定参数" min-width="150">
             <template #default="{ row }">{{ row.parameterName || '未绑定' }}</template>
@@ -117,10 +164,18 @@
           <el-table-column prop="updatedTime" label="更新时间" min-width="170">
             <template #default="{ row }">{{ row.updatedTime || '-' }}</template>
           </el-table-column>
-          <el-table-column label="操作" width="170" fixed="right" header-cell-class-name="cell-center" class-name="cell-center">
+          <el-table-column label="操作" width="380" fixed="right" header-cell-class-name="cell-center" class-name="cell-center">
             <template #default="{ row }">
-              <div class="table-action-row">
+              <div class="table-action-row detection-method-action-row">
                 <el-button link type="primary" @click="openDialog(row)">编辑</el-button>
+                <el-button link type="primary" @click="openModelBindingDialog(row)">配置绑定</el-button>
+                <el-button
+                  link
+                  :disabled="!getMethodBoundModels(row).length"
+                  @click="clearMethodModelBindings(row)"
+                >
+                  清空绑定
+                </el-button>
                 <el-button link type="danger" @click="removeRow(row)">删除</el-button>
               </div>
             </template>
@@ -154,6 +209,16 @@
           </el-form-item>
           <el-form-item label="标准编号">
             <el-input v-model="form.standardCode" placeholder="请输入标准编号，如 GB/T 5750.4" />
+          </el-form-item>
+          <el-form-item label="取样体积">
+            <el-input
+              v-model="form.sampleVolume"
+              inputmode="decimal"
+              placeholder="请输入数字，如 100"
+              @input="handleSampleVolumeInput"
+            >
+              <template #append>mL</template>
+            </el-input>
           </el-form-item>
           <el-form-item label="状态">
             <el-radio-group v-model="form.enabled">
@@ -192,6 +257,87 @@
         <el-button type="primary" :loading="saving" @click="submitForm">保存</el-button>
       </template>
     </el-dialog>
+
+    <el-dialog
+      v-model="modelBindingDialogVisible"
+      :title="modelBindingDialogTitle"
+      width="960px"
+      destroy-on-close
+      @closed="resetModelBindingForm"
+    >
+      <div class="binding-editor">
+        <div class="binding-editor__summary">
+          <span class="binding-editor__chip">
+            检测方法 <strong>{{ modelBindingForm.methodName || '-' }}</strong>
+          </span>
+          <button
+            type="button"
+            :class="['binding-editor__chip', 'binding-editor__chip--action', { 'is-active': modelBindingDialogFilter === 'selected' }]"
+            @click="switchModelBindingFilter('selected')"
+          >
+            已选型号 <strong>{{ selectedInstrumentModelCount }}</strong>
+          </button>
+          <button
+            type="button"
+            :class="['binding-editor__chip', 'binding-editor__chip--action', { 'is-active': modelBindingDialogFilter === 'pending' }]"
+            @click="switchModelBindingFilter('pending')"
+          >
+            待绑定型号 <strong>{{ pendingInstrumentModelCount }}</strong>
+          </button>
+        </div>
+        <div class="toolbar-panel binding-editor__toolbar">
+          <div class="toolbar-row">
+            <div class="toolbar-main">
+              <div class="toolbar-fields">
+                <label class="toolbar-field toolbar-field--medium">
+                  <span>型号筛选</span>
+                  <el-input
+                    v-model="modelBindingForm.keyword"
+                    clearable
+                    placeholder="请输入设备型号或生产厂家"
+                  />
+                </label>
+              </div>
+            </div>
+            <div class="toolbar-actions">
+              <el-button
+                :type="modelBindingDialogFilter === 'all' ? 'primary' : 'default'"
+                @click="switchModelBindingFilter('all')"
+              >
+                全部型号
+              </el-button>
+            </div>
+          </div>
+        </div>
+        <div v-if="filteredInstrumentModelOptions.length" class="instrument-model-grid">
+          <div
+            v-for="item in filteredInstrumentModelOptions"
+            :key="buildInstrumentModelKey(item)"
+            :class="['instrument-model-card', { 'is-selected': isInstrumentModelSelected(item) }]"
+            @click="toggleInstrumentModel(item)"
+          >
+            <div class="instrument-model-card__head">
+              <el-checkbox
+                :model-value="isInstrumentModelSelected(item)"
+                @change="(checked) => handleInstrumentModelToggle(item, checked)"
+                @click.stop
+              >
+                {{ item.instrumentModel || '-' }}
+              </el-checkbox>
+              <span class="status-chip info">在库 {{ item.instrumentCount || 0 }} 台</span>
+            </div>
+            <div class="instrument-model-card__meta">
+              生产厂家：{{ item.manufacturer || '-' }}
+            </div>
+          </div>
+        </div>
+        <div v-else class="empty-box">暂无可绑定的设备型号，请先在仪器台账维护设备型号。</div>
+      </div>
+      <template #footer>
+        <el-button @click="modelBindingDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="savingModelBinding" @click="submitModelBindings">保存绑定</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -203,6 +349,7 @@ import { ElForm, ElFormItem } from 'element-plus/es/components/form/index.mjs'
 import { ElInput } from 'element-plus/es/components/input/index.mjs'
 import { ElMessage } from 'element-plus/es/components/message/index.mjs'
 import { ElMessageBox } from 'element-plus/es/components/message-box/index.mjs'
+import { ElCheckbox } from 'element-plus/es/components/checkbox/index.mjs'
 import { ElRadioButton, ElRadioGroup } from 'element-plus/es/components/radio/index.mjs'
 import { ElOption, ElSelect } from 'element-plus/es/components/select/index.mjs'
 import { ElTable, ElTableColumn } from 'element-plus/es/components/table/index.mjs'
@@ -211,8 +358,10 @@ import {
   createDetectionMethodApi,
   deleteDetectionMethodApi,
   exportDetectionMethodsApi,
+  fetchInstrumentModelOptionsApi,
   fetchDetectionParametersApi,
   fetchDetectionMethodsApi,
+  saveDetectionMethodInstrumentModelBindingsApi,
   updateDetectionMethodApi
 } from '../api/lab'
 import { DEFAULT_PAGE_SIZE } from '../utils/labEnums'
@@ -235,12 +384,17 @@ const activeStatKey = ref('all')
 const rows = ref([])
 const total = ref(0)
 const parameterOptions = ref([])
+const instrumentModelOptions = ref([])
 const dialogVisible = ref(false)
+const modelBindingDialogVisible = ref(false)
 const saving = ref(false)
+const savingModelBinding = ref(false)
+const modelBindingDialogFilter = ref('all')
 
 const query = reactive({
   parameterId: '',
   enabled: '',
+  bindingStatus: '',
   keyword: '',
   pageNum: 1,
   pageSize: DEFAULT_PAGE_SIZE
@@ -251,10 +405,18 @@ const form = reactive({
   methodName: '',
   methodCode: '',
   standardCode: '',
+  sampleVolume: '',
   methodBasis: '',
   applyScope: '',
   enabled: 1,
   remark: ''
+})
+
+const modelBindingForm = reactive({
+  methodId: null,
+  methodName: '',
+  selectedKeys: [],
+  keyword: ''
 })
 
 const visibleRows = computed(() => {
@@ -264,25 +426,54 @@ const visibleRows = computed(() => {
   if (activeStatKey.value === 'disabled') {
     return rows.value.filter((item) => item.enabled === 0)
   }
+  if (activeStatKey.value === 'bound') {
+    return rows.value.filter((item) => Number(item.instrumentModelCount || 0) > 0)
+  }
+  if (activeStatKey.value === 'unbound') {
+    return rows.value.filter((item) => Number(item.instrumentModelCount || 0) === 0)
+  }
   return rows.value
 })
 
-const currentTags = computed(() => [
-  { label: '方法总数', value: total.value, type: 'info' },
-  { label: '启用方法', value: rows.value.filter((item) => item.enabled === 1).length, type: 'success' },
-  { label: '停用方法', value: rows.value.filter((item) => item.enabled === 0).length, type: 'warning' }
-])
-
 const currentStats = computed(() => [
   { key: 'all', label: '全部方法', value: total.value, desc: '检测方法全量台账' },
-  { key: 'enabled', label: '启用方法', value: rows.value.filter((item) => item.enabled === 1).length, desc: '当前可正式使用的方法' },
+  { key: 'bound', label: '已绑定型号', value: rows.value.filter((item) => Number(item.instrumentModelCount || 0) > 0).length, desc: '已配置设备型号的方法' },
+  { key: 'unbound', label: '未绑定型号', value: rows.value.filter((item) => Number(item.instrumentModelCount || 0) === 0).length, desc: '尚未配置设备型号的方法' },
   { key: 'disabled', label: '停用方法', value: rows.value.filter((item) => item.enabled === 0).length, desc: '已停用或暂不使用的方法' }
 ])
+
+const modelBindingDialogTitle = computed(() => (
+  modelBindingForm.methodName ? `配置设备型号 - ${modelBindingForm.methodName}` : '配置设备型号'
+))
+
+const selectedInstrumentModelKeySet = computed(() => new Set(modelBindingForm.selectedKeys))
+const selectedInstrumentModelCount = computed(() => modelBindingForm.selectedKeys.length)
+const pendingInstrumentModelCount = computed(() =>
+  instrumentModelOptions.value.filter((item) => !isInstrumentModelSelected(item)).length
+)
+
+const filteredInstrumentModelOptions = computed(() => {
+  const keyword = modelBindingForm.keyword.trim().toLowerCase()
+  let options = instrumentModelOptions.value || []
+  if (keyword) {
+    options = options.filter((item) =>
+      String(item.instrumentModel || '').toLowerCase().includes(keyword)
+        || String(item.manufacturer || '').toLowerCase().includes(keyword)
+    )
+  }
+  if (modelBindingDialogFilter.value === 'selected') {
+    options = options.filter((item) => isInstrumentModelSelected(item))
+  } else if (modelBindingDialogFilter.value === 'pending') {
+    options = options.filter((item) => !isInstrumentModelSelected(item))
+  }
+  return [...options].sort(compareInstrumentModelOption)
+})
 
 function handleStatClick(key) {
   const nextKey = activeStatKey.value === key ? 'all' : key
   activeStatKey.value = nextKey
-  query.enabled = nextKey === 'enabled' ? 1 : nextKey === 'disabled' ? 0 : ''
+  query.enabled = nextKey === 'disabled' ? 0 : ''
+  query.bindingStatus = nextKey === 'bound' ? 'BOUND' : nextKey === 'unbound' ? 'UNBOUND' : ''
   query.pageNum = 1
   loadRows()
 }
@@ -292,10 +483,19 @@ function resetForm() {
   form.methodName = ''
   form.methodCode = ''
   form.standardCode = ''
+  form.sampleVolume = ''
   form.methodBasis = ''
   form.applyScope = ''
   form.enabled = 1
   form.remark = ''
+}
+
+function resetModelBindingForm() {
+  modelBindingForm.methodId = null
+  modelBindingForm.methodName = ''
+  modelBindingForm.selectedKeys = []
+  modelBindingForm.keyword = ''
+  modelBindingDialogFilter.value = 'all'
 }
 
 function openDialog(row) {
@@ -305,6 +505,7 @@ function openDialog(row) {
     form.methodName = row.methodName || ''
     form.methodCode = row.methodCode || ''
     form.standardCode = row.standardCode || ''
+    form.sampleVolume = extractSampleVolumeNumber(row.sampleVolume)
     form.methodBasis = row.methodBasis || ''
     form.applyScope = row.applyScope || ''
     form.enabled = row.enabled ?? 1
@@ -313,9 +514,156 @@ function openDialog(row) {
   dialogVisible.value = true
 }
 
+function extractSampleVolumeNumber(value) {
+  const text = String(value || '').trim().replace(/\s+/g, '')
+  return text.replace(/(?:ml|毫升)$/i, '')
+}
+
+function sanitizeSampleVolumeNumber(value) {
+  const text = extractSampleVolumeNumber(value).replace(/[^\d.]/g, '')
+  const parts = text.split('.')
+  if (parts.length <= 1) {
+    return parts[0]
+  }
+  return `${parts[0]}.${parts.slice(1).join('')}`
+}
+
+function handleSampleVolumeInput(value) {
+  form.sampleVolume = sanitizeSampleVolumeNumber(value)
+}
+
+function buildSampleVolumePayload(value) {
+  const numberText = sanitizeSampleVolumeNumber(value)
+  return numberText ? `${numberText}mL` : ''
+}
+
+function isValidSampleVolumeNumber(value) {
+  const numberText = sanitizeSampleVolumeNumber(value)
+  return !numberText || /^\d+(\.\d+)?$/.test(numberText)
+}
+
+function getMethodBoundModels(row) {
+  return Array.isArray(row?.instrumentModelBindings) ? row.instrumentModelBindings : []
+}
+
+function buildInstrumentModelKey(itemOrModel, manufacturer) {
+  if (typeof itemOrModel === 'string') {
+    return `${itemOrModel.trim()}||${String(manufacturer || '').trim()}`
+  }
+  return `${String(itemOrModel?.instrumentModel || '').trim()}||${String(itemOrModel?.manufacturer || '').trim()}`
+}
+
+function formatInstrumentModelLabel(item) {
+  const model = item?.instrumentModel || '-'
+  const manufacturer = item?.manufacturer || ''
+  return manufacturer ? `${model} / ${manufacturer}` : model
+}
+
+function isInstrumentModelSelected(item) {
+  return selectedInstrumentModelKeySet.value.has(buildInstrumentModelKey(item))
+}
+
+function toggleInstrumentModel(item) {
+  handleInstrumentModelToggle(item, !isInstrumentModelSelected(item))
+}
+
+function handleInstrumentModelToggle(item, checked) {
+  const key = buildInstrumentModelKey(item)
+  const nextSelected = new Set(modelBindingForm.selectedKeys)
+  if (checked) {
+    nextSelected.add(key)
+  } else {
+    nextSelected.delete(key)
+  }
+  modelBindingForm.selectedKeys = Array.from(nextSelected)
+}
+
+function switchModelBindingFilter(key) {
+  modelBindingDialogFilter.value = modelBindingDialogFilter.value === key ? 'all' : key
+}
+
+function compareInstrumentModelOption(left, right) {
+  const leftSelected = isInstrumentModelSelected(left) ? 0 : 1
+  const rightSelected = isInstrumentModelSelected(right) ? 0 : 1
+  if (leftSelected !== rightSelected) {
+    return leftSelected - rightSelected
+  }
+  return formatInstrumentModelLabel(left).localeCompare(formatInstrumentModelLabel(right), 'zh-CN')
+}
+
+async function openModelBindingDialog(row) {
+  if (!instrumentModelOptions.value.length) {
+    await loadInstrumentModelOptions()
+  }
+  resetModelBindingForm()
+  modelBindingForm.methodId = row.id
+  modelBindingForm.methodName = row.methodName || ''
+  modelBindingForm.selectedKeys = getMethodBoundModels(row).map((item) => buildInstrumentModelKey(item))
+  modelBindingDialogVisible.value = true
+}
+
+function buildModelBindingPayload(selectedKeys = modelBindingForm.selectedKeys) {
+  const optionMap = new Map(instrumentModelOptions.value.map((item) => [buildInstrumentModelKey(item), item]))
+  return {
+    items: selectedKeys
+      .map((key) => optionMap.get(key))
+      .filter(Boolean)
+      .map((item) => ({
+        instrumentModel: item.instrumentModel,
+        manufacturer: item.manufacturer || ''
+      }))
+  }
+}
+
+async function submitModelBindings() {
+  if (!modelBindingForm.methodId) {
+    ElMessage.warning('当前检测方法不存在，请刷新后重试')
+    return
+  }
+  savingModelBinding.value = true
+  try {
+    await saveDetectionMethodInstrumentModelBindingsApi(modelBindingForm.methodId, buildModelBindingPayload())
+    ElMessage.success('设备型号绑定已保存')
+    modelBindingDialogVisible.value = false
+    await loadRows()
+  } finally {
+    savingModelBinding.value = false
+  }
+}
+
+async function clearMethodModelBindings(row) {
+  await ElMessageBox.confirm(`确认清空检测方法“${row.methodName}”已绑定的设备型号吗？`, '清空确认', {
+    type: 'warning'
+  })
+  await saveDetectionMethodInstrumentModelBindingsApi(row.id, { items: [] })
+  ElMessage.success('已清空当前检测方法的设备型号绑定')
+  await loadRows()
+}
+
+async function removeSingleMethodModelBinding(row, model) {
+  const modelLabel = formatInstrumentModelLabel(model)
+  await ElMessageBox.confirm(`确认解除检测方法“${row.methodName}”下的设备型号“${modelLabel}”吗？`, '解除确认', {
+    type: 'warning'
+  })
+  const removedKey = buildInstrumentModelKey(model)
+  const remainingKeys = getMethodBoundModels(row)
+    .map((item) => buildInstrumentModelKey(item))
+    .filter((key) => key !== removedKey)
+  if (!instrumentModelOptions.value.length) {
+    await loadInstrumentModelOptions()
+  }
+  await saveDetectionMethodInstrumentModelBindingsApi(row.id, buildModelBindingPayload(remainingKeys))
+  ElMessage.success('已解除当前设备型号绑定')
+  await loadRows()
+}
+
 async function submitForm() {
   if (!form.methodName.trim()) {
     ElMessage.warning('请填写检测方法名称')
+    return
+  }
+  if (!isValidSampleVolumeNumber(form.sampleVolume)) {
+    ElMessage.warning('取样体积只能填写数字')
     return
   }
 
@@ -323,6 +671,7 @@ async function submitForm() {
     methodName: form.methodName.trim(),
     methodCode: form.methodCode.trim(),
     standardCode: form.standardCode.trim(),
+    sampleVolume: buildSampleVolumePayload(form.sampleVolume),
     methodBasis: form.methodBasis.trim(),
     applyScope: form.applyScope.trim(),
     enabled: form.enabled,
@@ -362,6 +711,7 @@ function handleSearch() {
 function resetQuery() {
   query.parameterId = ''
   query.enabled = ''
+  query.bindingStatus = ''
   query.keyword = ''
   query.pageNum = 1
   activeStatKey.value = 'all'
@@ -369,8 +719,10 @@ function resetQuery() {
 }
 
 function syncActiveStatByQuery() {
-  if (String(query.enabled) === '1') {
-    activeStatKey.value = 'enabled'
+  if (query.bindingStatus === 'BOUND') {
+    activeStatKey.value = 'bound'
+  } else if (query.bindingStatus === 'UNBOUND') {
+    activeStatKey.value = 'unbound'
   } else if (String(query.enabled) === '0') {
     activeStatKey.value = 'disabled'
   } else {
@@ -381,6 +733,10 @@ function syncActiveStatByQuery() {
 async function loadParameterOptions() {
   const result = await fetchDetectionParametersApi({ pageNum: 1, pageSize: 500, enabled: 1 })
   parameterOptions.value = result.records || []
+}
+
+async function loadInstrumentModelOptions() {
+  instrumentModelOptions.value = await fetchInstrumentModelOptionsApi()
 }
 
 async function loadRows() {
@@ -399,7 +755,7 @@ async function handleExport() {
 }
 
 onMounted(async () => {
-  await Promise.all([loadRows(), loadParameterOptions()])
+  await Promise.all([loadRows(), loadParameterOptions(), loadInstrumentModelOptions()])
 })
 </script>
 
@@ -494,6 +850,169 @@ onMounted(async () => {
   line-height: 1.6;
 }
 
+.detection-method-action-row {
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 68px;
+  padding: 4px 0;
+}
+
+.binding-tree {
+  display: grid;
+  gap: 8px;
+  padding: 4px 0;
+  line-height: 1.5;
+}
+
+.binding-tree__parameter,
+.binding-tree__method {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.binding-tree__children {
+  display: grid;
+  gap: 6px;
+  margin-left: 18px;
+}
+
+.binding-tree__dash {
+  color: var(--brand);
+  font-weight: 800;
+}
+
+.binding-tree__dash--child {
+  color: var(--text-sub);
+}
+
+.binding-tree__parameter-name {
+  color: var(--text-main);
+  font-weight: 700;
+}
+
+.binding-tree__method-name {
+  color: var(--text-main);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.binding-tree__count {
+  flex: 0 0 auto;
+  color: var(--text-sub);
+  font-size: 12px;
+}
+
+.binding-tree__action {
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+.binding-tree__method--empty {
+  margin-left: 18px;
+  color: var(--text-sub);
+}
+
+.binding-editor {
+  display: grid;
+  gap: 14px;
+}
+
+.binding-editor__summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.binding-editor__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--brand) 16%, #ffffff 84%);
+  background: color-mix(in srgb, var(--brand) 7%, #ffffff 93%);
+  color: var(--text-sub);
+  font-size: 13px;
+}
+
+.binding-editor__chip--action {
+  appearance: none;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.binding-editor__chip--action:hover,
+.binding-editor__chip--action:focus-visible,
+.binding-editor__chip--action.is-active {
+  border-color: color-mix(in srgb, var(--brand) 42%, #ffffff 58%);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
+  outline: none;
+}
+
+.binding-editor__chip strong {
+  color: var(--brand);
+  font-size: 15px;
+}
+
+.binding-editor__toolbar {
+  padding: 12px;
+}
+
+.instrument-model-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  max-height: 430px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.instrument-model-card {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--line-soft);
+  border-radius: 12px;
+  background: var(--bg-panel-soft);
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.instrument-model-card:hover,
+.instrument-model-card.is-selected {
+  border-color: color-mix(in srgb, var(--brand) 45%, #ffffff 55%);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
+}
+
+.instrument-model-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.instrument-model-card__meta {
+  color: var(--text-sub);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.empty-box {
+  min-height: 180px;
+  display: grid;
+  place-items: center;
+  border: 1px dashed var(--line-soft);
+  border-radius: 12px;
+  color: var(--text-sub);
+}
+
 @media (max-width: 1080px) {
   .page-hero,
   .scene-grid {
@@ -502,6 +1021,10 @@ onMounted(async () => {
 
   .hero-tags {
     justify-content: flex-start;
+  }
+
+  .instrument-model-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style>

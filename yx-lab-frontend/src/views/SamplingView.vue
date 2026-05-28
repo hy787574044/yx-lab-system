@@ -151,6 +151,12 @@
               {{ getEnumLabel(sampleTypeLabelMap, row.sampleType) }}
             </template>
           </el-table-column>
+          <el-table-column prop="detectionTypeName" label="检测套餐" min-width="160" show-overflow-tooltip />
+          <el-table-column label="检测参数" min-width="220" show-overflow-tooltip>
+            <template #default="{ row }">
+              {{ formatTaskDetectionParameterSummary(row) }}
+            </template>
+          </el-table-column>
           <el-table-column label="任务状态" width="120" header-cell-class-name="cell-center" class-name="cell-center">
             <template #default="{ row }">
               <span class="status-chip" :class="getStatusClass('taskStatus', row.taskStatus)">
@@ -386,6 +392,7 @@
             <el-table-column prop="planName" label="计划名称" min-width="180" />
             <el-table-column prop="pointName" label="采样点位" min-width="160" />
             <el-table-column prop="samplerName" label="采样人员" width="120" />
+            <el-table-column prop="detectionTypeName" label="检测套餐" min-width="160" show-overflow-tooltip />
             <el-table-column label="周期类型" width="120" header-cell-class-name="cell-center" class-name="cell-center">
               <template #default="{ row }">
                 {{ getEnumLabel(cycleTypeLabelMap, row.cycleType) }}
@@ -454,9 +461,9 @@
 
     <el-dialog
       v-model="planDialogVisible"
-      class="sampling-form-dialog"
+      class="sampling-form-dialog sampling-plan-form-dialog"
       :title="editingPlanId ? '编辑采样计划' : '新增采样计划'"
-      width="760px"
+      width="1080px"
       align-center
       destroy-on-close
       @closed="resetPlanForm"
@@ -508,16 +515,6 @@
               />
             </el-select>
           </el-form-item>
-          <el-form-item label="周期类型" required>
-            <el-select v-model="planForm.cycleType" style="width: 100%">
-              <el-option
-                v-for="option in cycleTypeOptions"
-                :key="option.value"
-                :label="option.label"
-                :value="option.value"
-              />
-            </el-select>
-          </el-form-item>
           <el-form-item label="采样人员" required>
             <el-select
               v-model="planForm.samplerId"
@@ -535,6 +532,109 @@
                 :value="item.id"
               />
             </el-select>
+          </el-form-item>
+          <el-form-item class="plan-form-new-row" label="检测套餐" required>
+            <el-select
+              v-model="planForm.detectionTypeId"
+              filterable
+              style="width: 100%"
+              placeholder="请选择检测套餐"
+              @change="handlePlanDetectionTypeChange"
+            >
+              <el-option
+                v-for="item in detectionProjectOptions"
+                :key="item.id"
+                :label="item.typeName"
+                :value="item.id"
+              />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="周期类型" required>
+            <el-select v-model="planForm.cycleType" style="width: 100%">
+              <el-option
+                v-for="option in cycleTypeOptions"
+                :key="option.value"
+                :label="option.label"
+                :value="option.value"
+              />
+            </el-select>
+          </el-form-item>
+          <el-form-item v-if="planForm.detectionTypeId" class="plan-form-span-2" label="套餐参数" required>
+            <div class="login-config-panel">
+              <div class="login-config-panel__summary">
+                <span class="binding-editor__chip">
+                  已选参数<strong>{{ planDetectionConfigRows.length }}</strong>
+                </span>
+                <span class="login-config-panel__note">
+                  检测套餐参数在采样计划中确认，派发任务和样品登录都会沿用这份明细。
+                </span>
+                <el-button v-permission="'samplingPlan:write'" type="primary" plain size="small" @click="appendPlanConfigRow">新增参数</el-button>
+              </div>
+              <el-table
+                class="login-config-table"
+                :data="planDetectionConfigRows"
+                size="small"
+                max-height="360"
+                border
+              >
+                <el-table-column label="检测参数名称" min-width="220">
+                  <template #default="{ row, $index }">
+                    <el-select
+                      v-model="row.parameterId"
+                      placeholder="请选择检测参数"
+                      style="width: 100%"
+                      @change="(value) => handlePlanConfigParameterChange(row, value)"
+                    >
+                      <el-option
+                        v-for="option in getPlanConfigParameterOptions($index)"
+                        :key="option.id"
+                        :label="option.parameterName"
+                        :value="option.id"
+                      />
+                    </el-select>
+                  </template>
+                </el-table-column>
+                <el-table-column label="标准范围" min-width="150">
+                  <template #default="{ row }">
+                    {{ formatStandardRange(row.standardMin, row.standardMax) }}
+                  </template>
+                </el-table-column>
+                <el-table-column prop="unit" label="单位" width="100">
+                  <template #default="{ row }">{{ row.unit || '-' }}</template>
+                </el-table-column>
+                <el-table-column prop="referenceStandard" label="检测标准" min-width="220" show-overflow-tooltip>
+                  <template #default="{ row }">{{ row.referenceStandard || '-' }}</template>
+                </el-table-column>
+                <el-table-column label="检测方法" min-width="280">
+                  <template #default="{ row }">
+                    <el-select
+                      v-model="row.methodId"
+                      placeholder="请选择检测方法"
+                      style="width: 100%"
+                      :disabled="!row.parameterId || !row.methodOptions.length"
+                      @change="(value) => handlePlanConfigMethodChange(row, value)"
+                    >
+                      <el-option
+                        v-for="method in row.methodOptions"
+                        :key="method.id"
+                        :label="method.methodName"
+                        :value="method.id"
+                      />
+                    </el-select>
+                  </template>
+                </el-table-column>
+                <el-table-column label="操作" width="90" class-name="cell-center" header-cell-class-name="cell-center">
+                  <template #default="{ $index }">
+                    <div class="table-action-row">
+                      <el-button v-permission="'samplingPlan:write'" link type="danger" @click="removePlanConfigRow($index)">删除</el-button>
+                    </div>
+                  </template>
+                </el-table-column>
+              </el-table>
+              <div v-if="!planDetectionConfigRows.length" class="empty-block">
+                当前套餐参数已清空，可点击“新增参数”补充本计划需要检测的参数与方法。
+              </div>
+            </div>
           </el-form-item>
           <el-form-item label="开始时间" required>
             <el-date-picker
@@ -792,37 +892,19 @@
           </el-form-item>
           <el-form-item class="login-form-span-2 login-form-half-row" label="检测套餐" :required="!isLoginReadonly">
             <el-input
-              v-if="isLoginReadonly"
               :model-value="loginForm.detectionTypeName || loginForm.detectionItems || '-'"
               readonly
             />
-            <el-select
-              v-else
-              v-model="loginForm.detectionTypeId"
-              clearable
-              filterable
-              placeholder="请选择本次样品对应的检测套餐"
-              style="width: 100%"
-              @change="handleLoginDetectionTypeChange"
-            >
-              <el-option
-                v-for="item in detectionProjectOptions"
-                :key="item.id"
-                :label="item.typeName"
-                :value="item.id"
-              />
-            </el-select>
           </el-form-item>
-          <el-form-item v-if="loginForm.detectionTypeId" class="login-form-span-2" label="套餐参数" :required="!isLoginReadonly">
+          <el-form-item v-if="loginForm.detectionTypeId" class="login-form-span-2" label="检测参数明细">
             <div class="login-config-panel">
               <div class="login-config-panel__summary">
                 <span class="binding-editor__chip">
-                  已选参数<strong>{{ loginDetectionConfigRows.length }}</strong>
+                  参数数量<strong>{{ loginDetectionConfigRows.length }}</strong>
                 </span>
                 <span class="login-config-panel__note">
                   {{ loginConfigPanelNote }}
                 </span>
-                <el-button v-if="!isLoginReadonly" v-permission="'sample:write'" type="primary" plain size="small" @click="appendLoginConfigRow">新增参数</el-button>
               </div>
               <el-table
                 class="login-config-table"
@@ -832,22 +914,8 @@
                 border
               >
                 <el-table-column label="检测参数名称" min-width="180">
-                  <template #default="{ row, $index }">
-                    <span v-if="isLoginReadonly">{{ row.parameterName || '-' }}</span>
-                    <el-select
-                      v-else
-                      v-model="row.parameterId"
-                      placeholder="请选择检测参数"
-                      style="width: 100%"
-                      @change="(value) => handleLoginConfigParameterChange(row, value)"
-                    >
-                      <el-option
-                        v-for="option in getLoginConfigParameterOptions($index)"
-                        :key="option.id"
-                        :label="option.parameterName"
-                        :value="option.id"
-                      />
-                    </el-select>
+                  <template #default="{ row }">
+                    <span>{{ row.parameterName || '-' }}</span>
                   </template>
                 </el-table-column>
                 <el-table-column label="标准范围" min-width="140">
@@ -863,34 +931,12 @@
                 </el-table-column>
                 <el-table-column label="检测方法" min-width="220">
                   <template #default="{ row }">
-                    <span v-if="isLoginReadonly">{{ row.methodName || '-' }}</span>
-                    <el-select
-                      v-else
-                      v-model="row.methodId"
-                      placeholder="请选择检测方法"
-                      style="width: 100%"
-                      :disabled="!row.parameterId || !row.methodOptions.length"
-                      @change="(value) => handleLoginConfigMethodChange(row, value)"
-                    >
-                      <el-option
-                        v-for="method in row.methodOptions"
-                        :key="method.id"
-                        :label="method.methodName"
-                        :value="method.id"
-                      />
-                    </el-select>
-                  </template>
-                </el-table-column>
-                <el-table-column v-if="!isLoginReadonly" label="操作" width="90" class-name="cell-center" header-cell-class-name="cell-center">
-                  <template #default="{ $index }">
-                    <div class="table-action-row">
-                      <el-button v-permission="'sample:write'" link type="danger" @click="removeLoginConfigRow($index)">删除</el-button>
-                    </div>
+                    <span>{{ row.methodName || '-' }}</span>
                   </template>
                 </el-table-column>
               </el-table>
               <div v-if="!loginDetectionConfigRows.length" class="empty-block">
-                {{ isLoginReadonly ? '当前样品未登记套餐参数明细。' : '当前套餐参数已被临时清空，可点击“新增参数”按需补充本次样品的检测参数与检测方法。' }}
+                当前任务未携带套餐参数明细，请检查采样计划中的检测套餐配置。
               </div>
             </div>
           </el-form-item>
@@ -1004,7 +1050,7 @@
       v-model="taskDetailDialogVisible"
       align-center
       title="采样任务详情"
-      width="600px"
+      width="960px"
       top="5vh"
       :lock-scroll="true"
       destroy-on-close
@@ -1018,10 +1064,38 @@
         <div><span>采样封签号</span><strong>{{ taskDetail?.sealNo || '-' }}</strong></div>
         <div><span>点位名称</span><strong>{{ taskDetail?.pointName || taskDetail?.point_name || '-' }}</strong></div>
         <div><span>采样人员</span><strong>{{ taskDetail?.samplerName || taskDetail?.sampler_name || '-' }}</strong></div>
+        <div><span>检测套餐</span><strong>{{ taskDetail?.detectionTypeName || taskDetail?.detection_type_name || taskDetail?.detectionItems || '-' }}</strong></div>
         <div><span>任务状态</span><strong>{{ getEnumLabel(taskStatusLabelMap, taskDetail?.taskStatus || taskDetail?.task_status) }}</strong></div>
         <div><span>完成时间</span><strong>{{ taskDetail?.finishedTime || taskDetail?.finished_time || '-' }}</strong></div>
         <div><span>天气</span><strong>{{ taskDetail?.weather || '-' }}</strong></div>
         <div><span>温度</span><strong>{{ taskDetail?.temperature || '-' }}</strong></div>
+      </div>
+      <div class="task-detail-block">
+        <span>检测参数明细</span>
+        <el-table
+          v-if="taskDetailDetectionConfigRows.length"
+          class="login-config-table task-detail-config-table"
+          :data="taskDetailDetectionConfigRows"
+          size="small"
+          border
+        >
+          <el-table-column prop="parameterName" label="检测参数" min-width="180" />
+          <el-table-column label="标准范围" min-width="150">
+            <template #default="{ row }">
+              {{ formatStandardRange(row.standardMin, row.standardMax) }}
+            </template>
+          </el-table-column>
+          <el-table-column prop="unit" label="单位" width="100">
+            <template #default="{ row }">{{ row.unit || '-' }}</template>
+          </el-table-column>
+          <el-table-column prop="referenceStandard" label="检测标准" min-width="220" show-overflow-tooltip>
+            <template #default="{ row }">{{ row.referenceStandard || '-' }}</template>
+          </el-table-column>
+          <el-table-column prop="methodName" label="检测方法" min-width="240" show-overflow-tooltip>
+            <template #default="{ row }">{{ row.methodName || '-' }}</template>
+          </el-table-column>
+        </el-table>
+        <p v-else>暂无检测参数明细</p>
       </div>
       <div class="task-detail-block">
         <span>现场指标</span>
@@ -1237,13 +1311,14 @@ const taskDetailPhotos = computed(() => taskDetailPhotoList.value)
 const taskDetailPhotoPreviewUrls = computed(() =>
   taskDetailPhotoList.value.map((item) => item.previewUrl).filter(Boolean)
 )
+const taskDetailDetectionConfigRows = computed(() => parseTaskDetectionConfigSnapshot(taskDetail.value?.detectionConfigSnapshot))
 
 const isLoginReadonly = computed(() => loginDialogMode.value === 'view')
 const loginDialogTitle = computed(() => isLoginReadonly.value ? '样品登记明细' : '样品登录')
 const loginConfigPanelNote = computed(() => (
   isLoginReadonly.value
-    ? '当前仅展示该样品登记时保存的套餐参数与检测方法明细，不可在此窗口中修改。'
-    : '选择检测套餐后，系统会带出对应检测参数；你可以临时增删参数并调整方法，仅对本次样品登录生效，不会改动原检测套餐。'
+    ? '当前仅展示该样品登记时保存的检测参数与检测方法明细，不可在此窗口中修改。'
+    : '检测套餐由采样计划确定，样品登录只读展示任务携带的检测参数与检测方法明细。'
 ))
 
 const planForm = reactive({
@@ -1257,6 +1332,9 @@ const planForm = reactive({
   samplerName: '',
   samplingType: routineSamplingType,
   sampleType: '',
+  detectionTypeId: null,
+  detectionTypeName: '',
+  detectionConfigItems: [],
   cycleType: dailyCycleType,
   remark: ''
 })
@@ -2096,6 +2174,9 @@ function resetPlanForm() {
   planForm.samplerName = ''
   planForm.samplingType = routineSamplingType
   planForm.sampleType = ''
+  planForm.detectionTypeId = null
+  planForm.detectionTypeName = ''
+  planForm.detectionConfigItems = []
   planForm.cycleType = dailyCycleType
   planForm.remark = ''
 }
@@ -2105,7 +2186,7 @@ async function openPlanDialog() {
   planForm.planName = `采样计划-${dayjs().format('MMDD-HHmm')}`
   planForm.startTime = dayjs().format('YYYY-MM-DD HH:mm:ss')
   planForm.endTime = dayjs().add(7, 'day').format('YYYY-MM-DD HH:mm:ss')
-  await Promise.all([loadMonitoringPoints(), loadSamplers()])
+  await Promise.all([loadMonitoringPoints(), loadSamplers(), loadDetectionProjects()])
   if (monitoringPointOptions.value.length) {
     handlePlanPointChange(monitoringPointOptions.value[0].id)
   } else {
@@ -2115,7 +2196,7 @@ async function openPlanDialog() {
 }
 
 async function openPlanEditDialog(row) {
-  await Promise.all([loadMonitoringPoints(), loadSamplers()])
+  await Promise.all([loadMonitoringPoints(), loadSamplers(), loadDetectionProjects()])
   editingPlanId.value = row.id
   planForm.planName = row.planName || ''
   planForm.pointSource = row.pointId ? 'EXISTING' : 'CUSTOM'
@@ -2127,6 +2208,12 @@ async function openPlanEditDialog(row) {
   planForm.samplerName = row.samplerName || ''
   planForm.samplingType = row.samplingType || routineSamplingType
   planForm.sampleType = row.sampleType || ''
+  planForm.detectionTypeId = row.detectionTypeId || null
+  planForm.detectionTypeName = row.detectionTypeName || ''
+  planForm.detectionConfigItems = parseSampleDetectionConfigSnapshot(row.detectionConfigSnapshot)
+  if (!planForm.detectionConfigItems.length && planForm.detectionTypeId) {
+    planForm.detectionConfigItems = buildLoginDetectionConfigItems(getDetectionTypeById(planForm.detectionTypeId))
+  }
   planForm.cycleType = row.cycleType || dailyCycleType
   planForm.remark = row.remark || ''
   if (planForm.pointSource === 'EXISTING' && planForm.pointId) {
@@ -2152,6 +2239,13 @@ function handlePlanPointChange(pointId) {
   planForm.pointName = point?.pointName || ''
 }
 
+function handlePlanDetectionTypeChange(typeId) {
+  const detectionType = getDetectionTypeById(typeId)
+  planForm.detectionTypeId = detectionType?.id || null
+  planForm.detectionTypeName = detectionType?.typeName || ''
+  planForm.detectionConfigItems = buildLoginDetectionConfigItems(detectionType)
+}
+
 function buildPlanPayload() {
   return {
     planName: planForm.planName?.trim() || '',
@@ -2163,6 +2257,18 @@ function buildPlanPayload() {
     samplerName: planForm.samplerName?.trim() || '',
     samplingType: planForm.samplingType || routineSamplingType,
     sampleType: planForm.sampleType || '',
+    detectionTypeId: planForm.detectionTypeId,
+    detectionTypeName: planForm.detectionTypeName?.trim() || '',
+    detectionConfigItems: planDetectionConfigRows.value.map((item) => ({
+      parameterId: item.parameterId,
+      parameterName: item.parameterName,
+      unit: item.unit,
+      standardMin: item.standardMin,
+      standardMax: item.standardMax,
+      referenceStandard: item.referenceStandard,
+      methodId: item.methodId,
+      methodName: item.methodName
+    })),
     cycleType: planForm.cycleType || dailyCycleType,
     remark: planForm.remark?.trim() || ''
   }
@@ -2180,6 +2286,14 @@ async function submitPlanForm() {
   }
   if (!payload.samplerId || !payload.samplerName) {
     ElMessage.warning('请选择采样人员')
+    return
+  }
+  if (!payload.detectionTypeId || !payload.detectionTypeName) {
+    ElMessage.warning('请选择检测套餐')
+    return
+  }
+  if (!payload.detectionConfigItems.length || payload.detectionConfigItems.some((item) => !item.parameterId || !item.methodId)) {
+    ElMessage.warning('请选择检测套餐对应的检测参数与检测方法')
     return
   }
   if (planForm.pointSource === 'EXISTING' && !payload.pointId) {
@@ -2478,6 +2592,14 @@ function formatStandardRange(min, max, unit) {
   return '-'
 }
 
+function formatTaskDetectionParameterSummary(task) {
+  const rows = parseTaskDetectionConfigSnapshot(task?.detectionConfigSnapshot)
+  if (!rows.length) {
+    return task?.detectionTypeName || task?.detectionItems || '-'
+  }
+  return rows.map((item) => item.parameterName).filter(Boolean).join('、')
+}
+
 function getDetectionTypeById(typeId) {
   return detectionProjectOptions.value.find((item) => String(item.id) === String(typeId || '')) || null
 }
@@ -2533,7 +2655,7 @@ function buildLoginConfigRowFromSnapshot(item) {
   const parameterId = String(item?.parameterId || '').trim()
   const parameter = detectionParameterOptions.value.find((option) => String(option.id) === parameterId)
   const methodId = String(item?.methodId || '').trim()
-  let methodOptions = getLoginMethodOptionsByParameter(parameterId)
+  let methodOptions = getDetectionConfigMethodOptionsByParameter(parameterId)
   if (methodId && !methodOptions.some((option) => option.id === methodId)) {
     methodOptions = [
       ...methodOptions,
@@ -2562,14 +2684,21 @@ function parseSampleDetectionConfigSnapshot(snapshot) {
     .filter((item) => item.parameterId || item.parameterName || item.methodId || item.methodName)
 }
 
+function parseTaskDetectionConfigSnapshot(snapshot) {
+  return parseBindingJson(snapshot)
+    .map((item) => buildLoginConfigRowFromSnapshot(item))
+    .filter((item) => item.parameterId || item.parameterName || item.methodId || item.methodName)
+}
+
 const loginDetectionConfigRows = computed(() => loginForm.detectionConfigItems)
-const enabledLoginParameterOptions = computed(() => (
+const planDetectionConfigRows = computed(() => planForm.detectionConfigItems)
+const enabledDetectionParameterOptions = computed(() => (
   detectionParameterOptions.value
     .filter((item) => item.enabled === 1)
     .sort((left, right) => String(left.parameterName || '').localeCompare(String(right.parameterName || ''), 'zh-CN'))
 ))
 
-function createEmptyLoginConfigRow() {
+function createEmptyDetectionConfigRow() {
   return {
     parameterId: '',
     parameterName: '',
@@ -2583,7 +2712,7 @@ function createEmptyLoginConfigRow() {
   }
 }
 
-function getLoginMethodOptionsByParameter(parameterId) {
+function getDetectionConfigMethodOptionsByParameter(parameterId) {
   if (!parameterId) {
     return []
   }
@@ -2595,24 +2724,32 @@ function getLoginMethodOptionsByParameter(parameterId) {
     }))
 }
 
-function getLoginConfigParameterOptions(currentIndex) {
+function getPlanConfigParameterOptions(currentIndex) {
   const selectedParameterIds = new Set(
-    loginDetectionConfigRows.value
+    planDetectionConfigRows.value
       .map((item, index) => index === currentIndex ? '' : String(item.parameterId || '').trim())
       .filter(Boolean)
   )
-  return enabledLoginParameterOptions.value.filter((item) => !selectedParameterIds.has(String(item.id)))
+  return enabledDetectionParameterOptions.value.filter((item) => !selectedParameterIds.has(String(item.id)))
 }
 
-function appendLoginConfigRow() {
-  loginForm.detectionConfigItems.push(createEmptyLoginConfigRow())
+function appendPlanConfigRow() {
+  planForm.detectionConfigItems.push(createEmptyDetectionConfigRow())
 }
 
-function removeLoginConfigRow(index) {
-  loginForm.detectionConfigItems.splice(index, 1)
+function removePlanConfigRow(index) {
+  planForm.detectionConfigItems.splice(index, 1)
 }
 
-function handleLoginConfigParameterChange(row, parameterId) {
+function handlePlanConfigParameterChange(row, parameterId) {
+  applyDetectionConfigParameterChange(row, parameterId)
+}
+
+function handlePlanConfigMethodChange(row, methodId) {
+  applyDetectionConfigMethodChange(row, methodId)
+}
+
+function applyDetectionConfigParameterChange(row, parameterId) {
   const parameter = detectionParameterOptions.value.find((item) => String(item.id) === String(parameterId || ''))
   row.parameterId = String(parameterId || '')
   row.parameterName = parameter?.parameterName || ''
@@ -2620,7 +2757,7 @@ function handleLoginConfigParameterChange(row, parameterId) {
   row.standardMin = parameter?.standardMin ?? null
   row.standardMax = parameter?.standardMax ?? null
   row.referenceStandard = parameter?.referenceStandard || ''
-  row.methodOptions = getLoginMethodOptionsByParameter(parameterId)
+  row.methodOptions = getDetectionConfigMethodOptionsByParameter(parameterId)
   const nextMethod = row.methodOptions.find((item) => item.id === row.methodId) || row.methodOptions[0] || null
   row.methodId = nextMethod?.id || ''
   row.methodName = nextMethod?.methodName || ''
@@ -2970,22 +3107,19 @@ function applyTaskToLoginForm(task) {
   loginForm.pointName = task.pointName || ''
   loginForm.sampleType = task.sampleType || ''
   loginForm.qualityControlType = ''
-  loginForm.detectionItems = parseDetectionItemsText(task.detectionItems)
-  loginForm.detectionTypeId = null
-  loginForm.detectionTypeName = ''
-  loginForm.detectionConfigItems = []
+  loginForm.detectionItems = parseDetectionItemsText(task.detectionTypeName || task.detectionItems)
+  loginForm.detectionTypeId = task.detectionTypeId || null
+  loginForm.detectionTypeName = task.detectionTypeName || task.detectionItems || ''
+  loginForm.detectionConfigItems = parseSampleDetectionConfigSnapshot(task.detectionConfigSnapshot)
+  if (!loginForm.detectionConfigItems.length && loginForm.detectionTypeId) {
+    loginForm.detectionConfigItems = buildLoginDetectionConfigItems(getDetectionTypeById(loginForm.detectionTypeId))
+  }
   loginForm.samplingTime = task.samplingTime || dayjs().format('YYYY-MM-DD HH:mm:ss')
   loginForm.samplerId = task.samplerId || null
   loginForm.samplerName = task.samplerName || ''
   loginForm.weather = ''
   loginForm.storageCondition = ''
   loginForm.remark = task.remark || ''
-
-  const preferredType = detectionProjectOptions.value.find((item) => item.typeName === loginForm.detectionItems)
-    || detectionProjectOptions.value[0]
-  if (preferredType) {
-    handleLoginDetectionTypeChange(preferredType.id)
-  }
 }
 
 function resetLoginForm() {
@@ -3082,15 +3216,7 @@ function handleLoginTaskChange(taskId) {
   applyTaskToLoginForm(task)
 }
 
-function handleLoginDetectionTypeChange(typeId) {
-  const detectionType = getDetectionTypeById(typeId)
-  loginForm.detectionTypeId = detectionType?.id || null
-  loginForm.detectionTypeName = detectionType?.typeName || ''
-  loginForm.detectionItems = detectionType?.typeName || ''
-  loginForm.detectionConfigItems = buildLoginDetectionConfigItems(detectionType)
-}
-
-function handleLoginConfigMethodChange(row, methodId) {
+function applyDetectionConfigMethodChange(row, methodId) {
   const method = (row.methodOptions || []).find((item) => item.id === String(methodId || ''))
   row.methodId = String(methodId || '')
   row.methodName = method?.methodName || ''
@@ -3429,6 +3555,10 @@ watch(() => route.fullPath, () => {
   width: min(1180px, calc(100vw - 40px));
 }
 
+:deep(.sampling-plan-form-dialog) {
+  width: min(1080px, calc(100vw - 40px));
+}
+
 :deep(.sample-login-dialog .el-dialog__body) {
   max-height: calc(100vh - 150px);
   overflow-y: auto;
@@ -3518,6 +3648,10 @@ watch(() => route.fullPath, () => {
   grid-column: 1 / -1;
 }
 
+.plan-form-new-row {
+  grid-column: 1 / span 1;
+}
+
 .scene-copy p {
   margin: 0;
 }
@@ -3595,8 +3729,16 @@ watch(() => route.fullPath, () => {
 }
 
 :deep(.task-detail-dialog .el-dialog__body) {
-  max-height: 50vh;
+  max-height: 70vh;
   overflow-y: auto;
+}
+
+:deep(.task-detail-dialog) {
+  width: min(960px, calc(100vw - 40px));
+}
+
+.task-detail-config-table {
+  margin-top: 8px;
 }
 
 .map-selector {

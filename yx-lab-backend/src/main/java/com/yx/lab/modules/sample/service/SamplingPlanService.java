@@ -3,11 +3,22 @@ package com.yx.lab.modules.sample.service;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yx.lab.common.constant.LabWorkflowConstants;
 import com.yx.lab.common.exception.BusinessException;
 import com.yx.lab.common.model.PageResult;
 import com.yx.lab.common.security.DataScopeHelper;
 import com.yx.lab.common.util.PageUtils;
+import com.yx.lab.modules.detection.dto.DetectionTypeParameterMethodBindingItem;
+import com.yx.lab.modules.detection.entity.DetectionMethod;
+import com.yx.lab.modules.detection.entity.DetectionParameter;
+import com.yx.lab.modules.detection.entity.DetectionType;
+import com.yx.lab.modules.detection.mapper.DetectionMethodMapper;
+import com.yx.lab.modules.detection.mapper.DetectionParameterMapper;
+import com.yx.lab.modules.detection.mapper.DetectionTypeMapper;
+import com.yx.lab.modules.sample.dto.SampleDetectionConfigItem;
 import com.yx.lab.modules.sample.dto.SamplingPlanDispatchCommand;
 import com.yx.lab.modules.sample.dto.SamplingPlanQuery;
 import com.yx.lab.modules.sample.dto.SamplingPlanSaveCommand;
@@ -25,10 +36,15 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -38,6 +54,14 @@ public class SamplingPlanService {
     private final SamplingPlanMapper samplingPlanMapper;
 
     private final SamplingTaskMapper samplingTaskMapper;
+
+    private final DetectionTypeMapper detectionTypeMapper;
+
+    private final DetectionParameterMapper detectionParameterMapper;
+
+    private final DetectionMethodMapper detectionMethodMapper;
+
+    private final ObjectMapper objectMapper;
 
     private final DataScopeHelper dataScopeHelper;
 
@@ -416,6 +440,10 @@ public class SamplingPlanService {
         task.setSealNo(null);
         task.setSampleRegisterStatus(LabWorkflowConstants.SampleRegisterStatus.UNREGISTERED);
         task.setSampleId(null);
+        task.setDetectionItems(plan.getDetectionTypeName());
+        task.setDetectionTypeId(plan.getDetectionTypeId());
+        task.setDetectionTypeName(plan.getDetectionTypeName());
+        task.setDetectionConfigSnapshot(resolvePlanDetectionConfigSnapshot(plan));
         task.setTaskStatus(LabWorkflowConstants.SamplingTaskStatus.PENDING);
         task.setRemark(buildTaskRemark(plan, manualDispatch));
         samplingTaskMapper.insert(task);
@@ -433,6 +461,11 @@ public class SamplingPlanService {
         plan.setSamplerName(StrUtil.trim(command.getSamplerName()));
         plan.setSamplingType(StrUtil.trim(command.getSamplingType()));
         plan.setSampleType(StrUtil.trim(command.getSampleType()));
+        DetectionType detectionType = requireEnabledDetectionType(command.getDetectionTypeId(), command.getDetectionTypeName());
+        plan.setDetectionTypeId(detectionType.getId());
+        plan.setDetectionTypeName(detectionType.getTypeName());
+        plan.setDetectionConfigSnapshot(serializeDetectionConfigItems(
+                normalizeDetectionConfigItems(command.getDetectionConfigItems(), detectionType)));
         plan.setCycleType(StrUtil.trim(command.getCycleType()));
         plan.setPlanStatus(StrUtil.trim(command.getPlanStatus()));
         plan.setRemark(StrUtil.trim(command.getRemark()));
@@ -448,6 +481,12 @@ public class SamplingPlanService {
         if (StrUtil.isBlank(plan.getCycleType())) {
             throw new BusinessException("采样计划周期类型不能为空");
         }
+        if (plan.getDetectionTypeId() == null || StrUtil.isBlank(plan.getDetectionTypeName())) {
+            throw new BusinessException("采样计划必须选择检测套餐");
+        }
+        if (parseDetectionConfigSnapshot(plan.getDetectionConfigSnapshot()).isEmpty()) {
+            throw new BusinessException("采样计划必须配置检测套餐参数");
+        }
         if (!LabWorkflowConstants.CYCLE_TYPES.contains(plan.getCycleType())) {
             throw new BusinessException("采样计划周期类型不合法");
         }
@@ -456,6 +495,204 @@ public class SamplingPlanService {
         }
         if (LabWorkflowConstants.isRecurringCycle(plan.getCycleType()) && plan.getEndTime() == null) {
             throw new BusinessException("周期计划必须设置截止时间");
+        }
+    }
+
+    private DetectionType requireEnabledDetectionType(Long detectionTypeId, String submittedTypeName) {
+        if (detectionTypeId == null) {
+            throw new BusinessException("请选择检测套餐");
+        }
+        DetectionType detectionType = detectionTypeMapper.selectById(detectionTypeId);
+        if (detectionType == null) {
+            throw new BusinessException("检测套餐不存在");
+        }
+        if (!Integer.valueOf(1).equals(detectionType.getEnabled())) {
+            throw new BusinessException("当前检测套餐已停用，不能用于采样计划");
+        }
+        if (StrUtil.isNotBlank(submittedTypeName)
+                && !StrUtil.equals(StrUtil.trim(submittedTypeName), detectionType.getTypeName())) {
+            throw new BusinessException("检测套餐名称与配置不一致，请刷新后重试");
+        }
+        return detectionType;
+    }
+
+    private String buildDetectionConfigSnapshot(DetectionType detectionType) {
+        return serializeDetectionConfigItems(buildDetectionConfigItems(detectionType));
+    }
+
+    private String resolvePlanDetectionConfigSnapshot(SamplingPlan plan) {
+        if (plan == null) {
+            throw new BusinessException("采样计划不存在");
+        }
+        if (!parseDetectionConfigSnapshot(plan.getDetectionConfigSnapshot()).isEmpty()) {
+            return plan.getDetectionConfigSnapshot();
+        }
+        return buildDetectionConfigSnapshot(requireEnabledDetectionType(plan.getDetectionTypeId(), plan.getDetectionTypeName()));
+    }
+
+    private List<SampleDetectionConfigItem> buildDetectionConfigItems(DetectionType detectionType) {
+        if (detectionType == null) {
+            throw new BusinessException("请选择检测套餐");
+        }
+        List<Long> parameterIds = parseIdList(detectionType.getParameterIds());
+        if (parameterIds.isEmpty()) {
+            throw new BusinessException("当前检测套餐未配置检测参数，不能用于采样计划");
+        }
+
+        Map<Long, DetectionParameter> parameterMap = detectionParameterMapper.selectList(
+                        new LambdaQueryWrapper<DetectionParameter>().in(DetectionParameter::getId, parameterIds))
+                .stream()
+                .collect(Collectors.toMap(DetectionParameter::getId, item -> item, (left, right) -> left, LinkedHashMap::new));
+
+        Map<Long, Long> methodIdByParameterId = parseBindingItems(detectionType.getParameterMethodBindings()).stream()
+                .filter(item -> item != null && item.getParameterId() != null && item.getMethodIds() != null && !item.getMethodIds().isEmpty())
+                .collect(Collectors.toMap(
+                        DetectionTypeParameterMethodBindingItem::getParameterId,
+                        item -> item.getMethodIds().get(0),
+                        (left, right) -> left,
+                        LinkedHashMap::new));
+
+        List<Long> methodIds = methodIdByParameterId.values().stream()
+                .filter(id -> id != null)
+                .distinct()
+                .collect(Collectors.toList());
+        Map<Long, DetectionMethod> methodMap = methodIds.isEmpty()
+                ? Collections.emptyMap()
+                : detectionMethodMapper.selectList(new LambdaQueryWrapper<DetectionMethod>().in(DetectionMethod::getId, methodIds))
+                .stream()
+                .collect(Collectors.toMap(DetectionMethod::getId, item -> item, (left, right) -> left, LinkedHashMap::new));
+
+        return parameterIds.stream()
+                .map(parameterId -> buildSnapshotItem(parameterId, parameterMap.get(parameterId), methodMap.get(methodIdByParameterId.get(parameterId))))
+                .collect(Collectors.toList());
+    }
+
+    private List<SampleDetectionConfigItem> normalizeDetectionConfigItems(List<SampleDetectionConfigItem> submittedItems,
+                                                                          DetectionType detectionType) {
+        List<SampleDetectionConfigItem> items = submittedItems == null || submittedItems.isEmpty()
+                ? buildDetectionConfigItems(detectionType)
+                : submittedItems;
+        if (items.isEmpty()) {
+            throw new BusinessException("请选择检测套餐对应的检测参数与检测方法");
+        }
+
+        List<Long> parameterIds = items.stream()
+                .map(SampleDetectionConfigItem::getParameterId)
+                .filter(id -> id != null)
+                .distinct()
+                .collect(Collectors.toList());
+        if (parameterIds.size() != items.size()) {
+            throw new BusinessException("检测套餐参数明细存在空项或重复项");
+        }
+
+        Map<Long, DetectionParameter> parameterMap = detectionParameterMapper.selectList(
+                        new LambdaQueryWrapper<DetectionParameter>().in(DetectionParameter::getId, parameterIds))
+                .stream()
+                .collect(Collectors.toMap(DetectionParameter::getId, item -> item, (left, right) -> left, LinkedHashMap::new));
+
+        List<Long> methodIds = items.stream()
+                .map(SampleDetectionConfigItem::getMethodId)
+                .filter(id -> id != null)
+                .distinct()
+                .collect(Collectors.toList());
+        if (methodIds.size() != items.size()) {
+            throw new BusinessException("请为每个检测参数选择对应的检测方法");
+        }
+        Map<Long, DetectionMethod> methodMap = detectionMethodMapper.selectList(
+                        new LambdaQueryWrapper<DetectionMethod>().in(DetectionMethod::getId, methodIds))
+                .stream()
+                .collect(Collectors.toMap(DetectionMethod::getId, item -> item, (left, right) -> left, LinkedHashMap::new));
+
+        return items.stream()
+                .map(item -> buildSnapshotItem(item.getParameterId(), parameterMap.get(item.getParameterId()), methodMap.get(item.getMethodId())))
+                .collect(Collectors.toList());
+    }
+
+    private String serializeDetectionConfigItems(List<SampleDetectionConfigItem> snapshotItems) {
+        try {
+            return objectMapper.writeValueAsString(snapshotItems);
+        } catch (JsonProcessingException ex) {
+            throw new BusinessException("检测套餐参数快照生成失败");
+        }
+    }
+
+    private List<SampleDetectionConfigItem> parseDetectionConfigSnapshot(String snapshotText) {
+        if (StrUtil.isBlank(snapshotText)) {
+            return Collections.emptyList();
+        }
+        try {
+            List<SampleDetectionConfigItem> items = objectMapper.readValue(
+                    snapshotText,
+                    new TypeReference<List<SampleDetectionConfigItem>>() {
+                    }
+            );
+            if (items == null) {
+                return Collections.emptyList();
+            }
+            return items.stream()
+                    .filter(item -> item != null && item.getParameterId() != null && item.getMethodId() != null)
+                    .collect(Collectors.toList());
+        } catch (JsonProcessingException ex) {
+            throw new BusinessException("采样计划检测套餐参数快照格式错误");
+        }
+    }
+
+    private SampleDetectionConfigItem buildSnapshotItem(Long parameterId,
+                                                        DetectionParameter parameter,
+                                                        DetectionMethod method) {
+        if (parameter == null || !Integer.valueOf(1).equals(parameter.getEnabled())) {
+            throw new BusinessException("检测套餐包含不存在或已停用的检测参数：" + parameterId);
+        }
+        if (method == null || !Integer.valueOf(1).equals(method.getEnabled())) {
+            throw new BusinessException("检测套餐参数“" + parameter.getParameterName() + "”未配置可用检测方法");
+        }
+        if (!parameterId.equals(method.getParameterId())) {
+            throw new BusinessException("检测套餐参数“" + parameter.getParameterName() + "”绑定的检测方法不匹配");
+        }
+
+        SampleDetectionConfigItem item = new SampleDetectionConfigItem();
+        item.setParameterId(parameter.getId());
+        item.setParameterName(parameter.getParameterName());
+        item.setUnit(parameter.getUnit());
+        item.setStandardMin(parameter.getStandardMin());
+        item.setStandardMax(parameter.getStandardMax());
+        item.setReferenceStandard(parameter.getReferenceStandard());
+        item.setMethodId(method.getId());
+        item.setMethodName(method.getMethodName());
+        item.setMethodBasis(method.getMethodBasis());
+        return item;
+    }
+
+    private List<Long> parseIdList(String value) {
+        if (StrUtil.isBlank(value)) {
+            return Collections.emptyList();
+        }
+        return Arrays.stream(value.split(","))
+                .map(StrUtil::trim)
+                .filter(StrUtil::isNotBlank)
+                .map(item -> {
+                    try {
+                        return Long.valueOf(item);
+                    } catch (NumberFormatException ex) {
+                        throw new BusinessException("检测套餐参数配置格式错误：" + item);
+                    }
+                })
+                .collect(Collectors.toList());
+    }
+
+    private List<DetectionTypeParameterMethodBindingItem> parseBindingItems(String value) {
+        if (StrUtil.isBlank(value)) {
+            return Collections.emptyList();
+        }
+        try {
+            List<DetectionTypeParameterMethodBindingItem> items = objectMapper.readValue(
+                    value,
+                    new TypeReference<List<DetectionTypeParameterMethodBindingItem>>() {
+                    }
+            );
+            return items == null ? Collections.emptyList() : items;
+        } catch (JsonProcessingException ex) {
+            throw new BusinessException("检测套餐参数方法配置格式错误");
         }
     }
 

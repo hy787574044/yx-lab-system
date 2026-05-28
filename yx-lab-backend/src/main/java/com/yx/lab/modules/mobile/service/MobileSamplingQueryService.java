@@ -142,6 +142,9 @@ public class MobileSamplingQueryService {
         vo.setSampleType(task.getSampleType());
         vo.setSampleTypeDesc(LabWorkflowConstants.getSampleTypeLabel(task.getSampleType()));
         vo.setDetectionItems(task.getDetectionItems());
+        vo.setDetectionTypeId(task.getDetectionTypeId());
+        vo.setDetectionTypeName(task.getDetectionTypeName());
+        vo.setDetectionConfigSnapshot(task.getDetectionConfigSnapshot());
         vo.setTaskStatus(task.getTaskStatus());
         vo.setTaskStatusDesc(LabWorkflowConstants.getSamplingTaskStatusLabel(task.getTaskStatus()));
         vo.setTaskSealNo(task.getSealNo());

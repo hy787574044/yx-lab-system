@@ -13,4 +13,6 @@ public class DetectionMethodQuery extends PageQuery {
     private Long parameterId;
 
     private Integer enabled;
+
+    private String bindingStatus;
 }

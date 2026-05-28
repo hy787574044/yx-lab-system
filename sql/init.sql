@@ -185,6 +185,9 @@ CREATE TABLE lab_sampling_plan (
     sampler_name VARCHAR(64),
     sampling_type VARCHAR(32),
     sample_type VARCHAR(32),
+    detection_type_id BIGINT,
+    detection_type_name VARCHAR(128),
+    detection_config_snapshot TEXT,
     cycle_type VARCHAR(32),
     plan_status VARCHAR(32),
     remark VARCHAR(500),
@@ -212,6 +215,9 @@ CREATE TABLE lab_sampling_task (
     sample_register_status VARCHAR(32),
     sample_id BIGINT,
     detection_items VARCHAR(1000),
+    detection_type_id BIGINT,
+    detection_type_name VARCHAR(128),
+    detection_config_snapshot TEXT,
     task_status VARCHAR(32),
     started_time DATETIME,
     onsite_metrics TEXT,
@@ -315,6 +321,27 @@ CREATE TABLE lab_detection_parameter (
     updated_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
+DROP TABLE IF EXISTS lab_detection_method_instrument_model_binding;
+CREATE TABLE lab_detection_method_instrument_model_binding (
+    id BIGINT PRIMARY KEY,
+    method_id BIGINT NOT NULL,
+    method_name VARCHAR(128) NOT NULL,
+    instrument_model VARCHAR(128) NOT NULL,
+    manufacturer VARCHAR(128) NOT NULL DEFAULT '',
+    instrument_count INT DEFAULT 0,
+    remark VARCHAR(500),
+    deleted TINYINT DEFAULT 0,
+    created_by BIGINT,
+    created_name VARCHAR(64),
+    created_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_by BIGINT,
+    updated_name VARCHAR(64),
+    updated_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    KEY idx_method_id (method_id),
+    KEY idx_instrument_model (instrument_model),
+    KEY idx_model_manufacturer (instrument_model, manufacturer)
+);
+
 DROP TABLE IF EXISTS lab_detection_step;
 CREATE TABLE lab_detection_step (
     id BIGINT PRIMARY KEY,
@@ -348,6 +375,7 @@ CREATE TABLE lab_detection_record (
     detector_name VARCHAR(64),
     detection_result VARCHAR(32),
     abnormal_remark VARCHAR(500),
+    remark VARCHAR(500),
     detection_status VARCHAR(32),
     deleted TINYINT DEFAULT 0,
     created_by BIGINT,

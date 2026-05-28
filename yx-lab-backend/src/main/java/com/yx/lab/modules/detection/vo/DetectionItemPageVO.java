@@ -58,6 +58,8 @@ public class DetectionItemPageVO {
 
     private String abnormalRemark;
 
+    private String remark;
+
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime updatedTime;
 }
