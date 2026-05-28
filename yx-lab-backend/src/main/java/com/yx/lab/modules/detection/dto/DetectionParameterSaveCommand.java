@@ -13,6 +13,9 @@ public class DetectionParameterSaveCommand {
     @NotBlank(message = "检测参数名称不能为空")
     private String parameterName;
 
+    @NotBlank(message = "参数类别不能为空")
+    private String parameterCategory;
+
     private BigDecimal standardMin;
 
     private BigDecimal standardMax;

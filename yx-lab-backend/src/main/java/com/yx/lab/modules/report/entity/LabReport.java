@@ -39,10 +39,6 @@ public class LabReport extends BaseEntity {
     @TableField("sample_no")
     private String sampleNo;
 
-    @Schema(description = "封签编号")
-    @TableField("seal_no")
-    private String sealNo;
-
     @Schema(description = "检测主流程ID")
     @TableField("detection_record_id")
     private Long detectionRecordId;

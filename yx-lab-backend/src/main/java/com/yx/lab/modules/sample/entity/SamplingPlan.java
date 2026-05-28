@@ -68,6 +68,10 @@ public class SamplingPlan extends BaseEntity {
     @TableField("detection_config_snapshot")
     private String detectionConfigSnapshot;
 
+    @Schema(description = "采样依据")
+    @TableField("sampling_basis")
+    private String samplingBasis;
+
     @Schema(description = "周期类型")
     @TableField("cycle_type")
     private String cycleType;

@@ -228,6 +228,7 @@ public class DetectionConfigController {
                 detectionConfigService.parameterPage(query).getRecords(),
                 java.util.Arrays.asList(
                         ExcelExportUtil.column("参数名称", DetectionParameter::getParameterName),
+                        ExcelExportUtil.column("参数类别", DetectionParameter::getParameterCategory),
                         ExcelExportUtil.column("单位", DetectionParameter::getUnit),
                         ExcelExportUtil.column("标准下限", DetectionParameter::getStandardMin),
                         ExcelExportUtil.column("标准上限", DetectionParameter::getStandardMax),
@@ -348,7 +349,7 @@ public class DetectionConfigController {
                         ExcelExportUtil.column("标准编号", DetectionMethodInstrumentModelBindingVO::getStandardCode),
                         ExcelExportUtil.column("取样体积", DetectionMethodInstrumentModelBindingVO::getSampleVolume),
                         ExcelExportUtil.column("已绑定参数", DetectionMethodInstrumentModelBindingVO::getParameterName),
-                        ExcelExportUtil.column("绑定设备型号", DetectionMethodInstrumentModelBindingVO::getInstrumentModelNames),
+                        ExcelExportUtil.column("绑定设备名称/设备型号", DetectionMethodInstrumentModelBindingVO::getInstrumentDisplayNames),
                         ExcelExportUtil.column("检测步骤", DetectionMethodInstrumentModelBindingVO::getMethodBasis),
                         ExcelExportUtil.column("适用范围", DetectionMethodInstrumentModelBindingVO::getApplyScope),
                         ExcelExportUtil.column("状态", item -> item.getEnabled() != null && item.getEnabled() == 1 ? "启用" : "停用"),

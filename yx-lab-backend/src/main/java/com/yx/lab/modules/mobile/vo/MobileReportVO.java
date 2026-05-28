@@ -16,8 +16,6 @@ public class MobileReportVO {
 
     private String sampleNo;
 
-    private String sealNo;
-
     private String reportStatus;
 
     private String reportStatusDesc;

@@ -26,10 +26,6 @@ public class DetectionRecord extends BaseEntity {
     @TableField("sample_no")
     private String sampleNo;
 
-    @Schema(description = "封签编号")
-    @TableField("seal_no")
-    private String sealNo;
-
     @Schema(description = "检测套餐ID")
     @TableField("detection_type_id")
     private Long detectionTypeId;

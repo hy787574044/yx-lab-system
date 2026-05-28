@@ -65,6 +65,8 @@ public class SamplingPlanService {
 
     private final DataScopeHelper dataScopeHelper;
 
+    private final SampleNoGeneratorService sampleNoGeneratorService;
+
     private final ConcurrentMap<Long, ReentrantLock> dispatchLocks = new ConcurrentHashMap<>();
 
     /**
@@ -430,6 +432,7 @@ public class SamplingPlanService {
         }
         SamplingTask task = new SamplingTask();
         task.setTaskNo(generateTaskNo());
+        task.setSampleNo(sampleNoGeneratorService.nextSampleNo());
         task.setPlanId(plan.getId());
         task.setPointId(plan.getPointId());
         task.setPointName(plan.getPointName());
@@ -437,7 +440,6 @@ public class SamplingPlanService {
         task.setSamplerId(plan.getSamplerId());
         task.setSamplerName(plan.getSamplerName());
         task.setSampleType(plan.getSampleType());
-        task.setSealNo(null);
         task.setSampleRegisterStatus(LabWorkflowConstants.SampleRegisterStatus.UNREGISTERED);
         task.setSampleId(null);
         task.setDetectionItems(plan.getDetectionTypeName());
@@ -466,6 +468,7 @@ public class SamplingPlanService {
         plan.setDetectionTypeName(detectionType.getTypeName());
         plan.setDetectionConfigSnapshot(serializeDetectionConfigItems(
                 normalizeDetectionConfigItems(command.getDetectionConfigItems(), detectionType)));
+        plan.setSamplingBasis(normalizeSamplingBasis(command.getSamplingBasisList()));
         plan.setCycleType(StrUtil.trim(command.getCycleType()));
         plan.setPlanStatus(StrUtil.trim(command.getPlanStatus()));
         plan.setRemark(StrUtil.trim(command.getRemark()));
@@ -653,12 +656,14 @@ public class SamplingPlanService {
         SampleDetectionConfigItem item = new SampleDetectionConfigItem();
         item.setParameterId(parameter.getId());
         item.setParameterName(parameter.getParameterName());
+        item.setParameterCategory(parameter.getParameterCategory());
         item.setUnit(parameter.getUnit());
         item.setStandardMin(parameter.getStandardMin());
         item.setStandardMax(parameter.getStandardMax());
         item.setReferenceStandard(parameter.getReferenceStandard());
         item.setMethodId(method.getId());
         item.setMethodName(method.getMethodName());
+        item.setSampleVolume(method.getSampleVolume());
         item.setMethodBasis(method.getMethodBasis());
         return item;
     }
@@ -779,6 +784,15 @@ public class SamplingPlanService {
         plan.setPlanStatus(planStatus);
         plan.setUpdatedTime(LocalDateTime.now());
         samplingPlanMapper.updateById(plan);
+    }
+
+    private String normalizeSamplingBasis(List<String> samplingBasisList) {
+        List<String> items = samplingBasisList == null ? Collections.emptyList() : samplingBasisList.stream()
+                .map(StrUtil::trim)
+                .filter(StrUtil::isNotBlank)
+                .distinct()
+                .collect(Collectors.toList());
+        return items.isEmpty() ? null : String.join("、", items);
     }
 
     private String generateTaskNo() {

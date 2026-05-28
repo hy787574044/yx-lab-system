@@ -118,10 +118,9 @@ public class DetectionPendingFlowService {
             DetectionRecord record = new DetectionRecord();
             record.setSampleId(sample.getId());
             record.setSampleNo(sample.getSampleNo());
-            record.setSealNo(sample.getSealNo());
             record.setDetectionTypeId(sample.getDetectionTypeId());
             record.setDetectionTypeName(resolveDetectionTypeName(sample));
-            record.setDetectionTime(sample.getSealTime() != null ? sample.getSealTime() : LocalDateTime.now());
+            record.setDetectionTime(sample.getSamplingTime() != null ? sample.getSamplingTime() : LocalDateTime.now());
             record.setDetectorId(null);
             record.setDetectorName(null);
             record.setDetectionResult(null);

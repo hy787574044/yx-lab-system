@@ -38,5 +38,7 @@ public class DetectionMethodInstrumentModelBindingVO {
 
     private String instrumentModelNames;
 
+    private String instrumentDisplayNames;
+
     private List<DetectionMethodInstrumentModelBinding> instrumentModelBindings = new ArrayList<>();
 }

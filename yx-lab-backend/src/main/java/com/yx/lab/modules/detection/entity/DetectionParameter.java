@@ -21,6 +21,10 @@ public class DetectionParameter extends BaseEntity {
     @TableField("parameter_name")
     private String parameterName;
 
+    @Schema(description = "参数类别")
+    @TableField("parameter_category")
+    private String parameterCategory;
+
     @Schema(description = "标准下限")
     @TableField("standard_min")
     private BigDecimal standardMin;

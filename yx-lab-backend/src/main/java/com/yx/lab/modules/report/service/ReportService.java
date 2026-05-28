@@ -93,9 +93,7 @@ public class ReportService {
                         .and(StrUtil.isNotBlank(query.getKeyword()), wrapper -> wrapper
                                 .like(LabReport::getReportName, query.getKeyword())
                                 .or()
-                                .like(LabReport::getSealNo, query.getKeyword())
-                        .or()
-                        .like(LabReport::getSampleNo, query.getKeyword()))
+                                .like(LabReport::getSampleNo, query.getKeyword()))
                         .eq(StrUtil.isNotBlank(query.getReportType()), LabReport::getReportType, query.getReportType())
                         .eq(StrUtil.isNotBlank(query.getReportStatus()), LabReport::getReportStatus, query.getReportStatus())
                         .in(scopedReportIds != null, LabReport::getId, scopedReportIds)
@@ -280,13 +278,11 @@ public class ReportService {
         // 没有默认模板时仍可生成基础报告文本，保证审核通过后一定有正式产物。
         if (template == null) {
             content = "样品编号：" + sample.getSampleNo()
-                    + "\n封签编号：" + sample.getSealNo()
                     + "\n监测点位：" + sample.getPointName()
                     + "\n检测结果：" + LabWorkflowConstants.getDetectionResultLabel(record.getDetectionResult());
         } else {
             content = template.getTemplateContent()
                     .replace("${sampleNo}", sample.getSampleNo())
-                    .replace("${sealNo}", StrUtil.blankToDefault(sample.getSealNo(), "-"))
                     .replace("${pointName}", sample.getPointName())
                     .replace("${detectionType}", "")
                     .replace("${detectionResult}", LabWorkflowConstants.getDetectionResultLabel(record.getDetectionResult()));
@@ -298,7 +294,6 @@ public class ReportService {
         report.setGeneratedTime(LocalDateTime.now());
         report.setSampleId(sample.getId());
         report.setSampleNo(sample.getSampleNo());
-        report.setSealNo(sample.getSealNo());
         report.setDetectionRecordId(record.getId());
         report.setReportStatus(LabWorkflowConstants.ReportStatus.GENERATED);
         report.setContentSnapshot(content);
@@ -306,7 +301,7 @@ public class ReportService {
         report.setFilePath(writeReportArtifact(report, sample, record, loadDetectionItems(record.getId()), loadLatestReview(sample.getId())));
         labReportMapper.insert(report);
         labSampleService.appendTrace(sample.getId(),
-                "已生成报告：封签号=" + sample.getSealNo()
+                "已生成报告：样品编号=" + sample.getSampleNo()
                         + "，报告名称=" + report.getReportName()
                         + "，状态=已生成");
     }
@@ -450,11 +445,9 @@ public class ReportService {
                 report == null ? null : report.getReportName(),
                 (sample == null ? "检测报告" : sample.getSampleNo() + "-检测报告")));
         String sampleNo = sample == null ? "-" : StrUtil.blankToDefault(sample.getSampleNo(), "-");
-        String sealNo = sample == null ? "-" : StrUtil.blankToDefault(sample.getSealNo(), "-");
         String pointName = sample == null ? "-" : StrUtil.blankToDefault(sample.getPointName(), "-");
         String sampleType = sample == null ? "-" : StrUtil.blankToDefault(LabWorkflowConstants.getSampleTypeLabel(sample.getSampleType()), "-");
         String samplingTime = formatDateTime(sample == null ? null : sample.getSamplingTime());
-        String sealTime = formatDateTime(sample == null ? null : sample.getSealTime());
         String samplerName = sample == null ? "-" : StrUtil.blankToDefault(sample.getSamplerName(), "-");
         String weather = sample == null ? "-" : StrUtil.blankToDefault(sample.getWeather(), "-");
         String storageCondition = sample == null ? "-" : StrUtil.blankToDefault(sample.getStorageCondition(), "-");
@@ -513,7 +506,7 @@ public class ReportService {
 
         html.append("<div class=\"summary-grid\">")
                 .append(buildSummaryItem("样品编号", sampleNo))
-                .append(buildSummaryItem("封签编号", sealNo))
+                .append(buildSummaryItem("监测点位", pointName))
                 .append(buildSummaryItem("检测项数", String.valueOf(items.size())))
                 .append(buildSummaryItem("综合结果", detectionResult))
                 .append(buildSummaryItem("正常项数", String.valueOf(normalCount)))
@@ -524,9 +517,8 @@ public class ReportService {
 
         html.append("<div class=\"section\"><h2 class=\"section-title\">样品基础信息</h2>")
                 .append("<table class=\"info-table\">")
-                .append(infoRow("样品编号", sampleNo, "封签编号", sealNo))
-                .append(infoRow("监测点位", pointName, "样品类型", sampleType))
-                .append(infoRow("采样时间", samplingTime, "封签时间", sealTime))
+                .append(infoRow("样品编号", sampleNo, "监测点位", pointName))
+                .append(infoRow("样品类型", sampleType, "采样时间", samplingTime))
                 .append(infoRow("采样人员", samplerName, "天气情况", weather))
                 .append(infoRow("存储条件", storageCondition, "样品状态", sampleStatus))
                 .append(infoRow("样品备注", sampleRemark, "结果摘要", resultSummary))
@@ -614,12 +606,10 @@ public class ReportService {
         vo.setPublishedByName(StrUtil.blankToDefault(report == null ? null : report.getPublishedByName(), "-"));
 
         vo.setSampleNo(StrUtil.blankToDefault(sample == null ? null : sample.getSampleNo(), "-"));
-        vo.setSealNo(StrUtil.blankToDefault(sample == null ? null : sample.getSealNo(), "-"));
         vo.setPointName(StrUtil.blankToDefault(sample == null ? null : sample.getPointName(), "-"));
         vo.setSampleTypeLabel(StrUtil.blankToDefault(LabWorkflowConstants.getSampleTypeLabel(sample == null ? null : sample.getSampleType()), "-"));
         vo.setQualityControlTypeLabel(StrUtil.blankToDefault(LabWorkflowConstants.getQualityControlTypeLabel(sample == null ? null : sample.getQualityControlType()), "-"));
         vo.setSamplingTime(formatDateTime(sample == null ? null : sample.getSamplingTime()));
-        vo.setSealTime(formatDateTime(sample == null ? null : sample.getSealTime()));
         vo.setSamplerName(StrUtil.blankToDefault(sample == null ? null : sample.getSamplerName(), "-"));
         vo.setWeather(StrUtil.blankToDefault(sample == null ? null : sample.getWeather(), "-"));
         vo.setStorageCondition(StrUtil.blankToDefault(sample == null ? null : sample.getStorageCondition(), "-"));
@@ -726,7 +716,7 @@ public class ReportService {
             html.append("<header class=\"paper-header\">")
                     .append("<div class=\"paper-header__side\">")
                     .append("<div>样品编号：").append(safeText(previewData.getSampleNo())).append("</div>")
-                    .append("<div>封签编号：").append(safeText(previewData.getSealNo())).append("</div>")
+                    .append("<div>点位名称：").append(safeText(previewData.getPointName())).append("</div>")
                     .append("</div>")
                     .append("<div class=\"paper-header__title\">")
                     .append("<h1>").append(safeText(StrUtil.blankToDefault(previewData.getReportName(), "化验报告"))).append("</h1>")
@@ -742,15 +732,14 @@ public class ReportService {
                 html.append("<section class=\"paper-section\"><h2>一、样品基础信息</h2><table class=\"info-table\"><tbody>")
                         .append("<tr><td class=\"label\">报告名称</td><td>").append(safeText(previewData.getReportName())).append("</td><td class=\"label\">报告类型</td><td>")
                         .append(safeText(previewData.getReportTypeLabel())).append("</td><td class=\"label\">报告状态</td><td>").append(safeText(previewData.getReportStatusLabel())).append("</td></tr>")
-                        .append("<tr><td class=\"label\">样品编号</td><td>").append(safeText(previewData.getSampleNo())).append("</td><td class=\"label\">封签编号</td><td>")
-                        .append(safeText(previewData.getSealNo())).append("</td><td class=\"label\">点位名称</td><td>").append(safeText(previewData.getPointName())).append("</td></tr>")
+                        .append("<tr><td class=\"label\">样品编号</td><td>").append(safeText(previewData.getSampleNo())).append("</td><td class=\"label\">点位名称</td><td>")
+                        .append(safeText(previewData.getPointName())).append("</td><td class=\"label\">采样人员</td><td>").append(safeText(previewData.getSamplerName())).append("</td></tr>")
                         .append("<tr><td class=\"label\">样品类型</td><td>").append(safeText(previewData.getSampleTypeLabel())).append("</td><td class=\"label\">质控类型</td><td>")
                         .append(safeText(previewData.getQualityControlTypeLabel())).append("</td><td class=\"label\">样品状态</td><td>").append(safeText(previewData.getSampleStatusLabel())).append("</td></tr>")
                         .append("<tr><td class=\"label\">结果摘要</td><td colspan=\"5\">").append(safeText(previewData.getResultSummary())).append("</td></tr>")
-                        .append("<tr><td class=\"label\">采样时间</td><td>").append(safeText(previewData.getSamplingTime())).append("</td><td class=\"label\">封签时间</td><td>")
-                        .append(safeText(previewData.getSealTime())).append("</td><td class=\"label\">采样人员</td><td>").append(safeText(previewData.getSamplerName())).append("</td></tr>")
-                        .append("<tr><td class=\"label\">天气情况</td><td>").append(safeText(previewData.getWeather())).append("</td><td class=\"label\">保存条件</td><td>")
-                        .append(safeText(previewData.getStorageCondition())).append("</td><td class=\"label\">样品备注</td><td>").append(safeText(previewData.getSampleRemark())).append("</td></tr>")
+                        .append("<tr><td class=\"label\">采样时间</td><td>").append(safeText(previewData.getSamplingTime())).append("</td><td class=\"label\">天气情况</td><td>")
+                        .append(safeText(previewData.getWeather())).append("</td><td class=\"label\">保存条件</td><td>").append(safeText(previewData.getStorageCondition())).append("</td></tr>")
+                        .append("<tr><td class=\"label\">样品备注</td><td colspan=\"5\">").append(safeText(previewData.getSampleRemark())).append("</td></tr>")
                         .append("</tbody></table></section>");
 
                 html.append("<section class=\"paper-section\"><h2>二、流程与审查信息</h2><table class=\"info-table\"><tbody>")

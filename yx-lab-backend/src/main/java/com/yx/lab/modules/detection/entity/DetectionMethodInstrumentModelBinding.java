@@ -24,6 +24,10 @@ public class DetectionMethodInstrumentModelBinding extends BaseEntity {
     @TableField("instrument_model")
     private String instrumentModel;
 
+    @Schema(description = "设备名称/设备型号展示")
+    @TableField(exist = false)
+    private String instrumentDisplayNames;
+
     @Schema(description = "生产厂家")
     @TableField("manufacturer")
     private String manufacturer;

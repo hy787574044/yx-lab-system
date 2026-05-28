@@ -811,7 +811,7 @@ const sceneConfigMap = {
     tableTitle: '留痕来源清单',
     tableSubtitle: '当前以业务留痕可追溯为优先，统一审计中心可后续再建设。',
     keywordPlaceholder: '请输入日志来源、状态或说明',
-    note: '样品封签、流程流转、报告推送等关键留痕已落地，统一审计中心暂按后续规划处理。',
+    note: '样品编号、流程流转、报告推送等关键留痕已落地，统一审计中心暂按后续规划处理。',
     emptyText: '暂无日志来源数据',
     guide: '本页帮助快速确认哪些留痕已经具备生产可追溯能力，哪些能力仍在规划。',
     constraint: '如后续确需统一日志平台，可在现有业务留痕基础上再追加集中审计能力。',
@@ -820,7 +820,7 @@ const sceneConfigMap = {
       { label: '查看报告台账', path: '/report-ledger' }
     ],
     quickLinks: [
-      { label: '样品管理', path: '/sample-ledger', desc: '查看封签与样品留痕承接情况' },
+      { label: '样品管理', path: '/sample-ledger', desc: '查看样品编号与流程留痕承接情况' },
       { label: '检测管理', path: '/detection-ledger', desc: '查看检测记录与重检留痕' },
       { label: '报告管理', path: '/report-ledger', desc: '查看正式报告与推送留痕' }
     ],

@@ -75,17 +75,15 @@ public class LabSampleController {
         ExcelExportUtil.prepareExportQuery(query);
         return ExcelExportUtil.buildResponse(
                 "样品台账.xlsx",
-                "样品台账",
-                labSampleService.page(query).getRecords(),
-                java.util.Arrays.asList(
+                        "样品台账",
+                        labSampleService.page(query).getRecords(),
+                        java.util.Arrays.asList(
                         ExcelExportUtil.column("样品编号", LabSample::getSampleNo),
-                        ExcelExportUtil.column("封签编号", LabSample::getSealNo),
                         ExcelExportUtil.column("点位名称", LabSample::getPointName),
                         ExcelExportUtil.column("样品类型", item -> LabWorkflowConstants.getSampleTypeLabel(item.getSampleType())),
                         ExcelExportUtil.column("质控类型", item -> LabWorkflowConstants.getQualityControlTypeLabel(item.getQualityControlType())),
                         ExcelExportUtil.column("样品状态", item -> LabWorkflowConstants.getSampleStatusLabel(item.getSampleStatus())),
                         ExcelExportUtil.column("采样时间", LabSample::getSamplingTime),
-                        ExcelExportUtil.column("封签时间", LabSample::getSealTime),
                         ExcelExportUtil.column("采样人员", LabSample::getSamplerName),
                         ExcelExportUtil.column("审核流程", item -> StrUtil.blankToDefault(item.getReviewFlowName(), "-")),
                         ExcelExportUtil.column("发布流程", item -> StrUtil.blankToDefault(item.getPublishFlowName(), "-")),

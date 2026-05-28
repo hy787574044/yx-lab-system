@@ -68,9 +68,6 @@ public class DetectorDashboardVO {
         @Schema(description = "样品编号")
         private String sampleNo;
 
-        @Schema(description = "封签编号")
-        private String sealNo;
-
         @Schema(description = "检测参数")
         private String parameterName;
 

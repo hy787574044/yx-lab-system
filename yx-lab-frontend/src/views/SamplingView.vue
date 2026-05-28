@@ -40,7 +40,7 @@
                   <el-input
                     v-model="taskQuery.keyword"
                     clearable
-                    placeholder="请输入任务编号、点位名称或封签号"
+                    placeholder="请输入任务编号、点位名称或样品编号"
                     @keyup.enter="handleCurrentSceneSearch"
                   />
                 </label>
@@ -80,7 +80,7 @@
                   <el-input
                     v-model="sampleQuery.keyword"
                     clearable
-                    placeholder="请输入样品编号、点位名称或封签号"
+                    placeholder="请输入样品编号或点位名称"
                     @keyup.enter="handleCurrentSceneSearch"
                   />
                 </label>
@@ -128,10 +128,10 @@
           :empty-text="baseScene.emptyText"
         >
           <el-table-column prop="taskNo" label="任务编号" min-width="150" />
-          <el-table-column label="采样封签号" min-width="150">
+          <el-table-column label="样品编号" min-width="170">
             <template #default="{ row }">
-              <span class="plan-sampler" :class="{ 'is-empty': !row.sealNo }">
-                {{ row.sealNo || '待录入' }}
+              <span class="plan-sampler" :class="{ 'is-empty': !row.sampleNo }">
+                {{ row.sampleNo || '任务生成时自动生成' }}
               </span>
             </template>
           </el-table-column>
@@ -152,7 +152,7 @@
             </template>
           </el-table-column>
           <el-table-column prop="detectionTypeName" label="检测套餐" min-width="160" show-overflow-tooltip />
-          <el-table-column label="检测参数" min-width="220" show-overflow-tooltip>
+          <el-table-column label="检测参数" min-width="150" show-overflow-tooltip>
             <template #default="{ row }">
               {{ formatTaskDetectionParameterSummary(row) }}
             </template>
@@ -180,22 +180,13 @@
           <el-table-column prop="remark" label="备注" min-width="180" show-overflow-tooltip />
           <el-table-column
             label="操作"
-            :width="baseScene.allowTaskActions ? 460 : 120"
+            :width="baseScene.allowTaskActions ? 370 : 140"
             fixed="right"
-            class-name="cell-center"
+            header-cell-class-name="cell-center"
+            class-name="cell-center task-action-cell"
           >
             <template #default="{ row }">
-              <div class="action-row">
-                <el-button
-                  v-if="baseScene.allowTaskActions"
-                  v-permission="'samplingTask:write'"
-                  size="small"
-                  :loading="isRowActionLoading('task', 'seal', row.id)"
-                  @click="editTaskSealNo(row)"
-                  :disabled="isRowActionLoading('task', 'start', row.id) || isRowActionLoading('task', 'seal', row.id)"
-                >
-                  {{ row.sealNo ? '修改封签' : '录入封签' }}
-                </el-button>
+              <div class="action-row task-action-row">
                 <el-button
                   v-if="baseScene.allowTaskActions"
                   v-permission="'samplingTask:write'"
@@ -247,7 +238,6 @@
           :empty-text="baseScene.emptyText"
         >
           <el-table-column prop="sampleNo" label="样品编号" min-width="180" />
-          <el-table-column prop="sealNo" label="封签编号" min-width="180" />
           <el-table-column prop="pointName" label="点位名称" min-width="160" />
           <el-table-column label="样品类型" width="120" header-cell-class-name="cell-center" class-name="cell-center">
             <template #default="{ row }">
@@ -393,6 +383,11 @@
             <el-table-column prop="pointName" label="采样点位" min-width="160" />
             <el-table-column prop="samplerName" label="采样人员" width="120" />
             <el-table-column prop="detectionTypeName" label="检测套餐" min-width="160" show-overflow-tooltip />
+            <el-table-column prop="samplingBasis" label="采样依据" min-width="220" show-overflow-tooltip>
+              <template #default="{ row }">
+                {{ formatSamplingBasisText(row.samplingBasis) || '-' }}
+              </template>
+            </el-table-column>
             <el-table-column label="周期类型" width="120" header-cell-class-name="cell-center" class-name="cell-center">
               <template #default="{ row }">
                 {{ getEnumLabel(cycleTypeLabelMap, row.cycleType) }}
@@ -559,6 +554,25 @@
               />
             </el-select>
           </el-form-item>
+          <el-form-item class="plan-form-span-2" label="采样依据">
+            <el-select
+              v-model="planForm.samplingBasisList"
+              multiple
+              filterable
+              clearable
+              collapse-tags
+              collapse-tags-tooltip
+              style="width: 100%"
+              placeholder="请选择采样依据，可多选"
+            >
+              <el-option
+                v-for="option in samplingBasisOptions"
+                :key="option"
+                :label="option"
+                :value="option"
+              />
+            </el-select>
+          </el-form-item>
           <el-form-item v-if="planForm.detectionTypeId" class="plan-form-span-2" label="套餐参数" required>
             <div class="login-config-panel">
               <div class="login-config-panel__summary">
@@ -577,7 +591,7 @@
                 max-height="360"
                 border
               >
-                <el-table-column label="检测参数名称" min-width="220">
+                <el-table-column label="检测参数名称" min-width="140">
                   <template #default="{ row, $index }">
                     <el-select
                       v-model="row.parameterId"
@@ -594,18 +608,18 @@
                     </el-select>
                   </template>
                 </el-table-column>
-                <el-table-column label="标准范围" min-width="150">
+                <el-table-column label="标准范围" min-width="120">
                   <template #default="{ row }">
                     {{ formatStandardRange(row.standardMin, row.standardMax) }}
                   </template>
                 </el-table-column>
-                <el-table-column prop="unit" label="单位" width="100">
+                <el-table-column prop="unit" label="单位" width="72">
                   <template #default="{ row }">{{ row.unit || '-' }}</template>
                 </el-table-column>
-                <el-table-column prop="referenceStandard" label="检测标准" min-width="220" show-overflow-tooltip>
+                <el-table-column prop="referenceStandard" label="检测标准" min-width="150" show-overflow-tooltip>
                   <template #default="{ row }">{{ row.referenceStandard || '-' }}</template>
                 </el-table-column>
-                <el-table-column label="检测方法" min-width="280">
+                <el-table-column label="检测方法" min-width="170">
                   <template #default="{ row }">
                     <el-select
                       v-model="row.methodId"
@@ -622,6 +636,9 @@
                       />
                     </el-select>
                   </template>
+                </el-table-column>
+                <el-table-column prop="sampleVolume" label="取样体积" min-width="90" show-overflow-tooltip>
+                  <template #default="{ row }">{{ row.sampleVolume || '-' }}</template>
                 </el-table-column>
                 <el-table-column label="操作" width="90" class-name="cell-center" header-cell-class-name="cell-center">
                   <template #default="{ $index }">
@@ -670,7 +687,7 @@
       v-model="taskCompleteDialogVisible"
       class="sampling-form-dialog"
       title="采样录入"
-      width="760px"
+      width="960px"
       align-center
       destroy-on-close
       @closed="resetTaskCompleteDialog"
@@ -679,6 +696,9 @@
         <div class="plan-form-grid">
           <el-form-item label="任务编号">
             <el-input :model-value="taskCompletePreview?.taskNo || '-'" readonly />
+          </el-form-item>
+          <el-form-item label="样品编号">
+            <el-input :model-value="taskCompletePreview?.sampleNo || '-'" readonly />
           </el-form-item>
           <el-form-item label="点位名称">
             <el-input :model-value="taskCompletePreview?.pointName || '-'" readonly />
@@ -689,8 +709,54 @@
           <el-form-item label="样品类型">
             <el-input :model-value="getEnumLabel(sampleTypeLabelMap, taskCompletePreview?.sampleType) || '-'" readonly />
           </el-form-item>
-          <el-form-item label="封签编号" required>
-            <el-input v-model="taskCompleteForm.sealNo" placeholder="请输入采样封签号" />
+          <el-form-item class="plan-form-span-2" label="检测套餐">
+            <el-input
+              :model-value="taskCompletePreview?.detectionTypeName || taskCompletePreview?.detectionItems || '-'"
+              readonly
+            />
+          </el-form-item>
+          <el-form-item class="plan-form-span-2" label="检测参数">
+            <div class="login-config-panel">
+              <div class="login-config-panel__summary">
+                <span class="binding-editor__chip">
+                  参数数量<strong>{{ taskCompleteDetectionConfigRows.length }}</strong>
+                </span>
+                <span class="login-config-panel__note">
+                  采样录入阶段只读展示当前任务携带的检测参数与检测方法明细。
+                </span>
+              </div>
+              <el-table
+                v-if="taskCompleteDetectionConfigRows.length"
+                class="login-config-table task-detail-config-table"
+                :data="taskCompleteDetectionConfigRows"
+                size="small"
+                max-height="320"
+                border
+              >
+                <el-table-column prop="parameterName" label="检测参数" min-width="130" show-overflow-tooltip />
+                <el-table-column label="标准范围" min-width="120">
+                  <template #default="{ row }">
+                    {{ formatStandardRange(row.standardMin, row.standardMax) }}
+                  </template>
+                </el-table-column>
+                <el-table-column prop="unit" label="单位" width="72">
+                  <template #default="{ row }">{{ row.unit || '-' }}</template>
+                </el-table-column>
+                <el-table-column prop="referenceStandard" label="检测标准" min-width="150" show-overflow-tooltip>
+                  <template #default="{ row }">{{ row.referenceStandard || '-' }}</template>
+                </el-table-column>
+                <el-table-column prop="methodName" label="检测方法" min-width="160" show-overflow-tooltip>
+                  <template #default="{ row }">{{ row.methodName || '-' }}</template>
+                </el-table-column>
+                <el-table-column prop="instrumentDisplayNames" label="采样设备" min-width="220" show-overflow-tooltip>
+                  <template #default="{ row }">{{ row.instrumentDisplayNames || '-' }}</template>
+                </el-table-column>
+                <el-table-column prop="sampleVolume" label="取样体积" min-width="90" show-overflow-tooltip>
+                  <template #default="{ row }">{{ row.sampleVolume || '-' }}</template>
+                </el-table-column>
+              </el-table>
+              <div v-else class="empty-block">暂无检测参数明细</div>
+            </div>
           </el-form-item>
           <el-form-item label="天气">
             <el-select
@@ -846,11 +912,11 @@
               />
             </el-select>
           </el-form-item>
-          <el-form-item label="OCR封签号" :required="!isLoginReadonly">
+          <el-form-item label="样品编号">
             <el-input
-              :model-value="loginForm.sealNo || '-'"
+              :model-value="loginForm.sampleNo || '-'"
               readonly
-              placeholder="选择待登录任务后自动带出"
+              placeholder="任务生成时由服务器自动生成"
             />
           </el-form-item>
           <el-form-item label="点位名称" :required="!isLoginReadonly">
@@ -913,26 +979,29 @@
                 max-height="460"
                 border
               >
-                <el-table-column label="检测参数名称" min-width="180">
+                <el-table-column label="检测参数名称" min-width="130">
                   <template #default="{ row }">
                     <span>{{ row.parameterName || '-' }}</span>
                   </template>
                 </el-table-column>
-                <el-table-column label="标准范围" min-width="140">
+                <el-table-column label="标准范围" min-width="120">
                   <template #default="{ row }">
                     {{ formatStandardRange(row.standardMin, row.standardMax) }}
                   </template>
                 </el-table-column>
-                <el-table-column prop="unit" label="单位" width="100">
+                <el-table-column prop="unit" label="单位" width="72">
                   <template #default="{ row }">{{ row.unit || '-' }}</template>
                 </el-table-column>
-                <el-table-column prop="referenceStandard" label="检测标准" min-width="160" show-overflow-tooltip>
+                <el-table-column prop="referenceStandard" label="检测标准" min-width="140" show-overflow-tooltip>
                   <template #default="{ row }">{{ row.referenceStandard || '-' }}</template>
                 </el-table-column>
-                <el-table-column label="检测方法" min-width="220">
+                <el-table-column label="检测方法" min-width="160">
                   <template #default="{ row }">
                     <span>{{ row.methodName || '-' }}</span>
                   </template>
+                </el-table-column>
+                <el-table-column prop="sampleVolume" label="取样体积" min-width="90" show-overflow-tooltip>
+                  <template #default="{ row }">{{ row.sampleVolume || '-' }}</template>
                 </el-table-column>
               </el-table>
               <div v-if="!loginDetectionConfigRows.length" class="empty-block">
@@ -1061,7 +1130,7 @@
     >
       <div class="task-detail-grid">
         <div><span>任务编号</span><strong>{{ taskDetail?.taskNo || taskDetail?.task_no || '-' }}</strong></div>
-        <div><span>采样封签号</span><strong>{{ taskDetail?.sealNo || '-' }}</strong></div>
+        <div><span>样品编号</span><strong>{{ taskDetail?.sampleNo || '-' }}</strong></div>
         <div><span>点位名称</span><strong>{{ taskDetail?.pointName || taskDetail?.point_name || '-' }}</strong></div>
         <div><span>采样人员</span><strong>{{ taskDetail?.samplerName || taskDetail?.sampler_name || '-' }}</strong></div>
         <div><span>检测套餐</span><strong>{{ taskDetail?.detectionTypeName || taskDetail?.detection_type_name || taskDetail?.detectionItems || '-' }}</strong></div>
@@ -1079,20 +1148,26 @@
           size="small"
           border
         >
-          <el-table-column prop="parameterName" label="检测参数" min-width="180" />
-          <el-table-column label="标准范围" min-width="150">
+          <el-table-column prop="parameterName" label="检测参数" min-width="130" show-overflow-tooltip />
+          <el-table-column label="标准范围" min-width="120">
             <template #default="{ row }">
               {{ formatStandardRange(row.standardMin, row.standardMax) }}
             </template>
           </el-table-column>
-          <el-table-column prop="unit" label="单位" width="100">
+          <el-table-column prop="unit" label="单位" width="72">
             <template #default="{ row }">{{ row.unit || '-' }}</template>
           </el-table-column>
-          <el-table-column prop="referenceStandard" label="检测标准" min-width="220" show-overflow-tooltip>
+          <el-table-column prop="referenceStandard" label="检测标准" min-width="150" show-overflow-tooltip>
             <template #default="{ row }">{{ row.referenceStandard || '-' }}</template>
           </el-table-column>
-          <el-table-column prop="methodName" label="检测方法" min-width="240" show-overflow-tooltip>
+          <el-table-column prop="methodName" label="检测方法" min-width="160" show-overflow-tooltip>
             <template #default="{ row }">{{ row.methodName || '-' }}</template>
+          </el-table-column>
+          <el-table-column prop="instrumentDisplayNames" label="采样设备" min-width="220" show-overflow-tooltip>
+            <template #default="{ row }">{{ row.instrumentDisplayNames || '-' }}</template>
+          </el-table-column>
+          <el-table-column prop="sampleVolume" label="取样体积" min-width="90" show-overflow-tooltip>
+            <template #default="{ row }">{{ row.sampleVolume || '-' }}</template>
           </el-table-column>
         </el-table>
         <p v-else>暂无检测参数明细</p>
@@ -1141,7 +1216,6 @@ import { ElForm, ElFormItem } from 'element-plus/es/components/form/index.mjs'
 import { ElInput } from 'element-plus/es/components/input/index.mjs'
 import { ElImage } from 'element-plus/es/components/image/index.mjs'
 import { ElMessage } from 'element-plus/es/components/message/index.mjs'
-import { ElMessageBox } from 'element-plus/es/components/message-box/index.mjs'
 import { ElOption, ElSelect } from 'element-plus/es/components/select/index.mjs'
 import { ElTable, ElTableColumn } from 'element-plus/es/components/table/index.mjs'
 import { ElUpload } from 'element-plus/es/components/upload/index.mjs'
@@ -1155,6 +1229,7 @@ import {
   exportSamplingPlansApi,
   exportSamplesApi,
   exportSamplingTasksApi,
+  fetchDetectionMethodInstrumentModelBindingsApi,
   fetchDetectionMethodOptionsApi,
   fetchDetectionParametersApi,
   fetchMonitoringPointsApi,
@@ -1173,7 +1248,6 @@ import {
   resumeSamplingPlanApi,
   resumeSamplingTaskApi,
   startSamplingTaskApi,
-  updateSamplingTaskSealNoApi,
   updateSamplingPlanApi,
   uploadStorageFileApi
 } from '../api/lab'
@@ -1216,6 +1290,19 @@ import {
 const route = useRoute()
 const FLOW_TYPE_REVIEW = 'REVIEW'
 const FLOW_TYPE_PUBLISH = 'PUBLISH'
+const samplingBasisOptions = [
+  'GB 5749-2022',
+  'GB/T 5750.2-2023',
+  'GB 3838-2002',
+  'HJ 91.2-2022',
+  'GB/T 14848-2017',
+  'HJ 164-2020',
+  'HJ 91.1-2019',
+  'HJ 493-2009',
+  'HJ 494-2009',
+  'GB/T 14581-1993',
+  'GB/T 13580.2-1992'
+]
 
 const planQuery = reactive({
   keyword: '',
@@ -1283,7 +1370,7 @@ const taskDetail = ref(null)
 
 const loginForm = reactive({
   taskId: null,
-  sealNo: '',
+  sampleNo: '',
   pointId: null,
   pointName: '',
   sampleType: '',
@@ -1311,7 +1398,20 @@ const taskDetailPhotos = computed(() => taskDetailPhotoList.value)
 const taskDetailPhotoPreviewUrls = computed(() =>
   taskDetailPhotoList.value.map((item) => item.previewUrl).filter(Boolean)
 )
-const taskDetailDetectionConfigRows = computed(() => parseTaskDetectionConfigSnapshot(taskDetail.value?.detectionConfigSnapshot))
+const detectionMethodInstrumentModelNameMap = ref({})
+const detectionMethodInstrumentModelLoaded = ref(false)
+const taskCompleteDetectionConfigRows = computed(() => (
+  parseTaskDetectionConfigSnapshot(taskCompletePreview.value?.detectionConfigSnapshot).map((item) => ({
+    ...item,
+    instrumentDisplayNames: resolveMethodInstrumentDisplayNames(item?.methodId)
+  }))
+))
+const taskDetailDetectionConfigRows = computed(() => (
+  parseTaskDetectionConfigSnapshot(taskDetail.value?.detectionConfigSnapshot).map((item) => ({
+    ...item,
+    instrumentDisplayNames: item.instrumentDisplayNames || resolveMethodInstrumentDisplayNames(item?.methodId)
+  }))
+))
 
 const isLoginReadonly = computed(() => loginDialogMode.value === 'view')
 const loginDialogTitle = computed(() => isLoginReadonly.value ? '样品登记明细' : '样品登录')
@@ -1335,6 +1435,7 @@ const planForm = reactive({
   detectionTypeId: null,
   detectionTypeName: '',
   detectionConfigItems: [],
+  samplingBasisList: [],
   cycleType: dailyCycleType,
   remark: ''
 })
@@ -1348,7 +1449,6 @@ const dispatchForm = reactive({
 
 const taskCompleteForm = reactive({
   taskId: null,
-  sealNo: '',
   onsiteMetrics: '',
   weather: '',
   temperature: '',
@@ -1413,7 +1513,7 @@ const sceneMap = {
     subtitle: '聚焦待处理采样任务，适合班组长或调度人员快速推进采样执行。',
     tableTitle: '待办采样任务',
     tableSubtitle: '默认聚焦待处理任务，并保留开始、废弃、恢复、完成等现场执行动作。',
-    note: '采样任务页强调今天要做什么，开始采样前必须先录入封签号，上方统计卡可切换到进行中、已完成、已废弃视角。',
+    note: '采样任务页强调今天要做什么，样品编号会在任务生成时按规则自动生成，上方统计卡可切换到进行中、已完成、已废弃视角。',
     guide: '如需安排周期计划，请进入独立的采样计划页面；任务完成后再进入样品登录。',
     mode: 'task',
     defaultStatKey: 'tasks:pending',
@@ -1426,7 +1526,7 @@ const sceneMap = {
       { path: '/sampling-plan', label: '采样计划', desc: '独立维护周期计划并执行手动派发' },
       { path: '/sample-login', label: '样品登录', desc: '将已完成采样任务登记为正式样品' },
       { path: '/task-history', label: '历史任务', desc: '查看已完成或已废弃的采样执行记录' },
-      { path: '/sample-ledger', label: '样品台账', desc: '查看样品封签、状态与流程留痕' }
+      { path: '/sample-ledger', label: '样品台账', desc: '查看样品编号、状态与流程留痕' }
     ]
   },
   '/sampling-plan': {
@@ -1457,7 +1557,7 @@ const sceneMap = {
     tableTitle: '历史采样任务',
     tableSubtitle: '本页聚焦已完成、已废弃任务，操作区切换为只读查询视角。',
     note: '历史任务页用于追溯与复盘，不再承载现场执行按钮，避免误操作。',
-    guide: '如历史任务已形成样品，可直接跳转到样品台账继续核验封签与留痕。',
+    guide: '如历史任务已形成样品，可直接跳转到样品台账继续核验编号与留痕。',
     mode: 'task',
     defaultStatKey: 'tasks:completed',
     allowTaskActions: false,
@@ -1487,7 +1587,7 @@ const sceneMap = {
     taskFilter: () => true,
     sampleFilter: () => true,
     quickLinks: [
-      { path: '/sample-login', label: '样品登录', desc: '承接已完成任务并生成样品封签' },
+      { path: '/sample-login', label: '样品登录', desc: '承接已完成任务并延续已有样品编号' },
       { path: '/task-history', label: '历史任务', desc: '只看已完成与已废弃任务' },
       { path: '/detection-analysis', label: '检测分析', desc: '继续进入化验室检测流程' }
     ]
@@ -1495,10 +1595,10 @@ const sceneMap = {
   '/sample-login': {
     key: 'sample-login',
     title: '样品登录',
-    subtitle: '将已完成采样任务转成正式样品，生成样品编号并承接后续检测、审核、报告链路。',
+    subtitle: '将已完成采样任务转成正式样品，沿用任务已生成的样品编号并承接后续检测、审核、报告链路。',
     tableTitle: '已登记样品',
     tableSubtitle: '默认展示已登记样品，并通过统计卡切换到待审核、退回重检、闭环完成等状态。',
-    note: '样品登录页优先解决未登记任务，支持封签号识别后自动带出任务，且不再自动生成封签号。',
+    note: '样品登录页优先解决未登记任务，直接选择已完成采样的任务后回显任务已生成的样品编号。',
     guide: '如本页没有可登录样品，请先回到采样任务完成采样任务；若样品已登记，可继续前往检测分析。',
     mode: 'sample',
     defaultStatKey: 'samples:logged',
@@ -1510,16 +1610,16 @@ const sceneMap = {
     quickLinks: [
       { path: '/task-assign', label: '采样任务', desc: '先完成现场采样任务，再进行样品登录' },
       { path: '/detection-analysis', label: '检测分析', desc: '样品登录完成后进入化验室检测流程' },
-      { path: '/sample-ledger', label: '样品台账', desc: '查看全量样品、封签与流程留痕' }
+      { path: '/sample-ledger', label: '样品台账', desc: '查看全量样品编号与流程留痕' }
     ]
   },
   '/sample-ledger': {
     key: 'sample-ledger',
     title: '样品台账',
-    subtitle: '集中查看全部样品、封签编号、保存条件、结果摘要和全流程留痕信息。',
+    subtitle: '集中查看全部样品编号、保存条件、结果摘要和全流程留痕信息。',
     tableTitle: '样品全量台账',
     tableSubtitle: '本页不再强调登录动作，转为全量追踪样品状态与闭环结果。',
-    note: '样品台账页适合盘点封签与状态流转，可通过统计卡快速定位待审核、退回重检、已完成样品。',
+    note: '样品台账页适合盘点样品编号与状态流转，可通过统计卡快速定位待审核、退回重检、已完成样品。',
     guide: '如需新增样品，请回到样品登录；如需继续推进流程，可跳转到检测分析或结果审查。',
     mode: 'sample',
     defaultStatKey: 'samples:all',
@@ -1529,7 +1629,7 @@ const sceneMap = {
     taskFilter: () => true,
     sampleFilter: () => true,
     quickLinks: [
-      { path: '/sample-login', label: '样品登录', desc: '继续补录新样品并生成封签' },
+      { path: '/sample-login', label: '样品登录', desc: '继续补录新样品并承接编号' },
       { path: '/detection-analysis', label: '检测分析', desc: '查看样品是否已进入检测流程' },
       { path: '/review-result', label: '结果审查', desc: '跟踪样品检测后的审核流转' }
     ]
@@ -1702,7 +1802,7 @@ const currentStats = computed(() => {
       key: 'samples:logged',
       label: baseScene.value.key === 'sample-login' ? '已登记样品' : '登记完成',
       value: getCount(sampleStatCounts.value, loggedSampleStatus),
-      desc: '已经生成封签并等待后续检测的样品'
+      desc: '已经生成样品编号并等待后续检测的样品'
     },
     {
       key: 'samples:reviewing',
@@ -2149,6 +2249,20 @@ function handlePlanSamplerChange(userId) {
   planForm.samplerName = user?.realName || user?.username || ''
 }
 
+function parseSamplingBasisList(value) {
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item || '').trim()).filter(Boolean)
+  }
+  return String(value || '')
+    .split('、')
+    .map((item) => item.trim())
+    .filter(Boolean)
+}
+
+function formatSamplingBasisText(value) {
+  return parseSamplingBasisList(value).join('、')
+}
+
 function resetDispatchForm() {
   dispatchForm.planId = null
   dispatchForm.samplingTime = ''
@@ -2177,6 +2291,7 @@ function resetPlanForm() {
   planForm.detectionTypeId = null
   planForm.detectionTypeName = ''
   planForm.detectionConfigItems = []
+  planForm.samplingBasisList = []
   planForm.cycleType = dailyCycleType
   planForm.remark = ''
 }
@@ -2211,6 +2326,7 @@ async function openPlanEditDialog(row) {
   planForm.detectionTypeId = row.detectionTypeId || null
   planForm.detectionTypeName = row.detectionTypeName || ''
   planForm.detectionConfigItems = parseSampleDetectionConfigSnapshot(row.detectionConfigSnapshot)
+  planForm.samplingBasisList = parseSamplingBasisList(row.samplingBasis || row.sampling_basis)
   if (!planForm.detectionConfigItems.length && planForm.detectionTypeId) {
     planForm.detectionConfigItems = buildLoginDetectionConfigItems(getDetectionTypeById(planForm.detectionTypeId))
   }
@@ -2267,8 +2383,10 @@ function buildPlanPayload() {
       standardMax: item.standardMax,
       referenceStandard: item.referenceStandard,
       methodId: item.methodId,
-      methodName: item.methodName
+      methodName: item.methodName,
+      sampleVolume: item.sampleVolume
     })),
+    samplingBasisList: parseSamplingBasisList(planForm.samplingBasisList),
     cycleType: planForm.cycleType || dailyCycleType,
     remark: planForm.remark?.trim() || ''
   }
@@ -2392,29 +2510,6 @@ async function resumePlan(row) {
     await Promise.all([loadPlans(), loadPlanStats()])
   } finally {
     endRowAction('plan', 'resume', row?.id)
-  }
-}
-
-async function promptTaskSealNo(row, options = {}) {
-  const {
-    title = row?.sealNo ? '修改采样封签号' : '录入采样封签号',
-    confirmButtonText = '保存'
-  } = options
-  try {
-    const { value } = await ElMessageBox.prompt(
-      '请输入采样封签号，支持手工录入或粘贴 OCR 识别结果。',
-      title,
-      {
-        confirmButtonText,
-        cancelButtonText: '取消',
-        inputValue: row?.sealNo || '',
-        inputPlaceholder: '请输入采样封签号',
-        inputValidator: (inputValue) => String(inputValue || '').trim() ? true : '封签号不能为空'
-      }
-    )
-    return String(value || '').trim()
-  } catch {
-    return null
   }
 }
 
@@ -2630,7 +2725,8 @@ function buildLoginDetectionConfigItems(detectionType) {
         .filter((item) => String(item.parameterId) === String(parameterId) && item.enabled === 1)
         .map((item) => ({
           id: String(item.id),
-          methodName: item.methodName || `检测方法-${item.id}`
+          methodName: item.methodName || `检测方法-${item.id}`,
+          sampleVolume: item.sampleVolume || item.sample_volume || ''
         }))
       const defaultMethodId = bindingMap.get(parameterId) && methodOptions.some((item) => item.id === bindingMap.get(parameterId))
         ? bindingMap.get(parameterId)
@@ -2645,6 +2741,7 @@ function buildLoginDetectionConfigItems(detectionType) {
         referenceStandard: parameter.referenceStandard || '',
         methodId: currentMethod?.id || '',
         methodName: currentMethod?.methodName || '',
+        sampleVolume: currentMethod?.sampleVolume || '',
         methodOptions
       }
     })
@@ -2661,7 +2758,8 @@ function buildLoginConfigRowFromSnapshot(item) {
       ...methodOptions,
       {
         id: methodId,
-        methodName: item?.methodName || `检测方法-${methodId}`
+        methodName: item?.methodName || `检测方法-${methodId}`,
+        sampleVolume: item?.sampleVolume || item?.sample_volume || ''
       }
     ]
   }
@@ -2674,6 +2772,7 @@ function buildLoginConfigRowFromSnapshot(item) {
     referenceStandard: item?.referenceStandard || parameter?.referenceStandard || '',
     methodId,
     methodName: item?.methodName || methodOptions.find((option) => option.id === methodId)?.methodName || '',
+    sampleVolume: item?.sampleVolume || item?.sample_volume || methodOptions.find((option) => option.id === methodId)?.sampleVolume || '',
     methodOptions
   }
 }
@@ -2688,6 +2787,66 @@ function parseTaskDetectionConfigSnapshot(snapshot) {
   return parseBindingJson(snapshot)
     .map((item) => buildLoginConfigRowFromSnapshot(item))
     .filter((item) => item.parameterId || item.parameterName || item.methodId || item.methodName)
+}
+
+function buildInstrumentModelLabel(binding) {
+  const displayNames = String(binding?.instrumentDisplayNames || binding?.instrumentDisplayName || binding?.label || '').trim()
+  if (displayNames) {
+    return displayNames
+  }
+  const instrumentName = String(binding?.instrumentName || '').trim()
+  const instrumentModel = String(binding?.instrumentModel || '').trim()
+  const manufacturer = String(binding?.manufacturer || '').trim()
+  if (!instrumentModel) {
+    return ''
+  }
+  if (instrumentName) {
+    return `${instrumentName}/${instrumentModel}`
+  }
+  return manufacturer ? `${instrumentModel} / ${manufacturer}` : instrumentModel
+}
+
+function resolveMethodInstrumentDisplayNames(methodId) {
+  const key = String(methodId || '').trim()
+  if (!key) {
+    return ''
+  }
+  return detectionMethodInstrumentModelNameMap.value[key] || ''
+}
+
+async function ensureDetectionMethodInstrumentModelMap() {
+  if (detectionMethodInstrumentModelLoaded.value) {
+    return
+  }
+  const result = await fetchDetectionMethodInstrumentModelBindingsApi({
+    pageNum: 1,
+    pageSize: 1000
+  })
+  const records = Array.isArray(result?.records) ? result.records : []
+  const nextMap = {}
+  records.forEach((item) => {
+    const methodId = String(item?.id || item?.methodId || '').trim()
+    if (!methodId) {
+      return
+    }
+    const instrumentDisplayNames = String(item?.instrumentDisplayNames || '').trim()
+    if (instrumentDisplayNames) {
+      nextMap[methodId] = instrumentDisplayNames
+      return
+    }
+    const instrumentModelNames = String(item?.instrumentModelNames || '').trim()
+    if (instrumentModelNames) {
+      nextMap[methodId] = instrumentModelNames
+      return
+    }
+    const bindings = Array.isArray(item?.instrumentModelBindings) ? item.instrumentModelBindings : []
+    nextMap[methodId] = bindings
+      .map((binding) => buildInstrumentModelLabel(binding))
+      .filter(Boolean)
+      .join('、')
+  })
+  detectionMethodInstrumentModelNameMap.value = nextMap
+  detectionMethodInstrumentModelLoaded.value = true
 }
 
 const loginDetectionConfigRows = computed(() => loginForm.detectionConfigItems)
@@ -2708,6 +2867,7 @@ function createEmptyDetectionConfigRow() {
     referenceStandard: '',
     methodId: '',
     methodName: '',
+    sampleVolume: '',
     methodOptions: []
   }
 }
@@ -2720,7 +2880,8 @@ function getDetectionConfigMethodOptionsByParameter(parameterId) {
     .filter((item) => String(item.parameterId) === String(parameterId) && item.enabled === 1)
     .map((item) => ({
       id: String(item.id),
-      methodName: item.methodName || `检测方法-${item.id}`
+      methodName: item.methodName || `检测方法-${item.id}`,
+      sampleVolume: item.sampleVolume || item.sample_volume || ''
     }))
 }
 
@@ -2761,23 +2922,7 @@ function applyDetectionConfigParameterChange(row, parameterId) {
   const nextMethod = row.methodOptions.find((item) => item.id === row.methodId) || row.methodOptions[0] || null
   row.methodId = nextMethod?.id || ''
   row.methodName = nextMethod?.methodName || ''
-}
-
-async function editTaskSealNo(row) {
-  if (!beginRowAction('task', 'seal', row?.id)) {
-    return
-  }
-  try {
-    const sealNo = await promptTaskSealNo(row)
-    if (!sealNo) {
-      return
-    }
-    await updateSamplingTaskSealNoApi(row.id, { sealNo })
-    ElMessage.success('采样封签号已保存。')
-    await Promise.all([loadTasks(), loadTaskStats()])
-  } finally {
-    endRowAction('task', 'seal', row?.id)
-  }
+  row.sampleVolume = nextMethod?.sampleVolume || ''
 }
 
 async function startTask(row) {
@@ -2785,15 +2930,7 @@ async function startTask(row) {
     return
   }
   try {
-    const sealNo = row?.sealNo?.trim() || await promptTaskSealNo(row, {
-      title: '开始任务前请先录入封签号',
-      confirmButtonText: '录入并开始'
-    })
-    if (!sealNo) {
-      return
-    }
     await startSamplingTaskApi(row.id, {
-      sealNo,
       remark: '采样任务开始执行'
     })
     ElMessage.success('采样任务已开始执行。')
@@ -2836,6 +2973,7 @@ async function openTaskDetailDialog(row) {
   if (!row?.id) {
     return
   }
+  await ensureDetectionMethodInstrumentModelMap()
   const detail = await fetchSamplingTaskDetailApi(row.id)
   taskDetail.value = detail || row
   await resolveTaskDetailPhotos(extractTaskPhotoUrls(taskDetail.value))
@@ -2857,7 +2995,6 @@ function resetTaskCompleteForm() {
   taskCompletePreview.value = null
   taskCompletePhotoList.value = []
   taskCompleteForm.taskId = null
-  taskCompleteForm.sealNo = ''
   taskCompleteForm.onsiteMetrics = ''
   taskCompleteForm.weather = ''
   taskCompleteForm.temperature = ''
@@ -3032,13 +3169,13 @@ async function openTaskCompleteDialog(row) {
     return
   }
   try {
+    await ensureDetectionMethodInstrumentModelMap()
     const detail = await fetchSamplingTaskDetailApi(row.id)
     const task = detail || row
     taskCompletePreview.value = task
     clearTaskCompletePhotoPreviewUrls()
     taskCompletePhotoList.value = extractTaskPhotoUrls(task).map(buildPhotoEntry)
     taskCompleteForm.taskId = task.id
-    taskCompleteForm.sealNo = task.sealNo || task.seal_no || ''
     taskCompleteForm.onsiteMetrics = task.onsiteMetrics || task.onsite_metrics || ''
     taskCompleteForm.weather = task.weather || ''
     taskCompleteForm.temperature = task.temperature || ''
@@ -3060,22 +3197,16 @@ async function submitTaskCompleteForm() {
     ElMessage.warning('请选择要录入的采样任务')
     return
   }
-  if (!String(taskCompleteForm.sealNo || '').trim()) {
-    ElMessage.warning('请先录入采样封签号')
-    return
-  }
   taskCompleteSubmitting.value = true
   try {
     const task = taskCompletePreview.value
     if (task?.taskStatus === pendingTaskStatus) {
       await startSamplingTaskApi(task.id, {
-        sealNo: String(taskCompleteForm.sealNo || '').trim(),
         remark: 'PC端采样录入时自动开始任务'
       })
     }
     await completeSamplingTaskApi({
       taskId: taskCompleteForm.taskId,
-      sealNo: String(taskCompleteForm.sealNo || '').trim(),
       onsiteMetrics: taskCompleteForm.onsiteMetrics,
       weather: taskCompleteForm.weather,
       temperature: taskCompleteForm.temperature,
@@ -3102,7 +3233,7 @@ function applyTaskToLoginForm(task) {
     return
   }
   loginForm.taskId = task.id
-  loginForm.sealNo = task.sealNo || ''
+  loginForm.sampleNo = task.sampleNo || ''
   loginForm.pointId = task.pointId || null
   loginForm.pointName = task.pointName || ''
   loginForm.sampleType = task.sampleType || ''
@@ -3126,7 +3257,7 @@ function resetLoginForm() {
   loginDialogMode.value = 'create'
   loginPreviewTaskLabel.value = ''
   loginForm.taskId = null
-  loginForm.sealNo = ''
+  loginForm.sampleNo = ''
   loginForm.pointId = null
   loginForm.pointName = ''
   loginForm.sampleType = ''
@@ -3164,13 +3295,12 @@ async function openLoginDialog(task = null) {
 
 function buildSampleTaskPreviewLabel(sample) {
   const sampleNo = sample?.sampleNo || '未生成样品编号'
-  const sealNo = sample?.sealNo || '未录入封签号'
   const pointName = sample?.pointName || '未命名点位'
   const samplerName = sample?.samplerName || '未指定采样员'
   if (sample?.taskId) {
-    return `任务ID-${sample.taskId} / ${sealNo} / ${pointName} / ${samplerName}`
+    return `任务ID-${sample.taskId} / ${sampleNo} / ${pointName} / ${samplerName}`
   }
-  return `无任务直登 / ${sampleNo} / ${sealNo} / ${pointName} / ${samplerName}`
+  return `无任务直登 / ${sampleNo} / ${pointName} / ${samplerName}`
 }
 
 function applySampleToLoginForm(sample) {
@@ -3179,7 +3309,7 @@ function applySampleToLoginForm(sample) {
   }
   loginForm.taskId = sample.taskId || null
   loginPreviewTaskLabel.value = buildSampleTaskPreviewLabel(sample)
-  loginForm.sealNo = sample.sealNo || ''
+  loginForm.sampleNo = sample.sampleNo || ''
   loginForm.pointId = sample.pointId || null
   loginForm.pointName = sample.pointName || ''
   loginForm.sampleType = sample.sampleType || ''
@@ -3220,28 +3350,15 @@ function applyDetectionConfigMethodChange(row, methodId) {
   const method = (row.methodOptions || []).find((item) => item.id === String(methodId || ''))
   row.methodId = String(methodId || '')
   row.methodName = method?.methodName || ''
-}
-
-function handleLoginSealNoChange(value) {
-  const sealNo = String(value || loginForm.sealNo || '').trim()
-  loginForm.sealNo = sealNo
-  if (!sealNo) {
-    return
-  }
-  const task = pendingLoggableTasks.value.find((item) => item.sealNo === sealNo)
-  if (!task) {
-    ElMessage.warning('未找到与该封签号匹配的待登录采样任务')
-    return
-  }
-  applyTaskToLoginForm(task)
+  row.sampleVolume = method?.sampleVolume || ''
 }
 
 function formatPendingTaskLabel(task) {
   const pointName = task?.pointName || '未命名点位'
   const samplerName = task?.samplerName || '未指定采样员'
   const taskNo = task?.taskNo || '未生成任务编号'
-  const sealNo = task?.sealNo || '未录入封签号'
-  return `${taskNo} / ${sealNo} / ${pointName} / ${samplerName}`
+  const sampleNo = task?.sampleNo || '任务生成时自动生成样品编号'
+  return `${taskNo} / ${sampleNo} / ${pointName} / ${samplerName}`
 }
 
 async function submitSampleLogin() {
@@ -3249,7 +3366,7 @@ async function submitSampleLogin() {
     ElMessage.warning('没有可登录的任务，请先进行采样任务完成录入')
     return
   }
-  if (!loginForm.sealNo || !loginForm.pointId || !loginForm.pointName || !loginForm.sampleType || !loginForm.detectionTypeId || !loginForm.detectionItems || !loginForm.samplingTime) {
+  if (!loginForm.pointId || !loginForm.pointName || !loginForm.sampleType || !loginForm.detectionTypeId || !loginForm.detectionItems || !loginForm.samplingTime) {
     ElMessage.warning('请完整填写样品登录信息')
     return
   }
@@ -3277,11 +3394,12 @@ async function submitSampleLogin() {
         standardMax: item.standardMax,
         referenceStandard: item.referenceStandard,
         methodId: item.methodId,
-        methodName: item.methodName
+        methodName: item.methodName,
+        sampleVolume: item.sampleVolume
       }))
     })
     loginDialogVisible.value = false
-    ElMessage.success(`样品登录完成，封签编号：${sample?.sealNo || '-'}`)
+    ElMessage.success(`样品登录完成，样品编号：${sample?.sampleNo || '-'}`)
     sampleQuery.pageNum = 1
     await Promise.all([loadTasks(), loadSamples(), loadTaskStats(), loadSampleStats()])
     await loadLoggableTasks()
@@ -3362,6 +3480,20 @@ watch(() => route.fullPath, () => {
   gap: 8px;
   justify-content: center;
   white-space: nowrap;
+}
+
+:deep(.el-table td.task-action-cell .cell) {
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
+.task-action-row {
+  gap: 6px;
+}
+
+.task-action-row :deep(.el-button) {
+  min-width: 60px;
+  padding: 0 12px;
 }
 
 .plan-sampler {

@@ -37,9 +37,6 @@ public class ReportPreviewVO {
     @Schema(description = "样品编号")
     private String sampleNo;
 
-    @Schema(description = "封签编号")
-    private String sealNo;
-
     @Schema(description = "点位名称")
     private String pointName;
 
@@ -51,9 +48,6 @@ public class ReportPreviewVO {
 
     @Schema(description = "采样时间")
     private String samplingTime;
-
-    @Schema(description = "封签时间")
-    private String sealTime;
 
     @Schema(description = "采样人员")
     private String samplerName;

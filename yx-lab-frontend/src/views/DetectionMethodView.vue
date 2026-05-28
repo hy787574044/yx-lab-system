@@ -139,7 +139,7 @@
           <el-table-column prop="standardCode" label="标准编号" min-width="160">
             <template #default="{ row }">{{ row.standardCode || '-' }}</template>
           </el-table-column>
-          <el-table-column prop="sampleVolume" label="取样体积" min-width="120">
+          <el-table-column prop="sampleVolume" label="取样体积" min-width="90">
             <template #default="{ row }">{{ row.sampleVolume || '-' }}</template>
           </el-table-column>
           <el-table-column prop="parameterName" label="已绑定参数" min-width="150">
@@ -294,7 +294,7 @@
                   <el-input
                     v-model="modelBindingForm.keyword"
                     clearable
-                    placeholder="请输入设备型号或生产厂家"
+                    placeholder="请输入设备名称、设备型号或生产厂家"
                   />
                 </label>
               </div>
@@ -325,6 +325,9 @@
                 {{ item.instrumentModel || '-' }}
               </el-checkbox>
               <span class="status-chip info">在库 {{ item.instrumentCount || 0 }} 台</span>
+            </div>
+            <div class="instrument-model-card__meta">
+              设备名称：{{ formatInstrumentNameText(item) }}
             </div>
             <div class="instrument-model-card__meta">
               生产厂家：{{ item.manufacturer || '-' }}
@@ -457,7 +460,10 @@ const filteredInstrumentModelOptions = computed(() => {
   let options = instrumentModelOptions.value || []
   if (keyword) {
     options = options.filter((item) =>
-      String(item.instrumentModel || '').toLowerCase().includes(keyword)
+      String(item.instrumentName || '').toLowerCase().includes(keyword)
+        || String(item.instrumentDisplayNames || '').toLowerCase().includes(keyword)
+        || String(item.label || '').toLowerCase().includes(keyword)
+        || String(item.instrumentModel || '').toLowerCase().includes(keyword)
         || String(item.manufacturer || '').toLowerCase().includes(keyword)
     )
   }
@@ -554,9 +560,17 @@ function buildInstrumentModelKey(itemOrModel, manufacturer) {
 }
 
 function formatInstrumentModelLabel(item) {
+  const displayNames = String(item?.instrumentDisplayNames || item?.instrumentDisplayName || item?.label || '').trim()
+  if (displayNames) {
+    return displayNames
+  }
+  const name = String(item?.instrumentName || '').trim()
   const model = item?.instrumentModel || '-'
-  const manufacturer = item?.manufacturer || ''
-  return manufacturer ? `${model} / ${manufacturer}` : model
+  return name ? `${name}/${model}` : model
+}
+
+function formatInstrumentNameText(item) {
+  return String(item?.instrumentName || item?.instrumentDisplayNames || item?.instrumentDisplayName || '').trim() || '-'
 }
 
 function isInstrumentModelSelected(item) {

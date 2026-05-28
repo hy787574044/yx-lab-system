@@ -168,11 +168,14 @@ public class DetectionConfigService {
                         .and(StrUtil.isNotBlank(keyword), wrapper -> wrapper
                                 .like(DetectionParameter::getParameterName, keyword)
                                 .or()
+                                .like(DetectionParameter::getParameterCategory, keyword)
+                                .or()
                                 .like(DetectionParameter::getUnit, keyword)
                                 .or()
                                 .like(DetectionParameter::getReferenceStandard, keyword)
                                 .or()
                                 .like(DetectionParameter::getRemark, keyword))
+                        .eq(StrUtil.isNotBlank(query.getParameterCategory()), DetectionParameter::getParameterCategory, StrUtil.trim(query.getParameterCategory()))
                         .eq(query.getEnabled() != null, DetectionParameter::getEnabled, query.getEnabled())
                         .orderByDesc(DetectionParameter::getCreatedTime));
         return new PageResult<>(page.getTotal(), page.getRecords());
@@ -267,6 +270,7 @@ public class DetectionConfigService {
     public List<InstrumentModelOptionVO> instrumentModelOptions() {
         List<Instrument> instruments = instrumentMapper.selectList(new LambdaQueryWrapper<Instrument>()
                 .isNotNull(Instrument::getInstrumentModel)
+                .orderByAsc(Instrument::getInstrumentName)
                 .orderByAsc(Instrument::getInstrumentModel)
                 .orderByAsc(Instrument::getManufacturer));
         Map<String, InstrumentModelOptionVO> optionMap = new LinkedHashMap<>();
@@ -282,9 +286,17 @@ public class DetectionConfigService {
                 vo.setInstrumentModel(model);
                 vo.setManufacturer(manufacturer);
                 vo.setInstrumentCount(0);
-                vo.setLabel(buildInstrumentModelLabel(model, manufacturer));
+                vo.setInstrumentName("");
+                vo.setInstrumentDisplayNames("");
                 return vo;
             });
+            String instrumentName = StrUtil.trim(instrument.getInstrumentName());
+            option.setInstrumentName(appendDistinctText(option.getInstrumentName(), instrumentName));
+            option.setInstrumentDisplayNames(appendDistinctText(
+                    option.getInstrumentDisplayNames(),
+                    buildInstrumentNameModelLabel(instrumentName, model)
+            ));
+            option.setLabel(StrUtil.blankToDefault(option.getInstrumentDisplayNames(), buildInstrumentNameModelLabel(null, model)));
             option.setInstrumentCount(option.getInstrumentCount() + 1);
         }
         return new ArrayList<>(optionMap.values());
@@ -676,6 +688,7 @@ public class DetectionConfigService {
 
     private void applyParameterCommand(DetectionParameter entity, DetectionParameterSaveCommand command) {
         entity.setParameterName(StrUtil.trim(command.getParameterName()));
+        entity.setParameterCategory(StrUtil.trim(command.getParameterCategory()));
         entity.setStandardMin(command.getStandardMin());
         entity.setStandardMax(command.getStandardMax());
         entity.setUnit(StrUtil.trim(command.getUnit()));
@@ -737,6 +750,9 @@ public class DetectionConfigService {
 
     private void validateParameter(DetectionParameter entity, Long selfId) {
         validateEnabledFlag(entity.getEnabled(), "检测参数启用状态不合法");
+        if (StrUtil.isBlank(entity.getParameterCategory())) {
+            throw new BusinessException("参数类别不能为空");
+        }
         ensureParameterNameUnique(entity.getParameterName(), selfId);
         BigDecimal min = entity.getStandardMin();
         BigDecimal max = entity.getStandardMax();
@@ -1375,6 +1391,7 @@ public class DetectionConfigService {
         DetectionParameterMethodBindingVO vo = new DetectionParameterMethodBindingVO();
         vo.setId(parameter.getId());
         vo.setParameterName(parameter.getParameterName());
+        vo.setParameterCategory(parameter.getParameterCategory());
         vo.setStandardMin(parameter.getStandardMin());
         vo.setStandardMax(parameter.getStandardMax());
         vo.setUnit(parameter.getUnit());
@@ -1424,6 +1441,9 @@ public class DetectionConfigService {
                                 .orderByAsc(DetectionMethodInstrumentModelBinding::getManufacturer))
                 .stream()
                 .collect(Collectors.groupingBy(DetectionMethodInstrumentModelBinding::getMethodId, LinkedHashMap::new, Collectors.toList()));
+        Map<String, List<String>> instrumentDisplayNameMap = buildInstrumentDisplayNameMap(bindingMap.values().stream()
+                .flatMap(List::stream)
+                .collect(Collectors.toList()));
         Map<String, InstrumentModelOptionVO> currentOptionMap = instrumentModelOptions().stream()
                 .collect(Collectors.toMap(
                         item -> buildInstrumentModelKey(item.getInstrumentModel(), item.getManufacturer()),
@@ -1432,13 +1452,14 @@ public class DetectionConfigService {
                         LinkedHashMap::new
                 ));
         return methodRows.stream()
-                .map(method -> toMethodBindingVO(method, bindingMap.get(method.getId()), currentOptionMap))
+                .map(method -> toMethodBindingVO(method, bindingMap.get(method.getId()), currentOptionMap, instrumentDisplayNameMap))
                 .collect(Collectors.toList());
     }
 
     private DetectionMethodInstrumentModelBindingVO toMethodBindingVO(DetectionMethod method,
                                                                       List<DetectionMethodInstrumentModelBinding> bindings,
-                                                                      Map<String, InstrumentModelOptionVO> currentOptionMap) {
+                                                                      Map<String, InstrumentModelOptionVO> currentOptionMap,
+                                                                      Map<String, List<String>> instrumentDisplayNameMap) {
         DetectionMethodInstrumentModelBindingVO vo = new DetectionMethodInstrumentModelBindingVO();
         vo.setId(method.getId());
         vo.setMethodName(method.getMethodName());
@@ -1465,7 +1486,55 @@ public class DetectionConfigService {
         vo.setInstrumentModelNames(bindingRows.stream()
                 .map(item -> buildInstrumentModelLabel(item.getInstrumentModel(), item.getManufacturer()))
                 .collect(Collectors.joining("、")));
+        LinkedHashSet<String> instrumentDisplayNames = new LinkedHashSet<>();
+        for (DetectionMethodInstrumentModelBinding binding : bindingRows) {
+            List<String> names = instrumentDisplayNameMap.get(buildInstrumentModelKey(binding.getInstrumentModel(), binding.getManufacturer()));
+            if (names == null || names.isEmpty()) {
+                String displayName = buildInstrumentNameModelLabel(null, binding.getInstrumentModel());
+                binding.setInstrumentDisplayNames(displayName);
+                instrumentDisplayNames.add(displayName);
+                continue;
+            }
+            binding.setInstrumentDisplayNames(String.join("、", names));
+            instrumentDisplayNames.addAll(names);
+        }
+        vo.setInstrumentDisplayNames(String.join("、", instrumentDisplayNames));
         return vo;
+    }
+
+    private Map<String, List<String>> buildInstrumentDisplayNameMap(List<DetectionMethodInstrumentModelBinding> bindings) {
+        List<DetectionMethodInstrumentModelBinding> bindingRows = bindings == null ? Collections.emptyList() : bindings;
+        List<String> instrumentModels = bindingRows.stream()
+                .map(DetectionMethodInstrumentModelBinding::getInstrumentModel)
+                .map(StrUtil::trim)
+                .filter(StrUtil::isNotBlank)
+                .distinct()
+                .collect(Collectors.toList());
+        if (instrumentModels.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        Map<String, LinkedHashSet<String>> displayNameMap = new LinkedHashMap<>();
+        instrumentMapper.selectList(new LambdaQueryWrapper<Instrument>()
+                        .in(Instrument::getInstrumentModel, instrumentModels)
+                        .orderByAsc(Instrument::getInstrumentModel)
+                        .orderByAsc(Instrument::getManufacturer)
+                        .orderByAsc(Instrument::getInstrumentName))
+                .forEach(instrument -> {
+                    String instrumentModel = StrUtil.trim(instrument.getInstrumentModel());
+                    if (StrUtil.isBlank(instrumentModel)) {
+                        return;
+                    }
+                    String key = buildInstrumentModelKey(instrumentModel, instrument.getManufacturer());
+                    displayNameMap.computeIfAbsent(key, ignored -> new LinkedHashSet<>())
+                            .add(buildInstrumentNameModelLabel(instrument.getInstrumentName(), instrumentModel));
+                });
+        return displayNameMap.entrySet().stream()
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        entry -> new ArrayList<>(entry.getValue()),
+                        (left, right) -> left,
+                        LinkedHashMap::new
+                ));
     }
 
     private void clearMethodInstrumentModelBindings(Long methodId) {
@@ -1496,5 +1565,28 @@ public class DetectionConfigService {
         String model = StrUtil.blankToDefault(StrUtil.trim(instrumentModel), "-");
         String maker = StrUtil.trim(manufacturer);
         return StrUtil.isBlank(maker) ? model : model + " / " + maker;
+    }
+
+    private String buildInstrumentNameModelLabel(String instrumentName, String instrumentModel) {
+        String model = StrUtil.blankToDefault(StrUtil.trim(instrumentModel), "-");
+        String name = StrUtil.trim(instrumentName);
+        return StrUtil.isBlank(name) ? model : name + "/" + model;
+    }
+
+    private String appendDistinctText(String text, String segment) {
+        String current = StrUtil.trim(text);
+        String value = StrUtil.trim(segment);
+        if (StrUtil.isBlank(value)) {
+            return StrUtil.blankToDefault(current, "");
+        }
+        if (StrUtil.isBlank(current)) {
+            return value;
+        }
+        for (String item : current.split("、")) {
+            if (value.equals(StrUtil.trim(item))) {
+                return current;
+            }
+        }
+        return current + "、" + value;
     }
 }

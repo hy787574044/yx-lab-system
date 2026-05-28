@@ -42,6 +42,8 @@ public class SamplingPlanSaveCommand {
 
     private List<SampleDetectionConfigItem> detectionConfigItems;
 
+    private List<String> samplingBasisList;
+
     private String cycleType;
 
     private String planStatus;

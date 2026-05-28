@@ -76,9 +76,7 @@ public class ReviewService {
                 PageUtils.buildPage(query),
                 new LambdaQueryWrapper<ReviewRecord>()
                         .and(StrUtil.isNotBlank(query.getKeyword()), wrapper -> wrapper
-                                .like(ReviewRecord::getSampleNo, query.getKeyword())
-                                .or()
-                                .like(ReviewRecord::getSealNo, query.getKeyword()))
+                                .like(ReviewRecord::getSampleNo, query.getKeyword()))
                         .eq(StrUtil.isNotBlank(query.getReviewResult()), ReviewRecord::getReviewResult, query.getReviewResult())
                         .eq(Boolean.TRUE.equals(query.getMine()), ReviewRecord::getReviewerId, currentUser.getUserId())
                         .eq(Boolean.FALSE.equals(query.getMine()) && dataScopeHelper.onlySelfScope(),
@@ -182,7 +180,6 @@ public class ReviewService {
         reviewRecord.setDetectionRecordId(record.getId());
         reviewRecord.setSampleId(record.getSampleId());
         reviewRecord.setSampleNo(record.getSampleNo());
-        reviewRecord.setSealNo(sample.getSealNo());
         fillReviewNodeInfo(reviewRecord, sample, currentReviewNode);
         reviewRecord.setReviewerId(currentUser.getUserId());
         reviewRecord.setReviewerName(currentUser.getRealName());
@@ -219,7 +216,7 @@ public class ReviewService {
                     sample.getId(),
                     LabWorkflowConstants.SampleStatus.COMPLETED,
                     record.getDetectionResult(),
-                    "审查通过：封签号=" + sample.getSealNo()
+                    "审查通过：样品编号=" + sample.getSampleNo()
                             + "，审查人=" + currentUser.getRealName()
                             + "，结果=" + LabWorkflowConstants.getDetectionResultLabel(record.getDetectionResult()));
             reportService.createApprovedReport(sample, record);
@@ -236,7 +233,7 @@ public class ReviewService {
                 sample.getId(),
                 LabWorkflowConstants.SampleStatus.RETEST,
                 buildRetestSummary(rejectReason, reviewRemark),
-                "审查驳回：封签号=" + sample.getSealNo()
+                "审查驳回：样品编号=" + sample.getSampleNo()
                         + "，审查人=" + currentUser.getRealName()
                         + "，原因=" + rejectReason);
     }

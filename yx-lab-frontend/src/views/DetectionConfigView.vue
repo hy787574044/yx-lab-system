@@ -45,12 +45,27 @@
                     <el-option label="停用" :value="0" />
                   </el-select>
                 </label>
+                <label class="toolbar-field">
+                  <span>参数类别</span>
+                  <el-select
+                    v-model="parameterQuery.parameterCategory"
+                    clearable
+                    placeholder="请选择参数类别"
+                  >
+                    <el-option
+                      v-for="option in parameterCategoryOptions"
+                      :key="option.value"
+                      :label="option.label"
+                      :value="option.value"
+                    />
+                  </el-select>
+                </label>
                 <label class="toolbar-field toolbar-field--medium">
                   <span>关键字</span>
                   <el-input
                     v-model="parameterQuery.keyword"
                     clearable
-                    placeholder="请输入参数名称、单位、标准或备注"
+                    placeholder="请输入参数名称、类别、单位、标准或备注"
                     @keyup.enter="handleParameterSearch"
                   />
                 </label>
@@ -74,7 +89,7 @@
             height="100%"
             empty-text="暂无检测参数数据"
           >
-            <el-table-column label="参数方法关系" min-width="360">
+            <el-table-column label="参数方法关系" min-width="300">
               <template #default="{ row }">
                 <div class="binding-tree">
                   <div class="binding-tree__parameter">
@@ -109,15 +124,18 @@
                 </div>
               </template>
             </el-table-column>
-            <el-table-column label="标准范围" min-width="180">
+            <el-table-column label="参数类别" width="110" header-cell-class-name="cell-center" class-name="cell-center">
+              <template #default="{ row }">{{ row.parameterCategory || '-' }}</template>
+            </el-table-column>
+            <el-table-column label="标准范围" min-width="120">
               <template #default="{ row }">
                 {{ formatStandardRange(row.standardMin, row.standardMax) }}
               </template>
             </el-table-column>
-            <el-table-column prop="unit" label="单位" min-width="100">
+            <el-table-column prop="unit" label="单位" width="72">
               <template #default="{ row }">{{ row.unit || '-' }}</template>
             </el-table-column>
-            <el-table-column prop="referenceStandard" label="检测标准" min-width="180" show-overflow-tooltip>
+            <el-table-column prop="referenceStandard" label="检测标准" min-width="140" show-overflow-tooltip>
               <template #default="{ row }">{{ row.referenceStandard || '-' }}</template>
             </el-table-column>
             <el-table-column prop="exceedRule" label="判定规则" min-width="220" show-overflow-tooltip>
@@ -241,7 +259,7 @@
             <el-table-column prop="parameterNames" label="组内参数" min-width="220" show-overflow-tooltip>
               <template #default="{ row }">{{ row.parameterNames || '-' }}</template>
             </el-table-column>
-            <el-table-column prop="parameterMethodNames" label="参数检测方法" min-width="320" show-overflow-tooltip>
+            <el-table-column prop="parameterMethodNames" label="参数检测方法" min-width="260" show-overflow-tooltip>
               <template #default="{ row }">{{ row.parameterMethodNames || '-' }}</template>
             </el-table-column>
             <el-table-column label="参数数量" width="110" class-name="cell-center" header-cell-class-name="cell-center">
@@ -295,6 +313,20 @@
               v-model="parameterForm.parameterName"
               placeholder="请输入检测参数名称，例如 pH、浊度、余氯"
             />
+          </el-form-item>
+          <el-form-item label="参数类别" required>
+            <el-select
+              v-model="parameterForm.parameterCategory"
+              placeholder="请选择参数类别"
+              style="width: 100%"
+            >
+              <el-option
+                v-for="option in parameterCategoryOptions"
+                :key="option.value"
+                :label="option.label"
+                :value="option.value"
+              />
+            </el-select>
           </el-form-item>
           <el-form-item label="单位">
             <el-input
@@ -670,6 +702,7 @@ import {
   fetchDetectionParameterMethodBindingsApi,
   fetchDetectionParametersApi,
   fetchDetectionTypesApi,
+  fetchDictItemsApi,
   saveDetectionParameterMethodBindingsApi,
   updateDetectionParameterApi,
   updateDetectionTypeApi
@@ -682,6 +715,7 @@ const activeStatKey = ref('all')
 const parameterRows = ref([])
 const parameterTotal = ref(0)
 const allParameters = ref([])
+const parameterCategoryOptions = ref([])
 const detectionMethodOptions = ref([])
 const detectorOptions = ref([])
 const groupRows = ref([])
@@ -701,6 +735,7 @@ const parameterBindingFilter = ref('all')
 
 const parameterQuery = reactive({
   enabled: '',
+  parameterCategory: '',
   keyword: '',
   pageNum: 1,
   pageSize: DEFAULT_PAGE_SIZE
@@ -717,6 +752,7 @@ const groupQuery = reactive({
 const parameterForm = reactive({
   id: null,
   parameterName: '',
+  parameterCategory: '',
   standardMin: '',
   standardMax: '',
   unit: '',
@@ -1000,6 +1036,16 @@ function formatStandardRange(min, max, unit) {
     return `<= ${max}${suffix}`
   }
   return '-'
+}
+
+function normalizeDictOptions(items) {
+  return (items || [])
+    .map((item) => {
+      const label = String(item.label || item.value || '').trim()
+      const value = String(item.value || item.label || '').trim()
+      return label && value ? { label, value } : null
+    })
+    .filter(Boolean)
 }
 
 function parseBindingJson(value) {
@@ -1309,6 +1355,7 @@ function resetParameterBindingState() {
 function resetParameterForm() {
   parameterForm.id = null
   parameterForm.parameterName = ''
+  parameterForm.parameterCategory = ''
   parameterForm.standardMin = ''
   parameterForm.standardMax = ''
   parameterForm.unit = ''
@@ -1337,6 +1384,7 @@ async function openParameterDialog(row) {
   if (row) {
     parameterForm.id = row.id
     parameterForm.parameterName = row.parameterName || ''
+    parameterForm.parameterCategory = row.parameterCategory || ''
     parameterForm.standardMin = row.standardMin ?? ''
     parameterForm.standardMax = row.standardMax ?? ''
     parameterForm.unit = row.unit || ''
@@ -1374,9 +1422,14 @@ async function submitParameterForm() {
     ElMessage.warning('请填写检测参数名称')
     return
   }
+  if (!parameterForm.parameterCategory) {
+    ElMessage.warning('请选择参数类别')
+    return
+  }
 
   const payload = {
     parameterName: parameterForm.parameterName.trim(),
+    parameterCategory: parameterForm.parameterCategory,
     standardMin: toNullableNumber(parameterForm.standardMin),
     standardMax: toNullableNumber(parameterForm.standardMax),
     unit: parameterForm.unit.trim(),
@@ -1553,6 +1606,7 @@ function handleGroupSearch() {
 
 function resetParameterQuery() {
   parameterQuery.enabled = ''
+  parameterQuery.parameterCategory = ''
   parameterQuery.keyword = ''
   parameterQuery.pageNum = 1
   activeStatKey.value = 'all'
@@ -1574,6 +1628,18 @@ async function loadDetectorOptions() {
     ...item,
     id: item.userId ?? item.id
   }))
+}
+
+async function loadParameterCategoryOptions() {
+  const result = await fetchDictItemsApi('detection_parameter_category')
+  const options = normalizeDictOptions(result)
+  parameterCategoryOptions.value = options.length
+    ? options
+    : [
+      { label: '原位检测', value: '原位检测' },
+      { label: '现场测定', value: '现场测定' },
+      { label: '实验室测定', value: '实验室测定' }
+    ]
 }
 
 async function loadParameterOptions() {
@@ -1613,7 +1679,7 @@ async function handleExportCurrentScene() {
 }
 
 async function refreshAll() {
-  await Promise.all([loadParameterOptions(), loadMethodOptions(), loadDetectorOptions()])
+  await Promise.all([loadParameterCategoryOptions(), loadParameterOptions(), loadMethodOptions(), loadDetectorOptions()])
   await Promise.all([loadParameters(), loadGroups()])
 }
 

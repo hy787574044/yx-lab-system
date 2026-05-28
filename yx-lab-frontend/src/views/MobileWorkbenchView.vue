@@ -108,7 +108,7 @@
               </span>
             </div>
             <p>任务编号：{{ task.taskNo || '-' }}</p>
-            <p>封签编号：{{ task.sealNo || task.seal_no || '待录入' }}</p>
+            <p>样品编号：{{ task.sampleNo || '任务生成时自动生成' }}</p>
             <p>计划时间：{{ task.samplingTime || '-' }}</p>
             <p>样品类型：{{ getEnumLabel(sampleTypeLabelMap, task.sampleType) }}</p>
             <p>检测项目组：{{ task.detectionTypeName || task.detectionItems || '-' }}</p>
@@ -161,7 +161,6 @@
                 {{ getEnumLabel(sampleStatusLabelMap, sample.sampleStatus) }}
               </span>
             </div>
-            <p>封签编号：{{ sample.sealNo || '-' }}</p>
             <p>点位名称：{{ sample.pointName || '-' }}</p>
             <p>采样人员：{{ sample.samplerName || '-' }}</p>
             <p>检测项目组：{{ sample.detectionTypeName || sample.detectionItems || '-' }}</p>
@@ -186,7 +185,6 @@
                 {{ getEnumLabel(detectionStatusLabelMap, row.detectionStatus) }}
               </span>
             </div>
-            <p>封签编号：{{ row.sealNo || '-' }}</p>
             <p>检测项目组：{{ row.detectionTypeName || '-' }}</p>
             <p>检测结果：{{ getEnumLabel(detectionResultLabelMap, row.detectionResult) }}</p>
             <p>提交时间：{{ row.detectionTime || '-' }}</p>
@@ -258,7 +256,6 @@
               </span>
             </div>
             <p>样品编号：{{ row.sampleNo || '-' }}</p>
-            <p>封签编号：{{ row.sealNo || '-' }}</p>
             <p>发布时间：{{ row.publishedTime || row.generatedTime || '-' }}</p>
             <p>发布人员：{{ row.publishedByName || '-' }}</p>
             <div class="card-actions">
@@ -279,8 +276,8 @@
       @closed="resetCompleteForm"
     >
       <el-form label-position="top">
-        <el-form-item label="采样封签号" required>
-          <el-input v-model="completeForm.sealNo" placeholder="请输入或粘贴 OCR 识别的封签号" />
+        <el-form-item label="样品编号">
+          <el-input model-value="采样完成后由服务器生成" readonly />
         </el-form-item>
         <el-form-item label="天气">
           <el-input v-model="completeForm.weather" placeholder="例如：晴、多云、小雨" />
@@ -353,7 +350,7 @@
               size="small"
               border
             >
-              <el-table-column label="检测参数" min-width="140">
+              <el-table-column label="检测参数" min-width="120">
                 <template #default="{ row }">
                   <span>{{ row.parameterName || '-' }}</span>
                 </template>
@@ -363,14 +360,19 @@
                   {{ formatStandardRange(row.standardMin, row.standardMax, row.unit) }}
                 </template>
               </el-table-column>
-              <el-table-column prop="referenceStandard" label="检测标准" min-width="160" show-overflow-tooltip>
+              <el-table-column prop="referenceStandard" label="检测标准" min-width="130" show-overflow-tooltip>
                 <template #default="{ row }">
                   <span>{{ row.referenceStandard || '-' }}</span>
                 </template>
               </el-table-column>
-              <el-table-column label="检测方法" min-width="150" show-overflow-tooltip>
+              <el-table-column label="检测方法" min-width="120" show-overflow-tooltip>
                 <template #default="{ row }">
                   <span>{{ row.methodName || '-' }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="取样体积" min-width="90" show-overflow-tooltip>
+                <template #default="{ row }">
+                  <span>{{ row.sampleVolume || '-' }}</span>
                 </template>
               </el-table-column>
             </el-table>
@@ -567,7 +569,6 @@ import {
   fetchReportPreviewDataApi,
   loginSampleApi,
   mobileLogoutApi,
-  startSamplingTaskApi,
   abandonSamplingTaskApi,
   completeSamplingTaskApi,
   submitDetectionApi,
@@ -640,7 +641,6 @@ const reportPrintRef = ref(null)
 
 const completeForm = reactive({
   taskId: null,
-  sealNo: '',
   onsiteMetrics: '',
   weather: '',
   temperature: '',
@@ -739,7 +739,8 @@ function parseDetectionConfigSnapshot(snapshot) {
           standardMax: item.standardMax ?? item.standard_max ?? null,
           referenceStandard: item.referenceStandard || item.reference_standard || '',
           methodId: item.methodId || item.method_id || null,
-          methodName: item.methodName || item.method_name || ''
+          methodName: item.methodName || item.method_name || '',
+          sampleVolume: item.sampleVolume || item.sample_volume || ''
         }))
       : []
   } catch {
@@ -896,30 +897,6 @@ async function ensureDetectionConfig() {
   detectionParameters.value = parameterResult.records || []
 }
 
-async function handleStartTask(task) {
-  let sealNo = String(task?.sealNo || '').trim()
-  if (!sealNo) {
-    try {
-      const { value } = await ElMessageBox.prompt(
-        '请输入采样封签号，支持手工录入或粘贴 OCR 识别结果。',
-        '开始任务前请先录入封签号',
-        {
-          confirmButtonText: '录入并开始',
-          cancelButtonText: '取消',
-          inputPlaceholder: '请输入采样封签号',
-          inputValidator: (inputValue) => String(inputValue || '').trim() ? true : '封签号不能为空'
-        }
-      )
-      sealNo = String(value || '').trim()
-    } catch {
-      return
-    }
-  }
-  await startSamplingTaskApi(task.id, { sealNo, remark: '移动端开始采样' })
-  ElMessage.success('采样任务已开始。')
-  await refreshAll()
-}
-
 async function abandonTask(task) {
   try {
     const { value } = await ElMessageBox.prompt('请填写废弃原因', '废弃采样任务', {
@@ -940,7 +917,6 @@ async function abandonTask(task) {
 
 function openCompleteDialog(task) {
   completeForm.taskId = task.id
-  completeForm.sealNo = task.sealNo || task.seal_no || ''
   completeForm.onsiteMetrics = task.onsiteMetrics || task.onsite_metrics || ''
   completeForm.weather = task.weather || ''
   completeForm.temperature = task.temperature || ''
@@ -951,7 +927,6 @@ function openCompleteDialog(task) {
 
 function resetCompleteForm() {
   completeForm.taskId = null
-  completeForm.sealNo = ''
   completeForm.onsiteMetrics = ''
   completeForm.weather = ''
   completeForm.temperature = ''
@@ -964,15 +939,10 @@ async function submitComplete() {
     ElMessage.warning('请选择要完成的采样任务')
     return
   }
-  if (!String(completeForm.sealNo || '').trim()) {
-    ElMessage.warning('请先录入采样封签号')
-    return
-  }
   submitting.value = true
   try {
     await completeSamplingTaskApi({
       taskId: completeForm.taskId,
-      sealNo: String(completeForm.sealNo || '').trim(),
       onsiteMetrics: completeForm.onsiteMetrics,
       weather: completeForm.weather,
       temperature: completeForm.temperature,
@@ -1047,11 +1017,12 @@ async function submitSampleLogin() {
         standardMax: item.standardMax,
         referenceStandard: item.referenceStandard,
         methodId: item.methodId,
-        methodName: item.methodName
+        methodName: item.methodName,
+        sampleVolume: item.sampleVolume
       }))
     })
     loginDialogVisible.value = false
-    ElMessage.success(`样品登录完成，封签编号：${sample?.sealNo || '-'}`)
+    ElMessage.success(`样品登录完成，样品编号：${sample?.sampleNo || '-'}`)
     await refreshAll()
     activeTab.value = 'detection'
   } finally {

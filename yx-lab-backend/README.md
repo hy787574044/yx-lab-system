@@ -251,16 +251,16 @@ curl -G "http://localhost:8080/api/unified/users/menus" \
 
 如果你的数据库已经初始化过，需要手动补充该表结构，或重新执行 `sql/init.sql` 中对应的建表语句。
 
-### 样品封签与留痕字段调整
+### 样品编号与留痕字段调整
 
-本次样品封签与留痕功能对以下表新增了字段：
+当前采样完成时由服务端统一生成样品编号，编号规则为 `YX` + 日期 + 4 位递增序号，例如 `YX202605280001`。本次调整涉及以下结构：
 
-- `lab_sample`：`seal_no`、`seal_time`、`trace_log`
-- `lab_detection_record`：`seal_no`
-- `lab_review_record`：`seal_no`
-- `lab_report`：`seal_no`
+- `lab_sampling_task`：新增 `sample_no`
+- `lab_sample_no_sequence`：样品编号日期序列表
+- `lab_sample`：保留 `trace_log`，不再使用历史采样标识字段
+- `lab_detection_record`、`lab_review_record`、`lab_report`：只保留 `sample_no` 作为业务编号
 
-如果你的数据库已经初始化过，需要同步执行 `sql/init.sql` 中对应的字段调整，保证样品封签号和流程留痕能够正常入库。
+如果你的数据库已经初始化过，需要执行 `sql/20260528_sample_no_generator_remove_seal.sql`，补充样品编号序列表并清理历史采样标识字段。
 
 ### 报告正式产物调整
 

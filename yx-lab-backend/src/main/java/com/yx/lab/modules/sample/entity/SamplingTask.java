@@ -22,6 +22,10 @@ public class SamplingTask extends BaseEntity {
     @TableField("task_no")
     private String taskNo;
 
+    @Schema(description = "样品编号")
+    @TableField("sample_no")
+    private String sampleNo;
+
     @Schema(description = "采样计划ID")
     @TableField("plan_id")
     private Long planId;
@@ -50,10 +54,6 @@ public class SamplingTask extends BaseEntity {
     @Schema(description = "样品类型")
     @TableField("sample_type")
     private String sampleType;
-
-    @Schema(description = "封签编号")
-    @TableField("seal_no")
-    private String sealNo;
 
     @Schema(description = "样品登记状态")
     @TableField("sample_register_status")

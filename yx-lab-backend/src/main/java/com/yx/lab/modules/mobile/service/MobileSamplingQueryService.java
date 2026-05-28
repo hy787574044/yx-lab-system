@@ -60,7 +60,7 @@ public class MobileSamplingQueryService {
                         .or()
                         .like(SamplingTask::getPointName, keyword)
                         .or()
-                        .like(SamplingTask::getSealNo, keyword))
+                        .like(SamplingTask::getSampleNo, keyword))
                 .eq(StrUtil.isNotBlank(taskStatus), SamplingTask::getTaskStatus, taskStatus)
                 .in(SamplingTask::getTaskStatus,
                         LabWorkflowConstants.SamplingTaskStatus.PENDING,
@@ -147,7 +147,6 @@ public class MobileSamplingQueryService {
         vo.setDetectionConfigSnapshot(task.getDetectionConfigSnapshot());
         vo.setTaskStatus(task.getTaskStatus());
         vo.setTaskStatusDesc(LabWorkflowConstants.getSamplingTaskStatusLabel(task.getTaskStatus()));
-        vo.setTaskSealNo(task.getSealNo());
         vo.setSampleRegisterStatus(task.getSampleRegisterStatus());
         vo.setSampleRegisterStatusDesc(LabWorkflowConstants.getSampleRegisterStatusLabel(task.getSampleRegisterStatus()));
         vo.setFinishedTime(task.getFinishedTime());
@@ -156,14 +155,12 @@ public class MobileSamplingQueryService {
         vo.setPhotoUrls(storageService.toFullUrls(task.getPhotoUrls()));
         if (sample != null) {
             vo.setSampleId(sample.getId());
-            vo.setSampleNo(sample.getSampleNo());
-            vo.setSealNo(sample.getSealNo());
+            vo.setSampleNo(StrUtil.blankToDefault(sample.getSampleNo(), task.getSampleNo()));
             vo.setSampleStatus(sample.getSampleStatus());
             vo.setSampleStatusDesc(LabWorkflowConstants.getSampleStatusLabel(sample.getSampleStatus()));
             vo.setSampleLogged(Boolean.TRUE);
         } else {
-            // 如果没有样品，使用任务的封签号（支持提前录入封签号的场景）
-            vo.setSealNo(task.getSealNo());
+            vo.setSampleNo(task.getSampleNo());
             vo.setSampleLogged(Boolean.FALSE);
         }
         return vo;

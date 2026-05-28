@@ -12,8 +12,6 @@ public class MobileDetectionTodoVO {
 
     private String sampleNo;
 
-    private String sealNo;
-
     private String pointName;
 
     private String sampleType;

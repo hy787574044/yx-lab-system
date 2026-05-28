@@ -30,10 +30,6 @@ public class ReviewRecord extends BaseEntity {
     @TableField("sample_no")
     private String sampleNo;
 
-    @Schema(description = "封签编号")
-    @TableField("seal_no")
-    private String sealNo;
-
     @Schema(description = "审核流程ID")
     @TableField("flow_id")
     private Long flowId;

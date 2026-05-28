@@ -162,7 +162,6 @@ export const fetchSamplingTasksApi = (params) => request.get('/api/samplingTasks
 export const fetchSamplingTaskStatsApi = () => request.get('/api/samplingTasks/stats')
 export const exportSamplingTasksApi = (params) => downloadExcel('/api/samplingTasks/export', params, '采样任务.xlsx')
 export const fetchSamplingTaskDetailApi = (id) => request.get(`/api/samplingTasks/${id}`)
-export const updateSamplingTaskSealNoApi = (id, data) => request.post(`/api/samplingTasks/${id}/sealNo`, data)
 /**
  * 开始采样任务。
  *

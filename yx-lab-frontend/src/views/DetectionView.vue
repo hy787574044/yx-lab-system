@@ -30,7 +30,7 @@
                 <el-input
                   v-model="query.keyword"
                   clearable
-                  placeholder="请输入样品编号、封签号或检测套餐"
+                  placeholder="请输入样品编号或检测套餐"
                   @keyup.enter="handleSearch"
                 />
               </label>
@@ -77,7 +77,6 @@
           :empty-text="baseScene.emptyText"
         >
           <el-table-column prop="sampleNo" label="样品编号" min-width="170" />
-          <el-table-column prop="sealNo" label="封签编号" min-width="170" />
           <el-table-column prop="detectionTypeName" label="检测套餐" min-width="180" />
           <el-table-column label="参数进度" min-width="150">
             <template #default="{ row }">
@@ -153,7 +152,6 @@
       <div v-if="currentSubflowRecord" class="subflow-panel subflow-panel--dialog">
         <div class="result-dialog__summary">
           <span class="binding-editor__chip">样品编号<strong>{{ currentSubflowRecord.sampleNo || '-' }}</strong></span>
-          <span class="binding-editor__chip">封签编号<strong>{{ currentSubflowRecord.sealNo || '-' }}</strong></span>
           <span class="binding-editor__chip">检测套餐<strong>{{ currentSubflowRecord.detectionTypeName || '-' }}</strong></span>
           <span class="binding-editor__chip">检测项数<strong>{{ currentSubflowItems.length }}</strong></span>
         </div>
@@ -276,8 +274,8 @@
               border
               max-height="460"
             >
-              <el-table-column prop="parameterName" label="检测参数" min-width="140" show-overflow-tooltip />
-              <el-table-column prop="methodName" label="检测方法" min-width="170" show-overflow-tooltip>
+              <el-table-column prop="parameterName" label="检测参数" min-width="120" show-overflow-tooltip />
+              <el-table-column prop="methodName" label="检测方法" min-width="130" show-overflow-tooltip>
                 <template #default="{ row }">{{ row.methodName || '-' }}</template>
               </el-table-column>
               <el-table-column label="检测步骤" min-width="210" show-overflow-tooltip>
@@ -300,15 +298,15 @@
                   </span>
                 </template>
               </el-table-column>
-              <el-table-column label="标准范围" min-width="130">
+              <el-table-column label="标准范围" min-width="120">
                 <template #default="{ row }">
                   {{ formatStandardRange(row.standardMin, row.standardMax) }}
                 </template>
               </el-table-column>
-              <el-table-column prop="unit" label="单位" width="90">
+              <el-table-column prop="unit" label="单位" width="72">
                 <template #default="{ row }">{{ row.unit || '-' }}</template>
               </el-table-column>
-              <el-table-column prop="referenceStandard" label="检测标准" min-width="140" show-overflow-tooltip>
+              <el-table-column prop="referenceStandard" label="检测标准" min-width="130" show-overflow-tooltip>
                 <template #default="{ row }">{{ row.referenceStandard || '-' }}</template>
               </el-table-column>
               <el-table-column label="检测结果" width="100" header-cell-class-name="result-field-header">
@@ -370,17 +368,17 @@
           border
           max-height="460"
         >
-          <el-table-column prop="parameterName" label="检测参数" min-width="150" />
-          <el-table-column prop="methodName" label="检测方法" min-width="220" show-overflow-tooltip />
-          <el-table-column label="标准范围" min-width="140">
+          <el-table-column prop="parameterName" label="检测参数" min-width="120" show-overflow-tooltip />
+          <el-table-column prop="methodName" label="检测方法" min-width="150" show-overflow-tooltip />
+          <el-table-column label="标准范围" min-width="120">
             <template #default="{ row }">
               {{ formatStandardRange(row.standardMin, row.standardMax, row.unit) }}
             </template>
           </el-table-column>
-          <el-table-column prop="unit" label="单位" width="90">
+          <el-table-column prop="unit" label="单位" width="72">
             <template #default="{ row }">{{ row.unit || '-' }}</template>
           </el-table-column>
-          <el-table-column prop="referenceStandard" label="检测标准" min-width="160" show-overflow-tooltip>
+          <el-table-column prop="referenceStandard" label="检测标准" min-width="130" show-overflow-tooltip>
             <template #default="{ row }">{{ row.referenceStandard || '-' }}</template>
           </el-table-column>
           <el-table-column label="检测结果" width="100" header-cell-class-name="result-field-header">
@@ -516,7 +514,6 @@ const resultForm = reactive({
   recordId: null,
   sampleId: null,
   sampleNo: '',
-  sealNo: '',
   detectionTypeId: null,
   detectionTypeName: '',
   parameterName: '',
@@ -542,12 +539,11 @@ function buildPendingSampleRecord(sample) {
     id: `pending-sample-${sample.id}`,
     sampleId: sample.id,
     sampleNo: sample.sampleNo,
-    sealNo: sample.sealNo,
     detectionTypeName: sample.detectionTypeName || sample.detectionItems || '待分配检测套餐',
     detectorName: '',
     detectionResult: null,
     detectionStatus: WAIT_ASSIGN_STATUS,
-    detectionTime: sample.sealTime || sample.samplingTime || '',
+    detectionTime: sample.samplingTime || '',
     abnormalRemark: '历史样品未自动生成参数子流程',
     parameterCount: configItems.length,
     assignedCount: 0,
@@ -1212,7 +1208,6 @@ function resetResultForm() {
   resultForm.recordId = null
   resultForm.sampleId = null
   resultForm.sampleNo = ''
-  resultForm.sealNo = ''
   resultForm.detectionTypeId = null
   resultForm.detectionTypeName = ''
   resultForm.parameterName = ''
@@ -1287,7 +1282,6 @@ async function openResultDialog(row, item) {
   resultForm.recordId = row.id
   resultForm.sampleId = row.sampleId || detail?.record?.sampleId || null
   resultForm.sampleNo = row.sampleNo || detail?.record?.sampleNo || ''
-  resultForm.sealNo = row.sealNo || detail?.record?.sealNo || ''
   resultForm.detectionTypeId = row.detectionTypeId || detail?.record?.detectionTypeId || null
   resultForm.detectionTypeName = row.detectionTypeName || detail?.record?.detectionTypeName || ''
   resultForm.parameterName = currentItem.parameterName || ''
@@ -1324,7 +1318,6 @@ async function openRecordResultDialog(row) {
   resultForm.recordId = row.id
   resultForm.sampleId = row.sampleId || detail?.record?.sampleId || null
   resultForm.sampleNo = row.sampleNo || detail?.record?.sampleNo || ''
-  resultForm.sealNo = row.sealNo || detail?.record?.sealNo || ''
   resultForm.detectionTypeId = row.detectionTypeId || detail?.record?.detectionTypeId || null
   resultForm.detectionTypeName = row.detectionTypeName || detail?.record?.detectionTypeName || ''
   resultForm.parameterName = '全部参数'

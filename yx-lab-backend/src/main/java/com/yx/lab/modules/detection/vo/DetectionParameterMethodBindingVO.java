@@ -12,6 +12,8 @@ public class DetectionParameterMethodBindingVO {
 
     private String parameterName;
 
+    private String parameterCategory;
+
     private BigDecimal standardMin;
 
     private BigDecimal standardMax;

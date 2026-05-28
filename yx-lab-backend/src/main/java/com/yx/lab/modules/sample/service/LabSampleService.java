@@ -37,7 +37,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -75,8 +74,6 @@ public class LabSampleService {
                 new LambdaQueryWrapper<LabSample>()
                         .and(StrUtil.isNotBlank(query.getKeyword()), wrapper -> wrapper
                                 .like(LabSample::getSampleNo, query.getKeyword())
-                                .or()
-                                .like(LabSample::getSealNo, query.getKeyword())
                                 .or()
                                 .like(LabSample::getPointName, query.getKeyword()))
                         .eq(StrUtil.isNotBlank(query.getSampleStatus()), LabSample::getSampleStatus, query.getSampleStatus())
@@ -148,14 +145,8 @@ public class LabSampleService {
     @Transactional(rollbackFor = Exception.class)
     public LabSample loginSample(SampleLoginCommand command) {
         CurrentUser currentUser = requireCurrentUser();
-        String commandSealNo = normalizeSealNo(command.getSealNo());
-        // 先判断是“任务样品登录”还是“无任务直登样品”，两种入口的校验规则不同。
         SamplingTask task = resolveTaskForLogin(command);
-        if (task != null) {
-            validateTaskForSampleLogin(task, currentUser, commandSealNo);
-        } else {
-            validateSamplerOperator(command, currentUser);
-        }
+        validateTaskForSampleLogin(task, currentUser);
         // 任务来源样品的套餐由采样计划派发时固化，样品登录只做回显和承接，不能再重新选择套餐。
         DetectionType detectionType = resolveDetectionType(command, task);
         List<SampleDetectionConfigItem> detectionConfigItems = normalizeDetectionConfigItems(command, task, detectionType);
@@ -170,17 +161,12 @@ public class LabSampleService {
                 FlowConfigManagementService.FLOW_TYPE_PUBLISH,
                 "发布流程");
 
-        // 封签号是样品与采样任务衔接的关键主键，先统一归一化并做唯一性校验。
-        String sealNo = resolveSealNo(commandSealNo, task);
-        validateSealNoUniqueness(sealNo);
-
         LabSample sample = new LabSample();
-        sample.setSampleNo(generateSampleNo());
-        sample.setSealNo(sealNo);
-        sample.setTaskId(task == null ? command.getTaskId() : task.getId());
-        sample.setPointId(command.getPointId() != null ? command.getPointId() : (task == null ? null : task.getPointId()));
-        sample.setPointName(StrUtil.isNotBlank(command.getPointName()) ? command.getPointName() : (task == null ? null : task.getPointName()));
-        sample.setSampleType(StrUtil.isNotBlank(command.getSampleType()) ? command.getSampleType() : (task == null ? null : task.getSampleType()));
+        sample.setSampleNo(StrUtil.trim(task.getSampleNo()));
+        sample.setTaskId(task.getId());
+        sample.setPointId(command.getPointId() != null ? command.getPointId() : task.getPointId());
+        sample.setPointName(StrUtil.isNotBlank(command.getPointName()) ? command.getPointName() : task.getPointName());
+        sample.setSampleType(StrUtil.isNotBlank(command.getSampleType()) ? command.getSampleType() : task.getSampleType());
         sample.setQualityControlType(StrUtil.blankToDefault(StrUtil.trim(command.getQualityControlType()), null));
         sample.setDetectionItems(resolveDetectionItems(command, task, detectionType));
         sample.setDetectionTypeId(resolveDetectionTypeId(command, task, detectionType));
@@ -191,7 +177,6 @@ public class LabSampleService {
         sample.setPublishFlowId(publishFlow == null ? null : publishFlow.getId());
         sample.setPublishFlowName(publishFlow == null ? null : publishFlow.getFlowName());
         sample.setSamplingTime(command.getSamplingTime());
-        sample.setSealTime(LocalDateTime.now());
         sample.setSamplerId(resolveSamplerId(command, task, currentUser));
         sample.setSamplerName(resolveSamplerName(command, task, currentUser));
         sample.setWeather(command.getWeather());
@@ -201,13 +186,9 @@ public class LabSampleService {
         sample.setTraceLog(buildLoginTrace(sample, task));
         labSampleMapper.insert(sample);
 
-        // 如本次登录来源于采样任务，需同步回填任务的样品登记状态和样品主键。
-        if (task != null) {
-            task.setSampleRegisterStatus(LabWorkflowConstants.SampleRegisterStatus.REGISTERED);
-            task.setSampleId(sample.getId());
-            task.setSealNo(sample.getSealNo());
-            samplingTaskMapper.updateById(task);
-        }
+        task.setSampleRegisterStatus(LabWorkflowConstants.SampleRegisterStatus.REGISTERED);
+        task.setSampleId(sample.getId());
+        samplingTaskMapper.updateById(task);
         // 样品一旦登录完成，立即补齐后续待分配检测主流程与参数子流程。
         detectionPendingFlowService.createPendingFlowIfMissing(sample);
         return sample;
@@ -262,67 +243,29 @@ public class LabSampleService {
     }
 
     private SamplingTask resolveTaskForLogin(SampleLoginCommand command) {
-        if (command.getTaskId() != null) {
-            SamplingTask task = samplingTaskMapper.selectById(command.getTaskId());
-            if (task == null) {
-                throw new BusinessException("采样任务不存在。");
-            }
-            return task;
+        if (command.getTaskId() == null) {
+            throw new BusinessException("请选择已完成采样的任务后再进行样品登录。");
         }
-        // 无任务样品允许仅凭封签号回捞采样任务，实现 OCR 回填后再登录样品。
-        String sealNo = normalizeSealNo(command.getSealNo());
-        if (StrUtil.isBlank(sealNo)) {
-            return null;
+        SamplingTask task = samplingTaskMapper.selectById(command.getTaskId());
+        if (task == null) {
+            throw new BusinessException("采样任务不存在。");
         }
-        return samplingTaskMapper.selectOne(new LambdaQueryWrapper<SamplingTask>()
-                .eq(SamplingTask::getSealNo, sealNo)
-                .last("limit 1"));
+        return task;
     }
 
-    private void validateTaskForSampleLogin(SamplingTask task, CurrentUser currentUser, String sealNo) {
+    private void validateTaskForSampleLogin(SamplingTask task, CurrentUser currentUser) {
         if (!LabWorkflowConstants.SamplingTaskStatus.COMPLETED.equals(task.getTaskStatus())) {
             throw new BusinessException("采样任务未完成，不能进行样品登录。");
         }
         validateTaskOperator(task, currentUser);
-        if (StrUtil.isBlank(task.getSealNo()) && StrUtil.isBlank(sealNo)) {
-            throw new BusinessException("采样任务尚未录入封签号，请先录入或粘贴 OCR 识别结果。");
+        if (StrUtil.isBlank(task.getSampleNo())) {
+            throw new BusinessException("采样任务尚未生成样品编号，请先完成采样录入。");
         }
         Long existingCount = labSampleMapper.selectCount(new LambdaQueryWrapper<LabSample>()
                 .eq(LabSample::getTaskId, task.getId()));
         if (existingCount != null && existingCount > 0) {
             throw new BusinessException("该采样任务已完成样品登录，不能重复登录。");
         }
-    }
-
-    private void validateSealNoUniqueness(String sealNo) {
-        if (StrUtil.isBlank(sealNo)) {
-            return;
-        }
-        Long existingCount = labSampleMapper.selectCount(new LambdaQueryWrapper<LabSample>()
-                .eq(LabSample::getSealNo, sealNo));
-        if (existingCount != null && existingCount > 0) {
-            throw new BusinessException("封签号已被占用，请核对后重试。");
-        }
-    }
-
-    private String resolveSealNo(String commandSealNo, SamplingTask task) {
-        if (task != null) {
-            if (StrUtil.isNotBlank(commandSealNo)) {
-                return commandSealNo;
-            }
-            if (StrUtil.isNotBlank(task.getSealNo())) {
-                return task.getSealNo();
-            }
-            throw new BusinessException("采样任务尚未录入封签号。");
-        }
-        if (StrUtil.isBlank(commandSealNo)) {
-            throw new BusinessException("无任务直登样品时必须填写封签号。");
-        }
-        return commandSealNo;
-    }
-
-    private String normalizeSealNo(String sealNo) {
-        return StrUtil.blankToDefault(StrUtil.trim(sealNo), null);
     }
 
     private DetectionType resolveDetectionType(SampleLoginCommand command, SamplingTask task) {
@@ -473,12 +416,14 @@ public class LabSampleService {
             SampleDetectionConfigItem normalizedItem = new SampleDetectionConfigItem();
             normalizedItem.setParameterId(item.getParameterId());
             normalizedItem.setParameterName(StrUtil.blankToDefault(StrUtil.trim(item.getParameterName()), method.getParameterName()));
+            normalizedItem.setParameterCategory(StrUtil.trim(item.getParameterCategory()));
             normalizedItem.setUnit(StrUtil.trim(item.getUnit()));
             normalizedItem.setStandardMin(item.getStandardMin());
             normalizedItem.setStandardMax(item.getStandardMax());
             normalizedItem.setReferenceStandard(StrUtil.trim(item.getReferenceStandard()));
             normalizedItem.setMethodId(method.getId());
             normalizedItem.setMethodName(method.getMethodName());
+            normalizedItem.setSampleVolume(method.getSampleVolume());
             normalizedItem.setMethodBasis(method.getMethodBasis());
             normalizedItems.add(normalizedItem);
         }
@@ -555,12 +500,14 @@ public class LabSampleService {
         SampleDetectionConfigItem item = new SampleDetectionConfigItem();
         item.setParameterId(parameter.getId());
         item.setParameterName(parameter.getParameterName());
+        item.setParameterCategory(parameter.getParameterCategory());
         item.setUnit(parameter.getUnit());
         item.setStandardMin(parameter.getStandardMin());
         item.setStandardMax(parameter.getStandardMax());
         item.setReferenceStandard(parameter.getReferenceStandard());
         item.setMethodId(method.getId());
         item.setMethodName(method.getMethodName());
+        item.setSampleVolume(method.getSampleVolume());
         item.setMethodBasis(method.getMethodBasis());
         return item;
     }
@@ -609,14 +556,6 @@ public class LabSampleService {
         }
     }
 
-    private String generateSampleNo() {
-        String prefix = DateUtil.format(new Date(), "yyyyMM");
-        Long count = labSampleMapper.selectCount(new LambdaQueryWrapper<LabSample>()
-                .likeRight(LabSample::getSampleNo, prefix));
-        long next = count == null ? 1L : count + 1L;
-        return prefix + String.format("%04d", next);
-    }
-
     private CurrentUser requireCurrentUser() {
         CurrentUser currentUser = SecurityContext.getCurrentUser();
         if (currentUser == null || currentUser.getUserId() == null) {
@@ -631,15 +570,6 @@ public class LabSampleService {
         }
         if (task.getSamplerId() == null || !task.getSamplerId().equals(currentUser.getUserId())) {
             throw new BusinessException("当前用户不是该采样任务的责任采样员，不能进行样品登录。");
-        }
-    }
-
-    private void validateSamplerOperator(SampleLoginCommand command, CurrentUser currentUser) {
-        if (isAdmin(currentUser)) {
-            return;
-        }
-        if (!currentUser.getUserId().equals(command.getSamplerId())) {
-            throw new BusinessException("当前用户只能登录本人采集的样品。");
         }
     }
 
@@ -667,8 +597,7 @@ public class LabSampleService {
     private String buildLoginTrace(LabSample sample, SamplingTask task) {
         StringBuilder builder = new StringBuilder();
         builder.append(formatTraceEntry("样品登录",
-                "封签号=" + sample.getSealNo()
-                        + "，样品编号=" + sample.getSampleNo()
+                "样品编号=" + sample.getSampleNo()
                         + "，点位=" + sample.getPointName()
                         + "，采样人=" + sample.getSamplerName()
                         + "，采样时间=" + DateUtil.formatLocalDateTime(sample.getSamplingTime())));
@@ -682,7 +611,7 @@ public class LabSampleService {
             builder.append("\n").append(formatTraceEntry("来源任务",
                     "采样任务ID=" + task.getId()
                             + "，任务编号=" + StrUtil.blankToDefault(task.getTaskNo(), "-")
-                            + "，封签号=" + StrUtil.blankToDefault(task.getSealNo(), "-")));
+                            + "，样品编号=" + StrUtil.blankToDefault(task.getSampleNo(), "-")));
         }
         return builder.toString();
     }

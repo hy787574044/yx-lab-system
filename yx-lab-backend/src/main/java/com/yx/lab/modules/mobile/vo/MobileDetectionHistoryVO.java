@@ -14,8 +14,6 @@ public class MobileDetectionHistoryVO {
 
     private String sampleNo;
 
-    private String sealNo;
-
     private Long detectionTypeId;
 
     private String detectionTypeName;

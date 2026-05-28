@@ -41,8 +41,6 @@ public class MobileSamplingTodoVO {
 
     private String taskStatusDesc;
 
-    private String taskSealNo;
-
     private String sampleRegisterStatus;
 
     private String sampleRegisterStatusDesc;
@@ -55,8 +53,6 @@ public class MobileSamplingTodoVO {
     private Long sampleId;
 
     private String sampleNo;
-
-    private String sealNo;
 
     private String sampleStatus;
 

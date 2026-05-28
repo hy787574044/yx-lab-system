@@ -20,6 +20,8 @@ public class SampleDetectionConfigItem {
      */
     private String parameterName;
 
+    private String parameterCategory;
+
     /**
      * 单位。
      */
@@ -49,6 +51,8 @@ public class SampleDetectionConfigItem {
      * 选定的检测方法名称。
      */
     private String methodName;
+
+    private String sampleVolume;
 
     /**
      * 检测步骤。

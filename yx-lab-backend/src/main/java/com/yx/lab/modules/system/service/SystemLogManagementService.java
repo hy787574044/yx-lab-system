@@ -190,7 +190,7 @@ public class SystemLogManagementService {
         vo.setId(SOURCE_TYPE_SAMPLE + "-" + sample.getId() + "-" + index);
         vo.setSourceType(SOURCE_TYPE_SAMPLE);
         vo.setSourceName("样品留痕");
-        vo.setBusinessNo(buildSampleBusinessNo(sample.getSampleNo(), sample.getSealNo()));
+        vo.setBusinessNo(buildSampleBusinessNo(sample.getSampleNo()));
         vo.setOperatorName(resolveTraceOperator(entry.getContent(), sample.getSamplerName(), sample.getUpdatedName(), sample.getCreatedName()));
         vo.setContent(entry.getTitle() + "：" + entry.getContent());
         vo.setStatus("已留痕");
@@ -203,7 +203,7 @@ public class SystemLogManagementService {
         vo.setId(SOURCE_TYPE_DETECTION + "-" + record.getId());
         vo.setSourceType(SOURCE_TYPE_DETECTION);
         vo.setSourceName("检测记录");
-        vo.setBusinessNo(buildSampleBusinessNo(record.getSampleNo(), record.getSealNo()));
+        vo.setBusinessNo(buildSampleBusinessNo(record.getSampleNo()));
         vo.setOperatorName(normalizeDisplayValue(record.getDetectorName()));
         vo.setContent(buildDetectionContent(record));
         vo.setStatus(resolveDetectionStatusLabel(record.getDetectionStatus()));
@@ -216,7 +216,7 @@ public class SystemLogManagementService {
         vo.setId(SOURCE_TYPE_REVIEW + "-" + record.getId());
         vo.setSourceType(SOURCE_TYPE_REVIEW);
         vo.setSourceName("审核记录");
-        vo.setBusinessNo(buildSampleBusinessNo(record.getSampleNo(), record.getSealNo()));
+        vo.setBusinessNo(buildSampleBusinessNo(record.getSampleNo()));
         vo.setOperatorName(normalizeDisplayValue(record.getReviewerName()));
         vo.setContent(buildReviewContent(record));
         vo.setStatus(resolveReviewResultLabel(record.getReviewResult()));
@@ -229,7 +229,7 @@ public class SystemLogManagementService {
         vo.setId(SOURCE_TYPE_PUSH + "-" + record.getId());
         vo.setSourceType(SOURCE_TYPE_PUSH);
         vo.setSourceName("报告推送");
-        vo.setBusinessNo(buildSampleBusinessNo(record.getSampleNo(), record.getSealNo()));
+        vo.setBusinessNo(buildSampleBusinessNo(record.getSampleNo()));
         vo.setOperatorName(normalizeDisplayValue(record.getRecipientName()));
         vo.setContent(buildPushContent(record));
         vo.setStatus(resolvePushStatusLabel(record.getPushStatus()));
@@ -237,15 +237,9 @@ public class SystemLogManagementService {
         return vo;
     }
 
-    private String buildSampleBusinessNo(String sampleNo, String sealNo) {
-        if (StrUtil.isNotBlank(sampleNo) && StrUtil.isNotBlank(sealNo)) {
-            return sampleNo + " / " + sealNo;
-        }
+    private String buildSampleBusinessNo(String sampleNo) {
         if (StrUtil.isNotBlank(sampleNo)) {
             return sampleNo;
-        }
-        if (StrUtil.isNotBlank(sealNo)) {
-            return sealNo;
         }
         return "-";
     }

@@ -17,8 +17,6 @@ public class DetectionItemPageVO {
 
     private String sampleNo;
 
-    private String sealNo;
-
     private Long detectionTypeId;
 
     private String detectionTypeName;

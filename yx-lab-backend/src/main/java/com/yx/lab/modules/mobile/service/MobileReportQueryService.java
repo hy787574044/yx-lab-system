@@ -53,8 +53,6 @@ public class MobileReportQueryService {
                 .and(StrUtil.isNotBlank(keyword), condition -> condition
                         .like(LabReport::getReportName, keyword)
                         .or()
-                        .like(LabReport::getSealNo, keyword)
-                        .or()
                         .like(LabReport::getSampleNo, keyword))
                 .eq(StrUtil.isNotBlank(query.getReportType()), LabReport::getReportType, query.getReportType())
                 .eq(StrUtil.isNotBlank(query.getReportStatus()), LabReport::getReportStatus, query.getReportStatus())
@@ -106,7 +104,6 @@ public class MobileReportQueryService {
         vo.setSampleId(report.getSampleId());
         vo.setReportName(report.getReportName());
         vo.setSampleNo(report.getSampleNo());
-        vo.setSealNo(report.getSealNo());
         vo.setReportStatus(report.getReportStatus());
         vo.setReportStatusDesc(LabWorkflowConstants.getReportStatusLabel(report.getReportStatus()));
         vo.setGeneratedTime(report.getGeneratedTime());

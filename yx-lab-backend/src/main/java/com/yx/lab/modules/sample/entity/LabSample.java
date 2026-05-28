@@ -11,7 +11,7 @@ import lombok.EqualsAndHashCode;
 import java.time.LocalDateTime;
 
 /**
- * 样品实体，记录样品登录后的主档信息、封签信息及流程留痕。
+ * 样品实体，记录样品登录后的主档信息及流程留痕。
  */
 @Data
 @TableName("lab_sample")
@@ -21,10 +21,6 @@ public class LabSample extends BaseEntity {
     @Schema(description = "样品编号")
     @TableField("sample_no")
     private String sampleNo;
-
-    @Schema(description = "封签编号")
-    @TableField("seal_no")
-    private String sealNo;
 
     @Schema(description = "采样任务ID")
     @TableField("task_id")
@@ -82,11 +78,6 @@ public class LabSample extends BaseEntity {
     @TableField("sampling_time")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime samplingTime;
-
-    @Schema(description = "封签时间")
-    @TableField("seal_time")
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    private LocalDateTime sealTime;
 
     @Schema(description = "采样员ID")
     @TableField("sampler_id")

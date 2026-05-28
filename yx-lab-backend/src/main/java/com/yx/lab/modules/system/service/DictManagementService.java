@@ -337,6 +337,13 @@ public class DictManagementService {
                         "ABNORMAL", "异常"
                 )),
                 "系统内置：检测结果判定统一使用。"));
+        definitions.add(new BuiltInDictDefinition("detection_parameter_category", "参数类别", "检测管理",
+                buildItemText(mapOf(
+                        "IN_SITU", "原位检测",
+                        "FIELD", "现场测定",
+                        "LABORATORY", "实验室测定"
+                )),
+                "系统内置：检测参数基础台账的参数类别。"));
         definitions.add(new BuiltInDictDefinition("review_result", "审核结果", "审核管理",
                 buildItemText(mapOf(
                         "APPROVED", "审核通过",

@@ -74,7 +74,6 @@ public class DetectionWorkflowController {
                 detectionWorkflowService.page(query).getRecords(),
                 Arrays.asList(
                         ExcelExportUtil.column("样品编号", DetectionRecord::getSampleNo),
-                        ExcelExportUtil.column("封签编号", DetectionRecord::getSealNo),
                         ExcelExportUtil.column("检测套餐", DetectionRecord::getDetectionTypeName),
                         ExcelExportUtil.column("检测人员", DetectionRecord::getDetectorName),
                         ExcelExportUtil.column("流程状态", item -> LabWorkflowConstants.getDetectionStatusLabel(item.getDetectionStatus())),
@@ -116,7 +115,6 @@ public class DetectionWorkflowController {
                 detectionWorkflowService.itemPage(query).getRecords(),
                 Arrays.asList(
                         ExcelExportUtil.column("样品编号", DetectionItemPageVO::getSampleNo),
-                        ExcelExportUtil.column("封签编号", DetectionItemPageVO::getSealNo),
                         ExcelExportUtil.column("检测套餐", DetectionItemPageVO::getDetectionTypeName),
                         ExcelExportUtil.column("检测参数", DetectionItemPageVO::getParameterName),
                         ExcelExportUtil.column("检测方法", DetectionItemPageVO::getMethodName),

@@ -186,7 +186,6 @@
                   </div>
                 </div>
                 <div class="detector-card__meta">
-                  <p><span>封签编号：</span>{{ item.sealNo || '-' }}</p>
                   <em>任务状态：{{ item.statusText || '-' }}</em>
                 </div>
                 <button type="button" class="detector-card__action" @click.stop="goRoute('/detection-analysis')">进入处理</button>

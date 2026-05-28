@@ -30,10 +30,6 @@ public class ReportPushRecord extends BaseEntity {
     @TableField("sample_no")
     private String sampleNo;
 
-    @Schema(description = "封签编号")
-    @TableField("seal_no")
-    private String sealNo;
-
     @Schema(description = "接收人用户ID")
     @TableField("recipient_user_id")
     private Long recipientUserId;

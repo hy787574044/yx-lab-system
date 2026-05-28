@@ -81,6 +81,7 @@ public class SamplingPlanController {
                         ExcelExportUtil.column("计划名称", SamplingPlan::getPlanName),
                         ExcelExportUtil.column("采样点位", SamplingPlan::getPointName),
                         ExcelExportUtil.column("采样人员", SamplingPlan::getSamplerName),
+                        ExcelExportUtil.column("采样依据", SamplingPlan::getSamplingBasis),
                         ExcelExportUtil.column("周期类型", item -> LabWorkflowConstants.getCycleTypeLabel(item.getCycleType())),
                         ExcelExportUtil.column("样品类型", item -> LabWorkflowConstants.getSampleTypeLabel(item.getSampleType())),
                         ExcelExportUtil.column("检测套餐", SamplingPlan::getDetectionTypeName),

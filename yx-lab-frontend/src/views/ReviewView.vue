@@ -30,7 +30,7 @@
                 <el-input
                   v-model="query.keyword"
                   clearable
-                  placeholder="请输入样品编号、封签号或检测套餐"
+                  placeholder="请输入样品编号或检测套餐"
                   @keyup.enter="handleSearch"
                 />
               </label>
@@ -70,7 +70,6 @@
         <div class="table-card__body">
         <el-table class="list-table" :data="visibleRecords" stripe height="100%" :empty-text="baseScene.emptyText">
           <el-table-column prop="sampleNo" label="样品编号" min-width="160" />
-          <el-table-column prop="sealNo" label="封签编号" min-width="160" />
           <el-table-column prop="detectionTypeName" label="检测套餐" min-width="160" />
           <el-table-column label="参数进度" min-width="150">
             <template #default="{ row }">
@@ -148,7 +147,6 @@
       <div class="review-dialog">
         <div class="review-dialog__summary">
           <span class="binding-editor__chip">样品编号<strong>{{ reviewDialog.sampleNo || '-' }}</strong></span>
-          <span class="binding-editor__chip">封签编号<strong>{{ reviewDialog.sealNo || '-' }}</strong></span>
           <span class="binding-editor__chip">检测套餐<strong>{{ reviewDialog.detectionTypeName || '-' }}</strong></span>
           <span class="binding-editor__chip">子流程<strong>{{ reviewDialog.items.length }}</strong></span>
           <span class="binding-editor__chip">待审核<strong>{{ pendingReviewItemCount }}</strong></span>
@@ -173,16 +171,16 @@
           max-height="500"
         >
           <el-table-column prop="parameterName" label="检测参数" min-width="120" />
-          <el-table-column prop="methodName" label="检测方法" min-width="180" show-overflow-tooltip />
-          <el-table-column label="标准范围" min-width="130">
+          <el-table-column prop="methodName" label="检测方法" min-width="130" show-overflow-tooltip />
+          <el-table-column label="标准范围" min-width="120">
             <template #default="{ row }">
               {{ formatStandardRange(row.standardMin, row.standardMax) }}
             </template>
           </el-table-column>
-          <el-table-column prop="unit" label="单位" width="90">
+          <el-table-column prop="unit" label="单位" width="72">
             <template #default="{ row }">{{ row.unit || '-' }}</template>
           </el-table-column>
-          <el-table-column prop="referenceStandard" label="检测标准" min-width="150" show-overflow-tooltip>
+          <el-table-column prop="referenceStandard" label="检测标准" min-width="130" show-overflow-tooltip>
             <template #default="{ row }">{{ row.referenceStandard || '-' }}</template>
           </el-table-column>
           <el-table-column prop="resultValue" label="检测值" min-width="110">
@@ -341,7 +339,6 @@ let loadDataVersion = 0
 const reviewDialog = reactive({
   detectionRecordId: null,
   sampleNo: '',
-  sealNo: '',
   detectionTypeName: '',
   reviewRemark: '',
   items: []
@@ -423,7 +420,6 @@ const mappedPendingRows = computed(() =>
     id: `pending-${item.id}`,
     detectionRecordId: item.id,
     sampleNo: item.sampleNo,
-    sealNo: item.sealNo,
     detectionTypeName: item.detectionTypeName || '-',
     detectorName: item.detectorName || '-',
     reviewerName: '待审核',
@@ -739,7 +735,6 @@ function getFinalReviewText(item) {
 function resetReviewDialog() {
   reviewDialog.detectionRecordId = null
   reviewDialog.sampleNo = ''
-  reviewDialog.sealNo = ''
   reviewDialog.detectionTypeName = ''
   reviewDialog.reviewRemark = ''
   reviewDialog.items = []
@@ -761,7 +756,6 @@ async function openReviewDialog(row, readonly = false) {
   resetReviewDialog()
   reviewDialog.detectionRecordId = detectionRecordId
   reviewDialog.sampleNo = row.sampleNo || detail?.record?.sampleNo || ''
-  reviewDialog.sealNo = row.sealNo || detail?.record?.sealNo || ''
   reviewDialog.detectionTypeName = row.detectionTypeName || detail?.record?.detectionTypeName || ''
   reviewDialog.reviewRemark = row.reviewRemark || ''
   reviewDialog.items = items.map((item) => ({

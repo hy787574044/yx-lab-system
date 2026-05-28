@@ -76,8 +76,8 @@
             empty-text="暂无检测分析子流程数据"
           >
             <el-table-column prop="sampleNo" label="样品编号" min-width="150" />
-            <el-table-column prop="parameterName" label="检测参数" min-width="150" show-overflow-tooltip />
-            <el-table-column prop="methodName" label="检测方法" min-width="180" show-overflow-tooltip>
+            <el-table-column prop="parameterName" label="检测参数" min-width="120" show-overflow-tooltip />
+            <el-table-column prop="methodName" label="检测方法" min-width="150" show-overflow-tooltip>
               <template #default="{ row }">{{ row.methodName || '-' }}</template>
             </el-table-column>
             <el-table-column label="检测步骤" min-width="220" show-overflow-tooltip>
@@ -86,13 +86,13 @@
             <el-table-column label="检测人员" min-width="120">
               <template #default="{ row }">{{ row.detectorName || '-' }}</template>
             </el-table-column>
-            <el-table-column label="标准范围" min-width="150">
+            <el-table-column label="标准范围" min-width="120">
               <template #default="{ row }">{{ formatStandardRange(row.standardMin, row.standardMax) }}</template>
             </el-table-column>
-            <el-table-column prop="unit" label="单位" width="90">
+            <el-table-column prop="unit" label="单位" width="72">
               <template #default="{ row }">{{ row.unit || '-' }}</template>
             </el-table-column>
-            <el-table-column prop="referenceStandard" label="检测标准" min-width="160" show-overflow-tooltip>
+            <el-table-column prop="referenceStandard" label="检测标准" min-width="130" show-overflow-tooltip>
               <template #default="{ row }">{{ row.referenceStandard || '-' }}</template>
             </el-table-column>
             <el-table-column label="检测结果" min-width="120" header-cell-class-name="result-field-header">
@@ -290,7 +290,6 @@ const resultForm = reactive({
   recordId: null,
   sampleId: null,
   sampleNo: '',
-  sealNo: '',
   detectionTypeId: null,
   detectionTypeName: '',
   parameterId: null,
@@ -463,7 +462,6 @@ function resetResultForm() {
   resultForm.recordId = null
   resultForm.sampleId = null
   resultForm.sampleNo = ''
-  resultForm.sealNo = ''
   resultForm.detectionTypeId = null
   resultForm.detectionTypeName = ''
   resultForm.parameterId = null
@@ -487,7 +485,6 @@ function openResultDialog(row) {
   resultForm.recordId = row.recordId
   resultForm.sampleId = row.sampleId
   resultForm.sampleNo = row.sampleNo || ''
-  resultForm.sealNo = row.sealNo || ''
   resultForm.detectionTypeId = row.detectionTypeId
   resultForm.detectionTypeName = row.detectionTypeName || ''
   resultForm.parameterId = row.parameterId

@@ -51,9 +51,7 @@ public class MobileReviewQueryService {
                 PageUtils.buildPage(query),
                 new LambdaQueryWrapper<ReviewRecord>()
                         .and(StrUtil.isNotBlank(keyword), wrapper -> wrapper
-                                .like(ReviewRecord::getSampleNo, keyword)
-                                .or()
-                                .like(ReviewRecord::getSealNo, keyword))
+                                .like(ReviewRecord::getSampleNo, keyword))
                         .eq(StrUtil.isNotBlank(query.getReviewResult()),
                                 ReviewRecord::getReviewResult,
                                 query.getReviewResult())
@@ -91,8 +89,6 @@ public class MobileReviewQueryService {
                 new LambdaQueryWrapper<DetectionRecord>()
                         .and(StrUtil.isNotBlank(keyword), wrapper -> wrapper
                                 .like(DetectionRecord::getSampleNo, keyword)
-                                .or()
-                                .like(DetectionRecord::getSealNo, keyword)
                                 .or()
                                 .like(DetectionRecord::getDetectionTypeName, keyword))
                         .eq(DetectionRecord::getDetectionStatus, LabWorkflowConstants.DetectionStatus.SUBMITTED)

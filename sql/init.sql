@@ -188,6 +188,7 @@ CREATE TABLE lab_sampling_plan (
     detection_type_id BIGINT,
     detection_type_name VARCHAR(128),
     detection_config_snapshot TEXT,
+    sampling_basis VARCHAR(1000),
     cycle_type VARCHAR(32),
     plan_status VARCHAR(32),
     remark VARCHAR(500),
@@ -204,6 +205,7 @@ DROP TABLE IF EXISTS lab_sampling_task;
 CREATE TABLE lab_sampling_task (
     id BIGINT PRIMARY KEY,
     task_no VARCHAR(64) NOT NULL,
+    sample_no VARCHAR(64),
     plan_id BIGINT,
     point_id BIGINT NOT NULL,
     point_name VARCHAR(128) NOT NULL,
@@ -211,7 +213,6 @@ CREATE TABLE lab_sampling_task (
     sampler_id BIGINT,
     sampler_name VARCHAR(64),
     sample_type VARCHAR(32),
-    seal_no VARCHAR(64),
     sample_register_status VARCHAR(32),
     sample_id BIGINT,
     detection_items VARCHAR(1000),
@@ -235,14 +236,13 @@ CREATE TABLE lab_sampling_task (
     updated_name VARCHAR(64),
     updated_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     KEY idx_lab_sampling_task_no (task_no),
-    KEY idx_lab_sampling_task_seal_no (seal_no)
+    KEY idx_lab_sampling_task_sample_no (sample_no)
 );
 
 DROP TABLE IF EXISTS lab_sample;
 CREATE TABLE lab_sample (
     id BIGINT PRIMARY KEY,
     sample_no VARCHAR(64) NOT NULL,
-    seal_no VARCHAR(64),
     task_id BIGINT,
     point_id BIGINT NOT NULL,
     point_name VARCHAR(128) NOT NULL,
@@ -257,7 +257,6 @@ CREATE TABLE lab_sample (
     publish_flow_id BIGINT,
     publish_flow_name VARCHAR(128),
     sampling_time DATETIME,
-    seal_time DATETIME,
     sampler_id BIGINT,
     sampler_name VARCHAR(64),
     weather VARCHAR(32),
@@ -274,9 +273,16 @@ CREATE TABLE lab_sample (
     updated_name VARCHAR(64),
     updated_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     KEY idx_lab_sample_no (sample_no),
-    KEY idx_lab_sample_seal_no (seal_no),
     KEY idx_lab_sample_review_flow_id (review_flow_id),
     KEY idx_lab_sample_publish_flow_id (publish_flow_id)
+);
+
+DROP TABLE IF EXISTS lab_sample_no_sequence;
+CREATE TABLE lab_sample_no_sequence (
+    sequence_date VARCHAR(8) PRIMARY KEY,
+    current_value BIGINT NOT NULL DEFAULT 0,
+    created_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
 DROP TABLE IF EXISTS lab_detection_type;
@@ -305,6 +311,7 @@ DROP TABLE IF EXISTS lab_detection_parameter;
 CREATE TABLE lab_detection_parameter (
     id BIGINT PRIMARY KEY,
     parameter_name VARCHAR(64) NOT NULL,
+    parameter_category VARCHAR(32) NOT NULL DEFAULT '实验室测定',
     standard_min DECIMAL(10,2),
     standard_max DECIMAL(10,2),
     unit VARCHAR(32),
@@ -367,7 +374,6 @@ CREATE TABLE lab_detection_record (
     id BIGINT PRIMARY KEY,
     sample_id BIGINT NOT NULL,
     sample_no VARCHAR(64) NOT NULL,
-    seal_no VARCHAR(64),
     detection_type_id BIGINT,
     detection_type_name VARCHAR(64),
     detection_time DATETIME,
@@ -418,7 +424,6 @@ CREATE TABLE lab_review_record (
     detection_record_id BIGINT NOT NULL,
     sample_id BIGINT,
     sample_no VARCHAR(64),
-    seal_no VARCHAR(64),
     flow_id BIGINT,
     flow_node_id BIGINT,
     flow_node_name VARCHAR(128),
@@ -464,7 +469,6 @@ CREATE TABLE lab_report (
     generated_time DATETIME,
     sample_id BIGINT,
     sample_no VARCHAR(64),
-    seal_no VARCHAR(64),
     detection_record_id BIGINT,
     report_status VARCHAR(32),
     published_time DATETIME,
@@ -487,7 +491,6 @@ CREATE TABLE lab_report_push_record (
     report_id BIGINT NOT NULL,
     sample_id BIGINT,
     sample_no VARCHAR(64),
-    seal_no VARCHAR(64),
     recipient_user_id BIGINT,
     recipient_name VARCHAR(64),
     recipient_phone VARCHAR(32),
@@ -634,6 +637,9 @@ VALUES (857, 'report_status', '报告状态字典', '报告管理', '待生成\n
 
 INSERT INTO lab_dict (id, dict_code, dict_name, module_name, item_text, status, remark, deleted, created_name, updated_name)
 VALUES (858, 'cycle_type', '周期类型字典', '基础配置', '每日\n每周\n每月\n每季度', 1, '用于周期计划与自动任务配置', 0, 'system', 'system');
+
+INSERT INTO lab_dict (id, dict_code, dict_name, module_name, item_text, status, remark, deleted, created_name, updated_name)
+VALUES (859, 'detection_parameter_category', '参数类别', '检测管理', 'IN_SITU=原位检测\nFIELD=现场测定\nLABORATORY=实验室测定', 1, '检测参数基础台账参数类别', 0, 'system', 'system');
 
 INSERT INTO lab_flow_config (id, flow_name, flow_type, scope_name, default_flag, status, remark, deleted, created_name, updated_name)
 VALUES (9601, '常规三级审核', 'REVIEW', '全部样品', 1, 1, '样品检测完成后进入初审、复审、终审。', 0, 'system', 'system');

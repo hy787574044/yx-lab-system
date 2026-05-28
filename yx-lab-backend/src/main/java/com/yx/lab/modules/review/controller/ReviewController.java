@@ -72,7 +72,6 @@ public class ReviewController {
                 reviewService.page(query).getRecords(),
                 Arrays.asList(
                         ExcelExportUtil.column("样品编号", ReviewRecord::getSampleNo),
-                        ExcelExportUtil.column("封签编号", ReviewRecord::getSealNo),
                         ExcelExportUtil.column("检测流程ID", ReviewRecord::getDetectionRecordId),
                         ExcelExportUtil.column("检测人员", ReviewRecord::getDetectorName),
                         ExcelExportUtil.column("审核人", ReviewRecord::getReviewerName),

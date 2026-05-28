@@ -146,7 +146,6 @@ public class DashboardService {
             vo.setId(item.getId());
             vo.setRecordId(item.getRecordId());
             vo.setSampleNo(record == null ? null : record.getSampleNo());
-            vo.setSealNo(record == null ? null : record.getSealNo());
             vo.setParameterName(item.getParameterName());
             vo.setMethodName(item.getMethodName());
             vo.setTitle((item.getParameterName() == null ? "" : item.getParameterName()) + " 待检测");

@@ -31,7 +31,7 @@
                 <el-input
                   v-model="query.keyword"
                   clearable
-                  placeholder="请输入报告名称、样品编号或封签编号"
+                  placeholder="请输入报告名称或样品编号"
                   @keyup.enter="handleSearch"
                 />
               </label>
@@ -80,7 +80,6 @@
           >
           <el-table-column prop="reportName" label="报告名称" min-width="200" />
           <el-table-column prop="sampleNo" label="样品编号" width="150" />
-          <el-table-column prop="sealNo" label="封签编号" width="160" />
           <el-table-column label="报告类型" width="110">
             <template #default="{ row }">
               {{ getEnumLabel(reportTypeLabelMap, row.reportType) }}
@@ -342,7 +341,7 @@ async function createTemplate() {
     reportType: monthlyReportType,
     templateName: '月报模板',
     defaultTemplate: 0,
-    templateContent: '月报模板内容：${sampleNo} / ${sealNo} - ${detectionResult}'
+    templateContent: '月报模板内容：${sampleNo} - ${detectionResult}'
   })
   ElMessage.success('模板已创建。')
   await loadReportStats()

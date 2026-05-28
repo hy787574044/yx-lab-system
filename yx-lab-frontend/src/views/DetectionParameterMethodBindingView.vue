@@ -51,7 +51,7 @@
           height="100%"
           empty-text="暂无参数方法绑定数据"
         >
-          <el-table-column label="参数方法关系" min-width="460">
+          <el-table-column label="参数方法关系" min-width="360">
             <template #default="{ row }">
               <div class="binding-tree">
                 <div class="binding-tree__parameter">
@@ -85,12 +85,15 @@
               </div>
             </template>
           </el-table-column>
-          <el-table-column label="标准范围" min-width="170">
+          <el-table-column label="参数类别" width="110" header-cell-class-name="cell-center" class-name="cell-center">
+            <template #default="{ row }">{{ row.parameterCategory || '-' }}</template>
+          </el-table-column>
+          <el-table-column label="标准范围" min-width="120">
             <template #default="{ row }">
               {{ formatStandardRange(row.standardMin, row.standardMax) }}
             </template>
           </el-table-column>
-          <el-table-column prop="unit" label="单位" width="100">
+          <el-table-column prop="unit" label="单位" width="72">
             <template #default="{ row }">{{ row.unit || '-' }}</template>
           </el-table-column>
           <el-table-column label="已绑定方法数" width="120" class-name="cell-center" header-cell-class-name="cell-center">

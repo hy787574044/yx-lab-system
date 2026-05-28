@@ -65,15 +65,13 @@ public class MobileDetectionQueryService {
                         .and(StrUtil.isNotBlank(StrUtil.trim(query.getKeyword())), wrapper -> wrapper
                                 .like(LabSample::getSampleNo, StrUtil.trim(query.getKeyword()))
                                 .or()
-                                .like(LabSample::getSealNo, StrUtil.trim(query.getKeyword()))
-                                .or()
                                 .like(LabSample::getPointName, StrUtil.trim(query.getKeyword())))
                         .eq(StrUtil.isNotBlank(query.getSampleStatus()), LabSample::getSampleStatus, query.getSampleStatus())
                         .eq(StrUtil.isNotBlank(query.getSampleType()), LabSample::getSampleType, query.getSampleType())
                         // 检测员只能查看分配给自己的样品
                         .in(LabSample::getId, pendingSampleIds)
                         .in(LabSample::getSampleStatus, LabWorkflowConstants.DETECTABLE_SAMPLE_STATUSES)
-                        .orderByDesc(LabSample::getSealTime)
+                        .orderByDesc(LabSample::getSamplingTime)
                         .orderByDesc(LabSample::getCreatedTime));
         return new PageResult<>(page.getTotal(), page.getRecords().stream()
                 .map(this::toDetectionTodoVO)
@@ -94,8 +92,6 @@ public class MobileDetectionQueryService {
                 new LambdaQueryWrapper<DetectionRecord>()
                         .and(StrUtil.isNotBlank(keyword), wrapper -> wrapper
                                 .like(DetectionRecord::getSampleNo, keyword)
-                                .or()
-                                .like(DetectionRecord::getSealNo, keyword)
                                 .or()
                                 .like(DetectionRecord::getDetectionTypeName, keyword))
                         .eq(DetectionRecord::getDetectorId, currentUser.getUserId())
@@ -121,7 +117,6 @@ public class MobileDetectionQueryService {
         MobileDetectionTodoVO vo = new MobileDetectionTodoVO();
         vo.setSampleId(sample.getId());
         vo.setSampleNo(sample.getSampleNo());
-        vo.setSealNo(sample.getSealNo());
         vo.setPointName(sample.getPointName());
         vo.setSampleType(sample.getSampleType());
         vo.setSampleTypeDesc(LabWorkflowConstants.getSampleTypeLabel(sample.getSampleType()));
@@ -140,7 +135,6 @@ public class MobileDetectionQueryService {
         vo.setId(record.getId());
         vo.setSampleId(record.getSampleId());
         vo.setSampleNo(record.getSampleNo());
-        vo.setSealNo(record.getSealNo());
         vo.setDetectionTypeId(record.getDetectionTypeId());
         vo.setDetectionTypeName(record.getDetectionTypeName());
         vo.setDetectionResult(record.getDetectionResult());

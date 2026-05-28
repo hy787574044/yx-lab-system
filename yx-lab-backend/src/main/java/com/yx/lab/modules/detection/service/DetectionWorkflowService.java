@@ -329,8 +329,6 @@ public class DetectionWorkflowService {
                 .and(StrUtil.isNotBlank(keyword), condition -> condition
                         .like(DetectionRecord::getSampleNo, keyword)
                         .or()
-                        .like(DetectionRecord::getSealNo, keyword)
-                        .or()
                         .like(DetectionRecord::getDetectionTypeName, keyword))
                 .eq(scopedDetectorId != null,
                         DetectionRecord::getDetectorId,
@@ -429,8 +427,6 @@ public class DetectionWorkflowService {
                         .and(wrapper -> wrapper
                                 .like(DetectionRecord::getSampleNo, keyword)
                                 .or()
-                                .like(DetectionRecord::getSealNo, keyword)
-                                .or()
                                 .like(DetectionRecord::getDetectionTypeName, keyword)))
                 .stream()
                 .map(DetectionRecord::getId)
@@ -465,7 +461,6 @@ public class DetectionWorkflowService {
             vo.setRecordId(item.getRecordId());
             vo.setSampleId(record == null ? null : record.getSampleId());
             vo.setSampleNo(record == null ? null : record.getSampleNo());
-            vo.setSealNo(record == null ? null : record.getSealNo());
             vo.setDetectionTypeId(record == null ? null : record.getDetectionTypeId());
             vo.setDetectionTypeName(record == null ? null : record.getDetectionTypeName());
             vo.setDetectionTime(record == null ? null : record.getDetectionTime());
@@ -517,7 +512,6 @@ public class DetectionWorkflowService {
         DetectionRecord record = new DetectionRecord();
         record.setSampleId(sample.getId());
         record.setSampleNo(sample.getSampleNo());
-        record.setSealNo(sample.getSealNo());
         record.setDetectionTypeId(detectionType.getId());
         record.setDetectionTypeName(detectionType.getTypeName());
         record.setDetectionTime(LocalDateTime.now());
@@ -548,7 +542,7 @@ public class DetectionWorkflowService {
                 sample.getId(),
                 LabWorkflowConstants.SampleStatus.REVIEWING,
                 record.getDetectionResult(),
-                "检测结果已提交：封签号=" + sample.getSealNo()
+                "检测结果已提交：样品编号=" + sample.getSampleNo()
                         + "，检测套餐=" + record.getDetectionTypeName()
                         + "，检测员=" + currentUser.getRealName()
                         + "，结果=" + LabWorkflowConstants.getDetectionResultLabel(record.getDetectionResult()));
@@ -781,7 +775,7 @@ public class DetectionWorkflowService {
                     sample.getId(),
                     LabWorkflowConstants.SampleStatus.COMPLETED,
                     record.getDetectionResult(),
-                    "检测流程已完成：封签号=" + sample.getSealNo()
+                    "检测流程已完成：样品编号=" + sample.getSampleNo()
                             + "，检测套餐=" + record.getDetectionTypeName()
                             + "，检测员=" + StrUtil.blankToDefault(record.getDetectorName(), currentUser.getRealName())
                             + "，结果=" + LabWorkflowConstants.getDetectionResultLabel(record.getDetectionResult()));
@@ -798,7 +792,7 @@ public class DetectionWorkflowService {
                     sample.getId(),
                     LabWorkflowConstants.SampleStatus.REVIEWING,
                     record.getDetectionResult(),
-                    "检测结果已提交待审核：封签号=" + sample.getSealNo()
+                    "检测结果已提交待审核：样品编号=" + sample.getSampleNo()
                             + "，检测套餐=" + record.getDetectionTypeName()
                             + "，检测员=" + StrUtil.blankToDefault(record.getDetectorName(), currentUser.getRealName())
                             + "，结果=" + LabWorkflowConstants.getDetectionResultLabel(record.getDetectionResult()));
