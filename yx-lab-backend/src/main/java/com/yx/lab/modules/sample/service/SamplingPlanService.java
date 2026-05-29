@@ -426,16 +426,17 @@ public class SamplingPlanService {
         if (manualDispatch) {
             existingTaskQuery.ne(SamplingTask::getTaskStatus, LabWorkflowConstants.SamplingTaskStatus.ABANDONED);
         }
-        Long existingCount = samplingTaskMapper.selectCount(existingTaskQuery);
-        if (existingCount != null && existingCount > 0) {
+        List<SamplingTask> existingTasks = samplingTaskMapper.selectList(existingTaskQuery);
+        if (!existingTasks.isEmpty()) {
             if (manualDispatch) {
                 throw new BusinessException("当前计划在该执行时间已生成采样任务，不能重复派发");
             }
+            fillMissingAutoDispatchTaskFields(plan, existingTasks);
             return false;
         }
         SamplingTask task = new SamplingTask();
         task.setTaskNo(generateTaskNo());
-        task.setSampleNo(sampleNoGeneratorService.nextSampleNo());
+        task.setSampleNo(sampleNoGeneratorService.ensureSampleNo(null));
         task.setPlanId(plan.getId());
         task.setPointId(plan.getPointId());
         task.setPointName(plan.getPointName());
@@ -455,6 +456,63 @@ public class SamplingPlanService {
         samplingTaskMapper.insert(task);
         updatePlanStatus(plan, resolvePlanStatusAfterDispatch(plan));
         return true;
+    }
+
+    private void fillMissingAutoDispatchTaskFields(SamplingPlan plan, List<SamplingTask> existingTasks) {
+        for (SamplingTask existingTask : existingTasks) {
+            boolean changed = false;
+            if (StrUtil.isBlank(existingTask.getSampleNo())) {
+                existingTask.setSampleNo(sampleNoGeneratorService.ensureSampleNo(existingTask.getSampleNo()));
+                changed = true;
+            }
+            if (existingTask.getPointId() == null && plan.getPointId() != null) {
+                existingTask.setPointId(plan.getPointId());
+                changed = true;
+            }
+            if (StrUtil.isBlank(existingTask.getPointName()) && StrUtil.isNotBlank(plan.getPointName())) {
+                existingTask.setPointName(plan.getPointName());
+                changed = true;
+            }
+            if (existingTask.getSamplerId() == null && plan.getSamplerId() != null) {
+                existingTask.setSamplerId(plan.getSamplerId());
+                changed = true;
+            }
+            if (StrUtil.isBlank(existingTask.getSamplerName()) && StrUtil.isNotBlank(plan.getSamplerName())) {
+                existingTask.setSamplerName(plan.getSamplerName());
+                changed = true;
+            }
+            if (StrUtil.isBlank(existingTask.getSampleType()) && StrUtil.isNotBlank(plan.getSampleType())) {
+                existingTask.setSampleType(plan.getSampleType());
+                changed = true;
+            }
+            if (StrUtil.isBlank(existingTask.getSampleRegisterStatus())) {
+                existingTask.setSampleRegisterStatus(LabWorkflowConstants.SampleRegisterStatus.UNREGISTERED);
+                changed = true;
+            }
+            if (StrUtil.isBlank(existingTask.getDetectionItems()) && StrUtil.isNotBlank(plan.getDetectionTypeName())) {
+                existingTask.setDetectionItems(plan.getDetectionTypeName());
+                changed = true;
+            }
+            if (existingTask.getDetectionTypeId() == null && plan.getDetectionTypeId() != null) {
+                existingTask.setDetectionTypeId(plan.getDetectionTypeId());
+                changed = true;
+            }
+            if (StrUtil.isBlank(existingTask.getDetectionTypeName()) && StrUtil.isNotBlank(plan.getDetectionTypeName())) {
+                existingTask.setDetectionTypeName(plan.getDetectionTypeName());
+                changed = true;
+            }
+            if (parseDetectionConfigSnapshot(existingTask.getDetectionConfigSnapshot()).isEmpty()) {
+                existingTask.setDetectionConfigSnapshot(resolvePlanDetectionConfigSnapshot(plan));
+                changed = true;
+            }
+            if (StrUtil.isBlank(existingTask.getSamplingBasis()) && StrUtil.isNotBlank(plan.getSamplingBasis())) {
+                existingTask.setSamplingBasis(plan.getSamplingBasis());
+                changed = true;
+            }
+            if (changed) {
+                samplingTaskMapper.updateById(existingTask);
+            }
+        }
     }
 
     private void applyPlanCommand(SamplingPlan plan, SamplingPlanSaveCommand command) {
