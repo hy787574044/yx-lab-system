@@ -389,7 +389,7 @@ public class SamplingPlanService {
             SamplingPlan plan = requirePlan(planId);
             if (!LabWorkflowConstants.canDispatchPlan(plan.getPlanStatus())) {
                 if (manualDispatch) {
-                    throw new BusinessException("褰撳墠璁″垝鐘舵€佷笉鍏佽娲惧彂");
+                    throw new BusinessException("当前计划状态不允许派发");
                 }
                 return false;
             }

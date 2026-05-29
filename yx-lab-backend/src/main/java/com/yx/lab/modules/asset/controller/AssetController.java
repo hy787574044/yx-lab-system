@@ -73,7 +73,7 @@ public class AssetController {
     }
 
     @GetMapping("/instruments/stats")
-    @Operation(summary = "浠櫒鐘舵€佺粺璁?")
+    @Operation(summary = "仪器状态统计")
     public ApiResponse<List<StatusCountVO>> instrumentStats() {
         return ApiResponse.success(instrumentAssetService.instrumentStats());
     }
@@ -205,7 +205,7 @@ public class AssetController {
     }
 
     @GetMapping("/maintenances/stats")
-    @Operation(summary = "缁翠慨璁板綍缁熻")
+    @Operation(summary = "维修记录统计")
     public ApiResponse<List<StatusCountVO>> maintenanceStats() {
         return ApiResponse.success(instrumentAssetService.maintenanceStats());
     }

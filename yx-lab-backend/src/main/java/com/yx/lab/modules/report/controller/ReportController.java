@@ -61,7 +61,7 @@ public class ReportController {
     }
 
     @GetMapping("/stats")
-    @Operation(summary = "鎶ュ憡鐘舵€佺粺璁?")
+    @Operation(summary = "报告状态统计")
     public ApiResponse<List<StatusCountVO>> stats() {
         return ApiResponse.success(reportService.statusStats());
     }

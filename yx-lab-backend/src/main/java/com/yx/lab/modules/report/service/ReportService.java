@@ -1179,7 +1179,7 @@ public class ReportService {
 
     private String normalizeDetectorName(String value) {
         String name = StrUtil.trimToEmpty(value);
-        if ("-".equals(name) || name.contains("协同检测") || name.contains("鍗忓悓妫€娴")) {
+        if ("-".equals(name) || name.contains("协同检测")) {
             return "";
         }
         return name;

@@ -51,7 +51,7 @@ public class ReviewController {
     }
 
     @GetMapping("/stats")
-    @Operation(summary = "瀹℃牳鐘舵€佺粺璁?")
+    @Operation(summary = "审核状态统计")
     public ApiResponse<List<StatusCountVO>> stats() {
         return ApiResponse.success(reviewService.statusStats());
     }
