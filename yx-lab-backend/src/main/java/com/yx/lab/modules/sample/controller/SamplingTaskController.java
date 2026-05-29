@@ -66,6 +66,7 @@ public class SamplingTaskController {
                         ExcelExportUtil.column("采样人员", SamplingTask::getSamplerName),
                         ExcelExportUtil.column("样品类型", item -> LabWorkflowConstants.getSampleTypeLabel(item.getSampleType())),
                         ExcelExportUtil.column("检测套餐", SamplingTask::getDetectionTypeName),
+                        ExcelExportUtil.column("采样依据", SamplingTask::getSamplingBasis),
                         ExcelExportUtil.column("任务状态", item -> LabWorkflowConstants.getSamplingTaskStatusLabel(item.getTaskStatus())),
                         ExcelExportUtil.column("样品登记状态", item -> LabWorkflowConstants.getSampleRegisterStatusLabel(item.getSampleRegisterStatus())),
                         ExcelExportUtil.column("计划采样时间", SamplingTask::getSamplingTime),

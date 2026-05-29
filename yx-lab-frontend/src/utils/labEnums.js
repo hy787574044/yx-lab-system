@@ -54,6 +54,7 @@ export const completedSampleStatus = 'COMPLETED'
 
 export const waitAssignDetectionStatus = 'WAIT_ASSIGN'
 export const waitDetectDetectionStatus = 'WAIT_DETECT'
+export const enteredDetectionStatus = 'ENTERED'
 export const reviewPendingDetectionStatus = 'SUBMITTED'
 export const approvedDetectionStatus = 'APPROVED'
 export const rejectedDetectionStatus = 'REJECTED'
@@ -61,12 +62,19 @@ export const rejectedDetectionStatus = 'REJECTED'
 export const normalDetectionResult = 'NORMAL'
 export const abnormalDetectionResult = 'ABNORMAL'
 
+export const inSituParameterCategory = 'IN_SITU'
+export const fieldParameterCategory = 'FIELD'
+export const laboratoryParameterCategory = 'LABORATORY'
+
 export const approvedReviewResult = 'APPROVED'
 export const rejectedReviewResult = 'REJECTED'
 
 export const dailyReportType = 'DAILY'
 export const weeklyReportType = 'WEEKLY'
 export const monthlyReportType = 'MONTHLY'
+
+export const detectionReportCategory = 'DETECTION_REPORT'
+export const rawRecordReportCategory = 'RAW_RECORD'
 
 export const draftReportStatus = 'DRAFT'
 export const generatedReportStatus = 'GENERATED'
@@ -151,6 +159,7 @@ export const sampleStatusLabelMap = {
 export const detectionStatusLabelMap = {
   [waitAssignDetectionStatus]: '待分配',
   [waitDetectDetectionStatus]: '待检测',
+  [enteredDetectionStatus]: '已录入',
   [reviewPendingDetectionStatus]: '待审核',
   [approvedDetectionStatus]: '已通过',
   [rejectedDetectionStatus]: '已驳回'
@@ -159,6 +168,15 @@ export const detectionStatusLabelMap = {
 export const detectionResultLabelMap = {
   [normalDetectionResult]: '正常',
   [abnormalDetectionResult]: '异常'
+}
+
+export const parameterCategoryLabelMap = {
+  [inSituParameterCategory]: '原位检测',
+  [fieldParameterCategory]: '现场测定',
+  [laboratoryParameterCategory]: '实验室测定',
+  原位检测: '原位检测',
+  现场测定: '现场测定',
+  实验室测定: '实验室测定'
 }
 
 export const reviewResultLabelMap = {
@@ -176,6 +194,11 @@ export const reportStatusLabelMap = {
   [draftReportStatus]: '草稿',
   [generatedReportStatus]: '已生成',
   [publishedReportStatus]: '已发布'
+}
+
+export const reportCategoryLabelMap = {
+  [detectionReportCategory]: '检测报告',
+  [rawRecordReportCategory]: '全流程原始记录'
 }
 
 export const pushStatusLabelMap = {
@@ -198,6 +221,7 @@ export const sampleTypeOptions = buildOptions(sampleTypeLabelMap)
 export const qualityControlTypeOptions = buildOptions(qualityControlTypeLabelMap)
 export const reportTypeOptions = buildOptions(reportTypeLabelMap)
 export const reportStatusOptions = buildOptions(reportStatusLabelMap)
+export const reportCategoryOptions = buildOptions(reportCategoryLabelMap)
 
 export const actionablePlanStatuses = [activePlanStatus, unpublishedPlanStatus]
 export const dispatchedPlanStatuses = [dispatchedPlanStatus]
@@ -239,6 +263,7 @@ const statusClassMaps = {
   detectionStatus: {
     [waitAssignDetectionStatus]: 'warning',
     [waitDetectDetectionStatus]: 'info',
+    [enteredDetectionStatus]: 'success',
     [reviewPendingDetectionStatus]: 'warning',
     [approvedDetectionStatus]: 'success',
     [rejectedDetectionStatus]: 'danger'
@@ -255,6 +280,10 @@ const statusClassMaps = {
     [draftReportStatus]: 'info',
     [generatedReportStatus]: 'warning',
     [publishedReportStatus]: 'success'
+  },
+  reportCategory: {
+    [detectionReportCategory]: 'primary',
+    [rawRecordReportCategory]: 'info'
   },
   pushStatus: {
     [pendingPushStatus]: 'warning',
@@ -302,6 +331,8 @@ const workflowTextLabelMap = {
   DRAFT: '草稿',
   GENERATED: '已生成',
   PUBLISHED: '已发布',
+  DETECTION_REPORT: '检测报告',
+  RAW_RECORD: '全流程原始记录',
   SUCCESS: '已推送',
   FAILED: '推送失败',
   CANCELLED: '已撤回'

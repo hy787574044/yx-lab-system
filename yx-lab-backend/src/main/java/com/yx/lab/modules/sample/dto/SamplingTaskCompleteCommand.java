@@ -3,6 +3,7 @@ package com.yx.lab.modules.sample.dto;
 import lombok.Data;
 
 import javax.validation.constraints.NotNull;
+import java.util.List;
 
 @Data
 public class SamplingTaskCompleteCommand {
@@ -25,4 +26,10 @@ public class SamplingTaskCompleteCommand {
     private String latitude;
 
     private String longitude;
+
+    private List<SampleDetectionConfigItem> detectionConfigItems;
+
+    private String sampleTotalVolume;
+
+    private String sampleBottleCount;
 }

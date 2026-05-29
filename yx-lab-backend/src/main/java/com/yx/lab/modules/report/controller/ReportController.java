@@ -84,6 +84,7 @@ public class ReportController {
                         ExcelExportUtil.column("报告名称", LabReport::getReportName),
                         ExcelExportUtil.column("样品编号", LabReport::getSampleNo),
                         ExcelExportUtil.column("报告类型", item -> LabWorkflowConstants.getReportTypeLabel(item.getReportType())),
+                        ExcelExportUtil.column("报告类别", item -> LabWorkflowConstants.getReportCategoryLabel(item.getReportCategory())),
                         ExcelExportUtil.column("报告状态", item -> LabWorkflowConstants.getReportStatusLabel(item.getReportStatus())),
                         ExcelExportUtil.column("生成时间", LabReport::getGeneratedTime),
                         ExcelExportUtil.column("发布人", LabReport::getPublishedByName),

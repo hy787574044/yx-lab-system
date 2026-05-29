@@ -140,9 +140,16 @@ public class DetectionPendingFlowService {
                 item.setReferenceStandard(configItem.getReferenceStandard());
                 item.setMethodId(configItem.getMethodId());
                 item.setMethodName(configItem.getMethodName());
-                item.setDetectorId(null);
-                item.setDetectorName(null);
-                item.setItemStatus(LabWorkflowConstants.DetectionStatus.WAIT_ASSIGN);
+                if (configItem.getResultValue() != null) {
+                    item.setResultValue(configItem.getResultValue());
+                    item.setDetectorId(sample.getSamplerId());
+                    item.setDetectorName(sample.getSamplerName());
+                    item.setItemStatus(LabWorkflowConstants.DetectionStatus.ENTERED);
+                } else {
+                    item.setDetectorId(null);
+                    item.setDetectorName(null);
+                    item.setItemStatus(LabWorkflowConstants.DetectionStatus.WAIT_ASSIGN);
+                }
                 item.setExceedFlag(0);
                 detectionItemMapper.insert(item);
             }
@@ -249,6 +256,11 @@ public class DetectionPendingFlowService {
             if (item == null) {
                 throw new BusinessException("检测子流程不存在：" + itemCommand.getItemId());
             }
+            if (LabWorkflowConstants.DetectionStatus.ENTERED.equals(item.getItemStatus())
+                    || LabWorkflowConstants.DetectionStatus.SUBMITTED.equals(item.getItemStatus())
+                    || LabWorkflowConstants.DetectionStatus.APPROVED.equals(item.getItemStatus())) {
+                continue;
+            }
             if (itemCommand.getDetectorId() == null) {
                 item.setDetectorId(null);
                 item.setDetectorName(null);
@@ -313,7 +325,11 @@ public class DetectionPendingFlowService {
             return;
         }
         List<DetectionItem> effectiveItems = items == null ? new ArrayList<>() : items;
-        boolean allAssigned = !effectiveItems.isEmpty() && effectiveItems.stream().allMatch(item -> item.getDetectorId() != null);
+        boolean allAssigned = !effectiveItems.isEmpty() && effectiveItems.stream()
+                .allMatch(item -> item.getDetectorId() != null
+                        || LabWorkflowConstants.DetectionStatus.ENTERED.equals(item.getItemStatus())
+                        || LabWorkflowConstants.DetectionStatus.SUBMITTED.equals(item.getItemStatus())
+                        || LabWorkflowConstants.DetectionStatus.APPROVED.equals(item.getItemStatus()));
         record.setDetectionStatus(allAssigned
                 ? LabWorkflowConstants.DetectionStatus.WAIT_DETECT
                 : LabWorkflowConstants.DetectionStatus.WAIT_ASSIGN);
@@ -398,7 +414,8 @@ public class DetectionPendingFlowService {
 
     private int countCompletedItems(List<DetectionItem> items) {
         return (int) (items == null ? 0L : items.stream()
-                .filter(item -> LabWorkflowConstants.DetectionStatus.SUBMITTED.equals(item.getItemStatus())
+                .filter(item -> LabWorkflowConstants.DetectionStatus.ENTERED.equals(item.getItemStatus())
+                        || LabWorkflowConstants.DetectionStatus.SUBMITTED.equals(item.getItemStatus())
                         || LabWorkflowConstants.DetectionStatus.APPROVED.equals(item.getItemStatus()))
                 .count());
     }

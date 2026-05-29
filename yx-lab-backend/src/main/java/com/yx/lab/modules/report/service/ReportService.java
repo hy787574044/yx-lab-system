@@ -95,6 +95,7 @@ public class ReportService {
                                 .or()
                                 .like(LabReport::getSampleNo, query.getKeyword()))
                         .eq(StrUtil.isNotBlank(query.getReportType()), LabReport::getReportType, query.getReportType())
+                        .eq(StrUtil.isNotBlank(query.getReportCategory()), LabReport::getReportCategory, query.getReportCategory())
                         .eq(StrUtil.isNotBlank(query.getReportStatus()), LabReport::getReportStatus, query.getReportStatus())
                         .in(scopedReportIds != null, LabReport::getId, scopedReportIds)
                         .orderByDesc(LabReport::getGeneratedTime));
@@ -273,37 +274,12 @@ public class ReportService {
         ReportTemplate template = reportTemplateMapper.selectOne(new LambdaQueryWrapper<ReportTemplate>()
                 .eq(ReportTemplate::getDefaultTemplate, 1)
                 .last("limit 1"));
-
-        String content;
-        // 没有默认模板时仍可生成基础报告文本，保证审核通过后一定有正式产物。
-        if (template == null) {
-            content = "样品编号：" + sample.getSampleNo()
-                    + "\n监测点位：" + sample.getPointName()
-                    + "\n检测结果：" + LabWorkflowConstants.getDetectionResultLabel(record.getDetectionResult());
-        } else {
-            content = template.getTemplateContent()
-                    .replace("${sampleNo}", sample.getSampleNo())
-                    .replace("${pointName}", sample.getPointName())
-                    .replace("${detectionType}", "")
-                    .replace("${detectionResult}", LabWorkflowConstants.getDetectionResultLabel(record.getDetectionResult()));
-        }
-
-        LabReport report = new LabReport();
-        report.setReportName(sample.getSampleNo() + "-检测报告");
-        report.setReportType(LabWorkflowConstants.ReportType.DAILY);
-        report.setGeneratedTime(LocalDateTime.now());
-        report.setSampleId(sample.getId());
-        report.setSampleNo(sample.getSampleNo());
-        report.setDetectionRecordId(record.getId());
-        report.setReportStatus(LabWorkflowConstants.ReportStatus.GENERATED);
-        report.setContentSnapshot(content);
-        // 报告入库时同步生成 HTML 产物，后续预览和打印直接复用该正式文件。
-        report.setFilePath(writeReportArtifact(report, sample, record, loadDetectionItems(record.getId()), loadLatestReview(sample.getId())));
-        labReportMapper.insert(report);
+        List<DetectionItem> detectionItems = loadDetectionItems(record.getId());
+        ReviewRecord latestReview = loadLatestReview(sample.getId());
+        createApprovedReportByCategory(sample, record, template, detectionItems, latestReview, LabWorkflowConstants.ReportCategory.DETECTION_REPORT);
+        createApprovedReportByCategory(sample, record, template, detectionItems, latestReview, LabWorkflowConstants.ReportCategory.RAW_RECORD);
         labSampleService.appendTrace(sample.getId(),
-                "已生成报告：样品编号=" + sample.getSampleNo()
-                        + "，报告名称=" + report.getReportName()
-                        + "，状态=已生成");
+                "已生成报告：样品编号=" + sample.getSampleNo() + "，已生成检测报告与全流程原始记录");
     }
 
     /**
@@ -321,7 +297,9 @@ public class ReportService {
                 : detectionRecordMapper.selectById(report.getDetectionRecordId());
         List<DetectionItem> detectionItems = loadDetectionItems(report.getDetectionRecordId());
         ReviewRecord latestReview = loadLatestReview(report.getSampleId());
-        String html = buildDetailedReportHtml(report, sample, detectionRecord, detectionItems, latestReview);
+        String html = LabWorkflowConstants.ReportCategory.RAW_RECORD.equals(report.getReportCategory())
+                ? buildRawRecordHtml(buildPreviewVO(report, sample, detectionRecord, detectionItems, latestReview))
+                : buildDetailedReportHtml(report, sample, detectionRecord, detectionItems, latestReview);
         return html.getBytes(StandardCharsets.UTF_8);
     }
 
@@ -332,8 +310,11 @@ public class ReportService {
      * @return PDF 二进制
      */
     public byte[] downloadPdf(Long id, Long requestedPageHeightMm) {
+        LabReport report = requireReport(id);
         ReportPreviewVO previewData = previewData(id);
-        String html = buildPrintDocumentHtml(previewData, requestedPageHeightMm);
+        String html = LabWorkflowConstants.ReportCategory.RAW_RECORD.equals(report.getReportCategory())
+                ? buildRawRecordPrintDocumentHtml(previewData)
+                : buildPrintDocumentHtml(previewData, requestedPageHeightMm);
         try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
             PdfRendererBuilder builder = new PdfRendererBuilder();
             builder.useFastMode();
@@ -429,11 +410,65 @@ public class ReportService {
         String safeSampleNo = sample == null ? "report" : StrUtil.blankToDefault(sample.getSampleNo(), "report");
         String fileName = "reports/" + safeSampleNo + "-" + System.currentTimeMillis() + ".html";
         try {
-            String storedPath = storageService.storeText(fileName, buildDetailedReportHtml(report, sample, detectionRecord, detectionItems, latestReview));
+            String storedPath = storageService.storeText(fileName, buildReportArtifactHtml(report, sample, detectionRecord, detectionItems, latestReview));
             return storageService.toFullUrl(storedPath);
         } catch (IOException ex) {
             throw new BusinessException("报告文件写入失败：" + ex.getMessage());
         }
+    }
+
+    private String buildReportArtifactHtml(LabReport report,
+                                           LabSample sample,
+                                           DetectionRecord detectionRecord,
+                                           List<DetectionItem> detectionItems,
+                                           ReviewRecord latestReview) {
+        if (LabWorkflowConstants.ReportCategory.RAW_RECORD.equals(report == null ? null : report.getReportCategory())) {
+            return buildRawRecordHtml(buildPreviewVO(report, sample, detectionRecord, detectionItems, latestReview));
+        }
+        return buildDetailedReportHtml(report, sample, detectionRecord, detectionItems, latestReview);
+    }
+
+    private void createApprovedReportByCategory(LabSample sample,
+                                                DetectionRecord record,
+                                                ReportTemplate template,
+                                                List<DetectionItem> detectionItems,
+                                                ReviewRecord latestReview,
+                                                String reportCategory) {
+        LabReport report = new LabReport();
+        report.setReportName(sample.getSampleNo()
+                + (LabWorkflowConstants.ReportCategory.RAW_RECORD.equals(reportCategory) ? "-全流程原始记录" : "-检测报告"));
+        report.setReportType(LabWorkflowConstants.ReportType.DAILY);
+        report.setReportCategory(reportCategory);
+        report.setGeneratedTime(LocalDateTime.now());
+        report.setSampleId(sample.getId());
+        report.setSampleNo(sample.getSampleNo());
+        report.setDetectionRecordId(record.getId());
+        report.setReportStatus(LabWorkflowConstants.ReportStatus.GENERATED);
+        report.setContentSnapshot(buildReportContentSnapshot(sample, record, template, reportCategory));
+        report.setFilePath(writeReportArtifact(report, sample, record, detectionItems, latestReview));
+        labReportMapper.insert(report);
+    }
+
+    private String buildReportContentSnapshot(LabSample sample,
+                                              DetectionRecord record,
+                                              ReportTemplate template,
+                                              String reportCategory) {
+        if (LabWorkflowConstants.ReportCategory.RAW_RECORD.equals(reportCategory)) {
+            return "报告类别：全流程原始记录"
+                    + "\n样品编号：" + sample.getSampleNo()
+                    + "\n监测点位：" + sample.getPointName()
+                    + "\n检测结果：" + LabWorkflowConstants.getDetectionResultLabel(record.getDetectionResult());
+        }
+        if (template == null) {
+            return "样品编号：" + sample.getSampleNo()
+                    + "\n监测点位：" + sample.getPointName()
+                    + "\n检测结果：" + LabWorkflowConstants.getDetectionResultLabel(record.getDetectionResult());
+        }
+        return template.getTemplateContent()
+                .replace("${sampleNo}", sample.getSampleNo())
+                .replace("${pointName}", sample.getPointName())
+                .replace("${detectionType}", "")
+                .replace("${detectionResult}", LabWorkflowConstants.getDetectionResultLabel(record.getDetectionResult()));
     }
 
     private String buildDetailedReportHtml(LabReport report,
@@ -600,6 +635,8 @@ public class ReportService {
         vo.setReportId(report == null ? null : report.getId());
         vo.setReportName(StrUtil.blankToDefault(report == null ? null : report.getReportName(), "检测报告"));
         vo.setReportTypeLabel(resolveReportTypeLabel(report == null ? null : report.getReportType()));
+        vo.setReportCategory(report == null ? null : report.getReportCategory());
+        vo.setReportCategoryLabel(LabWorkflowConstants.getReportCategoryLabel(report == null ? null : report.getReportCategory()));
         vo.setReportStatusLabel(LabWorkflowConstants.getReportStatusLabel(report == null ? null : report.getReportStatus()));
         vo.setGeneratedTime(formatDateTime(report == null ? null : report.getGeneratedTime()));
         vo.setPublishedTime(formatDateTime(report == null ? null : report.getPublishedTime()));
@@ -819,6 +856,14 @@ public class ReportService {
 
         html.append("</div></body></html>");
         return html.toString();
+    }
+
+    private String buildRawRecordHtml(ReportPreviewVO previewData) {
+        return buildPreviewStyledHtml(previewData, 297L);
+    }
+
+    private String buildRawRecordPrintDocumentHtml(ReportPreviewVO previewData) {
+        return buildPreviewStyledHtml(previewData, 297L);
     }
 
     private String buildPrintDocumentHtml(ReportPreviewVO previewData, Long requestedPageHeightMm) {

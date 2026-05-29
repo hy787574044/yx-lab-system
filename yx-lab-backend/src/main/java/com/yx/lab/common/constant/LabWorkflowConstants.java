@@ -152,6 +152,8 @@ public final class LabWorkflowConstants {
 
         public static final String WAIT_DETECT = "WAIT_DETECT";
 
+        public static final String ENTERED = "ENTERED";
+
         public static final String SUBMITTED = "SUBMITTED";
 
         public static final String APPROVED = "APPROVED";
@@ -169,6 +171,24 @@ public final class LabWorkflowConstants {
         public static final String ABNORMAL = "ABNORMAL";
 
         private DetectionResult() {
+        }
+    }
+
+    public static final class DetectionParameterCategory {
+
+        public static final String IN_SITU = "IN_SITU";
+
+        public static final String FIELD = "FIELD";
+
+        public static final String LABORATORY = "LABORATORY";
+
+        public static final String IN_SITU_LABEL = "原位检测";
+
+        public static final String FIELD_LABEL = "现场测定";
+
+        public static final String LABORATORY_LABEL = "实验室测定";
+
+        private DetectionParameterCategory() {
         }
     }
 
@@ -203,6 +223,16 @@ public final class LabWorkflowConstants {
         public static final String MONTHLY = "MONTHLY";
 
         private ReportType() {
+        }
+    }
+
+    public static final class ReportCategory {
+
+        public static final String DETECTION_REPORT = "DETECTION_REPORT";
+
+        public static final String RAW_RECORD = "RAW_RECORD";
+
+        private ReportCategory() {
         }
     }
 
@@ -261,6 +291,10 @@ public final class LabWorkflowConstants {
             ReportType.DAILY,
             ReportType.WEEKLY,
             ReportType.MONTHLY);
+
+    public static final Set<String> REPORT_CATEGORIES = unmodifiableSet(
+            ReportCategory.DETECTION_REPORT,
+            ReportCategory.RAW_RECORD);
 
     public static final Set<String> PAUSABLE_PLAN_STATUSES = unmodifiableSet(
             SamplingPlanStatus.ACTIVE,
@@ -338,6 +372,11 @@ public final class LabWorkflowConstants {
     public static boolean canAssignDetection(String detectionStatus) {
         return DetectionStatus.WAIT_ASSIGN.equals(detectionStatus)
                 || DetectionStatus.WAIT_DETECT.equals(detectionStatus);
+    }
+
+    public static boolean canEnterDetectionResult(String detectionStatus) {
+        return DetectionStatus.WAIT_DETECT.equals(detectionStatus)
+                || DetectionStatus.REJECTED.equals(detectionStatus);
     }
 
     public static String detectionStatusForReviewResult(String reviewResult) {
@@ -497,6 +536,16 @@ public final class LabWorkflowConstants {
         return reportType;
     }
 
+    public static String getReportCategoryLabel(String reportCategory) {
+        if (ReportCategory.DETECTION_REPORT.equals(reportCategory)) {
+            return "检测报告";
+        }
+        if (ReportCategory.RAW_RECORD.equals(reportCategory)) {
+            return "全流程原始记录";
+        }
+        return reportCategory;
+    }
+
     public static String getSampleTypeLabel(String sampleType) {
         if (SampleType.FACTORY.equals(sampleType)) {
             return "出厂水";
@@ -549,6 +598,9 @@ public final class LabWorkflowConstants {
         if (DetectionStatus.WAIT_DETECT.equals(detectionStatus)) {
             return "待检测";
         }
+        if (DetectionStatus.ENTERED.equals(detectionStatus)) {
+            return "已录入";
+        }
         if (DetectionStatus.SUBMITTED.equals(detectionStatus)) {
             return "待审核";
         }
@@ -569,6 +621,22 @@ public final class LabWorkflowConstants {
             return "异常";
         }
         return detectionResult;
+    }
+
+    public static String getDetectionParameterCategoryLabel(String parameterCategory) {
+        if (DetectionParameterCategory.IN_SITU.equals(parameterCategory)
+                || DetectionParameterCategory.IN_SITU_LABEL.equals(parameterCategory)) {
+            return DetectionParameterCategory.IN_SITU_LABEL;
+        }
+        if (DetectionParameterCategory.FIELD.equals(parameterCategory)
+                || DetectionParameterCategory.FIELD_LABEL.equals(parameterCategory)) {
+            return DetectionParameterCategory.FIELD_LABEL;
+        }
+        if (DetectionParameterCategory.LABORATORY.equals(parameterCategory)
+                || DetectionParameterCategory.LABORATORY_LABEL.equals(parameterCategory)) {
+            return DetectionParameterCategory.LABORATORY_LABEL;
+        }
+        return parameterCategory;
     }
 
     public static String getReviewResultLabel(String reviewResult) {

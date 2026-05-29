@@ -13,6 +13,7 @@ import com.yx.lab.common.util.PageUtils;
 import com.yx.lab.modules.sample.dto.SamplingTaskActionCommand;
 import com.yx.lab.modules.sample.dto.SamplingTaskCompleteCommand;
 import com.yx.lab.modules.sample.dto.SamplingTaskQuery;
+import com.yx.lab.modules.sample.dto.SampleDetectionConfigItem;
 import com.yx.lab.modules.sample.entity.LabSample;
 import com.yx.lab.modules.sample.entity.SamplingTask;
 import com.yx.lab.modules.sample.mapper.LabSampleMapper;
@@ -25,7 +26,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.Arrays;
+import java.util.Map;
 import java.util.List;
+import java.util.LinkedHashMap;
 import java.util.stream.Collectors;
 
 @Service
@@ -60,6 +63,7 @@ public class SamplingTaskService {
                                 resolveScopedSamplerId(query.getSamplerId()))
                         .orderByDesc(SamplingTask::getCreatedTime));
         page.getRecords().forEach(this::normalizeTaskFileUrlsForView);
+        page.getRecords().forEach(this::enrichTaskDetectionConfigSnapshotForView);
         return new PageResult<>(page.getTotal(), page.getRecords());
     }
 
@@ -116,6 +120,7 @@ public class SamplingTaskService {
     public SamplingTask detail(Long id) {
         SamplingTask task = requireTask(id);
         normalizeTaskFileUrlsForView(task);
+        enrichTaskDetectionConfigSnapshotForView(task);
         return task;
     }
 
@@ -126,6 +131,7 @@ public class SamplingTaskService {
                 .in(SamplingTask::getTaskStatus, LabWorkflowConstants.TODO_TASK_STATUSES)
                 .orderByAsc(SamplingTask::getSamplingTime));
         tasks.forEach(this::normalizeTaskFileUrlsForView);
+        tasks.forEach(this::enrichTaskDetectionConfigSnapshotForView);
         return tasks;
     }
 
@@ -196,6 +202,11 @@ public class SamplingTaskService {
         task.setOnsiteMetrics(command.getOnsiteMetrics());
         task.setWeather(command.getWeather());
         task.setTemperature(command.getTemperature());
+        task.setSampleTotalVolume(StrUtil.trim(command.getSampleTotalVolume()));
+        task.setSampleBottleCount(StrUtil.trim(command.getSampleBottleCount()));
+        task.setDetectionConfigSnapshot(mergeSamplingDetectionResults(
+                task.getDetectionConfigSnapshot(),
+                command.getDetectionConfigItems()));
         task.setPhotoUrls(normalizePhotoUrls(command.getPhotoUrls()));
         task.setRemark(command.getRemark());
         task.setAddress(command.getAddress());
@@ -224,9 +235,52 @@ public class SamplingTaskService {
                 .collect(Collectors.joining(","));
     }
 
+    private String mergeSamplingDetectionResults(String snapshotText, List<SampleDetectionConfigItem> submittedItems) {
+        List<SampleDetectionConfigItem> snapshotItems = samplingPlanService.parseDetectionConfigSnapshot(snapshotText);
+        if (snapshotItems.isEmpty() || submittedItems == null || submittedItems.isEmpty()) {
+            return snapshotText;
+        }
+        Map<Long, SampleDetectionConfigItem> submittedMap = submittedItems.stream()
+                .filter(item -> item != null && item.getParameterId() != null)
+                .collect(Collectors.toMap(
+                        SampleDetectionConfigItem::getParameterId,
+                        item -> item,
+                        (left, right) -> right,
+                        LinkedHashMap::new));
+        if (submittedMap.isEmpty()) {
+            return snapshotText;
+        }
+        for (SampleDetectionConfigItem item : snapshotItems) {
+            SampleDetectionConfigItem submitted = submittedMap.get(item.getParameterId());
+            if (submitted == null || submitted.getResultValue() == null || !isSamplingDetectableCategory(item)) {
+                item.setResultValue(isSamplingDetectableCategory(item) ? item.getResultValue() : null);
+                continue;
+            }
+            item.setResultValue(submitted.getResultValue());
+        }
+        return samplingPlanService.serializeDetectionConfigItems(snapshotItems);
+    }
+
+    private boolean isSamplingDetectableCategory(SampleDetectionConfigItem item) {
+        if (item == null) {
+            return false;
+        }
+        String category = StrUtil.trim(item.getParameterCategory());
+        return LabWorkflowConstants.DetectionParameterCategory.IN_SITU.equals(category)
+                || LabWorkflowConstants.DetectionParameterCategory.FIELD.equals(category)
+                || LabWorkflowConstants.DetectionParameterCategory.IN_SITU_LABEL.equals(category)
+                || LabWorkflowConstants.DetectionParameterCategory.FIELD_LABEL.equals(category);
+    }
+
     private void normalizeTaskFileUrlsForView(SamplingTask task) {
         if (task != null) {
             task.setPhotoUrls(storageService.toFullUrls(task.getPhotoUrls()));
+        }
+    }
+
+    private void enrichTaskDetectionConfigSnapshotForView(SamplingTask task) {
+        if (task != null) {
+            task.setDetectionConfigSnapshot(samplingPlanService.enrichDetectionConfigSnapshotForView(task.getDetectionConfigSnapshot()));
         }
     }
 

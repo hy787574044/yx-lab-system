@@ -62,6 +62,8 @@ public class LabSampleService {
 
     private final DataScopeHelper dataScopeHelper;
 
+    private final SamplingPlanService samplingPlanService;
+
     /**
      * 分页查询样品列表。
      *
@@ -81,6 +83,7 @@ public class LabSampleService {
                         .eq(resolveScopedSamplerId() != null, LabSample::getSamplerId, resolveScopedSamplerId())
                         .eq(dataScopeHelper.onlySelfScope(), LabSample::getCreatedBy, dataScopeHelper.currentUserId())
                         .orderByDesc(LabSample::getCreatedTime));
+        page.getRecords().forEach(this::enrichSampleDetectionConfigSnapshotForView);
         return new PageResult<>(page.getTotal(), page.getRecords());
     }
 
@@ -133,7 +136,9 @@ public class LabSampleService {
      * @return 样品详情
      */
     public LabSample detail(Long id) {
-        return labSampleMapper.selectById(id);
+        LabSample sample = labSampleMapper.selectById(id);
+        enrichSampleDetectionConfigSnapshotForView(sample);
+        return sample;
     }
 
     /**
@@ -171,12 +176,15 @@ public class LabSampleService {
         sample.setDetectionItems(resolveDetectionItems(command, task, detectionType));
         sample.setDetectionTypeId(resolveDetectionTypeId(command, task, detectionType));
         sample.setDetectionTypeName(resolveDetectionTypeName(command, task, detectionType));
-        sample.setDetectionConfigSnapshot(serializeDetectionConfigItems(detectionConfigItems));
+        sample.setDetectionConfigSnapshot(samplingPlanService.enrichDetectionConfigSnapshotForView(
+                serializeDetectionConfigItems(detectionConfigItems)));
         sample.setReviewFlowId(reviewFlow == null ? null : reviewFlow.getId());
         sample.setReviewFlowName(reviewFlow == null ? null : reviewFlow.getFlowName());
         sample.setPublishFlowId(publishFlow == null ? null : publishFlow.getId());
         sample.setPublishFlowName(publishFlow == null ? null : publishFlow.getFlowName());
         sample.setSamplingTime(command.getSamplingTime());
+        sample.setSampleTotalVolume(task.getSampleTotalVolume());
+        sample.setSampleBottleCount(task.getSampleBottleCount());
         sample.setSamplerId(resolveSamplerId(command, task, currentUser));
         sample.setSamplerName(resolveSamplerName(command, task, currentUser));
         sample.setWeather(command.getWeather());
@@ -191,7 +199,14 @@ public class LabSampleService {
         samplingTaskMapper.updateById(task);
         // 样品一旦登录完成，立即补齐后续待分配检测主流程与参数子流程。
         detectionPendingFlowService.createPendingFlowIfMissing(sample);
+        enrichSampleDetectionConfigSnapshotForView(sample);
         return sample;
+    }
+
+    private void enrichSampleDetectionConfigSnapshotForView(LabSample sample) {
+        if (sample != null) {
+            sample.setDetectionConfigSnapshot(samplingPlanService.enrichDetectionConfigSnapshotForView(sample.getDetectionConfigSnapshot()));
+        }
     }
 
     /**

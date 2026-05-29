@@ -47,6 +47,17 @@
                 </el-select>
               </label>
               <label class="toolbar-field">
+                <span>报告类别</span>
+                <el-select v-model="query.reportCategory" placeholder="请选择报告类别" clearable>
+                  <el-option
+                    v-for="option in reportCategoryOptions"
+                    :key="option.value"
+                    :label="option.label"
+                    :value="option.value"
+                  />
+                </el-select>
+              </label>
+              <label class="toolbar-field">
                 <span>报告状态</span>
                 <el-select v-model="query.reportStatus" placeholder="请选择报告状态" clearable>
                   <el-option
@@ -83,6 +94,11 @@
           <el-table-column label="报告类型" width="110">
             <template #default="{ row }">
               {{ getEnumLabel(reportTypeLabelMap, row.reportType) }}
+            </template>
+          </el-table-column>
+          <el-table-column label="报告类别" width="140">
+            <template #default="{ row }">
+              {{ getEnumLabel(reportCategoryLabelMap, row.reportCategory) }}
             </template>
           </el-table-column>
           <el-table-column label="报告状态" width="110">
@@ -162,8 +178,9 @@
       @closed="closePreviewDialog"
     >
       <div v-if="previewError" class="preview-empty">{{ previewError }}</div>
-      <ReportPrintDocument
+      <component
         v-else-if="previewData"
+        :is="previewComponent"
         ref="reportPrintRef"
         :preview-data="previewData"
       />
@@ -198,10 +215,13 @@ import TablePagination from '../components/common/TablePagination.vue'
 import ReportPrintDocument from '../components/report/ReportPrintDocument.vue'
 import {
   DEFAULT_PAGE_SIZE,
+  rawRecordReportCategory,
   generatedReportStatus,
   getEnumLabel,
   getStatusClass,
   monthlyReportType,
+  reportCategoryLabelMap,
+  reportCategoryOptions,
   publishedReportStatus,
   reportStatusLabelMap,
   reportStatusOptions,
@@ -209,12 +229,14 @@ import {
   reportTypeOptions,
   translateWorkflowText
 } from '../utils/labEnums'
+import RawRecordPrintDocument from '../components/report/RawRecordPrintDocument.vue'
 
 const query = reactive({
   pageNum: 1,
   pageSize: DEFAULT_PAGE_SIZE,
   keyword: '',
   reportType: '',
+  reportCategory: '',
   reportStatus: ''
 })
 
@@ -231,6 +253,11 @@ const previewTitle = ref('')
 const previewError = ref('')
 const reportPrintRef = ref(null)
 const downloadingReportId = ref('')
+const previewComponent = computed(() => (
+  previewData.value?.reportCategory === rawRecordReportCategory
+    ? RawRecordPrintDocument
+    : ReportPrintDocument
+))
 
 function toSafeNumber(value) {
   const num = typeof value === 'number' ? value : Number.parseFloat(String(value ?? '').replace(/,/g, '').trim())
@@ -297,6 +324,7 @@ function resetQuery() {
   query.pageSize = DEFAULT_PAGE_SIZE
   query.keyword = ''
   query.reportType = ''
+  query.reportCategory = ''
   query.reportStatus = ''
   activeStatKey.value = 'all'
   loadReports()
@@ -365,7 +393,10 @@ async function unpublish(id) {
 
 async function previewReport(row) {
   previewData.value = null
-  previewTitle.value = row.reportName || '报告预览'
+  const categoryLabel = getEnumLabel(reportCategoryLabelMap, row.reportCategory)
+  previewTitle.value = categoryLabel && categoryLabel !== '-'
+    ? `${row.reportName || '报告预览'} - ${categoryLabel}`
+    : (row.reportName || '报告预览')
   previewError.value = ''
   previewDialogVisible.value = true
   try {

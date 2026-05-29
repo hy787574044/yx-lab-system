@@ -554,7 +554,7 @@
               />
             </el-select>
           </el-form-item>
-          <el-form-item class="plan-form-span-2" label="采样依据">
+          <el-form-item label="采样依据" required>
             <el-select
               v-model="planForm.samplingBasisList"
               multiple
@@ -709,9 +709,15 @@
           <el-form-item label="样品类型">
             <el-input :model-value="getEnumLabel(sampleTypeLabelMap, taskCompletePreview?.sampleType) || '-'" readonly />
           </el-form-item>
-          <el-form-item class="plan-form-span-2" label="检测套餐">
+          <el-form-item label="检测套餐">
             <el-input
               :model-value="taskCompletePreview?.detectionTypeName || taskCompletePreview?.detectionItems || '-'"
+              readonly
+            />
+          </el-form-item>
+          <el-form-item label="采样依据">
+            <el-input
+              :model-value="formatSamplingBasisText(taskCompletePreview?.samplingBasis || taskCompletePreview?.sampling_basis) || '-'"
               readonly
             />
           </el-form-item>
@@ -722,7 +728,7 @@
                   参数数量<strong>{{ taskCompleteDetectionConfigRows.length }}</strong>
                 </span>
                 <span class="login-config-panel__note">
-                  采样录入阶段只读展示当前任务携带的检测参数与检测方法明细。
+                  原位检测、现场测定参数可在采样录入阶段直接填写检测值，实验室测定参数后续由检测人员录入。
                 </span>
               </div>
               <el-table
@@ -734,6 +740,9 @@
                 border
               >
                 <el-table-column prop="parameterName" label="检测参数" min-width="130" show-overflow-tooltip />
+                <el-table-column label="参数类别" width="100" header-cell-class-name="cell-center" class-name="cell-center">
+                  <template #default="{ row }">{{ formatParameterCategory(row) }}</template>
+                </el-table-column>
                 <el-table-column label="标准范围" min-width="120">
                   <template #default="{ row }">
                     {{ formatStandardRange(row.standardMin, row.standardMax) }}
@@ -741,6 +750,19 @@
                 </el-table-column>
                 <el-table-column prop="unit" label="单位" width="72">
                   <template #default="{ row }">{{ row.unit || '-' }}</template>
+                </el-table-column>
+                <el-table-column label="检测值" width="150">
+                  <template #default="{ row }">
+                    <el-input-number
+                      v-if="isSamplingDetectionResultEditable(row)"
+                      v-model="row.resultValue"
+                      :precision="2"
+                      :step="0.1"
+                      controls-position="right"
+                      style="width: 128px"
+                    />
+                    <span v-else>{{ row.resultValue ?? '-' }}</span>
+                  </template>
                 </el-table-column>
                 <el-table-column prop="referenceStandard" label="检测标准" min-width="150" show-overflow-tooltip>
                   <template #default="{ row }">{{ row.referenceStandard || '-' }}</template>
@@ -778,6 +800,23 @@
           </el-form-item>
           <el-form-item label="温度">
             <el-input v-model="taskCompleteForm.temperature" placeholder="例如：26℃" />
+          </el-form-item>
+          <el-form-item label="应采总容量">
+            <el-input :model-value="expectedTaskCompleteSampleTotalVolume" readonly>
+              <template #append>mL</template>
+            </el-input>
+          </el-form-item>
+          <el-form-item label="采样总容量">
+            <el-input
+              :model-value="taskCompleteForm.sampleTotalVolume"
+              placeholder="请输入采样总容量"
+              @input="handleTaskCompleteSampleTotalVolumeInput"
+            >
+              <template #append>mL</template>
+            </el-input>
+          </el-form-item>
+          <el-form-item label="采样瓶数">
+            <el-input-number v-model="taskCompleteForm.sampleBottleCount" :min="0" :precision="0" style="width: 100%" />
           </el-form-item>
           <el-form-item class="plan-form-span-2" label="现场照片">
             <div class="sampling-photo-uploader">
@@ -984,6 +1023,9 @@
                     <span>{{ row.parameterName || '-' }}</span>
                   </template>
                 </el-table-column>
+                <el-table-column label="参数类别" width="100" header-cell-class-name="cell-center" class-name="cell-center">
+                  <template #default="{ row }">{{ formatParameterCategory(row) }}</template>
+                </el-table-column>
                 <el-table-column label="标准范围" min-width="120">
                   <template #default="{ row }">
                     {{ formatStandardRange(row.standardMin, row.standardMax) }}
@@ -991,6 +1033,9 @@
                 </el-table-column>
                 <el-table-column prop="unit" label="单位" width="72">
                   <template #default="{ row }">{{ row.unit || '-' }}</template>
+                </el-table-column>
+                <el-table-column label="检测值" width="110">
+                  <template #default="{ row }">{{ row.resultValue ?? '-' }}</template>
                 </el-table-column>
                 <el-table-column prop="referenceStandard" label="检测标准" min-width="140" show-overflow-tooltip>
                   <template #default="{ row }">{{ row.referenceStandard || '-' }}</template>
@@ -1134,10 +1179,13 @@
         <div><span>点位名称</span><strong>{{ taskDetail?.pointName || taskDetail?.point_name || '-' }}</strong></div>
         <div><span>采样人员</span><strong>{{ taskDetail?.samplerName || taskDetail?.sampler_name || '-' }}</strong></div>
         <div><span>检测套餐</span><strong>{{ taskDetail?.detectionTypeName || taskDetail?.detection_type_name || taskDetail?.detectionItems || '-' }}</strong></div>
+        <div><span>采样依据</span><strong>{{ formatSamplingBasisText(taskDetail?.samplingBasis || taskDetail?.sampling_basis) || '-' }}</strong></div>
         <div><span>任务状态</span><strong>{{ getEnumLabel(taskStatusLabelMap, taskDetail?.taskStatus || taskDetail?.task_status) }}</strong></div>
         <div><span>完成时间</span><strong>{{ taskDetail?.finishedTime || taskDetail?.finished_time || '-' }}</strong></div>
         <div><span>天气</span><strong>{{ taskDetail?.weather || '-' }}</strong></div>
         <div><span>温度</span><strong>{{ taskDetail?.temperature || '-' }}</strong></div>
+        <div><span>采样总容量</span><strong>{{ taskDetail?.sampleTotalVolume || taskDetail?.sample_total_volume || '-' }}</strong></div>
+        <div><span>采样瓶数</span><strong>{{ taskDetail?.sampleBottleCount || taskDetail?.sample_bottle_count || '-' }}</strong></div>
       </div>
       <div class="task-detail-block">
         <span>检测参数明细</span>
@@ -1149,6 +1197,9 @@
           border
         >
           <el-table-column prop="parameterName" label="检测参数" min-width="130" show-overflow-tooltip />
+          <el-table-column label="参数类别" width="100" header-cell-class-name="cell-center" class-name="cell-center">
+            <template #default="{ row }">{{ formatParameterCategory(row) }}</template>
+          </el-table-column>
           <el-table-column label="标准范围" min-width="120">
             <template #default="{ row }">
               {{ formatStandardRange(row.standardMin, row.standardMax) }}
@@ -1156,6 +1207,9 @@
           </el-table-column>
           <el-table-column prop="unit" label="单位" width="72">
             <template #default="{ row }">{{ row.unit || '-' }}</template>
+          </el-table-column>
+          <el-table-column label="检测值" width="110">
+            <template #default="{ row }">{{ row.resultValue ?? '-' }}</template>
           </el-table-column>
           <el-table-column prop="referenceStandard" label="检测标准" min-width="150" show-overflow-tooltip>
             <template #default="{ row }">{{ row.referenceStandard || '-' }}</template>
@@ -1214,6 +1268,7 @@ import { ElDatePicker } from 'element-plus/es/components/date-picker/index.mjs'
 import { ElDialog } from 'element-plus/es/components/dialog/index.mjs'
 import { ElForm, ElFormItem } from 'element-plus/es/components/form/index.mjs'
 import { ElInput } from 'element-plus/es/components/input/index.mjs'
+import { ElInputNumber } from 'element-plus/es/components/input-number/index.mjs'
 import { ElImage } from 'element-plus/es/components/image/index.mjs'
 import { ElMessage } from 'element-plus/es/components/message/index.mjs'
 import { ElOption, ElSelect } from 'element-plus/es/components/select/index.mjs'
@@ -1269,11 +1324,14 @@ import {
   factorySampleType,
   getEnumLabel,
   getStatusClass,
+  fieldParameterCategory,
+  inSituParameterCategory,
   inProgressTaskStatus,
   loggedSampleStatus,
   pausedPlanStatus,
   pendingTaskStatus,
   planStatusLabelMap,
+  parameterCategoryLabelMap,
   qualityControlTypeLabelMap,
   qualityControlTypeOptions,
   retestSampleStatus,
@@ -1406,6 +1464,15 @@ const taskCompleteDetectionConfigRows = computed(() => (
     instrumentDisplayNames: resolveMethodInstrumentDisplayNames(item?.methodId)
   }))
 ))
+const expectedTaskCompleteSampleTotalVolume = computed(() => {
+  const total = taskCompleteDetectionConfigRows.value.reduce((sum, item) => (
+    sum + toSafeNumber(extractSampleVolumeNumber(item?.sampleVolume))
+  ), 0)
+  if (!Number.isFinite(total) || total <= 0) {
+    return ''
+  }
+  return Number.isInteger(total) ? String(total) : String(Number(total.toFixed(2)))
+})
 const taskDetailDetectionConfigRows = computed(() => (
   parseTaskDetectionConfigSnapshot(taskDetail.value?.detectionConfigSnapshot).map((item) => ({
     ...item,
@@ -1452,6 +1519,8 @@ const taskCompleteForm = reactive({
   onsiteMetrics: '',
   weather: '',
   temperature: '',
+  sampleTotalVolume: '',
+  sampleBottleCount: null,
   photoUrls: '',
   remark: '',
   address: '',
@@ -1483,6 +1552,13 @@ function normalizeDictOptions(items) {
       return label && value ? { label, value } : null
     })
     .filter(Boolean)
+}
+
+function formatParameterCategory(value) {
+  const rawValue = typeof value === 'object'
+    ? (value?.parameterCategoryDesc || value?.parameter_category_desc || value?.parameterCategory || value?.parameter_category || '')
+    : value
+  return getEnumLabel(parameterCategoryLabelMap, String(rawValue || '').trim())
 }
 
 function buildRowActionKey(scope, action, id) {
@@ -2263,6 +2339,37 @@ function formatSamplingBasisText(value) {
   return parseSamplingBasisList(value).join('、')
 }
 
+function extractSampleVolumeNumber(value) {
+  const text = String(value || '').trim().replace(/\s+/g, '')
+  return text.replace(/(?:ml|毫升)$/i, '')
+}
+
+function sanitizeSampleVolumeNumber(value) {
+  const text = extractSampleVolumeNumber(value).replace(/[^\d.]/g, '')
+  const parts = text.split('.')
+  if (parts.length <= 1) {
+    return parts[0]
+  }
+  return `${parts[0]}.${parts.slice(1).join('')}`
+}
+
+function buildSampleVolumePayload(value) {
+  const numberText = sanitizeSampleVolumeNumber(value)
+  return numberText ? `${numberText}mL` : ''
+}
+
+function isSamplingDetectionResultEditable(row) {
+  if (!row) {
+    return false
+  }
+  const category = String(row.parameterCategory || row.parameter_category || row.parameterCategoryDesc || row.parameter_category_desc || '').trim()
+  return [inSituParameterCategory, fieldParameterCategory, '原位检测', '现场测定'].includes(category)
+}
+
+function handleTaskCompleteSampleTotalVolumeInput(value) {
+  taskCompleteForm.sampleTotalVolume = sanitizeSampleVolumeNumber(value)
+}
+
 function resetDispatchForm() {
   dispatchForm.planId = null
   dispatchForm.samplingTime = ''
@@ -2378,6 +2485,8 @@ function buildPlanPayload() {
     detectionConfigItems: planDetectionConfigRows.value.map((item) => ({
       parameterId: item.parameterId,
       parameterName: item.parameterName,
+      parameterCategory: item.parameterCategory,
+      parameterCategoryDesc: item.parameterCategoryDesc,
       unit: item.unit,
       standardMin: item.standardMin,
       standardMax: item.standardMax,
@@ -2408,6 +2517,10 @@ async function submitPlanForm() {
   }
   if (!payload.detectionTypeId || !payload.detectionTypeName) {
     ElMessage.warning('请选择检测套餐')
+    return
+  }
+  if (!payload.samplingBasisList.length) {
+    ElMessage.warning('请选择采样依据')
     return
   }
   if (!payload.detectionConfigItems.length || payload.detectionConfigItems.some((item) => !item.parameterId || !item.methodId)) {
@@ -2735,6 +2848,8 @@ function buildLoginDetectionConfigItems(detectionType) {
       return {
         parameterId: String(parameter.id),
         parameterName: parameter.parameterName || '',
+        parameterCategory: parameter.parameterCategory || '',
+        parameterCategoryDesc: formatParameterCategory(parameter),
         unit: parameter.unit || '',
         standardMin: parameter.standardMin,
         standardMax: parameter.standardMax,
@@ -2766,6 +2881,8 @@ function buildLoginConfigRowFromSnapshot(item) {
   return {
     parameterId,
     parameterName: item?.parameterName || parameter?.parameterName || '',
+    parameterCategory: item?.parameterCategory || item?.parameter_category || parameter?.parameterCategory || '',
+    parameterCategoryDesc: item?.parameterCategoryDesc || item?.parameter_category_desc || formatParameterCategory(item?.parameterCategory || item?.parameter_category || parameter?.parameterCategory || ''),
     unit: item?.unit || parameter?.unit || '',
     standardMin: item?.standardMin ?? parameter?.standardMin ?? null,
     standardMax: item?.standardMax ?? parameter?.standardMax ?? null,
@@ -2773,6 +2890,7 @@ function buildLoginConfigRowFromSnapshot(item) {
     methodId,
     methodName: item?.methodName || methodOptions.find((option) => option.id === methodId)?.methodName || '',
     sampleVolume: item?.sampleVolume || item?.sample_volume || methodOptions.find((option) => option.id === methodId)?.sampleVolume || '',
+    resultValue: item?.resultValue ?? item?.result_value ?? null,
     methodOptions
   }
 }
@@ -2861,6 +2979,8 @@ function createEmptyDetectionConfigRow() {
   return {
     parameterId: '',
     parameterName: '',
+    parameterCategory: '',
+    parameterCategoryDesc: '',
     unit: '',
     standardMin: null,
     standardMax: null,
@@ -2914,6 +3034,8 @@ function applyDetectionConfigParameterChange(row, parameterId) {
   const parameter = detectionParameterOptions.value.find((item) => String(item.id) === String(parameterId || ''))
   row.parameterId = String(parameterId || '')
   row.parameterName = parameter?.parameterName || ''
+  row.parameterCategory = parameter?.parameterCategory || ''
+  row.parameterCategoryDesc = formatParameterCategory(parameter)
   row.unit = parameter?.unit || ''
   row.standardMin = parameter?.standardMin ?? null
   row.standardMax = parameter?.standardMax ?? null
@@ -2998,6 +3120,8 @@ function resetTaskCompleteForm() {
   taskCompleteForm.onsiteMetrics = ''
   taskCompleteForm.weather = ''
   taskCompleteForm.temperature = ''
+  taskCompleteForm.sampleTotalVolume = ''
+  taskCompleteForm.sampleBottleCount = null
   taskCompleteForm.photoUrls = ''
   taskCompleteForm.remark = ''
   taskCompleteForm.address = ''
@@ -3179,6 +3303,8 @@ async function openTaskCompleteDialog(row) {
     taskCompleteForm.onsiteMetrics = task.onsiteMetrics || task.onsite_metrics || ''
     taskCompleteForm.weather = task.weather || ''
     taskCompleteForm.temperature = task.temperature || ''
+    taskCompleteForm.sampleTotalVolume = extractSampleVolumeNumber(task.sampleTotalVolume || task.sample_total_volume || '')
+    taskCompleteForm.sampleBottleCount = task.sampleBottleCount ?? task.sample_bottle_count ?? null
     taskCompleteForm.photoUrls = extractTaskPhotoUrls(task).join(',')
     taskCompleteForm.remark = task.remark || ''
     taskCompleteForm.address = task.address || ''
@@ -3210,6 +3336,22 @@ async function submitTaskCompleteForm() {
       onsiteMetrics: taskCompleteForm.onsiteMetrics,
       weather: taskCompleteForm.weather,
       temperature: taskCompleteForm.temperature,
+      sampleTotalVolume: buildSampleVolumePayload(taskCompleteForm.sampleTotalVolume),
+      sampleBottleCount: taskCompleteForm.sampleBottleCount == null ? '' : String(taskCompleteForm.sampleBottleCount),
+      detectionConfigItems: taskCompleteDetectionConfigRows.value.map((item) => ({
+        parameterId: item.parameterId,
+        parameterName: item.parameterName,
+        parameterCategory: item.parameterCategory,
+        parameterCategoryDesc: item.parameterCategoryDesc,
+        unit: item.unit,
+        standardMin: item.standardMin,
+        standardMax: item.standardMax,
+        referenceStandard: item.referenceStandard,
+        methodId: item.methodId,
+        methodName: item.methodName,
+        sampleVolume: item.sampleVolume,
+        resultValue: isSamplingDetectionResultEditable(item) ? item.resultValue : null
+      })),
       photoUrls: taskCompleteForm.photoUrls,
       remark: taskCompleteForm.remark,
       address: taskCompleteForm.address,
@@ -3389,13 +3531,16 @@ async function submitSampleLogin() {
       detectionConfigItems: loginDetectionConfigRows.value.map((item) => ({
         parameterId: item.parameterId,
         parameterName: item.parameterName,
+        parameterCategory: item.parameterCategory,
+        parameterCategoryDesc: item.parameterCategoryDesc,
         unit: item.unit,
         standardMin: item.standardMin,
         standardMax: item.standardMax,
         referenceStandard: item.referenceStandard,
         methodId: item.methodId,
         methodName: item.methodName,
-        sampleVolume: item.sampleVolume
+        sampleVolume: item.sampleVolume,
+        resultValue: item.resultValue
       }))
     })
     loginDialogVisible.value = false

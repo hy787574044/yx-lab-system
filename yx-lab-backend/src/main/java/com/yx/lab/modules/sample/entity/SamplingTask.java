@@ -79,6 +79,10 @@ public class SamplingTask extends BaseEntity {
     @TableField("detection_config_snapshot")
     private String detectionConfigSnapshot;
 
+    @Schema(description = "采样依据")
+    @TableField("sampling_basis")
+    private String samplingBasis;
+
     @Schema(description = "任务状态")
     @TableField("task_status")
     private String taskStatus;
@@ -128,4 +132,12 @@ public class SamplingTask extends BaseEntity {
     @Schema(description = "Y坐标")
     @TableField("longitude")
     private String longitude;
+
+    @Schema(description = "采样总容量")
+    @TableField("sample_total_volume")
+    private String sampleTotalVolume;
+
+    @Schema(description = "采样瓶数")
+    @TableField("sample_bottle_count")
+    private String sampleBottleCount;
 }

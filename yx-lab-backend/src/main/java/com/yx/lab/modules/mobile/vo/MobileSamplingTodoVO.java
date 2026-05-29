@@ -37,6 +37,10 @@ public class MobileSamplingTodoVO {
 
     private String detectionConfigSnapshot;
 
+    private String sampleTotalVolume;
+
+    private String sampleBottleCount;
+
     private String taskStatus;
 
     private String taskStatusDesc;

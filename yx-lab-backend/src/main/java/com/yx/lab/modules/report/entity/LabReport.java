@@ -26,6 +26,10 @@ public class LabReport extends BaseEntity {
     @TableField("report_type")
     private String reportType;
 
+    @Schema(description = "报告类别")
+    @TableField("report_category")
+    private String reportCategory;
+
     @Schema(description = "生成时间")
     @TableField("generated_time")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")

@@ -85,6 +85,7 @@ public class SamplingPlanService {
                                 SamplingPlan::getSamplerId,
                                 resolveScopedSamplerId(query.getSamplerId()))
                         .orderByDesc(SamplingPlan::getCreatedTime));
+        page.getRecords().forEach(this::enrichPlanDetectionConfigSnapshotForView);
         return new PageResult<>(page.getTotal(), page.getRecords());
     }
 
@@ -153,7 +154,9 @@ public class SamplingPlanService {
      * @return 采样计划详情
      */
     public SamplingPlan detail(Long id) {
-        return requirePlan(id);
+        SamplingPlan plan = requirePlan(id);
+        enrichPlanDetectionConfigSnapshotForView(plan);
+        return plan;
     }
 
     /**
@@ -446,6 +449,7 @@ public class SamplingPlanService {
         task.setDetectionTypeId(plan.getDetectionTypeId());
         task.setDetectionTypeName(plan.getDetectionTypeName());
         task.setDetectionConfigSnapshot(resolvePlanDetectionConfigSnapshot(plan));
+        task.setSamplingBasis(plan.getSamplingBasis());
         task.setTaskStatus(LabWorkflowConstants.SamplingTaskStatus.PENDING);
         task.setRemark(buildTaskRemark(plan, manualDispatch));
         samplingTaskMapper.insert(task);
@@ -489,6 +493,9 @@ public class SamplingPlanService {
         }
         if (parseDetectionConfigSnapshot(plan.getDetectionConfigSnapshot()).isEmpty()) {
             throw new BusinessException("采样计划必须配置检测套餐参数");
+        }
+        if (StrUtil.isBlank(plan.getSamplingBasis())) {
+            throw new BusinessException("采样依据不能为空");
         }
         if (!LabWorkflowConstants.CYCLE_TYPES.contains(plan.getCycleType())) {
             throw new BusinessException("采样计划周期类型不合法");
@@ -611,7 +618,7 @@ public class SamplingPlanService {
                 .collect(Collectors.toList());
     }
 
-    private String serializeDetectionConfigItems(List<SampleDetectionConfigItem> snapshotItems) {
+    public String serializeDetectionConfigItems(List<SampleDetectionConfigItem> snapshotItems) {
         try {
             return objectMapper.writeValueAsString(snapshotItems);
         } catch (JsonProcessingException ex) {
@@ -619,7 +626,7 @@ public class SamplingPlanService {
         }
     }
 
-    private List<SampleDetectionConfigItem> parseDetectionConfigSnapshot(String snapshotText) {
+    public List<SampleDetectionConfigItem> parseDetectionConfigSnapshot(String snapshotText) {
         if (StrUtil.isBlank(snapshotText)) {
             return Collections.emptyList();
         }
@@ -656,16 +663,81 @@ public class SamplingPlanService {
         SampleDetectionConfigItem item = new SampleDetectionConfigItem();
         item.setParameterId(parameter.getId());
         item.setParameterName(parameter.getParameterName());
-        item.setParameterCategory(parameter.getParameterCategory());
+        applyParameterCategory(item, parameter.getParameterCategory());
         item.setUnit(parameter.getUnit());
         item.setStandardMin(parameter.getStandardMin());
         item.setStandardMax(parameter.getStandardMax());
+        item.setResultValue(null);
         item.setReferenceStandard(parameter.getReferenceStandard());
         item.setMethodId(method.getId());
         item.setMethodName(method.getMethodName());
         item.setSampleVolume(method.getSampleVolume());
         item.setMethodBasis(method.getMethodBasis());
         return item;
+    }
+
+    public String enrichDetectionConfigSnapshotForView(String snapshotText) {
+        if (StrUtil.isBlank(snapshotText)) {
+            return snapshotText;
+        }
+        try {
+            List<SampleDetectionConfigItem> items = parseDetectionConfigSnapshot(snapshotText);
+            if (items.isEmpty()) {
+                return snapshotText;
+            }
+            enrichDetectionConfigItems(items);
+            return serializeDetectionConfigItems(items);
+        } catch (BusinessException ex) {
+            return snapshotText;
+        }
+    }
+
+    private void enrichPlanDetectionConfigSnapshotForView(SamplingPlan plan) {
+        if (plan == null) {
+            return;
+        }
+        plan.setDetectionConfigSnapshot(enrichDetectionConfigSnapshotForView(plan.getDetectionConfigSnapshot()));
+    }
+
+    private void enrichDetectionConfigItems(List<SampleDetectionConfigItem> items) {
+        if (items == null || items.isEmpty()) {
+            return;
+        }
+        List<Long> parameterIds = items.stream()
+                .map(SampleDetectionConfigItem::getParameterId)
+                .filter(id -> id != null)
+                .distinct()
+                .collect(Collectors.toList());
+        Map<Long, DetectionParameter> parameterMap = parameterIds.isEmpty()
+                ? Collections.emptyMap()
+                : detectionParameterMapper.selectList(new LambdaQueryWrapper<DetectionParameter>()
+                        .in(DetectionParameter::getId, parameterIds))
+                .stream()
+                .collect(Collectors.toMap(DetectionParameter::getId, item -> item, (left, right) -> left, LinkedHashMap::new));
+        for (SampleDetectionConfigItem item : items) {
+            if (item == null) {
+                continue;
+            }
+            DetectionParameter parameter = parameterMap.get(item.getParameterId());
+            String category = StrUtil.blankToDefault(StrUtil.trim(item.getParameterCategory()),
+                    parameter == null ? null : StrUtil.trim(parameter.getParameterCategory()));
+            applyParameterCategory(item, category);
+            if (StrUtil.isBlank(item.getParameterName()) && parameter != null) {
+                item.setParameterName(parameter.getParameterName());
+            }
+            if (item.getResultValue() != null) {
+                item.setResultValue(item.getResultValue());
+            }
+        }
+    }
+
+    private void applyParameterCategory(SampleDetectionConfigItem item, String parameterCategory) {
+        if (item == null) {
+            return;
+        }
+        String category = StrUtil.trim(parameterCategory);
+        item.setParameterCategory(category);
+        item.setParameterCategoryDesc(LabWorkflowConstants.getDetectionParameterCategoryLabel(category));
     }
 
     private List<Long> parseIdList(String value) {

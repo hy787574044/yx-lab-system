@@ -1,0 +1,49 @@
+282:                "\u5bb8\u832c\u6553\u93b4\u612d\u59e4\u935b\u5a4f\u7d30\u93cd\u5cf0\u6427\u7f02\u6827\u5f7f=" + sample.getSampleNo() + "\u951b\u5c7d\u51e1\u9422\u71b8\u579a\u59ab\u20ac\u5a34\u5b2b\u59e4\u935b\u5a41\u7b0c\u934f\u3126\u7966\u7ecb\u5b2a\u5e2b\u6fee\u5b2d\ue187\u8930?);
+327:            throw new BusinessException("\u93b6\u30e5\u61a1 PDF \u9422\u71b8\u579a\u6fb6\u8fab\u89e6\u951b? + ex.getMessage());
+369:            throw new BusinessException("\u93b6\u30e5\u61a1\u59af\u2103\u6f98\u6d93\u5d85\u74e8\u9366?);
+385:            throw new BusinessException("\u93b6\u30e5\u61a1\u6d93\u5d85\u74e8\u9366?);
+416:            throw new BusinessException("\u93b6\u30e5\u61a1\u93c2\u56e6\u6b22\u9350\u6b0f\u53c6\u6fb6\u8fab\u89e6\u951b? + ex.getMessage());
+458:                    + "\\n\u93cd\u5cf0\u6427\u7f02\u6827\u5f7f\u951b? + sample.getSampleNo()
+459:                    + "\\n\u9429\u621e\u7974\u9410\u901b\u7d85\u951b? + sample.getPointName()
+463:            return "\u93cd\u5cf0\u6427\u7f02\u6827\u5f7f\u951b? + sample.getSampleNo()
+464:                    + "\\n\u9429\u621e\u7974\u9410\u901b\u7d85\u951b? + sample.getPointName()
+636:        vo.setReportName(StrUtil.blankToDefault(report == null ? null : report.getReportName(), "\u59ab\u20ac\u5a34\u5b2b\u59e4\u935b?));
+755:                    .append("<div>\u93cd\u5cf0\u6427\u7f02\u6827\u5f7f\u951b?).append(safeText(previewData.getSampleNo())).append("</div>")
+756:                    .append("<div>\u9410\u901b\u7d85\u935a\u5d87\u041e\u951b?).append(safeText(previewData.getPointName())).append("</div>")
+764:                    .append("<div>\u9422\u71b8\u579a\u93c3\u5815\u68ff\u951b?).append(safeText(previewData.getGeneratedTime())).append("</div>")
+794:                        .append(buildSummaryCard("\u59dd\uff45\u7236\u6924?, String.valueOf(defaultInteger(previewData.getNormalCount())), "is-success", false))
+795:                        .append(buildSummaryCard("\u5bee\u509a\u7236\u6924?, String.valueOf(defaultInteger(previewData.getAbnormalCount())), "is-danger", false))
+801:                    .append(page.getPageNo() == 1 ? "\u6d93\u5908\u20ac\u4f78\u5bf2\u6960\u5c80\u7ca8\u93cb\u6ec4\u69d1\u7f01? : "\u9356\u682d\u7359\u7f01\u64b4\u7049\u93c4\u5ea3\u7c8f\u951b\u5822\u753b\u6924\u7889\u7d1a")
+846:                        .append("<tr><td class=\\"label label--wide\\">\u5a34\u4f7a\u25bc\u9423\u6b11\u68d4</td><td colspan=\\"5\\" class=\\"trace-text\\">").append(safeText(StrUtil.blankToDefault(previewData.getTraceLog(), "\u8930\u64b3\u58a0\u93cd\u5cf0\u6427\u93c6\u509b\u68e4\u68f0\u6fc6\ue63b\u5a34\u4f7a\u25bc\u9423\u6b11\u68d4\u9286?))).append("</td></tr>")
+874:        String title = "\u59d8\u78cb\u5ddd\u59ab\u20ac\u5a34\u5b2b\u59e4\u935b?;
+927:                    .append("<div class=\\"report-meta\\"><span>\u93b6\u30e5\u61a1\u7f02\u6827\u5f7f\u951b?).append(safeText(buildReportNo(data))).append("</span>")
+928:                    .append("<span>\u9422\u71b8\u579a\u93c3\u30e6\u6e61\u951b?).append(safeText(toDateText(data.getGeneratedTime()))).append("</span>");
+981:                html.append("<p class=\\"basis-line\\">\u9352\u3085\u757e\u6e1a\u6fc7\u5d41\u951b?).append(safeText(resolveJudgmentBasis(data))).append("</p>")
+982:                        .append("<p class=\\"overall-line\\">\u93c1\u7fe0\u7d8b\u7487\u52ea\u73af\u951b?).append(safeText(buildOverallEvaluationText(data))).append("</p>");
+1072:        if (containsText(statusLabel, "\u5bf0?) || containsText(statusLabel, "\u93bb\u612a\u6c26")) {
+1100:        return "GB 5749-2022\u9286\u5a44\u6553\u5a32\u5a5a\u30ae\u9422\u3126\u6309\u9357\ue0a4\u6553\u93cd\u56e7\u566f\u9286?;
+1114:            return "\u93c8\ue101\ue0bc\u59ab\u20ac\u5a34\u5b2e\u300d\u9429\ue1bc\u6f4e\u7ed7\ufe40\u608e\u93cd\u56e7\u566f\u7455\u4f79\u7730\u9286?;
+1116:        return "\u701b\u6a3a\u6e6a " + abnormalNames.size() + " \u6924\u901b\u7b09\u935a\u581f\u7278\u93b8\u56e8\u7223\u951b? + String.join("\u9286?, abnormalNames) + "\u9286?;
+1121:        return label.contains("\u5bee\u509a\u7236") || label.contains("\u74d2\u546e\u7223") || label.contains("\u6d93\u5d85\u608e\u93cd?)
+1153:                detectorName = "\u93c8\ue045\u5bda\u7039?;
+1161:            DetectionSummaryRow row = new DetectionSummaryRow(StrUtil.blankToDefault(normalizeDetectorName(data == null ? null : data.getDetectorName()), "\u93c8\ue045\u5bda\u7039?));
+1182:        if ("-".equals(name) || name.contains("\u9357\u5fd3\u6093\u59ab\u20ac\u5a34?) || name.contains("\u95b8\u6940\u7e50\u93ae\u64b3\u039b\u9227\ue100\xf9")) {
+1350:            parameters = String.join("\u9286?, parameterNames);
+1474:        return "\u93c8\ue047\ue195\u7f03?;
+1479:            return "\u93c8\ue044\u7d8d\u934f\u30e6\ue5c5\u5a34\u5b2a\u20ac?;
+1483:            return "\u6d63\u5e9d\u7c2c\u93cd\u56e7\u566f\u6d93\u5b2e\u6aba\u951b? + formatDecimal(item.getStandardMin());
+1486:            return "\u6942\u6a39\u7c2c\u93cd\u56e7\u566f\u6d93\u5a47\u6aba\u951b? + formatDecimal(item.getStandardMax());
+1489:            return "\u6fb6\u52ea\u7c2c\u93cd\u56e7\u566f\u947c\u51a8\u6d3f\u9350?;
+1595:        result = result.replaceAll("\\\\bFACTORY\\\\b", "\u9351\u54c4\u5df6\u59d8?);
+1597:        result = result.replaceAll("\\\\bTERMINAL\\\\b", "\u93c8\ue0a3\u2171\u59d8?);
+1598:        result = result.replaceAll("\\\\bLOGGED\\\\b", "\u5bb8\u832c\u6ae5\u7481?);
+1599:        result = result.replaceAll("\\\\bREVIEWING\\\\b", "\u7039\u2103\u7273\u6d93?);
+1601:        result = result.replaceAll("\\\\bCOMPLETED\\\\b", "\u5bb8\u63d2\u756c\u93b4?);
+1602:        result = result.replaceAll("\\\\bWAIT_ASSIGN\\\\b", "\u5bf0\u546d\u578e\u95b0?);
+1603:        result = result.replaceAll("\\\\bWAIT_DETECT\\\\b", "\u5bf0\u546e\ue5c5\u5a34?);
+1604:        result = result.replaceAll("\\\\bSUBMITTED\\\\b", "\u5bb8\u53c9\u5f41\u6d5c?);
+1606:        result = result.replaceAll("\\\\bREJECTED\\\\b", "\u5bb8\u67e5\u250f\u9365?);
+1610:        result = result.replaceAll("\\\\bGENERATED\\\\b", "\u5bb8\u832c\u6553\u93b4?);
+1611:        result = result.replaceAll("\\\\bPUBLISHED\\\\b", "\u5bb8\u63d2\u5f42\u752f?);
+1612:        result = result.replaceAll("\\\\bPENDING\\\\b", "\u5bf0\u546e\u5e39\u95ab?);
+1615:        result = result.replaceAll("\\\\bCANCELLED\\\\b", "\u5bb8\u63d2\u5f47\u5a11?);

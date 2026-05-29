@@ -42,6 +42,7 @@ public class SamplingPlanSaveCommand {
 
     private List<SampleDetectionConfigItem> detectionConfigItems;
 
+    @NotNull(message = "采样依据不能为空")
     private List<String> samplingBasisList;
 
     private String cycleType;

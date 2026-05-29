@@ -219,11 +219,14 @@ CREATE TABLE lab_sampling_task (
     detection_type_id BIGINT,
     detection_type_name VARCHAR(128),
     detection_config_snapshot TEXT,
+    sampling_basis VARCHAR(1000),
     task_status VARCHAR(32),
     started_time DATETIME,
     onsite_metrics TEXT,
     weather VARCHAR(64),
     temperature VARCHAR(32),
+    sample_total_volume VARCHAR(64),
+    sample_bottle_count VARCHAR(32),
     photo_urls TEXT,
     abandon_reason VARCHAR(500),
     finished_time DATETIME,
@@ -257,6 +260,8 @@ CREATE TABLE lab_sample (
     publish_flow_id BIGINT,
     publish_flow_name VARCHAR(128),
     sampling_time DATETIME,
+    sample_total_volume VARCHAR(64),
+    sample_bottle_count VARCHAR(32),
     sampler_id BIGINT,
     sampler_name VARCHAR(64),
     weather VARCHAR(32),
@@ -466,6 +471,7 @@ CREATE TABLE lab_report (
     id BIGINT PRIMARY KEY,
     report_name VARCHAR(128) NOT NULL,
     report_type VARCHAR(32),
+    report_category VARCHAR(32) DEFAULT 'DETECTION_REPORT',
     generated_time DATETIME,
     sample_id BIGINT,
     sample_no VARCHAR(64),
@@ -482,7 +488,9 @@ CREATE TABLE lab_report (
     created_time DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_by BIGINT,
     updated_name VARCHAR(64),
-    updated_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    updated_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    KEY idx_lab_report_category_status (report_category, report_status),
+    KEY idx_lab_report_sample_no (sample_no)
 );
 
 DROP TABLE IF EXISTS lab_report_push_record;

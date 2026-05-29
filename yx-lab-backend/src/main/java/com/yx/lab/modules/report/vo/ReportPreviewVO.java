@@ -22,6 +22,12 @@ public class ReportPreviewVO {
     @Schema(description = "报告类型中文")
     private String reportTypeLabel;
 
+    @Schema(description = "报告类别")
+    private String reportCategory;
+
+    @Schema(description = "报告类别中文")
+    private String reportCategoryLabel;
+
     @Schema(description = "报告状态中文")
     private String reportStatusLabel;
 

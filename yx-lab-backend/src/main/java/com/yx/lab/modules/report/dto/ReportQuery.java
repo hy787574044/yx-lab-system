@@ -12,5 +12,7 @@ public class ReportQuery extends PageQuery {
 
     private String reportType;
 
+    private String reportCategory;
+
     private String reportStatus;
 }

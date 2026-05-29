@@ -711,7 +711,8 @@ public class DetectionWorkflowService {
             if (pendingItem.getDetectorId() == null) {
                 throw new BusinessException("检测参数“" + parameter.getParameterName() + "”尚未分配检测员");
             }
-            if (LabWorkflowConstants.DetectionStatus.SUBMITTED.equals(pendingItem.getItemStatus())
+            if (LabWorkflowConstants.DetectionStatus.ENTERED.equals(pendingItem.getItemStatus())
+                    || LabWorkflowConstants.DetectionStatus.SUBMITTED.equals(pendingItem.getItemStatus())
                     || LabWorkflowConstants.DetectionStatus.APPROVED.equals(pendingItem.getItemStatus())) {
                 throw new BusinessException("检测参数“" + parameter.getParameterName() + "”已提交结果，不能重复录入");
             }
@@ -783,7 +784,8 @@ public class DetectionWorkflowService {
         }
 
         boolean allReadyForReview = !pendingItems.isEmpty() && pendingItems.stream()
-                .allMatch(item -> LabWorkflowConstants.DetectionStatus.SUBMITTED.equals(item.getItemStatus())
+                .allMatch(item -> LabWorkflowConstants.DetectionStatus.ENTERED.equals(item.getItemStatus())
+                        || LabWorkflowConstants.DetectionStatus.SUBMITTED.equals(item.getItemStatus())
                         || LabWorkflowConstants.DetectionStatus.APPROVED.equals(item.getItemStatus()));
         if (allReadyForReview) {
             record.setDetectionResult(buildResultFromPendingItems(pendingItems));

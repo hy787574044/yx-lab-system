@@ -22,6 +22,8 @@ public class SampleDetectionConfigItem {
 
     private String parameterCategory;
 
+    private String parameterCategoryDesc;
+
     /**
      * 单位。
      */
@@ -36,6 +38,8 @@ public class SampleDetectionConfigItem {
      * 标准上限。
      */
     private BigDecimal standardMax;
+
+    private BigDecimal resultValue;
 
     /**
      * 检测标准。

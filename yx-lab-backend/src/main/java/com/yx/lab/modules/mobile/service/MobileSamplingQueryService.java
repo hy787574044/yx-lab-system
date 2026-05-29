@@ -13,6 +13,7 @@ import com.yx.lab.modules.sample.entity.LabSample;
 import com.yx.lab.modules.sample.entity.SamplingTask;
 import com.yx.lab.modules.sample.mapper.LabSampleMapper;
 import com.yx.lab.modules.sample.mapper.SamplingTaskMapper;
+import com.yx.lab.modules.sample.service.SamplingPlanService;
 import com.yx.lab.modules.storage.service.StorageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -38,6 +39,8 @@ public class MobileSamplingQueryService {
     private final LabSampleMapper labSampleMapper;
 
     private final StorageService storageService;
+
+    private final SamplingPlanService samplingPlanService;
 
     /**
      * 分页查询当前采样员的移动端采样待办。
@@ -144,7 +147,9 @@ public class MobileSamplingQueryService {
         vo.setDetectionItems(task.getDetectionItems());
         vo.setDetectionTypeId(task.getDetectionTypeId());
         vo.setDetectionTypeName(task.getDetectionTypeName());
-        vo.setDetectionConfigSnapshot(task.getDetectionConfigSnapshot());
+        vo.setDetectionConfigSnapshot(samplingPlanService.enrichDetectionConfigSnapshotForView(task.getDetectionConfigSnapshot()));
+        vo.setSampleTotalVolume(task.getSampleTotalVolume());
+        vo.setSampleBottleCount(task.getSampleBottleCount());
         vo.setTaskStatus(task.getTaskStatus());
         vo.setTaskStatusDesc(LabWorkflowConstants.getSamplingTaskStatusLabel(task.getTaskStatus()));
         vo.setSampleRegisterStatus(task.getSampleRegisterStatus());

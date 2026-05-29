@@ -110,4 +110,12 @@ public class LabSample extends BaseEntity {
     @Schema(description = "流程留痕")
     @TableField("trace_log")
     private String traceLog;
+
+    @Schema(description = "采样总容量")
+    @TableField("sample_total_volume")
+    private String sampleTotalVolume;
+
+    @Schema(description = "采样瓶数")
+    @TableField("sample_bottle_count")
+    private String sampleBottleCount;
 }
