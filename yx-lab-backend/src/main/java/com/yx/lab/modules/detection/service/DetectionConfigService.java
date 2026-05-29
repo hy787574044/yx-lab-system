@@ -162,6 +162,7 @@ public class DetectionConfigService {
      */
     public PageResult<DetectionParameter> parameterPage(DetectionParameterQuery query) {
         String keyword = StrUtil.trim(query.getKeyword());
+        String parameterCategory = normalizeParameterCategoryCode(query.getParameterCategory());
         Page<DetectionParameter> page = detectionParameterMapper.selectPage(
                 PageUtils.buildPage(query),
                 new LambdaQueryWrapper<DetectionParameter>()
@@ -175,7 +176,7 @@ public class DetectionConfigService {
                                 .like(DetectionParameter::getReferenceStandard, keyword)
                                 .or()
                                 .like(DetectionParameter::getRemark, keyword))
-                        .eq(StrUtil.isNotBlank(query.getParameterCategory()), DetectionParameter::getParameterCategory, StrUtil.trim(query.getParameterCategory()))
+                        .eq(StrUtil.isNotBlank(parameterCategory), DetectionParameter::getParameterCategory, parameterCategory)
                         .eq(query.getEnabled() != null, DetectionParameter::getEnabled, query.getEnabled())
                         .orderByDesc(DetectionParameter::getCreatedTime));
         return new PageResult<>(page.getTotal(), page.getRecords());
@@ -688,7 +689,7 @@ public class DetectionConfigService {
 
     private void applyParameterCommand(DetectionParameter entity, DetectionParameterSaveCommand command) {
         entity.setParameterName(StrUtil.trim(command.getParameterName()));
-        entity.setParameterCategory(StrUtil.trim(command.getParameterCategory()));
+        entity.setParameterCategory(normalizeParameterCategoryCode(command.getParameterCategory()));
         entity.setStandardMin(command.getStandardMin());
         entity.setStandardMax(command.getStandardMax());
         entity.setUnit(StrUtil.trim(command.getUnit()));
@@ -696,6 +697,20 @@ public class DetectionConfigService {
         entity.setReferenceStandard(StrUtil.trim(command.getReferenceStandard()));
         entity.setEnabled(command.getEnabled());
         entity.setRemark(StrUtil.trim(command.getRemark()));
+    }
+
+    private String normalizeParameterCategoryCode(String parameterCategory) {
+        String category = StrUtil.trim(parameterCategory);
+        if ("原位检测".equals(category)) {
+            return "IN_SITU";
+        }
+        if ("现场测定".equals(category)) {
+            return "FIELD";
+        }
+        if ("实验室测定".equals(category)) {
+            return "LABORATORY";
+        }
+        return category;
     }
 
     private void applyMethodCommand(DetectionMethod entity, DetectionMethodSaveCommand command) {

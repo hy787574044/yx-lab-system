@@ -164,6 +164,7 @@ public class SamplingPlanService {
      *
      * @param command 计划保存参数
      */
+    @Transactional(rollbackFor = Exception.class)
     public void save(SamplingPlanSaveCommand command) {
         SamplingPlan plan = new SamplingPlan();
         applyPlanCommand(plan, command);
@@ -175,6 +176,10 @@ public class SamplingPlanService {
         }
         validatePlan(plan);
         samplingPlanMapper.insert(plan);
+        LocalDateTime scheduledTime = resolveScheduledTime(plan, LocalDateTime.now());
+        if (scheduledTime != null) {
+            dispatchPlanTaskWithLock(plan.getId(), scheduledTime, false, null, null);
+        }
     }
 
     /**
@@ -777,9 +782,11 @@ public class SamplingPlanService {
                 continue;
             }
             DetectionParameter parameter = parameterMap.get(item.getParameterId());
-            String category = StrUtil.blankToDefault(StrUtil.trim(item.getParameterCategory()),
-                    parameter == null ? null : StrUtil.trim(parameter.getParameterCategory()));
-            applyParameterCategory(item, category);
+            String category = normalizeParameterCategoryCode(StrUtil.blankToDefault(
+                    StrUtil.trim(item.getParameterCategory()),
+                    parameter == null ? null : StrUtil.trim(parameter.getParameterCategory())));
+            item.setParameterCategory(category);
+            item.setParameterCategoryDesc(LabWorkflowConstants.getDetectionParameterCategoryLabel(category));
             if (StrUtil.isBlank(item.getParameterName()) && parameter != null) {
                 item.setParameterName(parameter.getParameterName());
             }
@@ -793,9 +800,23 @@ public class SamplingPlanService {
         if (item == null) {
             return;
         }
-        String category = StrUtil.trim(parameterCategory);
+        String category = normalizeParameterCategoryCode(parameterCategory);
         item.setParameterCategory(category);
         item.setParameterCategoryDesc(LabWorkflowConstants.getDetectionParameterCategoryLabel(category));
+    }
+
+    private String normalizeParameterCategoryCode(String parameterCategory) {
+        String category = StrUtil.trim(parameterCategory);
+        if (StrUtil.equals(category, LabWorkflowConstants.DetectionParameterCategory.IN_SITU_LABEL)) {
+            return LabWorkflowConstants.DetectionParameterCategory.IN_SITU;
+        }
+        if (StrUtil.equals(category, LabWorkflowConstants.DetectionParameterCategory.FIELD_LABEL)) {
+            return LabWorkflowConstants.DetectionParameterCategory.FIELD;
+        }
+        if (StrUtil.equals(category, LabWorkflowConstants.DetectionParameterCategory.LABORATORY_LABEL)) {
+            return LabWorkflowConstants.DetectionParameterCategory.LABORATORY;
+        }
+        return category;
     }
 
     private List<Long> parseIdList(String value) {

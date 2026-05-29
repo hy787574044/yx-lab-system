@@ -1561,6 +1561,14 @@ function formatParameterCategory(value) {
   return getEnumLabel(parameterCategoryLabelMap, String(rawValue || '').trim())
 }
 
+function normalizeParameterCategoryCode(value) {
+  const rawValue = String(value || '').trim()
+  if (rawValue === '原位检测') return 'IN_SITU'
+  if (rawValue === '现场测定') return 'FIELD'
+  if (rawValue === '实验室测定') return 'LABORATORY'
+  return rawValue
+}
+
 function buildRowActionKey(scope, action, id) {
   return `${scope}:${action}:${id ?? 'unknown'}`
 }
@@ -2848,7 +2856,7 @@ function buildLoginDetectionConfigItems(detectionType) {
       return {
         parameterId: String(parameter.id),
         parameterName: parameter.parameterName || '',
-        parameterCategory: parameter.parameterCategory || '',
+        parameterCategory: normalizeParameterCategoryCode(parameter.parameterCategory || ''),
         parameterCategoryDesc: formatParameterCategory(parameter),
         unit: parameter.unit || '',
         standardMin: parameter.standardMin,
@@ -2881,8 +2889,8 @@ function buildLoginConfigRowFromSnapshot(item) {
   return {
     parameterId,
     parameterName: item?.parameterName || parameter?.parameterName || '',
-    parameterCategory: item?.parameterCategory || item?.parameter_category || parameter?.parameterCategory || '',
-    parameterCategoryDesc: item?.parameterCategoryDesc || item?.parameter_category_desc || formatParameterCategory(item?.parameterCategory || item?.parameter_category || parameter?.parameterCategory || ''),
+    parameterCategory: normalizeParameterCategoryCode(item?.parameterCategory || item?.parameter_category || parameter?.parameterCategory || item?.parameterCategoryDesc || item?.parameter_category_desc || ''),
+    parameterCategoryDesc: formatParameterCategory(item?.parameterCategory || item?.parameter_category || parameter?.parameterCategory || item?.parameterCategoryDesc || item?.parameter_category_desc || ''),
     unit: item?.unit || parameter?.unit || '',
     standardMin: item?.standardMin ?? parameter?.standardMin ?? null,
     standardMax: item?.standardMax ?? parameter?.standardMax ?? null,
@@ -3034,7 +3042,7 @@ function applyDetectionConfigParameterChange(row, parameterId) {
   const parameter = detectionParameterOptions.value.find((item) => String(item.id) === String(parameterId || ''))
   row.parameterId = String(parameterId || '')
   row.parameterName = parameter?.parameterName || ''
-  row.parameterCategory = parameter?.parameterCategory || ''
+  row.parameterCategory = normalizeParameterCategoryCode(parameter?.parameterCategory || '')
   row.parameterCategoryDesc = formatParameterCategory(parameter)
   row.unit = parameter?.unit || ''
   row.standardMin = parameter?.standardMin ?? null

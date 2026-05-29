@@ -793,8 +793,16 @@ function isSamplingDetectionResultEditable(row) {
   if (!row) {
     return false
   }
-  const category = String(row.parameterCategory || row.parameter_category || row.parameterCategoryDesc || row.parameter_category_desc || '').trim()
-  return [inSituParameterCategory, fieldParameterCategory, '原位检测', '现场测定'].includes(category)
+  const category = normalizeParameterCategoryCode(row.parameterCategory || row.parameter_category || row.parameterCategoryDesc || row.parameter_category_desc || '')
+  return [inSituParameterCategory, fieldParameterCategory].includes(category)
+}
+
+function normalizeParameterCategoryCode(value) {
+  const rawValue = String(value || '').trim()
+  if (rawValue === '原位检测') return 'IN_SITU'
+  if (rawValue === '现场测定') return 'FIELD'
+  if (rawValue === '实验室测定') return 'LABORATORY'
+  return rawValue
 }
 
 function parseDetectionConfigSnapshot(snapshot) {
@@ -810,7 +818,7 @@ function parseDetectionConfigSnapshot(snapshot) {
         .map((item) => ({
           parameterId: item.parameterId || item.parameter_id || null,
           parameterName: item.parameterName || item.parameter_name || '',
-          parameterCategory: item.parameterCategory || item.parameter_category || '',
+          parameterCategory: normalizeParameterCategoryCode(item.parameterCategory || item.parameter_category || item.parameterCategoryDesc || item.parameter_category_desc || ''),
           parameterCategoryDesc: item.parameterCategoryDesc || item.parameter_category_desc || getEnumLabel(parameterCategoryLabelMap, item.parameterCategory || item.parameter_category || ''),
           unit: item.unit || '',
           standardMin: item.standardMin ?? item.standard_min ?? null,
