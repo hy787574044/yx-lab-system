@@ -204,7 +204,7 @@ public class ReviewService {
         }
 
         if (!anyRejected) {
-            markItemsApproved(pendingReviewItems);
+            markReviewReadyItemsApproved(recordItems);
         }
 
         // 只有全部子流程都审核通过，且审核流程全部必审节点通过，主流程和样品状态才会整体流转到“已完成/已出报告”。
@@ -225,6 +225,9 @@ public class ReviewService {
 
         // 只要存在任一驳回子流程，就整体回退到检测环节，由原检测人员重新化验后再提交。
         record.setDetectionStatus(resolveRetestRecordStatus(recordItems));
+        if (!anyRejected) {
+            throw new BusinessException("当前检测记录仍有未完成的子流程，不能生成报告");
+        }
         record.setDetectionResult(null);
         record.setAbnormalRemark(buildRetestSummary(rejectReason, reviewRemark));
         detectionRecordMapper.updateById(record);
@@ -315,10 +318,16 @@ public class ReviewService {
         }
     }
 
-    private void markItemsApproved(List<DetectionItem> pendingReviewItems) {
-        for (DetectionItem item : pendingReviewItems) {
-            item.setItemStatus(LabWorkflowConstants.DetectionStatus.APPROVED);
-            detectionItemMapper.updateById(item);
+    private void markReviewReadyItemsApproved(List<DetectionItem> recordItems) {
+        for (DetectionItem item : recordItems) {
+            if (LabWorkflowConstants.DetectionStatus.APPROVED.equals(item.getItemStatus())) {
+                continue;
+            }
+            if (LabWorkflowConstants.DetectionStatus.SUBMITTED.equals(item.getItemStatus())
+                    || LabWorkflowConstants.DetectionStatus.ENTERED.equals(item.getItemStatus())) {
+                item.setItemStatus(LabWorkflowConstants.DetectionStatus.APPROVED);
+                detectionItemMapper.updateById(item);
+            }
         }
     }
 

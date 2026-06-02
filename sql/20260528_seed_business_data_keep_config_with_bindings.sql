@@ -548,8 +548,8 @@ INSERT INTO lab_monitoring_point (
     created_by, created_name, created_time, updated_by, updated_name, updated_time
 )
 VALUES
-(940001, '城东水厂出厂水', '115.2121', '30.2211', '云河县城东片区', 36000, 'DAILY', 1101, '陈采样', '13810001001', 'FACTORY', 'ENABLED', 0, 1001, '系统管理员', NOW() - INTERVAL 30 DAY, 1001, '系统管理员', NOW()),
-(940002, '城西水厂出厂水', '115.1781', '30.2051', '云河县城西片区', 42000, 'DAILY', 1102, '李采样', '13810001002', 'FACTORY', 'ENABLED', 0, 1001, '系统管理员', NOW() - INTERVAL 28 DAY, 1001, '系统管理员', NOW()),
+(940001, '城东水厂出厂水', '115.2121', '30.2211', '阳新县城东片区', 36000, 'DAILY', 1101, '陈采样', '13810001001', 'FACTORY', 'ENABLED', 0, 1001, '系统管理员', NOW() - INTERVAL 30 DAY, 1001, '系统管理员', NOW()),
+(940002, '城西水厂出厂水', '115.1781', '30.2051', '阳新县城西片区', 42000, 'DAILY', 1102, '李采样', '13810001002', 'FACTORY', 'ENABLED', 0, 1001, '系统管理员', NOW() - INTERVAL 28 DAY, 1001, '系统管理员', NOW()),
 (940003, '富河原水取水口', '115.0912', '30.1548', '富河流域', 68000, 'WEEKLY', 1101, '陈采样', '13810001001', 'RAW', 'ENABLED', 0, 1001, '系统管理员', NOW() - INTERVAL 25 DAY, 1001, '系统管理员', NOW()),
 (940004, '兴国大道管网末梢', '115.2266', '30.2199', '兴国大道', 12000, 'DAILY', 1102, '李采样', '13810001002', 'TERMINAL', 'ENABLED', 0, 1001, '系统管理员', NOW() - INTERVAL 18 DAY, 1001, '系统管理员', NOW()),
 (940005, '莲花湖社区末梢点', '115.2442', '30.2366', '莲花湖社区', 9800, 'WEEKLY', 1101, '陈采样', '13810001001', 'TERMINAL', 'DISABLED', 0, 1001, '系统管理员', NOW() - INTERVAL 15 DAY, 1001, '系统管理员', NOW()),
@@ -662,8 +662,8 @@ INSERT INTO lab_report (
     deleted, created_by, created_name, created_time, updated_by, updated_name, updated_time
 )
 VALUES
-(810001, CONCAT(@sampleNo9, '-检测报告草稿'), 'DAILY', NOW() - INTERVAL 11 DAY, 970005, @sampleNo9, 980005, 'GENERATED', NULL, NULL, NULL, 'https://yangxin.yunhexx.com:8443/api/storage/file?path=demo/report/generated-sample-0009.pdf', CONCAT('样品编号：', @sampleNo9, '\n检测单位：云河水质化验室\n检测结果：正常\n结论：本次检测符合要求。'), 0, 1301, '刘审核', NOW() - INTERVAL 11 DAY, 1301, '刘审核', NOW() - INTERVAL 11 DAY),
-(810002, CONCAT(@sampleNo9, '-检测报告正式版'), 'DAILY', NOW() - INTERVAL 10 DAY, 970005, @sampleNo9, 980005, 'PUBLISHED', NOW() - INTERVAL 10 DAY, 1401, '孙报告', 'https://yangxin.yunhexx.com:8443/api/storage/file?path=demo/report/published-sample-0009.pdf', CONCAT('样品编号：', @sampleNo9, '\n检测单位：云河水质化验室\n检测结果：正常\n结论：本次检测符合要求。'), 0, 1401, '孙报告', NOW() - INTERVAL 10 DAY, 1401, '孙报告', NOW() - INTERVAL 10 DAY);
+(810001, CONCAT(@sampleNo9, '-检测报告草稿'), 'DAILY', NOW() - INTERVAL 11 DAY, 970005, @sampleNo9, 980005, 'GENERATED', NULL, NULL, NULL, 'https://yangxin.yunhexx.com:8443/api/storage/file?path=demo/report/generated-sample-0009.pdf', CONCAT('样品编号：', @sampleNo9, '\n检测单位：阳新水质化验室\n检测结果：正常\n结论：本次检测符合要求。'), 0, 1301, '刘审核', NOW() - INTERVAL 11 DAY, 1301, '刘审核', NOW() - INTERVAL 11 DAY),
+(810002, CONCAT(@sampleNo9, '-检测报告正式版'), 'DAILY', NOW() - INTERVAL 10 DAY, 970005, @sampleNo9, 980005, 'PUBLISHED', NOW() - INTERVAL 10 DAY, 1401, '孙报告', 'https://yangxin.yunhexx.com:8443/api/storage/file?path=demo/report/published-sample-0009.pdf', CONCAT('样品编号：', @sampleNo9, '\n检测单位：阳新水质化验室\n检测结果：正常\n结论：本次检测符合要求。'), 0, 1401, '孙报告', NOW() - INTERVAL 10 DAY, 1401, '孙报告', NOW() - INTERVAL 10 DAY);
 
 INSERT INTO lab_report_push_record (
     id, report_id, sample_id, sample_no, recipient_user_id, recipient_name, recipient_phone,

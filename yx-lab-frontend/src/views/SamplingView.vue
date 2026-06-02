@@ -1723,6 +1723,7 @@ const sceneMap = {
 const baseScene = computed(() => sceneMap[route.path] || sceneMap['/task-assign'])
 const isTaskScene = computed(() => baseScene.value.mode === 'task')
 const isPlanScene = computed(() => baseScene.value.mode === 'plan')
+const isTaskTodoScene = computed(() => baseScene.value.key === 'task-assign')
 const taskSceneRecords = computed(() => tasks.value.filter((item) => baseScene.value.taskFilter(item)))
 const sampleSceneRecords = computed(() => samples.value.filter((item) => baseScene.value.sampleFilter(item)))
 const planStatusOptions = computed(() => Object.entries(planStatusLabelMap).map(([value, label]) => ({ value, label })))
@@ -1835,6 +1836,36 @@ const currentStats = computed(() => {
   }
 
   if (isTaskScene.value) {
+    if (isTaskTodoScene.value) {
+      const todoTotal = getCount(taskStatCounts.value, 'TODO')
+      const unloggedCount = getCount(taskStatCounts.value, 'UNLOGGED')
+      return [
+        {
+          key: 'tasks:all',
+          label: '采样待办',
+          value: todoTotal,
+          desc: '待执行和待样品登录任务'
+        },
+        {
+          key: 'tasks:pending',
+          label: '待处理',
+          value: getCount(taskStatCounts.value, pendingTaskStatus),
+          desc: '尚未开始执行的采样任务'
+        },
+        {
+          key: 'tasks:progress',
+          label: '进行中',
+          value: getCount(taskStatCounts.value, inProgressTaskStatus),
+          desc: '正在现场执行的采样任务'
+        },
+        {
+          key: 'tasks:unlogged',
+          label: '待样品登录',
+          value: unloggedCount,
+          desc: '已完成采样但尚未登记为样品的任务'
+        }
+      ]
+    }
     return [
       {
         key: 'tasks:all',
@@ -2155,14 +2186,26 @@ async function loadPlanStats() {
   planStatCounts.value = buildCountMap(await fetchSamplingPlanStatsApi())
 }
 
+function buildTaskQueryPayload(extra = {}) {
+  return {
+    ...taskQuery,
+    scope: isTaskTodoScene.value ? 'todo' : '',
+    ...extra
+  }
+}
+
+function buildTaskStatsQueryPayload() {
+  return buildTaskQueryPayload({ taskStatus: '' })
+}
+
 async function loadTasks() {
-  const result = await fetchSamplingTasksApi(taskQuery)
+  const result = await fetchSamplingTasksApi(buildTaskQueryPayload())
   tasks.value = result.records || []
   taskTotal.value = toSafeNumber(result.total)
 }
 
 async function loadTaskStats() {
-  taskStatCounts.value = buildCountMap(await fetchSamplingTaskStatsApi())
+  taskStatCounts.value = buildCountMap(await fetchSamplingTaskStatsApi(buildTaskStatsQueryPayload()))
 }
 
 async function loadLoggableTasks() {
@@ -2211,7 +2254,7 @@ async function handleExportCurrentScene() {
       return
     }
     if (isTaskScene.value) {
-      await exportSamplingTasksApi({ ...taskQuery })
+      await exportSamplingTasksApi(buildTaskQueryPayload())
       ElMessage.success('采样任务导出成功')
       return
     }
@@ -2250,7 +2293,7 @@ function handleCurrentSceneSearch() {
   if (isTaskScene.value) {
     taskQuery.pageNum = 1
     syncActiveStatByCurrentQuery()
-    loadTasks()
+    Promise.all([loadTasks(), loadTaskStats()])
     return
   }
   sampleQuery.pageNum = 1
@@ -2265,7 +2308,7 @@ function resetCurrentSceneQuery() {
     taskQuery.samplerId = ''
     taskQuery.pageNum = 1
     activeStatKey.value = 'tasks:all'
-    loadTasks()
+    Promise.all([loadTasks(), loadTaskStats()])
     return
   }
   sampleQuery.keyword = ''

@@ -47,8 +47,8 @@ public class SamplingTaskController {
 
     @GetMapping("/stats")
     @Operation(summary = "采样任务状态统计")
-    public ApiResponse<List<StatusCountVO>> stats() {
-        return ApiResponse.success(samplingTaskService.statusStats());
+    public ApiResponse<List<StatusCountVO>> stats(@Validated SamplingTaskQuery query) {
+        return ApiResponse.success(samplingTaskService.statusStats(query));
     }
 
     @GetMapping("/export")

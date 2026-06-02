@@ -25,15 +25,19 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.List;
 import java.util.LinkedHashMap;
+import java.util.Collections;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class SamplingTaskService {
+
+    private static final String TASK_SCOPE_TODO = "todo";
 
     private final SamplingTaskMapper samplingTaskMapper;
 
@@ -48,6 +52,9 @@ public class SamplingTaskService {
     private final SampleNoGeneratorService sampleNoGeneratorService;
 
     public PageResult<SamplingTask> page(SamplingTaskQuery query) {
+        if (isTodoScope(query)) {
+            return pageTodoTasks(query);
+        }
         Page<SamplingTask> page = samplingTaskMapper.selectPage(
                 PageUtils.buildPage(query),
                 new LambdaQueryWrapper<SamplingTask>()
@@ -67,7 +74,10 @@ public class SamplingTaskService {
         return new PageResult<>(page.getTotal(), page.getRecords());
     }
 
-    public List<StatusCountVO> statusStats() {
+    public List<StatusCountVO> statusStats(SamplingTaskQuery query) {
+        if (isTodoScope(query)) {
+            return todoStatusStats(query);
+        }
         return Arrays.asList(
                 statusCount("ALL", countTasksByStatus(null)),
                 statusCount(LabWorkflowConstants.SamplingTaskStatus.PENDING,
@@ -81,6 +91,10 @@ public class SamplingTaskService {
                 statusCount("UNLOGGED", countUnloggedCompletedTasks()));
     }
 
+    public List<StatusCountVO> statusStats() {
+        return statusStats(null);
+    }
+
     private StatusCountVO statusCount(String status, Long count) {
         StatusCountVO vo = new StatusCountVO();
         vo.setStatus(status);
@@ -89,11 +103,12 @@ public class SamplingTaskService {
     }
 
     private Long countTasksByStatus(String taskStatus) {
-        return samplingTaskMapper.selectCount(new LambdaQueryWrapper<SamplingTask>()
+        Number count = samplingTaskMapper.selectCount(new LambdaQueryWrapper<SamplingTask>()
                 .eq(StrUtil.isNotBlank(taskStatus), SamplingTask::getTaskStatus, taskStatus)
                 .eq(resolveScopedSamplerId(null) != null,
                         SamplingTask::getSamplerId,
                         resolveScopedSamplerId(null)));
+        return count == null ? 0L : count.longValue();
     }
 
     private Long countUnloggedCompletedTasks() {
@@ -115,6 +130,98 @@ public class SamplingTaskService {
             return dataScopeHelper.currentUserId();
         }
         return querySamplerId;
+    }
+
+    private boolean isTodoScope(SamplingTaskQuery query) {
+        return query != null && TASK_SCOPE_TODO.equalsIgnoreCase(StrUtil.trim(query.getScope()));
+    }
+
+    private PageResult<SamplingTask> pageTodoTasks(SamplingTaskQuery query) {
+        List<SamplingTask> records = loadTodoTasks(query, false);
+        long total = records.size();
+        long pageNum = query == null || query.getPageNum() <= 0 ? 1L : query.getPageNum();
+        long pageSize = query == null || query.getPageSize() <= 0 ? 10L : query.getPageSize();
+        int fromIndex = (int) Math.min((pageNum - 1) * pageSize, total);
+        int toIndex = (int) Math.min(fromIndex + pageSize, total);
+        List<SamplingTask> pageRecords = total == 0L
+                ? Collections.emptyList()
+                : new ArrayList<>(records.subList(fromIndex, toIndex));
+        pageRecords.forEach(this::normalizeTaskFileUrlsForView);
+        pageRecords.forEach(this::enrichTaskDetectionConfigSnapshotForView);
+        return new PageResult<>(total, pageRecords);
+    }
+
+    private List<StatusCountVO> todoStatusStats(SamplingTaskQuery query) {
+        List<SamplingTask> records = loadTodoTasks(query, true);
+        long pendingCount = records.stream()
+                .filter(task -> LabWorkflowConstants.SamplingTaskStatus.PENDING.equals(task.getTaskStatus()))
+                .count();
+        long progressCount = records.stream()
+                .filter(task -> LabWorkflowConstants.SamplingTaskStatus.IN_PROGRESS.equals(task.getTaskStatus()))
+                .count();
+        long unloggedCount = records.stream()
+                .filter(task -> LabWorkflowConstants.SamplingTaskStatus.COMPLETED.equals(task.getTaskStatus()))
+                .count();
+        long todoCount = pendingCount + progressCount + unloggedCount;
+        return Arrays.asList(
+                statusCount("TODO", todoCount),
+                statusCount("ALL", todoCount),
+                statusCount(LabWorkflowConstants.SamplingTaskStatus.PENDING, pendingCount),
+                statusCount(LabWorkflowConstants.SamplingTaskStatus.IN_PROGRESS, progressCount),
+                statusCount("UNLOGGED", unloggedCount)
+        );
+    }
+
+    private List<SamplingTask> loadTodoTasks(SamplingTaskQuery query, boolean ignoreTaskStatus) {
+        String keyword = query == null ? null : StrUtil.trim(query.getKeyword());
+        String taskStatus = query == null ? null : StrUtil.trim(query.getTaskStatus());
+        Long scopedSamplerId = resolveScopedSamplerId(query == null ? null : query.getSamplerId());
+        List<SamplingTask> candidates = samplingTaskMapper.selectList(new LambdaQueryWrapper<SamplingTask>()
+                .and(StrUtil.isNotBlank(keyword), wrapper -> wrapper
+                        .like(SamplingTask::getTaskNo, keyword)
+                        .or()
+                        .like(SamplingTask::getPointName, keyword)
+                        .or()
+                        .like(SamplingTask::getSampleNo, keyword))
+                .eq(!ignoreTaskStatus && StrUtil.isNotBlank(taskStatus), SamplingTask::getTaskStatus, taskStatus)
+                .eq(scopedSamplerId != null, SamplingTask::getSamplerId, scopedSamplerId)
+                .in(SamplingTask::getTaskStatus,
+                        LabWorkflowConstants.SamplingTaskStatus.PENDING,
+                        LabWorkflowConstants.SamplingTaskStatus.IN_PROGRESS,
+                        LabWorkflowConstants.SamplingTaskStatus.COMPLETED)
+                .orderByDesc(SamplingTask::getCreatedTime));
+        if (candidates.isEmpty()) {
+            return Collections.emptyList();
+        }
+        Map<Long, LabSample> sampleMap = loadSampleMapByTaskIds(candidates);
+        return candidates.stream()
+                .filter(task -> shouldShowTodoTask(task, sampleMap.get(task.getId())))
+                .collect(Collectors.toList());
+    }
+
+    private Map<Long, LabSample> loadSampleMapByTaskIds(List<SamplingTask> tasks) {
+        List<Long> taskIds = tasks.stream()
+                .map(SamplingTask::getId)
+                .filter(id -> id != null)
+                .collect(Collectors.toList());
+        if (taskIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        return labSampleMapper.selectList(new LambdaQueryWrapper<LabSample>()
+                        .in(LabSample::getTaskId, taskIds))
+                .stream()
+                .filter(sample -> sample.getTaskId() != null)
+                .collect(Collectors.toMap(LabSample::getTaskId, sample -> sample, (left, right) -> left, LinkedHashMap::new));
+    }
+
+    private boolean shouldShowTodoTask(SamplingTask task, LabSample sample) {
+        if (task == null) {
+            return false;
+        }
+        if (LabWorkflowConstants.TODO_TASK_STATUSES.contains(task.getTaskStatus())) {
+            return true;
+        }
+        return LabWorkflowConstants.SamplingTaskStatus.COMPLETED.equals(task.getTaskStatus()) && sample == null;
     }
 
     public SamplingTask detail(Long id) {
@@ -317,8 +424,8 @@ public class SamplingTaskService {
                 || LabWorkflowConstants.SampleRegisterStatus.REGISTERED.equals(task.getSampleRegisterStatus())) {
             return true;
         }
-        Long sampleCount = labSampleMapper.selectCount(new LambdaQueryWrapper<LabSample>()
+        Number sampleCount = labSampleMapper.selectCount(new LambdaQueryWrapper<LabSample>()
                 .eq(LabSample::getTaskId, task.getId()));
-        return sampleCount != null && sampleCount > 0;
+        return sampleCount != null && sampleCount.longValue() > 0;
     }
 }

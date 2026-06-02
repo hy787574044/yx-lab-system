@@ -85,7 +85,10 @@ public class DetectionPendingFlowService {
             if (activeRecords.isEmpty()) {
                 createPendingFlowIfMissing(sample);
             } else if (activeRecords.size() > 1) {
-                collapseDuplicateActiveRecords(sample.getId());
+                DetectionRecord keeper = collapseDuplicateActiveRecords(sample.getId());
+                promoteEnteredRecordIfReady(keeper, sample);
+            } else {
+                promoteEnteredRecordIfReady(activeRecords.get(0), sample);
             }
         }
     }
@@ -106,6 +109,7 @@ public class DetectionPendingFlowService {
             // 同一样品始终只保留一条活跃检测主流程，避免重复登录或重复补偿造成脏数据。
             DetectionRecord existing = collapseDuplicateActiveRecords(sample.getId());
             if (existing != null) {
+                promoteEnteredRecordIfReady(existing, sample);
                 return existing;
             }
 
@@ -114,6 +118,7 @@ public class DetectionPendingFlowService {
             if (configItems.isEmpty()) {
                 return null;
             }
+            boolean allResultsEntered = allResultsEntered(configItems);
 
             DetectionRecord record = new DetectionRecord();
             record.setSampleId(sample.getId());
@@ -125,7 +130,9 @@ public class DetectionPendingFlowService {
             record.setDetectorName(null);
             record.setDetectionResult(null);
             record.setAbnormalRemark("待分配检测员");
-            record.setDetectionStatus(LabWorkflowConstants.DetectionStatus.WAIT_ASSIGN);
+            record.setDetectionStatus(allResultsEntered
+                    ? LabWorkflowConstants.DetectionStatus.SUBMITTED
+                    : LabWorkflowConstants.DetectionStatus.WAIT_ASSIGN);
             detectionRecordMapper.insert(record);
 
             // 每一个套餐参数都展开成独立子流程，后续可单独分配检测员、录入结果和审查。
@@ -144,7 +151,9 @@ public class DetectionPendingFlowService {
                     item.setResultValue(configItem.getResultValue());
                     item.setDetectorId(sample.getSamplerId());
                     item.setDetectorName(sample.getSamplerName());
-                    item.setItemStatus(LabWorkflowConstants.DetectionStatus.ENTERED);
+                    item.setItemStatus(allResultsEntered
+                            ? LabWorkflowConstants.DetectionStatus.SUBMITTED
+                            : LabWorkflowConstants.DetectionStatus.ENTERED);
                 } else {
                     item.setDetectorId(null);
                     item.setDetectorName(null);
@@ -152,6 +161,9 @@ public class DetectionPendingFlowService {
                 }
                 item.setExceedFlag(0);
                 detectionItemMapper.insert(item);
+            }
+            if (allResultsEntered) {
+                updateSampleStatusForReviewing(sample);
             }
             return record;
         }
@@ -325,6 +337,9 @@ public class DetectionPendingFlowService {
             return;
         }
         List<DetectionItem> effectiveItems = items == null ? new ArrayList<>() : items;
+        if (promoteEnteredRecordIfReady(record, null, effectiveItems)) {
+            return;
+        }
         boolean allAssigned = !effectiveItems.isEmpty() && effectiveItems.stream()
                 .allMatch(item -> item.getDetectorId() != null
                         || LabWorkflowConstants.DetectionStatus.ENTERED.equals(item.getItemStatus())
@@ -397,6 +412,63 @@ public class DetectionPendingFlowService {
             return sample.getDetectionTypeName();
         }
         return StrUtil.trim(sample.getDetectionItems());
+    }
+
+    private boolean allResultsEntered(List<SampleDetectionConfigItem> configItems) {
+        return configItems != null && !configItems.isEmpty()
+                && configItems.stream().allMatch(item -> item != null && item.getResultValue() != null);
+    }
+
+    private void promoteEnteredRecordIfReady(DetectionRecord record, LabSample sample) {
+        if (record == null || record.getId() == null) {
+            return;
+        }
+        List<DetectionItem> items = detectionItemMapper.selectList(new LambdaQueryWrapper<DetectionItem>()
+                .eq(DetectionItem::getRecordId, record.getId())
+                .orderByAsc(DetectionItem::getCreatedTime));
+        promoteEnteredRecordIfReady(record, sample, items);
+    }
+
+    private boolean promoteEnteredRecordIfReady(DetectionRecord record, LabSample sample, List<DetectionItem> items) {
+        if (record == null || items == null || items.isEmpty()) {
+            return false;
+        }
+        boolean allResultsReady = items.stream()
+                .allMatch(item -> item.getResultValue() != null
+                        && (LabWorkflowConstants.DetectionStatus.ENTERED.equals(item.getItemStatus())
+                        || LabWorkflowConstants.DetectionStatus.SUBMITTED.equals(item.getItemStatus())
+                        || LabWorkflowConstants.DetectionStatus.APPROVED.equals(item.getItemStatus())));
+        if (!allResultsReady) {
+            return false;
+        }
+
+        for (DetectionItem item : items) {
+            if (LabWorkflowConstants.DetectionStatus.ENTERED.equals(item.getItemStatus())) {
+                item.setItemStatus(LabWorkflowConstants.DetectionStatus.SUBMITTED);
+                detectionItemMapper.updateById(item);
+            }
+        }
+
+        record.setDetectionStatus(LabWorkflowConstants.DetectionStatus.SUBMITTED);
+        detectionRecordMapper.updateById(record);
+
+        LabSample effectiveSample = sample;
+        if (effectiveSample == null && record.getSampleId() != null) {
+            effectiveSample = labSampleMapper.selectById(record.getSampleId());
+        }
+        updateSampleStatusForReviewing(effectiveSample);
+        return true;
+    }
+
+    private void updateSampleStatusForReviewing(LabSample sample) {
+        if (sample == null || sample.getId() == null) {
+            return;
+        }
+        if (LabWorkflowConstants.SampleStatus.COMPLETED.equals(sample.getSampleStatus())) {
+            return;
+        }
+        sample.setSampleStatus(LabWorkflowConstants.SampleStatus.REVIEWING);
+        labSampleMapper.updateById(sample);
     }
 
     private String resolveDetectorName(LabUser detector) {

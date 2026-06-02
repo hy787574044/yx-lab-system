@@ -25,7 +25,11 @@ import com.yx.lab.modules.report.vo.ReportPreviewVO;
 import com.yx.lab.modules.review.entity.ReviewRecord;
 import com.yx.lab.modules.review.mapper.ReviewRecordMapper;
 import com.yx.lab.modules.sample.entity.LabSample;
+import com.yx.lab.modules.sample.entity.SamplingPlan;
+import com.yx.lab.modules.sample.entity.SamplingTask;
 import com.yx.lab.modules.sample.mapper.LabSampleMapper;
+import com.yx.lab.modules.sample.mapper.SamplingPlanMapper;
+import com.yx.lab.modules.sample.mapper.SamplingTaskMapper;
 import com.yx.lab.modules.sample.service.LabSampleService;
 import com.yx.lab.modules.sample.vo.StatusCountVO;
 import com.yx.lab.modules.storage.service.StorageService;
@@ -47,7 +51,9 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -70,6 +76,10 @@ public class ReportService {
     private final LabSampleService labSampleService;
 
     private final LabSampleMapper labSampleMapper;
+
+    private final SamplingTaskMapper samplingTaskMapper;
+
+    private final SamplingPlanMapper samplingPlanMapper;
 
     private final ReviewRecordMapper reviewRecordMapper;
 
@@ -122,10 +132,10 @@ public class ReportService {
 
     private Long countReportsByStatus(String reportStatus) {
         List<Long> scopedReportIds = resolveScopedReportIds();
-        Long count = labReportMapper.selectCount(new LambdaQueryWrapper<LabReport>()
+        Number count = labReportMapper.selectCount(new LambdaQueryWrapper<LabReport>()
                 .eq(StrUtil.isNotBlank(reportStatus), LabReport::getReportStatus, reportStatus)
                 .in(scopedReportIds != null, LabReport::getId, scopedReportIds));
-        return count == null ? 0L : count;
+        return count == null ? 0L : count.longValue();
     }
 
     private List<Long> resolveScopedReportIds() {
@@ -488,7 +498,7 @@ public class ReportService {
         String storageCondition = sample == null ? "-" : StrUtil.blankToDefault(sample.getStorageCondition(), "-");
         String sampleRemark = sample == null ? "-" : StrUtil.blankToDefault(sample.getRemark(), "-");
         String sampleStatus = sample == null ? "-" : StrUtil.blankToDefault(LabWorkflowConstants.getSampleStatusLabel(sample.getSampleStatus()), "-");
-        String traceLog = sample == null ? "" : translateWorkflowText(StrUtil.blankToDefault(sample.getTraceLog(), ""));
+        String traceLog = buildFullTraceLog(report, sample, detectionRecord, detectionItems, latestReview);
         String resultSummary = sample == null ? "-" : translateWorkflowText(StrUtil.blankToDefault(sample.getResultSummary(), "-"));
         String detectionResult = detectionRecord == null ? "-" : StrUtil.blankToDefault(LabWorkflowConstants.getDetectionResultLabel(detectionRecord.getDetectionResult()), "-");
         String detectorName = detectionRecord == null ? "-" : StrUtil.blankToDefault(detectionRecord.getDetectorName(), "-");
@@ -653,7 +663,7 @@ public class ReportService {
         vo.setSampleStatusLabel(StrUtil.blankToDefault(LabWorkflowConstants.getSampleStatusLabel(sample == null ? null : sample.getSampleStatus()), "-"));
         vo.setResultSummary(translateWorkflowText(StrUtil.blankToDefault(sample == null ? null : sample.getResultSummary(), "-")));
         vo.setSampleRemark(StrUtil.blankToDefault(sample == null ? null : sample.getRemark(), "-"));
-        vo.setTraceLog(translateWorkflowText(StrUtil.blankToDefault(sample == null ? null : sample.getTraceLog(), "")));
+        vo.setTraceLog(buildFullTraceLog(report, sample, detectionRecord, detectionItems, latestReview));
 
         vo.setDetectionTime(formatDateTime(detectionRecord == null ? null : detectionRecord.getDetectionTime()));
         vo.setDetectorName(StrUtil.blankToDefault(detectionRecord == null ? null : detectionRecord.getDetectorName(), "-"));
@@ -674,6 +684,305 @@ public class ReportService {
         vo.setNormalCount(Math.max(0, items.size() - abnormalCount));
         vo.setItems(items.stream().map(this::toPreviewItem).collect(java.util.stream.Collectors.toList()));
         return vo;
+    }
+
+    private String buildFullTraceLog(LabReport report,
+                                     LabSample sample,
+                                     DetectionRecord detectionRecord,
+                                     List<DetectionItem> detectionItems,
+                                     ReviewRecord latestReview) {
+        List<TraceTimelineEntry> entries = new ArrayList<>();
+        SamplingTask task = loadSamplingTask(sample);
+        SamplingPlan plan = loadSamplingPlan(task);
+
+        if (plan != null) {
+            addTimeline(entries,
+                    plan.getCreatedTime(),
+                    "采样计划创建",
+                    resolveOperator(plan.getCreatedName(), plan.getUpdatedName(), plan.getSamplerName()),
+                    "计划ID=" + plan.getId()
+                            + "，计划名称=" + StrUtil.blankToDefault(plan.getPlanName(), "-")
+                            + "，点位=" + StrUtil.blankToDefault(plan.getPointName(), "-")
+                            + "，采样人=" + StrUtil.blankToDefault(plan.getSamplerName(), "-")
+                            + "，周期=" + StrUtil.blankToDefault(LabWorkflowConstants.getCycleTypeLabel(plan.getCycleType()), "-")
+                            + "，计划时间=" + formatDateTime(plan.getStartTime()) + " 至 " + formatDateTime(plan.getEndTime()));
+        }
+
+        if (task != null) {
+            addTimeline(entries,
+                    task.getCreatedTime(),
+                    "采样计划下发/任务生成",
+                    resolveOperator(task.getCreatedName(), task.getUpdatedName(), task.getSamplerName()),
+                    "任务ID=" + task.getId()
+                            + "，任务编号=" + StrUtil.blankToDefault(task.getTaskNo(), "-")
+                            + "，样品编号=" + StrUtil.blankToDefault(task.getSampleNo(), "-")
+                            + "，计划ID=" + StrUtil.blankToDefault(String.valueOf(task.getPlanId()), "-")
+                            + "，采样人=" + StrUtil.blankToDefault(task.getSamplerName(), "-")
+                            + "，计划采样时间=" + formatDateTime(task.getSamplingTime())
+                            + "，任务状态=" + StrUtil.blankToDefault(LabWorkflowConstants.getSamplingTaskStatusLabel(task.getTaskStatus()), "-"));
+            addTimeline(entries,
+                    task.getStartedTime(),
+                    "采样任务开始",
+                    resolveOperator(task.getUpdatedName(), task.getSamplerName()),
+                    "任务编号=" + StrUtil.blankToDefault(task.getTaskNo(), "-")
+                            + "，采样人=" + StrUtil.blankToDefault(task.getSamplerName(), "-")
+                            + "，点位=" + StrUtil.blankToDefault(task.getPointName(), "-"));
+            addTimeline(entries,
+                    task.getFinishedTime(),
+                    "采样任务完成",
+                    resolveOperator(task.getUpdatedName(), task.getSamplerName()),
+                    "任务编号=" + StrUtil.blankToDefault(task.getTaskNo(), "-")
+                            + "，样品编号=" + StrUtil.blankToDefault(task.getSampleNo(), "-")
+                            + "，天气=" + StrUtil.blankToDefault(task.getWeather(), "-")
+                            + "，任务状态=" + StrUtil.blankToDefault(LabWorkflowConstants.getSamplingTaskStatusLabel(task.getTaskStatus()), "-"));
+        }
+
+        if (sample != null) {
+            addTimeline(entries,
+                    sample.getCreatedTime(),
+                    "样品登录",
+                    resolveOperator(sample.getCreatedName(), sample.getSamplerName()),
+                    "样品编号=" + StrUtil.blankToDefault(sample.getSampleNo(), "-")
+                            + "，点位=" + StrUtil.blankToDefault(sample.getPointName(), "-")
+                            + "，采样人=" + StrUtil.blankToDefault(sample.getSamplerName(), "-")
+                            + "，采样时间=" + formatDateTime(sample.getSamplingTime())
+                            + "，样品状态=" + StrUtil.blankToDefault(LabWorkflowConstants.getSampleStatusLabel(sample.getSampleStatus()), "-"));
+            addExistingTraceLog(entries, sample.getTraceLog(), sample.getCreatedTime(), resolveOperator(sample.getCreatedName(), sample.getSamplerName()));
+        }
+
+        if (detectionRecord != null) {
+            addTimeline(entries,
+                    detectionRecord.getCreatedTime(),
+                    "检测流程创建",
+                    resolveOperator(detectionRecord.getCreatedName(), detectionRecord.getDetectorName()),
+                    "检测流程ID=" + detectionRecord.getId()
+                            + "，样品编号=" + StrUtil.blankToDefault(detectionRecord.getSampleNo(), "-")
+                            + "，检测套餐=" + StrUtil.blankToDefault(detectionRecord.getDetectionTypeName(), "-")
+                            + "，流程状态=" + StrUtil.blankToDefault(LabWorkflowConstants.getDetectionStatusLabel(detectionRecord.getDetectionStatus()), "-"));
+        }
+
+        List<DetectionItem> items = detectionItems == null ? Collections.emptyList() : detectionItems;
+        for (DetectionItem item : items) {
+            addTimeline(entries,
+                    item.getCreatedTime(),
+                    "检测子流程生成",
+                    resolveOperator(item.getCreatedName(), item.getDetectorName()),
+                    "检测参数=" + StrUtil.blankToDefault(item.getParameterName(), "-")
+                            + "，检测方法=" + StrUtil.blankToDefault(item.getMethodName(), "-")
+                            + "，检测人员=" + StrUtil.blankToDefault(item.getDetectorName(), "-")
+                            + "，子流程状态=" + StrUtil.blankToDefault(LabWorkflowConstants.getDetectionStatusLabel(item.getItemStatus()), "-"));
+            if (item.getResultValue() != null) {
+                addTimeline(entries,
+                        item.getUpdatedTime(),
+                        "检测结果录入",
+                        resolveOperator(item.getUpdatedName(), item.getDetectorName()),
+                        "检测参数=" + StrUtil.blankToDefault(item.getParameterName(), "-")
+                                + "，检测值=" + item.getResultValue()
+                                + "，检测人员=" + StrUtil.blankToDefault(item.getDetectorName(), "-")
+                                + "，判定=" + (Integer.valueOf(1).equals(item.getExceedFlag()) ? "异常" : "正常")
+                                + "，子流程状态=" + StrUtil.blankToDefault(LabWorkflowConstants.getDetectionStatusLabel(item.getItemStatus()), "-"));
+            }
+        }
+
+        if (detectionRecord != null) {
+            addTimeline(entries,
+                    detectionRecord.getUpdatedTime(),
+                    "检测流程状态更新",
+                    resolveOperator(detectionRecord.getUpdatedName(), detectionRecord.getDetectorName()),
+                    "检测流程ID=" + detectionRecord.getId()
+                            + "，检测人员=" + StrUtil.blankToDefault(detectionRecord.getDetectorName(), "-")
+                            + "，检测结果=" + StrUtil.blankToDefault(LabWorkflowConstants.getDetectionResultLabel(detectionRecord.getDetectionResult()), "-")
+                            + "，流程状态=" + StrUtil.blankToDefault(LabWorkflowConstants.getDetectionStatusLabel(detectionRecord.getDetectionStatus()), "-"));
+        }
+
+        List<ReviewRecord> reviewRecords = loadReviewRecords(detectionRecord, sample, latestReview);
+        for (ReviewRecord review : reviewRecords) {
+            addTimeline(entries,
+                    review.getReviewTime() != null ? review.getReviewTime() : review.getCreatedTime(),
+                    "结果审核",
+                    resolveOperator(review.getReviewerName(), review.getCreatedName()),
+                    "审核记录ID=" + review.getId()
+                            + "，审核节点=" + StrUtil.blankToDefault(review.getFlowNodeName(), "-")
+                            + "，审核人=" + StrUtil.blankToDefault(review.getReviewerName(), "-")
+                            + "，审核结果=" + StrUtil.blankToDefault(LabWorkflowConstants.getReviewResultLabel(review.getReviewResult()), "-")
+                            + "，审核意见=" + StrUtil.blankToDefault(review.getReviewRemark(), "-")
+                            + "，驳回原因=" + StrUtil.blankToDefault(review.getRejectReason(), "-"));
+        }
+
+        for (LabReport relatedReport : loadRelatedReports(report, sample, detectionRecord)) {
+            addTimeline(entries,
+                    relatedReport.getGeneratedTime() != null ? relatedReport.getGeneratedTime() : relatedReport.getCreatedTime(),
+                    "报告生成",
+                    resolveOperator(relatedReport.getCreatedName(), relatedReport.getUpdatedName(), relatedReport.getPublishedByName()),
+                    "报告ID=" + relatedReport.getId()
+                            + "，报告名称=" + StrUtil.blankToDefault(relatedReport.getReportName(), "-")
+                            + "，报告类别=" + StrUtil.blankToDefault(LabWorkflowConstants.getReportCategoryLabel(relatedReport.getReportCategory()), "-")
+                            + "，报告状态=" + StrUtil.blankToDefault(LabWorkflowConstants.getReportStatusLabel(relatedReport.getReportStatus()), "-"));
+            addTimeline(entries,
+                    relatedReport.getPublishedTime(),
+                    "报告发布",
+                    resolveOperator(relatedReport.getPublishedByName(), relatedReport.getUpdatedName()),
+                    "报告ID=" + relatedReport.getId()
+                            + "，报告名称=" + StrUtil.blankToDefault(relatedReport.getReportName(), "-")
+                            + "，发布人=" + StrUtil.blankToDefault(relatedReport.getPublishedByName(), "-")
+                            + "，报告状态=" + StrUtil.blankToDefault(LabWorkflowConstants.getReportStatusLabel(relatedReport.getReportStatus()), "-"));
+        }
+
+        return renderTraceTimeline(entries);
+    }
+
+    private SamplingTask loadSamplingTask(LabSample sample) {
+        if (sample == null) {
+            return null;
+        }
+        if (sample.getTaskId() != null) {
+            SamplingTask task = samplingTaskMapper.selectById(sample.getTaskId());
+            if (task != null) {
+                return task;
+            }
+        }
+        if (StrUtil.isNotBlank(sample.getSampleNo())) {
+            return samplingTaskMapper.selectOne(new LambdaQueryWrapper<SamplingTask>()
+                    .eq(SamplingTask::getSampleNo, sample.getSampleNo())
+                    .orderByDesc(SamplingTask::getUpdatedTime)
+                    .orderByDesc(SamplingTask::getCreatedTime)
+                    .last("limit 1"));
+        }
+        return null;
+    }
+
+    private SamplingPlan loadSamplingPlan(SamplingTask task) {
+        if (task == null || task.getPlanId() == null) {
+            return null;
+        }
+        return samplingPlanMapper.selectById(task.getPlanId());
+    }
+
+    private List<ReviewRecord> loadReviewRecords(DetectionRecord detectionRecord, LabSample sample, ReviewRecord latestReview) {
+        List<ReviewRecord> records;
+        if (detectionRecord != null && detectionRecord.getId() != null) {
+            records = reviewRecordMapper.selectList(new LambdaQueryWrapper<ReviewRecord>()
+                    .eq(ReviewRecord::getDetectionRecordId, detectionRecord.getId())
+                    .orderByAsc(ReviewRecord::getReviewTime)
+                    .orderByAsc(ReviewRecord::getCreatedTime));
+        } else if (sample != null && sample.getId() != null) {
+            records = reviewRecordMapper.selectList(new LambdaQueryWrapper<ReviewRecord>()
+                    .eq(ReviewRecord::getSampleId, sample.getId())
+                    .orderByAsc(ReviewRecord::getReviewTime)
+                    .orderByAsc(ReviewRecord::getCreatedTime));
+        } else {
+            records = new ArrayList<>();
+        }
+        if ((records == null || records.isEmpty()) && latestReview != null) {
+            records = Collections.singletonList(latestReview);
+        }
+        return records == null ? Collections.emptyList() : records;
+    }
+
+    private List<LabReport> loadRelatedReports(LabReport report, LabSample sample, DetectionRecord detectionRecord) {
+        LambdaQueryWrapper<LabReport> wrapper = new LambdaQueryWrapper<LabReport>()
+                .orderByAsc(LabReport::getGeneratedTime)
+                .orderByAsc(LabReport::getCreatedTime);
+        if (sample != null && sample.getId() != null) {
+            wrapper.eq(LabReport::getSampleId, sample.getId());
+        } else if (detectionRecord != null && detectionRecord.getId() != null) {
+            wrapper.eq(LabReport::getDetectionRecordId, detectionRecord.getId());
+        } else if (report != null && report.getId() != null) {
+            wrapper.eq(LabReport::getId, report.getId());
+        } else {
+            return Collections.emptyList();
+        }
+        List<LabReport> reports = labReportMapper.selectList(wrapper);
+        if ((reports == null || reports.isEmpty()) && report != null) {
+            return Collections.singletonList(report);
+        }
+        return reports == null ? Collections.emptyList() : reports;
+    }
+
+    private void addExistingTraceLog(List<TraceTimelineEntry> entries,
+                                     String traceLog,
+                                     LocalDateTime fallbackTime,
+                                     String fallbackOperator) {
+        if (StrUtil.isBlank(traceLog)) {
+            return;
+        }
+        for (String line : StrUtil.splitTrim(traceLog, '\n')) {
+            if (StrUtil.isBlank(line)) {
+                continue;
+            }
+            LocalDateTime time = parseTraceLineTime(line);
+            String content = stripTraceLineTime(line);
+            addTimeline(entries,
+                    time == null ? fallbackTime : time,
+                    "样品流程留痕",
+                    fallbackOperator,
+                    content);
+        }
+    }
+
+    private LocalDateTime parseTraceLineTime(String line) {
+        if (StrUtil.isBlank(line) || line.length() < 19) {
+            return null;
+        }
+        String prefix = line.substring(0, 19);
+        try {
+            return LocalDateTime.parse(prefix, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+        } catch (DateTimeParseException ex) {
+            return null;
+        }
+    }
+
+    private String stripTraceLineTime(String line) {
+        String value = StrUtil.trim(line);
+        if (value.length() >= 20 && parseTraceLineTime(value) != null) {
+            return StrUtil.trim(value.substring(20));
+        }
+        return value;
+    }
+
+    private void addTimeline(List<TraceTimelineEntry> entries,
+                             LocalDateTime time,
+                             String stage,
+                             String operatorName,
+                             String content) {
+        if (entries == null || StrUtil.isBlank(stage)) {
+            return;
+        }
+        entries.add(new TraceTimelineEntry(time, stage, resolveOperator(operatorName), translateWorkflowText(content)));
+    }
+
+    private String renderTraceTimeline(List<TraceTimelineEntry> entries) {
+        if (entries == null || entries.isEmpty()) {
+            return "";
+        }
+        List<TraceTimelineEntry> sortedEntries = new ArrayList<>(entries);
+        sortedEntries.sort(Comparator
+                .comparing(TraceTimelineEntry::getTime, Comparator.nullsLast(Comparator.naturalOrder()))
+                .thenComparing(TraceTimelineEntry::getStage, Comparator.nullsLast(String::compareTo))
+                .thenComparing(TraceTimelineEntry::getContent, Comparator.nullsLast(String::compareTo)));
+
+        LinkedHashSet<String> lines = new LinkedHashSet<>();
+        for (TraceTimelineEntry entry : sortedEntries) {
+            String line = StrUtil.blankToDefault(formatDateTime(entry.getTime()), "-")
+                    + " [" + StrUtil.blankToDefault(entry.getStage(), "流程留痕") + "] "
+                    + "操作人=" + StrUtil.blankToDefault(entry.getOperatorName(), "-")
+                    + "，" + StrUtil.blankToDefault(entry.getContent(), "-");
+            lines.add(line);
+        }
+        return String.join("\n", lines);
+    }
+
+    private String resolveOperator(String... candidates) {
+        if (candidates == null) {
+            return "-";
+        }
+        for (String candidate : candidates) {
+            String value = StrUtil.trim(candidate);
+            if (StrUtil.isNotBlank(value) && !"-".equals(value) && !"null".equalsIgnoreCase(value)) {
+                return value;
+            }
+        }
+        return "-";
     }
 
     private String buildPreviewStyledHtml(ReportPreviewVO previewData, Long requestedPageHeightMm) {
@@ -850,7 +1159,7 @@ public class ReportService {
                         .append("</tbody></table></section>");
             }
 
-            html.append("<footer class=\"paper-footer clearfix\"><span class=\"paper-footer__left\">云河化验室管理系统通用报告模板</span><span class=\"paper-footer__right\">适配 A4 纵向打印，内容超出自动续页</span></footer>")
+            html.append("<footer class=\"paper-footer clearfix\"><span class=\"paper-footer__left\">阳新化验室管理系统通用报告模板</span><span class=\"paper-footer__right\">适配 A4 纵向打印，内容超出自动续页</span></footer>")
                     .append("</section>");
         }
 
@@ -1005,7 +1314,7 @@ public class ReportService {
                         .append(safeText(data.getReviewerName())).append("</td></tr>")
                         .append("<tr><th>批准人员</th><td>").append(safeText(data.getPublishedByName())).append("</td><th>签发日期</th><td>")
                         .append(safeText(resolveSignDate(data))).append("</td></tr>")
-                        .append("<tr><th>检测单位</th><td colspan=\"3\">云河水质化验室</td></tr>")
+                        .append("<tr><th>检测单位</th><td colspan=\"3\">阳新水质化验室</td></tr>")
                         .append("</tbody></table></div>")
                         .append("</section>");
 
@@ -1614,6 +1923,40 @@ public class ReportService {
         result = result.replaceAll("\\bFAILED\\b", "失败");
         result = result.replaceAll("\\bCANCELLED\\b", "已取消");
         return result;
+    }
+
+    private static class TraceTimelineEntry {
+
+        private final LocalDateTime time;
+
+        private final String stage;
+
+        private final String operatorName;
+
+        private final String content;
+
+        private TraceTimelineEntry(LocalDateTime time, String stage, String operatorName, String content) {
+            this.time = time;
+            this.stage = stage;
+            this.operatorName = operatorName;
+            this.content = content;
+        }
+
+        public LocalDateTime getTime() {
+            return time;
+        }
+
+        public String getStage() {
+            return stage;
+        }
+
+        public String getOperatorName() {
+            return operatorName;
+        }
+
+        public String getContent() {
+            return content;
+        }
     }
 
 }

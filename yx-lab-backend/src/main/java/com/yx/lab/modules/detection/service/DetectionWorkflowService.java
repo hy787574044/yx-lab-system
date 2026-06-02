@@ -788,6 +788,12 @@ public class DetectionWorkflowService {
                         || LabWorkflowConstants.DetectionStatus.SUBMITTED.equals(item.getItemStatus())
                         || LabWorkflowConstants.DetectionStatus.APPROVED.equals(item.getItemStatus()));
         if (allReadyForReview) {
+            for (DetectionItem item : pendingItems) {
+                if (LabWorkflowConstants.DetectionStatus.ENTERED.equals(item.getItemStatus())) {
+                    item.setItemStatus(LabWorkflowConstants.DetectionStatus.SUBMITTED);
+                    detectionItemMapper.updateById(item);
+                }
+            }
             record.setDetectionResult(buildResultFromPendingItems(pendingItems));
             record.setDetectionStatus(LabWorkflowConstants.DetectionStatus.SUBMITTED);
             labSampleService.updateStatus(

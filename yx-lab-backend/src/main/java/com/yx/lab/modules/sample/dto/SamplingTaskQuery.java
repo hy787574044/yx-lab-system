@@ -13,4 +13,6 @@ public class SamplingTaskQuery extends PageQuery {
     private String taskStatus;
 
     private Long samplerId;
+
+    private String scope;
 }

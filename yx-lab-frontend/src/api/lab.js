@@ -159,7 +159,7 @@ export const resumeSamplingPlanApi = (id) => request.post(`/api/samplingPlans/${
  * @returns {Promise<any>} 采样任务分页结果。
  */
 export const fetchSamplingTasksApi = (params) => request.get('/api/samplingTasks', { params })
-export const fetchSamplingTaskStatsApi = () => request.get('/api/samplingTasks/stats')
+export const fetchSamplingTaskStatsApi = (params) => request.get('/api/samplingTasks/stats', { params })
 export const exportSamplingTasksApi = (params) => downloadExcel('/api/samplingTasks/export', params, '采样任务.xlsx')
 export const fetchSamplingTaskDetailApi = (id) => request.get(`/api/samplingTasks/${id}`)
 /**

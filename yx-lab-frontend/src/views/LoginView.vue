@@ -4,7 +4,7 @@
       <div class="login-brand">
         <div class="login-brand__mark">YX</div>
         <div>
-          <strong>云河化验室水质管理平台</strong>
+          <strong>阳新化验室水质管理平台</strong>
         </div>
       </div>
 
