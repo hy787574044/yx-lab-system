@@ -831,7 +831,9 @@
                     class="sampling-photo-card__image"
                     :src="photo.previewUrl"
                     :preview-src-list="taskCompletePreviewPhotoUrls"
+                    :initial-index="index"
                     fit="cover"
+                    preview-teleported
                   />
                   <div v-else class="sampling-photo-card__placeholder">预览失败</div>
                   <el-button text type="danger" size="small" @click="removeTaskCompletePhoto(index)">移除</el-button>
@@ -1239,7 +1241,9 @@
               class="task-detail-photo"
               :src="photo.previewUrl"
               :preview-src-list="taskDetailPhotoPreviewUrls"
+              :initial-index="index"
               fit="cover"
+              preview-teleported
             />
             <div v-else class="task-detail-photo task-detail-photo--failed">
               预览失败
@@ -3748,6 +3752,7 @@ watch(() => route.fullPath, () => {
   overflow: hidden;
   border: 1px solid var(--line-soft);
   background: var(--bg-panel-soft);
+  cursor: pointer;
 }
 
 .sampling-photo-uploader {
@@ -3782,6 +3787,10 @@ watch(() => route.fullPath, () => {
   border: 1px solid var(--line-soft);
   background: var(--bg-panel-soft);
   overflow: hidden;
+}
+
+.sampling-photo-card__image {
+  cursor: pointer;
 }
 
 .sampling-photo-card__image :deep(img),

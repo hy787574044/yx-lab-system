@@ -1378,28 +1378,66 @@ public class DetectionConfigService {
         if (records == null || records.isEmpty()) {
             return;
         }
+        List<List<DetectionTypeParameterMethodBindingItem>> bindingRows = new ArrayList<>();
+        LinkedHashSet<Long> methodIds = new LinkedHashSet<>();
         for (DetectionType record : records) {
             List<DetectionTypeParameterMethodBindingItem> items = parseTypeParameterMethodBindings(record.getParameterMethodBindings());
+            bindingRows.add(items);
+            items.stream()
+                    .flatMap(item -> normalizeMethodIds(item == null ? null : item.getMethodIds()).stream())
+                    .forEach(methodIds::add);
+        }
+        Map<Long, String> methodNameMap = methodIds.isEmpty()
+                ? Collections.emptyMap()
+                : detectionMethodMapper.selectList(new LambdaQueryWrapper<DetectionMethod>()
+                        .in(DetectionMethod::getId, new ArrayList<>(methodIds)))
+                .stream()
+                .collect(Collectors.toMap(
+                        DetectionMethod::getId,
+                        method -> StrUtil.trim(method.getMethodName()),
+                        (left, right) -> left,
+                        LinkedHashMap::new
+                ));
+
+        for (int i = 0; i < records.size(); i++) {
+            DetectionType record = records.get(i);
+            List<DetectionTypeParameterMethodBindingItem> items = bindingRows.get(i);
             if (items.isEmpty()) {
                 record.setParameterMethodNames(null);
                 continue;
             }
             List<String> segments = new ArrayList<>();
             for (DetectionTypeParameterMethodBindingItem item : items) {
-                String parameterName = StrUtil.blankToDefault(item.getParameterName(), String.valueOf(item.getParameterId()));
-                List<String> methodNames = item.getMethodNames() == null
-                        ? Collections.emptyList()
-                        : item.getMethodNames().stream()
-                        .filter(StrUtil::isNotBlank)
-                        .collect(Collectors.toList());
-                if (methodNames.isEmpty()) {
-                    segments.add(parameterName);
-                } else {
-                    segments.add(parameterName + "（" + String.join("、", methodNames) + "）");
+                List<String> methodNames = resolveTypeMethodDisplayNames(item, methodNameMap);
+                if (!methodNames.isEmpty()) {
+                    segments.addAll(methodNames);
                 }
             }
-            record.setParameterMethodNames(String.join("；", segments));
+            record.setParameterMethodNames(segments.isEmpty() ? null : String.join("、", segments));
         }
+    }
+
+    private List<String> resolveTypeMethodDisplayNames(DetectionTypeParameterMethodBindingItem item,
+                                                       Map<Long, String> methodNameMap) {
+        if (item == null) {
+            return Collections.emptyList();
+        }
+        List<Long> methodIds = normalizeMethodIds(item.getMethodIds());
+        if (!methodIds.isEmpty()) {
+            return methodIds.stream()
+                    .map(methodNameMap::get)
+                    .map(StrUtil::trim)
+                    .filter(StrUtil::isNotBlank)
+                    .collect(Collectors.toList());
+        }
+        if (item.getMethodNames() == null || item.getMethodNames().isEmpty()) {
+            return Collections.emptyList();
+        }
+        return item.getMethodNames().stream()
+                .map(StrUtil::trim)
+                .filter(StrUtil::isNotBlank)
+                .filter(methodName -> !methodName.matches("\\d+"))
+                .collect(Collectors.toList());
     }
 
     private DetectionParameterMethodBindingVO toParameterMethodBindingVO(DetectionParameter parameter, List<DetectionMethod> methods) {
