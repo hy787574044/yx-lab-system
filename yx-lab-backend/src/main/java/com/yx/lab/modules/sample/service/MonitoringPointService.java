@@ -3,6 +3,7 @@ package com.yx.lab.modules.sample.service;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.yx.lab.common.constant.LabWorkflowConstants;
 import com.yx.lab.common.exception.BusinessException;
 import com.yx.lab.common.model.PageResult;
 import com.yx.lab.common.util.PageUtils;
@@ -91,6 +92,7 @@ public class MonitoringPointService {
 
     private void applyCommand(MonitoringPoint point, MonitoringPointSaveCommand command) {
         point.setPointName(StrUtil.trim(command.getPointName()));
+        point.setAddress(StrUtil.trim(command.getAddress()));
         point.setLongitude(StrUtil.trim(command.getLongitude()));
         point.setLatitude(StrUtil.trim(command.getLatitude()));
         point.setRegionName(StrUtil.trim(command.getRegionName()));
@@ -101,5 +103,29 @@ public class MonitoringPointService {
         point.setContactPhone(StrUtil.trim(command.getContactPhone()));
         point.setPointType(StrUtil.trim(command.getPointType()));
         point.setPointStatus(StrUtil.trim(command.getPointStatus()));
+        validatePoint(point);
+    }
+
+    private void validatePoint(MonitoringPoint point) {
+        if (!LabWorkflowConstants.PointStatus.ENABLED.equals(point.getPointStatus())) {
+            return;
+        }
+        if (StrUtil.isBlank(point.getLatitude()) || StrUtil.isBlank(point.getLongitude())) {
+            throw new BusinessException("启用的监测点位必须选择地图坐标");
+        }
+        validateCoordinate(point.getLatitude(), "纬度", -90D, 90D);
+        validateCoordinate(point.getLongitude(), "经度", -180D, 180D);
+    }
+
+    private void validateCoordinate(String value, String label, double min, double max) {
+        String text = StrUtil.trim(value);
+        try {
+            double coordinate = Double.parseDouble(text);
+            if (coordinate < min || coordinate > max) {
+                throw new BusinessException("监测点位" + label + "超出有效范围");
+            }
+        } catch (NumberFormatException ex) {
+            throw new BusinessException("监测点位" + label + "格式不正确");
+        }
     }
 }

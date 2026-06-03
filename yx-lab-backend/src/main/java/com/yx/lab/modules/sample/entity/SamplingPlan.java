@@ -30,6 +30,18 @@ public class SamplingPlan extends BaseEntity {
     @TableField("point_name")
     private String pointName;
 
+    @Schema(description = "点位地址/地图名称")
+    @TableField("address")
+    private String address;
+
+    @Schema(description = "纬度")
+    @TableField("latitude")
+    private String latitude;
+
+    @Schema(description = "经度")
+    @TableField("longitude")
+    private String longitude;
+
     @Schema(description = "开始时间")
     @TableField("start_time")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")

@@ -500,6 +500,17 @@
               placeholder="请输入采样点位名称"
             />
           </el-form-item>
+          <el-form-item label="点位坐标" required>
+            <div class="location-picker">
+              <el-input :model-value="formatCoordinateText(planForm)" readonly placeholder="请从地图选择点位" />
+              <el-button v-if="planForm.pointSource === 'CUSTOM'" @click="openPlanMapSelector">
+                {{ planForm.latitude && planForm.longitude ? '重新选点' : '地图选点' }}
+              </el-button>
+            </div>
+          </el-form-item>
+          <el-form-item class="plan-form-span-2" label="地图位置">
+            <el-input v-model="planForm.address" readonly placeholder="地图选点后自动回填" />
+          </el-form-item>
           <el-form-item label="样品类型" required>
             <el-select v-model="planForm.sampleType" style="width: 100%">
               <el-option
@@ -817,6 +828,14 @@
           </el-form-item>
           <el-form-item label="采样瓶数">
             <el-input-number v-model="taskCompleteForm.sampleBottleCount" :min="0" :precision="0" style="width: 100%" />
+          </el-form-item>
+          <el-form-item class="plan-form-span-2" label="现场位置">
+            <div class="location-picker">
+              <el-input :model-value="formatLocationText(taskCompleteForm)" readonly placeholder="可回显计划坐标，也可重新选择现场位置" />
+              <el-button @click="openMapSelector">
+                {{ taskCompleteForm.latitude && taskCompleteForm.longitude ? '调整位置' : '选择位置' }}
+              </el-button>
+            </div>
           </el-form-item>
           <el-form-item class="plan-form-span-2" label="现场照片">
             <div class="sampling-photo-uploader">
@@ -1188,6 +1207,7 @@
         <div><span>温度</span><strong>{{ taskDetail?.temperature || '-' }}</strong></div>
         <div><span>采样总容量</span><strong>{{ taskDetail?.sampleTotalVolume || taskDetail?.sample_total_volume || '-' }}</strong></div>
         <div><span>采样瓶数</span><strong>{{ taskDetail?.sampleBottleCount || taskDetail?.sample_bottle_count || '-' }}</strong></div>
+        <div><span>地图位置</span><strong>{{ formatLocationText(taskDetail) }}</strong></div>
       </div>
       <div class="task-detail-block">
         <span>检测参数明细</span>
@@ -1257,7 +1277,54 @@
         <p>{{ taskDetail?.remark || '-' }}</p>
       </div>
       <template #footer>
+        <el-button v-if="hasCoordinates(taskDetail)" @click="openTaskDetailMap">查看地图</el-button>
+        <el-button v-if="hasCoordinates(taskDetail)" type="primary" plain @click="openNavigation(taskDetail)">导航</el-button>
         <el-button @click="taskDetailDialogVisible = false">关闭</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog
+      v-model="planMapSelectorVisible"
+      title="选择采样点位"
+      width="960px"
+      align-center
+      append-to-body
+      destroy-on-close
+    >
+      <TiandituPointSelector v-model="mapSelectorValue" />
+      <template #footer>
+        <el-button @click="planMapSelectorVisible = false">取消</el-button>
+        <el-button type="primary" @click="confirmPlanMapSelection">确认选点</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog
+      v-model="mapSelectorVisible"
+      title="选择现场位置"
+      width="960px"
+      align-center
+      append-to-body
+      destroy-on-close
+    >
+      <TiandituPointSelector v-model="mapSelectorValue" />
+      <template #footer>
+        <el-button @click="mapSelectorVisible = false">取消</el-button>
+        <el-button type="primary" @click="confirmMapSelection">确认位置</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog
+      v-model="taskLocationViewerVisible"
+      title="任务地图位置"
+      width="960px"
+      align-center
+      append-to-body
+      destroy-on-close
+    >
+      <TiandituPointSelector v-model="taskLocationViewerValue" readonly />
+      <template #footer>
+        <el-button type="primary" plain @click="openNavigation(taskLocationViewerValue)">导航</el-button>
+        <el-button @click="taskLocationViewerVisible = false">关闭</el-button>
       </template>
     </el-dialog>
   </div>
@@ -1279,6 +1346,7 @@ import { ElOption, ElSelect } from 'element-plus/es/components/select/index.mjs'
 import { ElTable, ElTableColumn } from 'element-plus/es/components/table/index.mjs'
 import { ElUpload } from 'element-plus/es/components/upload/index.mjs'
 import TablePagination from '../components/common/TablePagination.vue'
+import TiandituPointSelector from '../components/TiandituPointSelector.vue'
 import {
   abandonSamplingTaskApi,
   completeSamplingTaskApi,
@@ -1404,8 +1472,11 @@ const loginDialogMode = ref('create')
 const planDialogVisible = ref(false)
 const taskCompleteDialogVisible = ref(false)
 const dispatchDialogVisible = ref(false)
+const planMapSelectorVisible = ref(false)
 const mapSelectorVisible = ref(false)
-const mapSelectorValue = reactive({ address: '', latitude: '', longitude: '' })
+const mapSelectorValue = reactive({ pointName: '', address: '', latitude: '', longitude: '' })
+const taskLocationViewerVisible = ref(false)
+const taskLocationViewerValue = reactive({ pointName: '', address: '', latitude: '', longitude: '' })
 const taskDetailDialogVisible = ref(false)
 const weatherOptions = ref([])
 const storageConditionOptions = ref([])
@@ -1497,6 +1568,9 @@ const planForm = reactive({
   pointSource: 'EXISTING',
   pointId: null,
   pointName: '',
+  address: '',
+  latitude: '',
+  longitude: '',
   startTime: '',
   endTime: '',
   samplerId: null,
@@ -2444,6 +2518,9 @@ function resetPlanForm() {
   planForm.pointSource = 'EXISTING'
   planForm.pointId = null
   planForm.pointName = ''
+  planForm.address = ''
+  planForm.latitude = ''
+  planForm.longitude = ''
   planForm.startTime = ''
   planForm.endTime = ''
   planForm.samplerId = null
@@ -2479,6 +2556,9 @@ async function openPlanEditDialog(row) {
   planForm.pointSource = row.pointId ? 'EXISTING' : 'CUSTOM'
   planForm.pointId = row.pointId || null
   planForm.pointName = row.pointName || ''
+  planForm.address = row.address || ''
+  planForm.latitude = row.latitude || ''
+  planForm.longitude = row.longitude || ''
   planForm.startTime = row.startTime || ''
   planForm.endTime = row.endTime || ''
   planForm.samplerId = row.samplerId || null
@@ -2504,6 +2584,9 @@ function handlePlanPointSourceChange(value) {
   if (value === 'CUSTOM') {
     planForm.pointId = null
     planForm.pointName = ''
+    planForm.address = ''
+    planForm.latitude = ''
+    planForm.longitude = ''
     return
   }
   if (monitoringPointOptions.value.length) {
@@ -2515,6 +2598,9 @@ function handlePlanPointChange(pointId) {
   const point = monitoringPointOptions.value.find((item) => item.id === pointId)
   planForm.pointId = point?.id || null
   planForm.pointName = point?.pointName || ''
+  planForm.address = point?.address || point?.pointName || ''
+  planForm.latitude = point?.latitude || ''
+  planForm.longitude = point?.longitude || ''
 }
 
 function handlePlanDetectionTypeChange(typeId) {
@@ -2529,6 +2615,9 @@ function buildPlanPayload() {
     planName: planForm.planName?.trim() || '',
     pointId: planForm.pointSource === 'EXISTING' ? planForm.pointId : null,
     pointName: planForm.pointName?.trim() || '',
+    address: planForm.address?.trim() || '',
+    latitude: planForm.latitude?.trim() || '',
+    longitude: planForm.longitude?.trim() || '',
     startTime: planForm.startTime || '',
     endTime: planForm.endTime || '',
     samplerId: planForm.samplerId,
@@ -2584,6 +2673,10 @@ async function submitPlanForm() {
   }
   if (planForm.pointSource === 'EXISTING' && !payload.pointId) {
     ElMessage.warning('请选择监测点位')
+    return
+  }
+  if (!payload.latitude || !payload.longitude) {
+    ElMessage.warning('请从地图选择采样点位坐标')
     return
   }
   if (payload.cycleType !== 'ONCE' && !payload.endTime) {
@@ -3188,82 +3281,100 @@ function resetTaskCompleteDialog() {
   resetTaskCompleteForm()
 }
 
+function syncMapSelectorValue(source) {
+  mapSelectorValue.pointName = source?.pointName || ''
+  mapSelectorValue.address = source?.address || source?.pointName || ''
+  mapSelectorValue.latitude = source?.latitude || source?.x_coordinate || ''
+  mapSelectorValue.longitude = source?.longitude || source?.y_coordinate || ''
+}
+
+function openPlanMapSelector() {
+  syncMapSelectorValue(planForm)
+  planMapSelectorVisible.value = true
+}
+
+function confirmPlanMapSelection() {
+  if (!mapSelectorValue.latitude || !mapSelectorValue.longitude) {
+    ElMessage.warning('请先在地图上选择点位')
+    return
+  }
+  planForm.address = mapSelectorValue.address
+  planForm.latitude = mapSelectorValue.latitude
+  planForm.longitude = mapSelectorValue.longitude
+  if (planForm.pointSource === 'CUSTOM') {
+    planForm.pointName = mapSelectorValue.pointName || mapSelectorValue.address || planForm.pointName
+  }
+  planMapSelectorVisible.value = false
+}
+
 function openMapSelector() {
-  mapSelectorValue.address = taskCompleteForm.address
-  mapSelectorValue.latitude = taskCompleteForm.latitude
-  mapSelectorValue.longitude = taskCompleteForm.longitude
+  syncMapSelectorValue({
+    pointName: taskCompletePreview.value?.pointName,
+    address: taskCompleteForm.address,
+    latitude: taskCompleteForm.latitude,
+    longitude: taskCompleteForm.longitude
+  })
   mapSelectorVisible.value = true
-  initMap()
 }
 
 function confirmMapSelection() {
+  if (!mapSelectorValue.latitude || !mapSelectorValue.longitude) {
+    ElMessage.warning('请先在地图上选择位置')
+    return
+  }
   taskCompleteForm.address = mapSelectorValue.address
   taskCompleteForm.latitude = mapSelectorValue.latitude
   taskCompleteForm.longitude = mapSelectorValue.longitude
   mapSelectorVisible.value = false
 }
 
-let map = null
-let mapMarker = null
-
-function initMap() {
-  if (map) {
-    map.destroy()
-    map = null
-    mapMarker = null
-  }
-  if (!window.AMap) {
-    loadAMapScript()
-  } else {
-    createMap()
-  }
+function openTaskDetailMap() {
+  syncTaskLocationViewerValue(taskDetail.value)
+  taskLocationViewerVisible.value = true
 }
 
-function loadAMapScript() {
-  const script = document.createElement('script')
-  script.src = 'https://webapi.amap.com/maps?v=2.0&key=da985cf3edbb156ab16aa5de2e8e954a&plugin=AMap.Geocoder'
-  script.onload = createMap
-  document.head.appendChild(script)
+function syncTaskLocationViewerValue(source) {
+  taskLocationViewerValue.pointName = source?.pointName || source?.point_name || ''
+  taskLocationViewerValue.address = source?.address || source?.pointName || source?.point_name || ''
+  taskLocationViewerValue.latitude = source?.latitude || source?.x_coordinate || ''
+  taskLocationViewerValue.longitude = source?.longitude || source?.y_coordinate || ''
 }
 
-function createMap() {
-  const mapContainer = document.querySelector('.map-selector__container')
-  if (!mapContainer) return
+function hasCoordinates(source) {
+  return Boolean(source && (source.latitude || source.x_coordinate) && (source.longitude || source.y_coordinate))
+}
 
-  map = new window.AMap.Map(mapContainer, {
-    center: mapSelectorValue.longitude && mapSelectorValue.latitude
-      ? [Number(mapSelectorValue.longitude), Number(mapSelectorValue.latitude)]
-      : [116.397428, 39.90923],
-    zoom: 15
-  })
-
-  map.on('click', async (e) => {
-    const lng = e.lnglat.getLng()
-    const lat = e.lnglat.getLat()
-
-    const geocoder = new window.AMap.Geocoder()
-    geocoder.getAddress([lng, lat], (status, res) => {
-      mapSelectorValue.address = res.regeocode?.formattedAddress || '未知地址'
-      mapSelectorValue.latitude = String(lat)
-      mapSelectorValue.longitude = String(lng)
-
-      if (mapMarker) {
-        mapMarker.setPosition([lng, lat])
-      } else {
-        mapMarker = new window.AMap.Marker({
-          position: [lng, lat],
-          map: map
-        })
-      }
-    })
-  })
-
-  if (mapSelectorValue.longitude && mapSelectorValue.latitude) {
-    mapMarker = new window.AMap.Marker({
-      position: [Number(mapSelectorValue.longitude), Number(mapSelectorValue.latitude)],
-      map: map
-    })
+function formatCoordinateText(source) {
+  if (!hasCoordinates(source)) {
+    return ''
   }
+  const longitude = source.longitude || source.y_coordinate
+  const latitude = source.latitude || source.x_coordinate
+  return `${longitude}, ${latitude}`
+}
+
+function formatLocationText(source) {
+  if (!source) {
+    return '-'
+  }
+  const address = source.address || source.pointName || source.point_name || ''
+  const coordinateText = formatCoordinateText(source)
+  if (address && coordinateText) {
+    return `${address}（${coordinateText}）`
+  }
+  return address || coordinateText || '-'
+}
+
+function openNavigation(source) {
+  if (!hasCoordinates(source)) {
+    ElMessage.warning('当前任务没有可导航坐标')
+    return
+  }
+  const longitude = source.longitude || source.y_coordinate
+  const latitude = source.latitude || source.x_coordinate
+  const label = encodeURIComponent(source.address || source.pointName || source.point_name || '采样点位')
+  const url = `https://map.tianditu.gov.cn/?lnglat=${encodeURIComponent(`${longitude},${latitude}`)}&level=16&name=${label}`
+  window.open(url, '_blank', 'noopener,noreferrer')
 }
 
 function clearTaskCompletePhotoPreviewUrls() {
@@ -4065,6 +4176,17 @@ watch(() => route.fullPath, () => {
   flex: 1;
 }
 
+.location-picker {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  width: 100%;
+}
+
+.location-picker > :only-child {
+  grid-column: 1 / -1;
+}
+
 :deep(.task-detail-dialog .el-dialog__body) {
   max-height: 70vh;
   overflow-y: auto;
@@ -4078,23 +4200,4 @@ watch(() => route.fullPath, () => {
   margin-top: 8px;
 }
 
-.map-selector {
-  display: flex;
-  flex-direction: column;
-  height: 400px;
-}
-
-.map-selector__container {
-  flex: 1;
-  width: 100%;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-}
-
-.map-selector__info {
-  padding: 12px;
-  background: #f5f5f5;
-  border-top: 1px solid #e0e0e0;
-  font-size: 14px;
-}
 </style>

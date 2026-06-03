@@ -19,6 +19,10 @@ public class MonitoringPoint extends BaseEntity {
     @TableField("point_name")
     private String pointName;
 
+    @Schema(description = "address")
+    @TableField("address")
+    private String address;
+
     @Schema(description = "经度")
     @TableField("longitude")
     private String longitude;

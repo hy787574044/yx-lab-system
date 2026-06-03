@@ -113,9 +113,18 @@
             <p>计划时间：{{ task.samplingTime || '-' }}</p>
             <p>样品类型：{{ getEnumLabel(sampleTypeLabelMap, task.sampleType) }}</p>
             <p>检测项目组：{{ task.detectionTypeName || task.detectionItems || '-' }}</p>
+            <p v-if="hasCoordinates(task)">位置：{{ formatLocationText(task) }}</p>
             <p v-if="task.sampleLogged">已登录样品：{{ task.sampleNo || '-' }}</p>
             <p v-else-if="task.taskStatus === completedTaskStatus" class="warn-text">采样已完成，请尽快进行样品登录</p>
             <div class="card-actions">
+              <el-button
+                v-if="hasCoordinates(task)"
+                size="small"
+                plain
+                @click="openNavigation(task)"
+              >
+                导航
+              </el-button>
               <el-button
                 v-if="task.taskStatus === pendingTaskStatus || task.taskStatus === inProgressTaskStatus"
                 size="small"
@@ -982,6 +991,36 @@ async function ensureDetectionConfig() {
   ])
   detectionTypes.value = typeResult.records || []
   detectionParameters.value = parameterResult.records || []
+}
+
+function hasCoordinates(source) {
+  return Boolean(source && (source.latitude || source.x_coordinate) && (source.longitude || source.y_coordinate))
+}
+
+function formatLocationText(source) {
+  if (!source) {
+    return '-'
+  }
+  const address = source.address || source.pointName || source.point_name || ''
+  const longitude = source.longitude || source.y_coordinate || ''
+  const latitude = source.latitude || source.x_coordinate || ''
+  const coordinateText = longitude && latitude ? `${longitude}, ${latitude}` : ''
+  if (address && coordinateText) {
+    return `${address}（${coordinateText}）`
+  }
+  return address || coordinateText || '-'
+}
+
+function openNavigation(source) {
+  if (!hasCoordinates(source)) {
+    ElMessage.warning('当前任务没有可导航坐标')
+    return
+  }
+  const longitude = source.longitude || source.y_coordinate
+  const latitude = source.latitude || source.x_coordinate
+  const label = encodeURIComponent(source.address || source.pointName || source.point_name || '采样点位')
+  const url = `https://map.tianditu.gov.cn/?lnglat=${encodeURIComponent(`${longitude},${latitude}`)}&level=16&name=${label}`
+  window.open(url, '_blank', 'noopener,noreferrer')
 }
 
 async function abandonTask(task) {

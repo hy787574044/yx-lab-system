@@ -10,6 +10,8 @@ public class MonitoringPointSaveCommand {
     @NotBlank(message = "点位名称不能为空")
     private String pointName;
 
+    private String address;
+
     private String longitude;
 
     private String latitude;

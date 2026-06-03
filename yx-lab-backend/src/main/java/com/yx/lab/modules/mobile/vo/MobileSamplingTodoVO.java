@@ -18,6 +18,12 @@ public class MobileSamplingTodoVO {
 
     private String pointName;
 
+    private String address;
+
+    private String latitude;
+
+    private String longitude;
+
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime samplingTime;
 

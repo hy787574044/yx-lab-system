@@ -316,9 +316,15 @@ public class SamplingTaskService {
                 command.getDetectionConfigItems()));
         task.setPhotoUrls(normalizePhotoUrls(command.getPhotoUrls()));
         task.setRemark(command.getRemark());
-        task.setAddress(command.getAddress());
-        task.setLatitude(command.getLatitude());
-        task.setLongitude(command.getLongitude());
+        if (StrUtil.isNotBlank(command.getAddress())) {
+            task.setAddress(StrUtil.trim(command.getAddress()));
+        }
+        if (StrUtil.isNotBlank(command.getLatitude())) {
+            task.setLatitude(StrUtil.trim(command.getLatitude()));
+        }
+        if (StrUtil.isNotBlank(command.getLongitude())) {
+            task.setLongitude(StrUtil.trim(command.getLongitude()));
+        }
         if (task.getStartedTime() == null) {
             task.setStartedTime(LocalDateTime.now());
         }

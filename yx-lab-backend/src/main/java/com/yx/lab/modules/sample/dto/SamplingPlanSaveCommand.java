@@ -19,6 +19,12 @@ public class SamplingPlanSaveCommand {
     @NotBlank(message = "采样点位名称不能为空")
     private String pointName;
 
+    private String address;
+
+    private String latitude;
+
+    private String longitude;
+
     @NotNull(message = "开始时间不能为空")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime startTime;

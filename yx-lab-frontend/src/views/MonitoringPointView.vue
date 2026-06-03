@@ -67,6 +67,7 @@
         <div class="table-card__body">
         <el-table class="list-table" :data="visibleRecords" stripe height="100%" empty-text="暂无监测点位数据">
           <el-table-column prop="pointName" label="点位名称" min-width="180" />
+          <el-table-column prop="address" label="地图位置" min-width="220" />
           <el-table-column prop="regionName" label="所属区域" min-width="160" />
           <el-table-column label="点位类型" width="120">
             <template #default="{ row }">
@@ -114,7 +115,7 @@
       </div>
     </section>
 
-    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="720px" @closed="resetForm">
+    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="820px" @closed="resetForm">
       <el-form :model="form" label-width="100px">
         <div class="form-grid">
           <el-form-item label="点位名称" required>
@@ -123,11 +124,16 @@
           <el-form-item label="所属区域">
             <el-input v-model="form.regionName" placeholder="请输入所属区域" />
           </el-form-item>
-          <el-form-item label="经度">
-            <el-input v-model="form.longitude" placeholder="请输入经度" />
+          <el-form-item label="点位坐标" required>
+            <div class="location-picker">
+              <el-input :model-value="formatCoordinateText(form)" readonly placeholder="请从地图选择点位坐标" />
+              <el-button @click="openMapSelector">
+                {{ form.longitude && form.latitude ? '重新选点' : '地图选点' }}
+              </el-button>
+            </div>
           </el-form-item>
-          <el-form-item label="纬度">
-            <el-input v-model="form.latitude" placeholder="请输入纬度" />
+          <el-form-item label="地图位置">
+            <el-input v-model="form.address" placeholder="地图选点后自动回填，可再次编辑" />
           </el-form-item>
           <el-form-item label="负责人">
             <el-input v-model="form.ownerName" placeholder="请输入负责人" />
@@ -175,6 +181,20 @@
         <el-button type="primary" :loading="submitting" @click="submit">保存</el-button>
       </template>
     </el-dialog>
+
+    <el-dialog
+      v-model="mapSelectorVisible"
+      title="选择点位位置"
+      width="880px"
+      append-to-body
+      destroy-on-close
+    >
+      <TiandituPointSelector v-model="mapSelectorValue" />
+      <template #footer>
+        <el-button @click="mapSelectorVisible = false">取消</el-button>
+        <el-button type="primary" @click="confirmMapSelection">确认位置</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -191,6 +211,7 @@ import { ElOption, ElSelect } from 'element-plus/es/components/select/index.mjs'
 import { ElTable, ElTableColumn } from 'element-plus/es/components/table/index.mjs'
 import { createMonitoringPointApi, exportMonitoringPointsApi, fetchMonitoringPointsApi, updateMonitoringPointApi } from '../api/lab'
 import TablePagination from '../components/common/TablePagination.vue'
+import TiandituPointSelector from '../components/TiandituPointSelector.vue'
 import {
   DEFAULT_PAGE_SIZE,
   dailyFrequencyType,
@@ -215,9 +236,12 @@ const activeStatKey = ref('all')
 const editingId = ref(null)
 const statusUpdatingId = ref(null)
 const submitting = ref(false)
+const mapSelectorVisible = ref(false)
+const mapSelectorValue = reactive({ pointName: '', address: '', latitude: '', longitude: '' })
 
 const defaultForm = () => ({
   pointName: '',
+  address: '',
   longitude: '',
   latitude: '',
   regionName: '',
@@ -279,6 +303,7 @@ function openEditDialog(row) {
   editingId.value = row.id
   Object.assign(form, {
     pointName: row.pointName || '',
+    address: row.address || row.pointName || '',
     longitude: row.longitude || '',
     latitude: row.latitude || '',
     regionName: row.regionName || '',
@@ -326,6 +351,7 @@ function resetForm() {
 function buildPayload(source) {
   return {
     pointName: source.pointName?.trim() || '',
+    address: source.address?.trim() || '',
     longitude: source.longitude?.trim() || '',
     latitude: source.latitude?.trim() || '',
     regionName: source.regionName?.trim() || '',
@@ -336,6 +362,39 @@ function buildPayload(source) {
     pointStatus: source.pointStatus || enabledPointStatus,
     servicePopulation: Number(source.servicePopulation) || 0
   }
+}
+
+function formatCoordinateText(source) {
+  if (!source?.longitude || !source?.latitude) {
+    return ''
+  }
+  return `${source.longitude}, ${source.latitude}`
+}
+
+function syncMapSelectorValue(source) {
+  mapSelectorValue.pointName = source?.pointName || ''
+  mapSelectorValue.address = source?.address || source?.pointName || ''
+  mapSelectorValue.latitude = source?.latitude || ''
+  mapSelectorValue.longitude = source?.longitude || ''
+}
+
+function openMapSelector() {
+  syncMapSelectorValue(form)
+  mapSelectorVisible.value = true
+}
+
+function confirmMapSelection() {
+  if (!mapSelectorValue.latitude || !mapSelectorValue.longitude) {
+    ElMessage.warning('请先在地图上选择点位')
+    return
+  }
+  form.address = mapSelectorValue.address || mapSelectorValue.pointName || form.address
+  form.latitude = mapSelectorValue.latitude
+  form.longitude = mapSelectorValue.longitude
+  if (!form.pointName) {
+    form.pointName = mapSelectorValue.pointName || mapSelectorValue.address || ''
+  }
+  mapSelectorVisible.value = false
 }
 
 async function loadData() {
@@ -357,6 +416,10 @@ async function submit() {
   const payload = buildPayload(form)
   if (!payload.pointName) {
     ElMessage.warning('请先填写点位名称')
+    return
+  }
+  if (payload.pointStatus === enabledPointStatus && (!payload.longitude || !payload.latitude)) {
+    ElMessage.warning('启用的监测点位请先选择地图坐标')
     return
   }
 
@@ -439,6 +502,13 @@ onMounted(loadData)
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0 16px;
+}
+
+.location-picker {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  width: 100%;
 }
 
 .table-actions {

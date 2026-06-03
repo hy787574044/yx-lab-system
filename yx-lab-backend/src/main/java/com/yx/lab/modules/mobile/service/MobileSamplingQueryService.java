@@ -139,6 +139,9 @@ public class MobileSamplingQueryService {
         vo.setPlanId(task.getPlanId());
         vo.setPointId(task.getPointId());
         vo.setPointName(task.getPointName());
+        vo.setAddress(task.getAddress());
+        vo.setLatitude(task.getLatitude());
+        vo.setLongitude(task.getLongitude());
         vo.setSamplingTime(task.getSamplingTime());
         vo.setSamplerId(task.getSamplerId());
         vo.setSamplerName(task.getSamplerName());
