@@ -13,6 +13,4 @@ public class DetectionRecordQuery extends PageQuery {
     private String detectionStatus;
 
     private Boolean mine;
-
-    private String scope;
 }
