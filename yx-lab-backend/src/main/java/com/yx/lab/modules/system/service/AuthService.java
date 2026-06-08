@@ -305,6 +305,11 @@ public class AuthService {
     }
 
     private LabUser resolveEmbedUser(EmbedLoginRequest request) {
+        String directUsername = firstNonBlank(request.getUsername(), request.getJobNo());
+        LabUser directUser = selectActiveUserByUsername(directUsername);
+        if (directUser != null) {
+            return directUser;
+        }
         UnifiedUserInfoVO unifiedUser = resolveUnifiedUser(request);
         String jobNo = firstNonBlank(unifiedUser == null ? null : unifiedUser.getJobNo(), request.getJobNo());
         String username = firstNonBlank(unifiedUser == null ? null : unifiedUser.getUsername(), request.getUsername(), jobNo);
@@ -335,7 +340,10 @@ public class AuthService {
                 return unifiedPlatformService.getUserInfoByJobNo(jobNoRequest);
             }
         } catch (BusinessException exception) {
-            log.warn("第三方嵌入登录查询统一平台用户失败，userId="
+            String lookupUrl = unifiedPlatformService.describeUserLookupUrl(request.getUserId(), request.getJobNo());
+            log.warn("第三方嵌入登录查询统一平台用户失败，调用地址="
+                    + lookupUrl
+                    + ", userId="
                     + request.getUserId()
                     + ", jobNo="
                     + request.getJobNo(),

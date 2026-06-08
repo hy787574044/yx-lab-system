@@ -27,6 +27,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -198,6 +200,20 @@ public class UnifiedPlatformService {
         return result;
     }
 
+    public String describeUserLookupUrl(String userId, String jobNo) {
+        if (StrUtil.isNotBlank(userId)) {
+            Map<String, Object> params = new LinkedHashMap<>();
+            params.put("id", StrUtil.trim(userId));
+            return buildFullUrl(USER_INFO_BY_ID_PATH, params);
+        }
+        if (StrUtil.isNotBlank(jobNo)) {
+            Map<String, Object> params = new LinkedHashMap<>();
+            params.put("jobNO", StrUtil.trim(jobNo));
+            return buildFullUrl(USER_INFO_BY_JOB_NO_PATH, params);
+        }
+        return buildFullUrl(QUERY_USER_INFO_PATH, new LinkedHashMap<>());
+    }
+
     private Map<String, Object> buildAuthorizeParams(UnifiedAuthorizeRequest request) {
         Map<String, Object> params = new LinkedHashMap<>();
         params.put("response_type", firstNonBlank(request.getResponseType(), properties.getResponseType(), "code"));
@@ -334,6 +350,36 @@ public class UnifiedPlatformService {
     private String buildUrl(String path) {
         String baseUrl = StrUtil.removeSuffix(properties.getBaseUrl(), "/");
         return baseUrl + path;
+    }
+
+    private String buildFullUrl(String path, Map<String, Object> params) {
+        String baseUrl = StrUtil.isBlank(properties.getBaseUrl())
+                ? ""
+                : StrUtil.removeSuffix(properties.getBaseUrl(), "/");
+        StringBuilder url = new StringBuilder(baseUrl).append(path);
+        if (params == null || params.isEmpty()) {
+            return url.toString();
+        }
+        boolean first = true;
+        for (Map.Entry<String, Object> entry : params.entrySet()) {
+            if (entry.getValue() == null || StrUtil.isBlank(String.valueOf(entry.getValue()))) {
+                continue;
+            }
+            url.append(first ? "?" : "&")
+                    .append(encodeQueryPart(entry.getKey()))
+                    .append("=")
+                    .append(encodeQueryPart(String.valueOf(entry.getValue())));
+            first = false;
+        }
+        return url.toString();
+    }
+
+    private String encodeQueryPart(String value) {
+        try {
+            return URLEncoder.encode(value == null ? "" : value, "UTF-8");
+        } catch (UnsupportedEncodingException exception) {
+            return value == null ? "" : value;
+        }
     }
 
     private JsonNode unwrapData(JsonNode root) {
