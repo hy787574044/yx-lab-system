@@ -1,9 +1,10 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { getToken, getUser, setToken } from '../utils/auth'
+import { getToken, getUser, setToken, setUser } from '../utils/auth'
 import { labMenuGroups, legacyRedirects } from './menuConfig'
 import { hasPermission } from '../utils/permission'
 import { getMenuPermissionCode } from '../utils/menuPermission'
 import { setEmbeddedMode } from '../utils/embedMode'
+import { API_BASE_URL } from '../config/appConfig'
 
 const componentMap = {
   DashboardView: () => import('../views/DashboardView.vue'),
@@ -81,22 +82,60 @@ function resolveQueryValue(value) {
   return value || ''
 }
 
-router.beforeEach((to, from, next) => {
+function buildApiUrl(path) {
+  return API_BASE_URL === '/'
+    ? path
+    : `${API_BASE_URL.replace(/\/$/, '')}${path}`
+}
+
+async function exchangeEmbedToken(query) {
+  const response = await fetch(buildApiUrl('/api/auth/embedLogin'), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      token: String(resolveQueryValue(query?.token) || '').trim(),
+      userId: String(resolveQueryValue(query?.userId) || '').trim(),
+      jobNo: String(resolveQueryValue(query?.jobNo) || '').trim(),
+      username: String(resolveQueryValue(query?.username) || resolveQueryValue(query?.userName) || '').trim(),
+      channelType: String(resolveQueryValue(query?.channelType) || '').trim()
+    })
+  })
+  const payload = await response.json().catch(() => ({}))
+  if (!response.ok || payload.code !== 0) {
+    throw new Error(payload.message || '第三方嵌入登录失败')
+  }
+  return payload.data || {}
+}
+
+router.beforeEach(async (to, from, next) => {
   document.title = to.meta?.title
     ? `${to.meta.title} - 阳新化验室水质管理平台`
     : '阳新化验室水质管理平台'
 
   const queryToken = String(resolveQueryValue(to.query?.token) || '').trim()
   if (queryToken) {
-    setToken(queryToken)
-    setEmbeddedMode(true)
-    const { token, ...queryWithoutToken } = to.query
-    next({
-      path: to.path === '/login' ? '/dashboard' : to.path,
-      query: queryWithoutToken,
-      hash: to.hash,
-      replace: true
-    })
+    try {
+      const loginResult = await exchangeEmbedToken(to.query)
+      if (!loginResult.token) {
+        throw new Error('嵌入登录未返回系统令牌')
+      }
+      setToken(loginResult.token)
+      setUser(loginResult)
+      setEmbeddedMode(true)
+      const { token, ...queryWithoutToken } = to.query
+      next({
+        path: to.path === '/login' ? '/dashboard' : to.path,
+        query: queryWithoutToken,
+        hash: to.hash,
+        replace: true
+      })
+    } catch (error) {
+      console.error('第三方嵌入登录失败', error)
+      setEmbeddedMode(false)
+      next('/login')
+    }
     return
   }
 

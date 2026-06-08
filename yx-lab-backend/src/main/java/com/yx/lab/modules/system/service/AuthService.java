@@ -10,6 +10,7 @@ import com.yx.lab.common.exception.BusinessException;
 import com.yx.lab.common.security.CurrentUser;
 import com.yx.lab.common.security.PermissionService;
 import com.yx.lab.common.security.SecurityContext;
+import com.yx.lab.modules.system.dto.EmbedLoginRequest;
 import com.yx.lab.modules.system.dto.LoginRequest;
 import com.yx.lab.modules.system.dto.PasswordChangeCommand;
 import com.yx.lab.modules.system.dto.UserProfileUpdateCommand;
@@ -17,6 +18,10 @@ import com.yx.lab.modules.system.entity.LabLoginLog;
 import com.yx.lab.modules.system.entity.LabUser;
 import com.yx.lab.modules.system.mapper.LabLoginLogMapper;
 import com.yx.lab.modules.system.mapper.LabUserMapper;
+import com.yx.lab.modules.unified.dto.UnifiedUserIdRequest;
+import com.yx.lab.modules.unified.dto.UnifiedUserJobNoRequest;
+import com.yx.lab.modules.unified.service.UnifiedPlatformService;
+import com.yx.lab.modules.unified.vo.UnifiedUserInfoVO;
 import com.yx.lab.modules.system.vo.CaptchaVO;
 import com.yx.lab.modules.system.vo.LoginVO;
 import com.yx.lab.modules.system.vo.UserProfileVO;
@@ -65,6 +70,8 @@ public class AuthService {
     private final PermissionService permissionService;
 
     private final StorageService storageService;
+
+    private final UnifiedPlatformService unifiedPlatformService;
 
     private void validateCaptcha(LoginRequest request) {
         if (request == null || StrUtil.isBlank(request.getCaptchaId()) || StrUtil.isBlank(request.getCaptchaCode())) {
@@ -185,33 +192,8 @@ public class AuthService {
             throw new BusinessException("用户名或密码错误");
         }
 
-        String token = IdUtil.fastSimpleUUID();
-        CurrentUser currentUser = new CurrentUser();
-        currentUser.setUserId(user.getId());
-        currentUser.setUsername(user.getUsername());
-        currentUser.setRealName(user.getRealName());
-        currentUser.setRoleCode(user.getRoleCode());
-        currentUser.setPermissionCodes(permissionService.resolvePermissions(user.getRoleCode()));
-        currentUser.setDataScope(permissionService.resolveDataScope(user.getRoleCode()));
-        stringRedisTemplate.opsForValue().set(
-                "lab:token:" + token,
-                JSONUtil.toJsonStr(currentUser),
-                securityProperties.getTokenExpireHours(),
-                TimeUnit.HOURS);
         saveLoginLog(user, username, loginChannel, LOGIN_STATUS_SUCCESS, "登录成功");
-        return LoginVO.builder()
-                .token(token)
-                .userId(user.getId())
-                .username(user.getUsername())
-                .realName(user.getRealName())
-                .orgId(user.getOrgId())
-                .orgName(user.getOrgName())
-                .roleCode(user.getRoleCode())
-                .permissionCodes(currentUser.getPermissionCodes())
-                .dataScope(currentUser.getDataScope())
-                .phone(user.getPhone())
-                .avatarUrl(storageService.toFullUrl(user.getAvatarUrl()))
-                .build();
+        return issueLoginToken(user);
     }
 
     /**
@@ -219,6 +201,27 @@ public class AuthService {
      *
      * @return 当前登录人信息
      */
+    /**
+     * 第三方嵌入登录：将外部入口身份兑换为本系统登录令牌。
+     *
+     * @param request 嵌入登录参数
+     * @return 本系统登录结果
+     */
+    public LoginVO embedLogin(EmbedLoginRequest request) {
+        if (request == null || StrUtil.isBlank(request.getToken())) {
+            throw new BusinessException("第三方令牌不能为空");
+        }
+        LabUser user = resolveEmbedUser(request);
+        if (user == null) {
+            throw new BusinessException("未找到对应的系统账号，请联系管理员绑定账号");
+        }
+        if (user.getStatus() == null || user.getStatus() != 1) {
+            throw new BusinessException("用户不存在或已停用");
+        }
+        saveLoginLog(user, user.getUsername(), resolveEmbedLoginChannel(request), LOGIN_STATUS_SUCCESS, "第三方嵌入登录成功");
+        return issueLoginToken(user);
+    }
+
     public UserProfileVO me() {
         return buildProfile(requireCurrentUserEntity());
     }
@@ -301,12 +304,68 @@ public class AuthService {
                 .build();
     }
 
-    private void refreshTokenUser(String token, LabUser user) {
-        if (StrUtil.isBlank(token)) {
-            return;
+    private LabUser resolveEmbedUser(EmbedLoginRequest request) {
+        UnifiedUserInfoVO unifiedUser = resolveUnifiedUser(request);
+        String jobNo = firstNonBlank(unifiedUser == null ? null : unifiedUser.getJobNo(), request.getJobNo());
+        String username = firstNonBlank(unifiedUser == null ? null : unifiedUser.getUsername(), request.getUsername(), jobNo);
+        LabUser user = selectActiveUserByUsername(username);
+        if (user != null) {
+            return user;
         }
-        String redisKey = "lab:token:" + token;
-        Long ttl = stringRedisTemplate.getExpire(redisKey, TimeUnit.SECONDS);
+        String realName = unifiedUser == null ? null : unifiedUser.getRealName();
+        if (StrUtil.isNotBlank(realName)) {
+            return labUserMapper.selectOne(new LambdaQueryWrapper<LabUser>()
+                    .eq(LabUser::getRealName, StrUtil.trim(realName))
+                    .eq(LabUser::getStatus, 1)
+                    .last("limit 1"));
+        }
+        return null;
+    }
+
+    private UnifiedUserInfoVO resolveUnifiedUser(EmbedLoginRequest request) {
+        try {
+            if (StrUtil.isNotBlank(request.getUserId())) {
+                UnifiedUserIdRequest userIdRequest = new UnifiedUserIdRequest();
+                userIdRequest.setId(StrUtil.trim(request.getUserId()));
+                return unifiedPlatformService.getUserInfoById(userIdRequest);
+            }
+            if (StrUtil.isNotBlank(request.getJobNo())) {
+                UnifiedUserJobNoRequest jobNoRequest = new UnifiedUserJobNoRequest();
+                jobNoRequest.setJobNo(StrUtil.trim(request.getJobNo()));
+                return unifiedPlatformService.getUserInfoByJobNo(jobNoRequest);
+            }
+        } catch (BusinessException exception) {
+            log.warn("第三方嵌入登录查询统一平台用户失败，userId="
+                    + request.getUserId()
+                    + ", jobNo="
+                    + request.getJobNo(),
+                    exception);
+        }
+        return null;
+    }
+
+    private LabUser selectActiveUserByUsername(String username) {
+        if (StrUtil.isBlank(username)) {
+            return null;
+        }
+        return labUserMapper.selectOne(new LambdaQueryWrapper<LabUser>()
+                .eq(LabUser::getUsername, StrUtil.trim(username))
+                .eq(LabUser::getStatus, 1)
+                .last("limit 1"));
+    }
+
+    private LoginVO issueLoginToken(LabUser user) {
+        String token = IdUtil.fastSimpleUUID();
+        CurrentUser currentUser = buildCurrentUser(user);
+        stringRedisTemplate.opsForValue().set(
+                "lab:token:" + token,
+                JSONUtil.toJsonStr(currentUser),
+                securityProperties.getTokenExpireHours(),
+                TimeUnit.HOURS);
+        return buildLoginVO(token, user, currentUser);
+    }
+
+    private CurrentUser buildCurrentUser(LabUser user) {
         CurrentUser currentUser = new CurrentUser();
         currentUser.setUserId(user.getId());
         currentUser.setUsername(user.getUsername());
@@ -314,6 +373,46 @@ public class AuthService {
         currentUser.setRoleCode(user.getRoleCode());
         currentUser.setPermissionCodes(permissionService.resolvePermissions(user.getRoleCode()));
         currentUser.setDataScope(permissionService.resolveDataScope(user.getRoleCode()));
+        return currentUser;
+    }
+
+    private LoginVO buildLoginVO(String token, LabUser user, CurrentUser currentUser) {
+        return LoginVO.builder()
+                .token(token)
+                .userId(user.getId())
+                .username(user.getUsername())
+                .realName(user.getRealName())
+                .orgId(user.getOrgId())
+                .orgName(user.getOrgName())
+                .roleCode(user.getRoleCode())
+                .permissionCodes(currentUser.getPermissionCodes())
+                .dataScope(currentUser.getDataScope())
+                .phone(user.getPhone())
+                .avatarUrl(storageService.toFullUrl(user.getAvatarUrl()))
+                .build();
+    }
+
+    private String resolveEmbedLoginChannel(EmbedLoginRequest request) {
+        String channelType = request == null ? null : StrUtil.trim(request.getChannelType());
+        return StrUtil.isBlank(channelType) ? "EMBED" : "EMBED-" + channelType;
+    }
+
+    private String firstNonBlank(String... values) {
+        for (String value : values) {
+            if (StrUtil.isNotBlank(value)) {
+                return StrUtil.trim(value);
+            }
+        }
+        return null;
+    }
+
+    private void refreshTokenUser(String token, LabUser user) {
+        if (StrUtil.isBlank(token)) {
+            return;
+        }
+        String redisKey = "lab:token:" + token;
+        Long ttl = stringRedisTemplate.getExpire(redisKey, TimeUnit.SECONDS);
+        CurrentUser currentUser = buildCurrentUser(user);
         if (ttl != null && ttl > 0L) {
             stringRedisTemplate.opsForValue().set(redisKey, JSONUtil.toJsonStr(currentUser), ttl, TimeUnit.SECONDS);
         } else {
