@@ -230,10 +230,10 @@ public class DetectionWorkflowService {
         }
 
         Map<Long, DetectionItemCommand> itemMap = validateSubmittedItems(command.getItems(), configuredParameters);
-        Long pendingCount = detectionRecordMapper.selectCount(new LambdaQueryWrapper<DetectionRecord>()
+        Number pendingCount = detectionRecordMapper.selectCount(new LambdaQueryWrapper<DetectionRecord>()
                 .eq(DetectionRecord::getSampleId, sample.getId())
                 .eq(DetectionRecord::getDetectionStatus, LabWorkflowConstants.DetectionStatus.SUBMITTED));
-        if (pendingCount != null && pendingCount > 0) {
+        if (pendingCount != null && pendingCount.longValue() > 0) {
             throw new BusinessException("当前样品已存在已提交的检测记录，请勿重复提交");
         }
         validateDetectorBinding(usableType, currentUser);
@@ -365,8 +365,8 @@ public class DetectionWorkflowService {
         if (StrUtil.isNotBlank(status)) {
             wrapper.eq(DetectionRecord::getDetectionStatus, status);
         }
-        Long count = detectionRecordMapper.selectCount(wrapper);
-        return count == null ? 0L : count;
+        Number count = detectionRecordMapper.selectCount(wrapper);
+        return count == null ? 0L : count.longValue();
     }
 
     private long countItems(DetectionItemQuery query, String status) {
@@ -374,8 +374,8 @@ public class DetectionWorkflowService {
         if (StrUtil.isNotBlank(status)) {
             wrapper.eq(DetectionItem::getItemStatus, status);
         }
-        Long count = detectionItemMapper.selectCount(wrapper);
-        return count == null ? 0L : count;
+        Number count = detectionItemMapper.selectCount(wrapper);
+        return count == null ? 0L : count.longValue();
     }
 
     private LambdaQueryWrapper<DetectionItem> buildItemQueryWrapper(DetectionItemQuery query, boolean ignoreStatusFilter) {
@@ -442,7 +442,7 @@ public class DetectionWorkflowService {
         if (dataScopeHelper.isAdmin()) {
             return null;
         }
-        if (dataScopeHelper.isRole("DETECTOR") && dataScopeHelper.currentUserId() != null) {
+        if (dataScopeHelper.isRole("STAFF") && dataScopeHelper.currentUserId() != null) {
             return dataScopeHelper.currentUserId();
         }
         return null;
@@ -454,13 +454,17 @@ public class DetectionWorkflowService {
         }
         fillMethodBasis(items);
         Map<Long, DetectionRecord> recordMap = loadDetectionRecordMap(items);
+        Map<Long, LabSample> sampleMap = loadSampleMap(recordMap.values());
         return items.stream().map(item -> {
             DetectionRecord record = recordMap.get(item.getRecordId());
+            LabSample sample = record == null ? null : sampleMap.get(record.getSampleId());
             DetectionItemPageVO vo = new DetectionItemPageVO();
             vo.setId(item.getId());
             vo.setRecordId(item.getRecordId());
             vo.setSampleId(record == null ? null : record.getSampleId());
             vo.setSampleNo(record == null ? null : record.getSampleNo());
+            vo.setSampleSourceMethod(sample == null ? null : sample.getSampleSourceMethod());
+            vo.setSampleSourceMethodLabel(sample == null ? null : LabWorkflowConstants.getSampleSourceMethodLabel(sample.getSampleSourceMethod()));
             vo.setDetectionTypeId(record == null ? null : record.getDetectionTypeId());
             vo.setDetectionTypeName(record == null ? null : record.getDetectionTypeName());
             vo.setDetectionTime(record == null ? null : record.getDetectionTime());
@@ -499,6 +503,21 @@ public class DetectionWorkflowService {
                         .in(DetectionRecord::getId, recordIds))
                 .stream()
                 .collect(Collectors.toMap(DetectionRecord::getId, item -> item, (left, right) -> left));
+    }
+
+    private Map<Long, LabSample> loadSampleMap(java.util.Collection<DetectionRecord> records) {
+        List<Long> sampleIds = records.stream()
+                .filter(record -> record != null && record.getSampleId() != null)
+                .map(DetectionRecord::getSampleId)
+                .distinct()
+                .collect(Collectors.toList());
+        if (sampleIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        return labSampleMapper.selectList(new LambdaQueryWrapper<LabSample>()
+                        .in(LabSample::getId, sampleIds))
+                .stream()
+                .collect(Collectors.toMap(LabSample::getId, item -> item, (left, right) -> left));
     }
 
     private void insertSubmittedRecord(LabSample sample,
@@ -583,7 +602,7 @@ public class DetectionWorkflowService {
         if (currentUser == null || currentUser.getUserId() == null) {
             throw new BusinessException("当前登录用户信息失效，请重新登录后再提交");
         }
-        if ("ADMIN".equalsIgnoreCase(currentUser.getRoleCode())) {
+        if (hasFullAccessRole(currentUser)) {
             return;
         }
         if (!detectionType.getDetectorId().equals(currentUser.getUserId())) {
@@ -689,7 +708,7 @@ public class DetectionWorkflowService {
         Map<Long, DetectionParameter> parameterMap = configuredParameters.stream()
                 .collect(Collectors.toMap(DetectionParameter::getId, parameter -> parameter, (left, right) -> left));
         Map<Long, DetectionItemCommand> itemMap = new LinkedHashMap<>();
-        boolean admin = currentUser != null && "ADMIN".equalsIgnoreCase(currentUser.getRoleCode());
+        boolean admin = hasFullAccessRole(currentUser);
 
         for (DetectionItemCommand item : items) {
             if (itemMap.put(item.getParameterId(), item) != null) {
@@ -737,6 +756,43 @@ public class DetectionWorkflowService {
         if (item.getStandardMax() != null && compareNullableDecimal(item.getStandardMax(), parameter.getStandardMax()) != 0) {
             throw new BusinessException("检测参数标准上限与配置不一致：" + parameter.getParameterName());
         }
+        validateResultWithinStandardRange(parameter, item.getResultValue());
+    }
+
+    private boolean hasFullAccessRole(CurrentUser currentUser) {
+        return currentUser != null
+                && ("ADMIN".equalsIgnoreCase(currentUser.getRoleCode())
+                || "DIRECTOR".equalsIgnoreCase(currentUser.getRoleCode()));
+    }
+
+    private void validateResultWithinStandardRange(DetectionParameter parameter, BigDecimal resultValue) {
+        if (parameter == null || resultValue == null) {
+            return;
+        }
+        if (isExceeded(parameter, resultValue)) {
+            throw new BusinessException("检测结果存在异常，禁止录入：" + parameter.getParameterName()
+                    + "，标准范围=" + formatStandardRange(parameter)
+                    + "，检测结果=" + resultValue);
+        }
+    }
+
+    private String formatStandardRange(DetectionParameter parameter) {
+        if (parameter == null) {
+            return "-";
+        }
+        BigDecimal min = parameter.getStandardMin();
+        BigDecimal max = parameter.getStandardMax();
+        String unit = StrUtil.blankToDefault(parameter.getUnit(), "");
+        if (min != null && max != null) {
+            return min + " - " + max + unit;
+        }
+        if (min != null) {
+            return ">=" + min + unit;
+        }
+        if (max != null) {
+            return "<=" + max + unit;
+        }
+        return "-";
     }
 
     private void applyRecordDetectorSummary(DetectionRecord record, List<DetectionItem> items, CurrentUser currentUser) {

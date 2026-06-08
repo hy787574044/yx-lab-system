@@ -191,7 +191,9 @@ public class AssetDocumentService {
     }
 
     private boolean isAdmin(CurrentUser currentUser) {
-        return currentUser != null && "ADMIN".equalsIgnoreCase(currentUser.getRoleCode());
+        return currentUser != null
+                && ("ADMIN".equalsIgnoreCase(currentUser.getRoleCode())
+                || "DIRECTOR".equalsIgnoreCase(currentUser.getRoleCode()));
     }
 
     private LabDocument getAccessibleDocument(Long id, CurrentUser currentUser) {
@@ -202,10 +204,10 @@ public class AssetDocumentService {
         if (isAdmin(currentUser) || Objects.equals(document.getCreatedBy(), currentUser.getUserId())) {
             return document;
         }
-        Long count = documentShareMapper.selectCount(new LambdaQueryWrapper<LabDocumentShare>()
+        Number count = documentShareMapper.selectCount(new LambdaQueryWrapper<LabDocumentShare>()
                 .eq(LabDocumentShare::getDocumentId, id)
                 .eq(LabDocumentShare::getUserId, currentUser.getUserId()));
-        if (count == null || count == 0L) {
+        if (count == null || count.longValue() == 0L) {
             throw new BusinessException("No permission to view document");
         }
         return document;

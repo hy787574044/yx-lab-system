@@ -6,7 +6,7 @@ const MENU_PERMISSION_MAP = {
   '/task-assign': 'samplingTask:view',
   '/task-history': 'samplingTask:view',
   '/task-ledger': 'samplingTask:view',
-  '/detection-split': 'detection:view',
+  '/detection-split': 'detection:assign',
   '/detection-analysis': 'detection:view',
   '/detection-history': 'detection:view',
   '/detection-ledger': 'detection:view',

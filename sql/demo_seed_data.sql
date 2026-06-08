@@ -48,14 +48,14 @@ DELETE FROM lab_user WHERE id BETWEEN 880000 AND 880999 OR username LIKE 'demo\_
 -- 3. 补充系统用户。密码沿用初始化脚本中的演示密码。
 INSERT INTO lab_user (id, username, password, real_name, org_id, org_name, role_code, phone, avatar_url, status, deleted, created_by, created_name, created_time, updated_by, updated_name, updated_time)
 VALUES
-(1101, 'sampler01', 'e86f78a8a3caf0b60d8e74e5942aa6d86dc150cd3c03338aef25b7d2d7e3acc7', '陈采样', 802, '采样组', 'SAMPLER', '13810001001', NULL, 1, 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
-(1102, 'sampler02', 'e86f78a8a3caf0b60d8e74e5942aa6d86dc150cd3c03338aef25b7d2d7e3acc7', '李采样', 802, '采样组', 'SAMPLER', '13810001002', NULL, 1, 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
-(1201, 'detector01', 'e86f78a8a3caf0b60d8e74e5942aa6d86dc150cd3c03338aef25b7d2d7e3acc7', '王检测', 803, '检测审核组', 'DETECTOR', '13810002001', NULL, 1, 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
-(1202, 'detector02', 'e86f78a8a3caf0b60d8e74e5942aa6d86dc150cd3c03338aef25b7d2d7e3acc7', '赵检测', 803, '检测审核组', 'DETECTOR', '13810002002', NULL, 1, 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
-(1203, 'detector03', 'e86f78a8a3caf0b60d8e74e5942aa6d86dc150cd3c03338aef25b7d2d7e3acc7', '周检测', 803, '检测审核组', 'DETECTOR', '13810002003', NULL, 1, 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
-(1301, 'reviewer01', 'e86f78a8a3caf0b60d8e74e5942aa6d86dc150cd3c03338aef25b7d2d7e3acc7', '刘审核', 803, '检测审核组', 'REVIEWER', '13810003001', NULL, 1, 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
-(1302, 'reviewer02', 'e86f78a8a3caf0b60d8e74e5942aa6d86dc150cd3c03338aef25b7d2d7e3acc7', '何审核', 803, '检测审核组', 'REVIEWER', '13810003002', NULL, 1, 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
-(1401, 'reporter01', 'e86f78a8a3caf0b60d8e74e5942aa6d86dc150cd3c03338aef25b7d2d7e3acc7', '孙报告', 803, '检测审核组', 'REPORTER', '13810004001', NULL, 1, 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW())
+(1101, 'sampler01', 'e86f78a8a3caf0b60d8e74e5942aa6d86dc150cd3c03338aef25b7d2d7e3acc7', '陈采样', 802, '采样组', 'STAFF', '13810001001', NULL, 1, 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
+(1102, 'sampler02', 'e86f78a8a3caf0b60d8e74e5942aa6d86dc150cd3c03338aef25b7d2d7e3acc7', '李采样', 802, '采样组', 'STAFF', '13810001002', NULL, 1, 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
+(1201, 'detector01', 'e86f78a8a3caf0b60d8e74e5942aa6d86dc150cd3c03338aef25b7d2d7e3acc7', '王检测', 803, '检测审核组', 'STAFF', '13810002001', NULL, 1, 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
+(1202, 'detector02', 'e86f78a8a3caf0b60d8e74e5942aa6d86dc150cd3c03338aef25b7d2d7e3acc7', '赵检测', 803, '检测审核组', 'STAFF', '13810002002', NULL, 1, 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
+(1203, 'detector03', 'e86f78a8a3caf0b60d8e74e5942aa6d86dc150cd3c03338aef25b7d2d7e3acc7', '周检测', 803, '检测审核组', 'STAFF', '13810002003', NULL, 1, 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
+(1301, 'reviewer01', 'e86f78a8a3caf0b60d8e74e5942aa6d86dc150cd3c03338aef25b7d2d7e3acc7', '刘审核', 803, '检测审核组', 'DIRECTOR', '13810003001', NULL, 1, 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
+(1302, 'reviewer02', 'e86f78a8a3caf0b60d8e74e5942aa6d86dc150cd3c03338aef25b7d2d7e3acc7', '何审核', 803, '检测审核组', 'DIRECTOR', '13810003002', NULL, 1, 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
+(1401, 'reporter01', 'e86f78a8a3caf0b60d8e74e5942aa6d86dc150cd3c03338aef25b7d2d7e3acc7', '孙报告', 803, '检测审核组', 'DIRECTOR', '13810004001', NULL, 1, 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW())
 ON DUPLICATE KEY UPDATE
 real_name = VALUES(real_name),
 org_id = VALUES(org_id),
@@ -270,7 +270,7 @@ SELECT
     END,
     CASE MOD(n, 4) WHEN 0 THEN 802 ELSE 803 END,
     CASE MOD(n, 4) WHEN 0 THEN '采样组' ELSE '检测审核组' END,
-    CASE MOD(n, 4) WHEN 0 THEN 'SAMPLER' WHEN 1 THEN 'DETECTOR' WHEN 2 THEN 'REVIEWER' ELSE 'REPORTER' END,
+    CASE MOD(n, 4) WHEN 0 THEN 'STAFF' WHEN 1 THEN 'STAFF' WHEN 2 THEN 'DIRECTOR' ELSE 'DIRECTOR' END,
     CONCAT('139', LPAD(n, 8, '0')),
     NULL,
     1,

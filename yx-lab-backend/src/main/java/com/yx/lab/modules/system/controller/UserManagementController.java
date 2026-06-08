@@ -65,7 +65,7 @@ public class UserManagementController {
                         ExcelExportUtil.column("用户名", LabUserVO::getUsername),
                         ExcelExportUtil.column("姓名", LabUserVO::getRealName),
                         ExcelExportUtil.column("所属机构", LabUserVO::getOrgName),
-                        ExcelExportUtil.column("角色编码", LabUserVO::getRoleCode),
+                        ExcelExportUtil.column("角色", LabUserVO::getRoleName),
                         ExcelExportUtil.column("手机号", LabUserVO::getPhone),
                         ExcelExportUtil.column("状态", item -> item.getStatus() != null && item.getStatus() == 1 ? "启用" : "停用"),
                         ExcelExportUtil.column("创建人", LabUserVO::getCreatedName),

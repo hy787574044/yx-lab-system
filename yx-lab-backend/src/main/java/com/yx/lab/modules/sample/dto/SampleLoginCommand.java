@@ -22,6 +22,8 @@ public class SampleLoginCommand {
     @NotBlank(message = "样品类型不能为空")
     private String sampleType;
 
+    private String sampleSourceMethod;
+
 
     @NotBlank(message = "检测项目不能为空")
     private String detectionItems;

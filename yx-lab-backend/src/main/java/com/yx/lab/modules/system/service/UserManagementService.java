@@ -12,7 +12,9 @@ import com.yx.lab.common.util.PageUtils;
 import com.yx.lab.modules.system.dto.UserQuery;
 import com.yx.lab.modules.system.dto.UserSaveCommand;
 import com.yx.lab.modules.system.entity.LabOrg;
+import com.yx.lab.modules.system.entity.LabRole;
 import com.yx.lab.modules.system.entity.LabUser;
+import com.yx.lab.modules.system.mapper.LabRoleMapper;
 import com.yx.lab.modules.system.mapper.LabUserMapper;
 import com.yx.lab.modules.system.vo.LabUserVO;
 import com.yx.lab.modules.storage.service.StorageService;
@@ -20,6 +22,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -30,6 +33,8 @@ import java.util.stream.Collectors;
 public class UserManagementService {
 
     private final LabUserMapper labUserMapper;
+
+    private final LabRoleMapper labRoleMapper;
 
     private final RoleManagementService roleManagementService;
 
@@ -61,8 +66,9 @@ public class UserManagementService {
                         .eq(query.getStatus() != null, LabUser::getStatus, query.getStatus())
                         .eq(StrUtil.isNotBlank(query.getRoleCode()), LabUser::getRoleCode, StrUtil.trim(query.getRoleCode()))
                         .orderByDesc(LabUser::getCreatedTime));
+        Map<String, String> roleNameMap = loadRoleNameMap(page.getRecords());
         List<LabUserVO> records = page.getRecords().stream()
-                .map(this::toVO)
+                .map(entity -> toVO(entity, roleNameMap))
                 .collect(Collectors.toList());
         return new PageResult<>(page.getTotal(), records);
     }
@@ -135,10 +141,10 @@ public class UserManagementService {
     }
 
     private void validateUsernameUnique(String username, Long excludeId) {
-        Long count = labUserMapper.selectCount(new LambdaQueryWrapper<LabUser>()
+        Number count = labUserMapper.selectCount(new LambdaQueryWrapper<LabUser>()
                 .eq(LabUser::getUsername, username)
                 .ne(excludeId != null, LabUser::getId, excludeId));
-        if (count != null && count > 0L) {
+        if (count != null && count.longValue() > 0L) {
             throw new BusinessException("用户名已存在");
         }
     }
@@ -157,6 +163,10 @@ public class UserManagementService {
     }
 
     private LabUserVO toVO(LabUser entity) {
+        return toVO(entity, loadRoleNameMap(java.util.Collections.singletonList(entity)));
+    }
+
+    private LabUserVO toVO(LabUser entity, Map<String, String> roleNameMap) {
         LabUserVO vo = new LabUserVO();
         vo.setId(entity.getId());
         vo.setUsername(entity.getUsername());
@@ -164,6 +174,7 @@ public class UserManagementService {
         vo.setOrgId(entity.getOrgId());
         vo.setOrgName(entity.getOrgName());
         vo.setRoleCode(entity.getRoleCode());
+        vo.setRoleName(roleNameMap.getOrDefault(StrUtil.trim(entity.getRoleCode()), entity.getRoleCode()));
         vo.setPhone(entity.getPhone());
         vo.setAvatarUrl(storageService.toFullUrl(entity.getAvatarUrl()));
         vo.setStatus(entity.getStatus());
@@ -172,5 +183,23 @@ public class UserManagementService {
         vo.setUpdatedName(entity.getUpdatedName());
         vo.setUpdatedTime(entity.getUpdatedTime());
         return vo;
+    }
+
+    private Map<String, String> loadRoleNameMap(List<LabUser> users) {
+        List<String> roleCodes = users == null
+                ? java.util.Collections.emptyList()
+                : users.stream()
+                .map(LabUser::getRoleCode)
+                .map(StrUtil::trim)
+                .filter(StrUtil::isNotBlank)
+                .distinct()
+                .collect(Collectors.toList());
+        if (roleCodes.isEmpty()) {
+            return java.util.Collections.emptyMap();
+        }
+        return labRoleMapper.selectList(new LambdaQueryWrapper<LabRole>()
+                        .in(LabRole::getRoleCode, roleCodes))
+                .stream()
+                .collect(Collectors.toMap(LabRole::getRoleCode, LabRole::getRoleName, (left, right) -> left));
     }
 }

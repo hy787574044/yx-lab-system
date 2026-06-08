@@ -76,6 +76,9 @@
             empty-text="暂无检测分析子流程数据"
           >
             <el-table-column prop="sampleNo" label="样品编号" min-width="150" />
+            <el-table-column label="样品来源" min-width="100">
+              <template #default="{ row }">{{ row.sampleSourceMethodLabel || '-' }}</template>
+            </el-table-column>
             <el-table-column prop="parameterName" label="检测参数" min-width="120" show-overflow-tooltip />
             <el-table-column prop="methodName" label="检测方法" min-width="150" show-overflow-tooltip>
               <template #default="{ row }">{{ row.methodName || '-' }}</template>
@@ -153,6 +156,7 @@
       <div class="result-dialog">
         <div class="result-dialog__summary">
           <span class="binding-editor__chip">样品编号<strong>{{ resultForm.sampleNo || '-' }}</strong></span>
+          <span class="binding-editor__chip">样品来源<strong>{{ resultForm.sampleSourceMethodLabel || '-' }}</strong></span>
           <span class="binding-editor__chip">检测参数<strong>{{ resultForm.parameterName || '-' }}</strong></span>
           <span class="binding-editor__chip">检测人员<strong>{{ resultForm.detectorName || '-' }}</strong></span>
         </div>
@@ -290,6 +294,7 @@ const resultForm = reactive({
   recordId: null,
   sampleId: null,
   sampleNo: '',
+  sampleSourceMethodLabel: '',
   detectionTypeId: null,
   detectionTypeName: '',
   parameterId: null,
@@ -431,6 +436,14 @@ function isResultValueAbnormal(item) {
   return item.standardMax != null && value > Number(item.standardMax)
 }
 
+function getResultRangeError(item) {
+  if (!isResultValueAbnormal(item)) {
+    return ''
+  }
+  const parameterName = item.parameterName || '当前检测参数'
+  return `检测结果存在异常，禁止录入：${parameterName}，标准范围 ${formatStandardRange(item.standardMin, item.standardMax, item.unit)}，检测结果 ${item.resultValue}`
+}
+
 function getResultValueStatusLabel(item) {
   if (!item || item.resultValue == null || item.resultValue === '') {
     return '待录入'
@@ -462,6 +475,7 @@ function resetResultForm() {
   resultForm.recordId = null
   resultForm.sampleId = null
   resultForm.sampleNo = ''
+  resultForm.sampleSourceMethodLabel = ''
   resultForm.detectionTypeId = null
   resultForm.detectionTypeName = ''
   resultForm.parameterId = null
@@ -485,6 +499,7 @@ function openResultDialog(row) {
   resultForm.recordId = row.recordId
   resultForm.sampleId = row.sampleId
   resultForm.sampleNo = row.sampleNo || ''
+  resultForm.sampleSourceMethodLabel = row.sampleSourceMethodLabel || ''
   resultForm.detectionTypeId = row.detectionTypeId
   resultForm.detectionTypeName = row.detectionTypeName || ''
   resultForm.parameterId = row.parameterId
@@ -510,6 +525,11 @@ async function submitDetectionResult() {
   }
   if (resultForm.resultValue == null || resultForm.resultValue === '') {
     ElMessage.warning('请先填写检测结果')
+    return
+  }
+  const rangeError = getResultRangeError(resultForm)
+  if (rangeError) {
+    ElMessage.warning(rangeError)
     return
   }
 

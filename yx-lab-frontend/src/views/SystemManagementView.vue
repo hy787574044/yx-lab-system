@@ -32,7 +32,7 @@
                   <el-input
                     v-model="userQuery.keyword"
                     clearable
-                    placeholder="请输入用户名、姓名、机构、手机号或角色编码"
+                    placeholder="请输入用户名、姓名、机构、手机号或角色"
                     @keyup.enter="handleUserSearch"
                   />
                 </label>
@@ -43,8 +43,8 @@
                   </el-select>
                 </label>
                 <label class="toolbar-field">
-                  <span>角色编码</span>
-                  <el-select v-model="userQuery.roleCode" clearable filterable placeholder="请选择角色编码">
+                  <span>角色</span>
+                  <el-select v-model="userQuery.roleCode" clearable filterable placeholder="请选择角色">
                     <el-option v-for="item in roleOptionsForUser" :key="item.value" :label="item.label" :value="item.value" />
                   </el-select>
                 </label>
@@ -67,7 +67,9 @@
             <el-table-column prop="orgName" label="所属机构" min-width="160">
               <template #default="{ row }">{{ row.orgName || '-' }}</template>
             </el-table-column>
-            <el-table-column prop="roleCode" label="角色编码" min-width="140" />
+            <el-table-column label="角色" min-width="140">
+              <template #default="{ row }">{{ getUserRoleName(row) }}</template>
+            </el-table-column>
             <el-table-column prop="phone" label="手机号" min-width="140">
               <template #default="{ row }">{{ row.phone || '-' }}</template>
             </el-table-column>
@@ -726,7 +728,7 @@ const formRows = [
 const sceneConfigMap = {
   '/system-users': {
     title: '用户管理',
-    subtitle: '对系统使用账号进行集中维护，统一管理登录账号、所属机构、角色编码、手机号与启停状态。',
+    subtitle: '对系统使用账号进行集中维护，统一管理登录账号、所属机构、角色、手机号与启停状态。',
     tableTitle: '用户台账',
     tableSubtitle: '当前页面已接入真实用户管理接口，可直接完成正式业务维护。',
     guide: '用户管理已从演示页升级为正式业务页，支持分页、查询、新增、编辑、删除，并与机构、角色形成联动。',
@@ -878,6 +880,19 @@ const visibleUserRows = computed(() => {
   return userRows.value
 })
 
+function getUserRoleName(row) {
+  const roleName = String(row?.roleName || '').trim()
+  if (roleName) {
+    return roleName
+  }
+  const roleCode = String(row?.roleCode || '').trim()
+  if (!roleCode) {
+    return '-'
+  }
+  const option = roleOptions.value.find((item) => String(item.value) === roleCode)
+  return option?.roleName || roleCode
+}
+
 const userFormInitial = computed(() => (userForm.realName || userForm.username || '用').slice(0, 1))
 const userFormAvatarSrc = computed(() => userAvatarPreviewUrl.value || userExistingAvatarPreviewUrl.value)
 
@@ -997,7 +1012,7 @@ const currentStats = computed(() => {
       { key: 'all', label: '全部用户', value: userTotal.value, desc: '当前用户分页总记录数' },
       { key: 'enabled', label: '启用用户', value: userRows.value.filter((item) => Number(item.status) === 1).length, desc: '当前页启用状态账号数' },
       { key: 'disabled', label: '停用用户', value: userRows.value.filter((item) => Number(item.status) === 0).length, desc: '当前页停用状态账号数' },
-      { key: 'role', label: '已配角色', value: userRows.value.filter((item) => normalizeText(item.roleCode) !== '-').length, desc: '当前页已绑定角色编码的账号数' }
+      { key: 'role', label: '已配角色', value: userRows.value.filter((item) => normalizeText(item.roleCode) !== '-').length, desc: '当前页已绑定角色的账号数' }
     ]
   }
 
@@ -1527,7 +1542,8 @@ async function loadRoleOptions() {
     roleOptions.value = Array.isArray(result)
       ? result.map((item) => ({
           label: `${item.roleName} ${item.roleCode}`,
-          value: item.roleCode
+          value: item.roleCode,
+          roleName: item.roleName
         }))
       : []
   } catch (error) {

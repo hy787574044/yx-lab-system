@@ -191,6 +191,17 @@
                   />
                 </label>
                 <label class="toolbar-field">
+                  <span>样品类型</span>
+                  <el-select v-model="groupQuery.sampleType" clearable placeholder="请选择样品类型">
+                    <el-option
+                      v-for="option in sampleTypeOptions"
+                      :key="option.value"
+                      :label="option.label"
+                      :value="option.value"
+                    />
+                  </el-select>
+                </label>
+                <label class="toolbar-field">
                   <span>检测人员</span>
                   <el-select
                     v-model="groupQuery.detectorId"
@@ -238,6 +249,9 @@
             empty-text="暂无检测套餐数据"
           >
             <el-table-column prop="typeName" label="套餐名称" min-width="180" />
+            <el-table-column label="绑定样品类型" width="130" header-cell-class-name="cell-center" class-name="cell-center">
+              <template #default="{ row }">{{ getEnumLabel(sampleTypeLabelMap, row.sampleType) }}</template>
+            </el-table-column>
             <el-table-column prop="parameterNames" label="组内参数" min-width="220" show-overflow-tooltip>
               <template #default="{ row }">{{ row.parameterNames || '-' }}</template>
             </el-table-column>
@@ -416,6 +430,16 @@
         <div class="form-grid">
           <el-form-item label="套餐名称" required>
             <el-input v-model="groupForm.typeName" placeholder="请输入检测套餐名称" />
+          </el-form-item>
+          <el-form-item label="样品类型" required>
+            <el-select v-model="groupForm.sampleType" placeholder="请选择绑定样品类型" style="width: 100%">
+              <el-option
+                v-for="option in sampleTypeOptions"
+                :key="option.value"
+                :label="option.label"
+                :value="option.value"
+              />
+            </el-select>
           </el-form-item>
           <el-form-item label="状态">
             <el-radio-group v-model="groupForm.enabled">
@@ -675,7 +699,12 @@ import {
   updateDetectionParameterApi,
   updateDetectionTypeApi
 } from '../api/lab'
-import { DEFAULT_PAGE_SIZE } from '../utils/labEnums'
+import {
+  DEFAULT_PAGE_SIZE,
+  getEnumLabel,
+  sampleTypeLabelMap,
+  sampleTypeOptions
+} from '../utils/labEnums'
 
 const route = useRoute()
 
@@ -709,6 +738,7 @@ const parameterQuery = reactive({
 
 const groupQuery = reactive({
   detectorId: '',
+  sampleType: '',
   enabled: '',
   keyword: '',
   pageNum: 1,
@@ -735,6 +765,7 @@ const parameterBindingForm = reactive({
 const groupForm = reactive({
   id: null,
   typeName: '',
+  sampleType: '',
   parameterIdList: [],
   parameterMethodSelection: [],
   enabled: 1,
@@ -1333,6 +1364,7 @@ function resetParameterForm() {
 function resetGroupForm() {
   groupForm.id = null
   groupForm.typeName = ''
+  groupForm.sampleType = ''
   groupForm.parameterIdList = []
   groupForm.parameterMethodSelection = []
   groupForm.enabled = 1
@@ -1371,6 +1403,7 @@ async function openGroupDialog(row) {
   if (row) {
     groupForm.id = row.id
     groupForm.typeName = row.typeName || ''
+    groupForm.sampleType = row.sampleType || ''
     groupForm.parameterIdList = parseParameterIds(row.parameterIds)
     groupForm.parameterMethodSelection = resolveGroupMethodSelection(row)
     groupForm.enabled = row.enabled ?? 1
@@ -1422,6 +1455,10 @@ async function submitGroupForm() {
     ElMessage.warning('请填写检测套餐名称')
     return
   }
+  if (!groupForm.sampleType) {
+    ElMessage.warning('请选择检测套餐绑定的样品类型')
+    return
+  }
   const bindings = buildGroupBindings()
   if (!bindings.length) {
     ElMessage.warning('请至少选择一个检测参数及其对应检测方法')
@@ -1442,6 +1479,7 @@ async function submitGroupForm() {
 
   const payload = {
     typeName: groupForm.typeName.trim(),
+    sampleType: groupForm.sampleType,
     parameterIds: uniqueIds.join(','),
     parameterNames: selectedParameters.map((item) => item.parameterName).join('、'),
     parameterMethodBindings: bindings.map((item) => ({
@@ -1572,6 +1610,7 @@ function resetParameterQuery() {
 
 function resetGroupQuery() {
   groupQuery.detectorId = ''
+  groupQuery.sampleType = ''
   groupQuery.enabled = ''
   groupQuery.keyword = ''
   groupQuery.pageNum = 1

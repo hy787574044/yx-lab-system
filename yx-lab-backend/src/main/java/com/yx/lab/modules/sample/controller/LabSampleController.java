@@ -81,6 +81,7 @@ public class LabSampleController {
                         ExcelExportUtil.column("样品编号", LabSample::getSampleNo),
                         ExcelExportUtil.column("点位名称", LabSample::getPointName),
                         ExcelExportUtil.column("样品类型", item -> LabWorkflowConstants.getSampleTypeLabel(item.getSampleType())),
+                        ExcelExportUtil.column("样品来源", item -> LabWorkflowConstants.getSampleSourceMethodLabel(item.getSampleSourceMethod())),
                         ExcelExportUtil.column("样品状态", item -> LabWorkflowConstants.getSampleStatusLabel(item.getSampleStatus())),
                         ExcelExportUtil.column("采样时间", LabSample::getSamplingTime),
                         ExcelExportUtil.column("采样人员", LabSample::getSamplerName),

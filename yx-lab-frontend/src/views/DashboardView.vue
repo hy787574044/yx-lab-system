@@ -295,7 +295,7 @@ const latestPassRate = computed(() => {
 })
 const viewMode = computed(() => {
   const roleCode = String(currentUser.value?.roleCode || '').toUpperCase()
-  if (roleCode === 'DETECTOR') {
+  if (roleCode === 'STAFF') {
     return 'detector'
   }
   return 'leader'
@@ -313,7 +313,7 @@ onMounted(async () => {
   loading.value = true
   try {
     const roleCode = String(currentUser.value?.roleCode || '').toUpperCase()
-    if (roleCode === 'DETECTOR') {
+    if (roleCode === 'STAFF') {
       dashboard.value = await detectorDashboardApi() || {}
     } else if (roleCode) {
       dashboard.value = await leaderDashboardApi() || {}

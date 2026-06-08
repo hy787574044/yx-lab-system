@@ -14,5 +14,7 @@ public class DetectionTypeQuery extends PageQuery {
 
     private Long detectorId;
 
+    private String sampleType;
+
     private Integer enabled;
 }

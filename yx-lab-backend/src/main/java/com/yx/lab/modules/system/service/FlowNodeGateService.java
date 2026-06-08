@@ -171,6 +171,8 @@ public class FlowNodeGateService {
     }
 
     private boolean isAdmin(CurrentUser currentUser) {
-        return currentUser != null && "ADMIN".equalsIgnoreCase(currentUser.getRoleCode());
+        return currentUser != null
+                && ("ADMIN".equalsIgnoreCase(currentUser.getRoleCode())
+                || "DIRECTOR".equalsIgnoreCase(currentUser.getRoleCode()));
     }
 }

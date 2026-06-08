@@ -133,7 +133,7 @@ public class SamplingPlanService {
         if (dataScopeHelper.isAdmin()) {
             return querySamplerId;
         }
-        if (dataScopeHelper.isRole("SAMPLER") && dataScopeHelper.currentUserId() != null) {
+        if (dataScopeHelper.isRole("STAFF") && dataScopeHelper.currentUserId() != null) {
             return dataScopeHelper.currentUserId();
         }
         return querySamplerId;

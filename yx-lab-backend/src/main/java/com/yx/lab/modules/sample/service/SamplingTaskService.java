@@ -121,7 +121,7 @@ public class SamplingTaskService {
         if (dataScopeHelper.isAdmin()) {
             return querySamplerId;
         }
-        if (dataScopeHelper.isRole("SAMPLER") && dataScopeHelper.currentUserId() != null) {
+        if (dataScopeHelper.isRole("STAFF") && dataScopeHelper.currentUserId() != null) {
             return dataScopeHelper.currentUserId();
         }
         return querySamplerId;
@@ -400,7 +400,9 @@ public class SamplingTaskService {
     }
 
     private boolean isAdmin(CurrentUser currentUser) {
-        return currentUser != null && "ADMIN".equalsIgnoreCase(currentUser.getRoleCode());
+        return currentUser != null
+                && ("ADMIN".equalsIgnoreCase(currentUser.getRoleCode())
+                || "DIRECTOR".equalsIgnoreCase(currentUser.getRoleCode()));
     }
 
     private boolean isTaskRegistered(SamplingTask task) {

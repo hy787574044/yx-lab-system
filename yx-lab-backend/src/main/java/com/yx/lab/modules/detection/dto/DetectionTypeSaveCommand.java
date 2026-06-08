@@ -15,6 +15,8 @@ public class DetectionTypeSaveCommand {
 
     private Long detectorId;
 
+    private String sampleType;
+
     private String parameterIds;
 
     private String parameterNames;

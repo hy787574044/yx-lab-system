@@ -41,7 +41,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class DetectionPendingFlowService {
 
-    private static final String DETECTOR_ROLE_CODE = "DETECTOR";
+    private static final String STAFF_ROLE_CODE = "STAFF";
 
     /**
      * 按样品维度保存并发锁，避免页面派发与自动补偿同时生成重复主流程。
@@ -86,9 +86,12 @@ public class DetectionPendingFlowService {
                 createPendingFlowIfMissing(sample);
             } else if (activeRecords.size() > 1) {
                 DetectionRecord keeper = collapseDuplicateActiveRecords(sample.getId());
+                assignSamplerAsDetectorIfPossible(keeper, sample);
                 promoteEnteredRecordIfReady(keeper, sample);
             } else {
-                promoteEnteredRecordIfReady(activeRecords.get(0), sample);
+                DetectionRecord record = activeRecords.get(0);
+                assignSamplerAsDetectorIfPossible(record, sample);
+                promoteEnteredRecordIfReady(record, sample);
             }
         }
     }
@@ -109,6 +112,7 @@ public class DetectionPendingFlowService {
             // 同一样品始终只保留一条活跃检测主流程，避免重复登录或重复补偿造成脏数据。
             DetectionRecord existing = collapseDuplicateActiveRecords(sample.getId());
             if (existing != null) {
+                assignSamplerAsDetectorIfPossible(existing, sample);
                 promoteEnteredRecordIfReady(existing, sample);
                 return existing;
             }
@@ -124,11 +128,13 @@ public class DetectionPendingFlowService {
             record.setDetectionTypeId(sample.getDetectionTypeId());
             record.setDetectionTypeName(resolveDetectionTypeName(sample));
             record.setDetectionTime(sample.getSamplingTime() != null ? sample.getSamplingTime() : LocalDateTime.now());
-            record.setDetectorId(null);
-            record.setDetectorName(null);
+            record.setDetectorId(sample.getSamplerId());
+            record.setDetectorName(resolveSamplerDetectorName(sample));
             record.setDetectionResult(null);
-            record.setAbnormalRemark("待分配检测员");
-            record.setDetectionStatus(LabWorkflowConstants.DetectionStatus.WAIT_ASSIGN);
+            record.setAbnormalRemark(sample.getSamplerId() == null ? "待分配检测员" : "已默认分配采样员检测");
+            record.setDetectionStatus(sample.getSamplerId() == null
+                    ? LabWorkflowConstants.DetectionStatus.WAIT_ASSIGN
+                    : LabWorkflowConstants.DetectionStatus.WAIT_DETECT);
             detectionRecordMapper.insert(record);
 
             // 每一个套餐参数都展开成独立子流程，后续可单独分配检测员、录入结果和审查。
@@ -143,9 +149,11 @@ public class DetectionPendingFlowService {
                 item.setReferenceStandard(configItem.getReferenceStandard());
                 item.setMethodId(configItem.getMethodId());
                 item.setMethodName(configItem.getMethodName());
-                item.setDetectorId(null);
-                item.setDetectorName(null);
-                item.setItemStatus(LabWorkflowConstants.DetectionStatus.WAIT_ASSIGN);
+                item.setDetectorId(sample.getSamplerId());
+                item.setDetectorName(resolveSamplerDetectorName(sample));
+                item.setItemStatus(sample.getSamplerId() == null
+                        ? LabWorkflowConstants.DetectionStatus.WAIT_ASSIGN
+                        : LabWorkflowConstants.DetectionStatus.WAIT_DETECT);
                 item.setExceedFlag(0);
                 detectionItemMapper.insert(item);
             }
@@ -362,7 +370,7 @@ public class DetectionPendingFlowService {
         return labUserMapper.selectList(new LambdaQueryWrapper<LabUser>()
                         .in(LabUser::getId, detectorIds)
                         .eq(LabUser::getStatus, 1)
-                        .eq(LabUser::getRoleCode, DETECTOR_ROLE_CODE))
+                        .eq(LabUser::getRoleCode, STAFF_ROLE_CODE))
                 .stream()
                 .collect(Collectors.toMap(LabUser::getId, user -> user));
     }
@@ -396,6 +404,44 @@ public class DetectionPendingFlowService {
             return sample.getDetectionTypeName();
         }
         return StrUtil.trim(sample.getDetectionItems());
+    }
+
+    private void assignSamplerAsDetectorIfPossible(DetectionRecord record, LabSample sample) {
+        if (record == null || record.getId() == null || sample == null || sample.getSamplerId() == null) {
+            return;
+        }
+        List<DetectionItem> items = detectionItemMapper.selectList(new LambdaQueryWrapper<DetectionItem>()
+                .eq(DetectionItem::getRecordId, record.getId())
+                .orderByAsc(DetectionItem::getCreatedTime));
+        boolean changed = false;
+        String detectorName = resolveSamplerDetectorName(sample);
+        for (DetectionItem item : items) {
+            if (item.getDetectorId() != null
+                    || !LabWorkflowConstants.DetectionStatus.WAIT_ASSIGN.equals(item.getItemStatus())) {
+                continue;
+            }
+            item.setDetectorId(sample.getSamplerId());
+            item.setDetectorName(detectorName);
+            item.setItemStatus(LabWorkflowConstants.DetectionStatus.WAIT_DETECT);
+            detectionItemMapper.updateById(item);
+            changed = true;
+        }
+        if (changed || record.getDetectorId() == null
+                || LabWorkflowConstants.DetectionStatus.WAIT_ASSIGN.equals(record.getDetectionStatus())) {
+            List<DetectionItem> latestItems = changed
+                    ? detectionItemMapper.selectList(new LambdaQueryWrapper<DetectionItem>()
+                    .eq(DetectionItem::getRecordId, record.getId())
+                    .orderByAsc(DetectionItem::getCreatedTime))
+                    : items;
+            refreshRecordAssignmentState(record, latestItems);
+        }
+    }
+
+    private String resolveSamplerDetectorName(LabSample sample) {
+        if (sample == null) {
+            return null;
+        }
+        return StrUtil.blankToDefault(StrUtil.trim(sample.getSamplerName()), "采样员");
     }
 
     private void promoteEnteredRecordIfReady(DetectionRecord record, LabSample sample) {

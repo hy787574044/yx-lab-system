@@ -115,6 +115,7 @@ public class DetectionWorkflowController {
                 detectionWorkflowService.itemPage(query).getRecords(),
                 Arrays.asList(
                         ExcelExportUtil.column("样品编号", DetectionItemPageVO::getSampleNo),
+                        ExcelExportUtil.column("样品来源", DetectionItemPageVO::getSampleSourceMethodLabel),
                         ExcelExportUtil.column("检测套餐", DetectionItemPageVO::getDetectionTypeName),
                         ExcelExportUtil.column("检测参数", DetectionItemPageVO::getParameterName),
                         ExcelExportUtil.column("检测方法", DetectionItemPageVO::getMethodName),

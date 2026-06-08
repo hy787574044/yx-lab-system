@@ -41,6 +41,9 @@ export const rawSampleType = 'RAW'
 export const terminalSampleType = 'TERMINAL'
 export const sourceWaterSampleType = 'SOURCE_WATER'
 
+export const samplingSampleSourceMethod = 'SAMPLING'
+export const deliveredSampleSourceMethod = 'DELIVERED'
+export const outsourcedSampleSourceMethod = 'OUTSOURCED'
 
 export const routineSamplingType = 'ROUTINE'
 
@@ -136,6 +139,11 @@ export const sampleTypeLabelMap = {
   [sourceWaterSampleType]: '水源水'
 }
 
+export const sampleSourceMethodLabelMap = {
+  [samplingSampleSourceMethod]: '采样',
+  [deliveredSampleSourceMethod]: '送样',
+  [outsourcedSampleSourceMethod]: '外采'
+}
 
 export const sampleStatusLabelMap = {
   [loggedSampleStatus]: '已登录',
@@ -197,6 +205,7 @@ export const pointTypeOptions = buildOptions(pointTypeLabelMap)
 export const frequencyTypeOptions = buildOptions(frequencyTypeLabelMap)
 export const cycleTypeOptions = buildOptions(cycleTypeLabelMap)
 export const sampleTypeOptions = buildOptions(sampleTypeLabelMap)
+export const sampleSourceMethodOptions = buildOptions(sampleSourceMethodLabelMap)
 export const reportTypeOptions = buildOptions(reportTypeLabelMap)
 export const reportStatusOptions = buildOptions(reportStatusLabelMap)
 export const reportCategoryOptions = buildOptions(reportCategoryLabelMap)
@@ -284,6 +293,9 @@ const workflowTextLabelMap = {
   FACTORY: '出厂水',
   RAW: '原水',
   TERMINAL: '管网末梢',
+  SAMPLING: '采样',
+  DELIVERED: '送样',
+  OUTSOURCED: '外采',
   ENABLED: '启用',
   DISABLED: '停用',
   ACTIVE: '启用中',

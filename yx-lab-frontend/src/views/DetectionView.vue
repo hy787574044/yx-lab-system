@@ -461,6 +461,7 @@ import {
   waitAssignDetectionStatus,
   waitDetectDetectionStatus
 } from '../utils/labEnums'
+import { hasPermission } from '../utils/permission'
 
 const props = defineProps({
   forcedScenePath: {
@@ -560,11 +561,11 @@ const sceneMap = {
   '/detection-split': {
     key: 'detection-split',
     title: '检测分样',
-    subtitle: '样品登录后先进入待分配检测流程，再按套餐参数拆分为多个待分配的检测子流程。',
+    subtitle: '样品登录后按套餐参数生成检测子流程，默认由采样员自采自检；特殊情况可在本页调整人员。',
     tableTitle: '检测流程队列',
-    tableSubtitle: '点击每条主流程后的“查看检测项”，即可查看套餐参数列表并逐条分配检测员。',
-    note: '当前页面重点处理“待分配”和“待检测”两个阶段，分配完成后即可继续进入检测执行。',
-    guide: '建议先在本页完成参数级人员分配，再由检测员按各自分工执行后续检测录入。',
+    tableSubtitle: '点击每条主流程后的“查看检测项”，即可查看套餐参数列表；特殊情况可重新分配检测人员。',
+    note: '当前页面重点处理需要人工调整检测人员的特殊检测流程，调整完成后即可继续检测执行。',
+    guide: '常规样品会默认分配采样员检测，仅在需要协同或改派时进入本页调整。',
     defaultStatKey: 'all',
     emptyText: '暂无检测分样数据',
     allowAssign: true,
@@ -572,7 +573,7 @@ const sceneMap = {
     statKeys: ['all', 'waitAssign', 'waitDetect', 'pendingReview'],
     recordFilter: (item) => item.detectionStatus === WAIT_ASSIGN_STATUS,
     quickLinks: [
-      { path: '/sample-login', label: '样品登录', desc: '先完成样品登录，再进入检测分样分配检测员' },
+      { path: '/sample-login', label: '样品登录', desc: '样品登录后默认自采自检，特殊情况再进入检测分样调整人员' },
       { path: '/review-result', label: '结果审查', desc: '检测完成提交后进入结果审查闭环' },
       { path: '/detection-history', label: '历史检测', desc: '查看已完成检测与驳回重检记录' }
     ]
@@ -580,18 +581,18 @@ const sceneMap = {
   '/detection-analysis': {
     key: 'detection-analysis',
     title: '检测分析',
-    subtitle: '样品登录后先进入待分配检测流程，再按套餐参数拆分为多个待分配的检测子流程。',
+    subtitle: '样品登录后按套餐参数生成检测子流程，默认由采样员自采自检并直接进入待检测。',
     tableTitle: '检测流程队列',
-    tableSubtitle: '点击每条主流程后的“查看检测项”，即可查看套餐参数列表并逐条分配检测员。',
-    note: '当前页重点处理“待分配”和“待检测”两个阶段，分配完成后即可继续进入检测执行。',
-    guide: '建议先在本页完成参数级人员分配，再由检测员按各自分工执行后续检测录入。',
+    tableSubtitle: '点击每条主流程后的“查看检测项”，即可查看套餐参数列表并录入检测结果。',
+    note: '当前页重点处理待检测、已提交和驳回重检流程；待分配一般只用于特殊改派场景。',
+    guide: '员工可直接处理分配给自己的检测子流程，主任可按需进入检测分样调整人员。',
     defaultStatKey: 'all',
     emptyText: '暂无检测分析数据',
     allowAssign: true,
     includePendingFallback: true,
     recordFilter: (item) => [WAIT_ASSIGN_STATUS, WAIT_DETECT_STATUS, reviewPendingDetectionStatus].includes(item.detectionStatus),
     quickLinks: [
-      { path: '/sample-login', label: '样品登录', desc: '先完成样品登录，再进入检测分析分配检测员' },
+      { path: '/sample-login', label: '样品登录', desc: '样品登录后自动进入检测分析，默认由采样员自采自检' },
       { path: '/review-result', label: '结果审查', desc: '检测完成提交后进入结果审查闭环' },
       { path: '/detection-history', label: '历史检测', desc: '查看已完成检测与驳回重检记录' }
     ]
@@ -957,6 +958,7 @@ function getMethodBasis(item) {
 function canAssignRow(row) {
   return !row.__sampleOnly
     && baseScene.value.allowAssign
+    && hasPermission('detection:assign')
     && [WAIT_ASSIGN_STATUS, WAIT_DETECT_STATUS].includes(row.detectionStatus)
 }
 
@@ -1232,6 +1234,14 @@ function isResultValueAbnormal(item) {
   return item.standardMax != null && value > Number(item.standardMax)
 }
 
+function getResultRangeError(item) {
+  if (!isResultValueAbnormal(item)) {
+    return ''
+  }
+  const parameterName = item.parameterName || '当前检测参数'
+  return `检测结果存在异常，禁止录入：${parameterName}，标准范围 ${formatStandardRange(item.standardMin, item.standardMax, item.unit)}，检测结果 ${item.resultValue}`
+}
+
 function getResultValueStatusLabel(item) {
   if (!item || item.resultValue == null || item.resultValue === '') {
     return '待录入'
@@ -1380,6 +1390,11 @@ async function submitDetectionResult() {
   }
   if (!resultForm.items.length || resultForm.items.some((item) => item.resultValue == null || item.resultValue === '')) {
     ElMessage.warning('请完整填写全部检测参数的结果值')
+    return
+  }
+  const abnormalItem = resultForm.items.find((item) => isResultValueAbnormal(item))
+  if (abnormalItem) {
+    ElMessage.warning(getResultRangeError(abnormalItem))
     return
   }
 

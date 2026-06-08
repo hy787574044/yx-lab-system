@@ -80,6 +80,7 @@ public class LabSampleService {
                                 .like(LabSample::getPointName, query.getKeyword()))
                         .eq(StrUtil.isNotBlank(query.getSampleStatus()), LabSample::getSampleStatus, query.getSampleStatus())
                         .eq(StrUtil.isNotBlank(query.getSampleType()), LabSample::getSampleType, query.getSampleType())
+                        .eq(StrUtil.isNotBlank(query.getSampleSourceMethod()), LabSample::getSampleSourceMethod, query.getSampleSourceMethod())
                         .eq(resolveScopedSamplerId() != null, LabSample::getSamplerId, resolveScopedSamplerId())
                         .eq(dataScopeHelper.onlySelfScope(), LabSample::getCreatedBy, dataScopeHelper.currentUserId())
                         .orderByDesc(LabSample::getCreatedTime));
@@ -124,7 +125,7 @@ public class LabSampleService {
         if (dataScopeHelper.isAdmin()) {
             return null;
         }
-        if (dataScopeHelper.isRole("SAMPLER") && dataScopeHelper.currentUserId() != null) {
+        if (dataScopeHelper.isRole("STAFF") && dataScopeHelper.currentUserId() != null) {
             return dataScopeHelper.currentUserId();
         }
         return null;
@@ -162,12 +163,15 @@ public class LabSampleService {
                 FlowConfigManagementService.FLOW_TYPE_REVIEW,
                 "审核流程");
 
+        String sampleSourceMethod = resolveSampleSourceMethod(command);
+
         LabSample sample = new LabSample();
         sample.setSampleNo(StrUtil.trim(task.getSampleNo()));
         sample.setTaskId(task.getId());
         sample.setPointId(command.getPointId() != null ? command.getPointId() : task.getPointId());
         sample.setPointName(StrUtil.isNotBlank(command.getPointName()) ? command.getPointName() : task.getPointName());
         sample.setSampleType(StrUtil.isNotBlank(command.getSampleType()) ? command.getSampleType() : task.getSampleType());
+        sample.setSampleSourceMethod(sampleSourceMethod);
         sample.setDetectionItems(resolveDetectionItems(command, task, detectionType));
         sample.setDetectionTypeId(resolveDetectionTypeId(command, task, detectionType));
         sample.setDetectionTypeName(resolveDetectionTypeName(command, task, detectionType));
@@ -306,7 +310,19 @@ public class LabSampleService {
         if (existingCount != null && existingCount.longValue() > 0) {
             throw new BusinessException("该采样任务已完成样品登录，不能重复登录。");
         }
-    }    private DetectionType resolveDetectionType(SampleLoginCommand command, SamplingTask task) {
+    }
+
+    private String resolveSampleSourceMethod(SampleLoginCommand command) {
+        String sampleSourceMethod = StrUtil.blankToDefault(
+                StrUtil.trim(command.getSampleSourceMethod()),
+                LabWorkflowConstants.SampleSourceMethod.SAMPLING);
+        if (!LabWorkflowConstants.SAMPLE_SOURCE_METHODS.contains(sampleSourceMethod)) {
+            throw new BusinessException("\u6837\u54c1\u6765\u6e90\u65b9\u5f0f\u4e0d\u6b63\u786e");
+        }
+        return sampleSourceMethod;
+    }
+
+    private DetectionType resolveDetectionType(SampleLoginCommand command, SamplingTask task) {
         Long detectionTypeId = command.getDetectionTypeId();
         String detectionTypeName = command.getDetectionTypeName();
         if (detectionTypeId == null) {
@@ -318,6 +334,10 @@ public class LabSampleService {
         }
         if (!Integer.valueOf(1).equals(detectionType.getEnabled())) {
             throw new BusinessException("当前检测套餐已停用，不能用于样品登录");
+        }
+        String sampleType = StrUtil.isNotBlank(command.getSampleType()) ? StrUtil.trim(command.getSampleType()) : task.getSampleType();
+        if (StrUtil.isNotBlank(detectionType.getSampleType()) && !StrUtil.equals(detectionType.getSampleType(), sampleType)) {
+            throw new BusinessException("检测套餐与样品类型不匹配，请重新选择");
         }
         if (StrUtil.isNotBlank(detectionTypeName)
                 && !StrUtil.equals(StrUtil.trim(detectionTypeName), detectionType.getTypeName())) {
@@ -604,7 +624,9 @@ public class LabSampleService {
     }
 
     private boolean isAdmin(CurrentUser currentUser) {
-        return currentUser != null && "ADMIN".equalsIgnoreCase(currentUser.getRoleCode());
+        return currentUser != null
+                && ("ADMIN".equalsIgnoreCase(currentUser.getRoleCode())
+                || "DIRECTOR".equalsIgnoreCase(currentUser.getRoleCode()));
     }
 
     private String buildLoginTrace(LabSample sample, SamplingTask task) {

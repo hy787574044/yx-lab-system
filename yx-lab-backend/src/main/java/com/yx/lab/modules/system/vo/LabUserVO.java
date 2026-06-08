@@ -31,6 +31,8 @@ public class LabUserVO {
     @Schema(description = "角色编码")
     private String roleCode;
 
+    private String roleName;
+
     @Schema(description = "手机号")
     private String phone;
 

@@ -38,6 +38,10 @@ public class LabSample extends BaseEntity {
     @TableField("sample_type")
     private String sampleType;
 
+    @Schema(description = "样品来源")
+    @TableField("sample_source_method")
+    private String sampleSourceMethod;
+
 
     @Schema(description = "检测项目文本")
     @TableField("detection_items")

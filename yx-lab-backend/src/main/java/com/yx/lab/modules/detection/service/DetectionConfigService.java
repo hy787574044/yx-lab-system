@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.yx.lab.common.constant.LabWorkflowConstants;
 import com.yx.lab.common.exception.BusinessException;
 import com.yx.lab.common.model.PageResult;
 import com.yx.lab.common.util.PageUtils;
@@ -67,7 +68,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class DetectionConfigService {
 
-    private static final String DETECTOR_ROLE_CODE = "DETECTOR";
+    private static final String STAFF_ROLE_CODE = "STAFF";
 
     private static final String SUBMITTED_DETECTION_STATUS = "SUBMITTED";
 
@@ -112,6 +113,7 @@ public class DetectionConfigService {
                                 .like(DetectionType::getDetectorName, keyword))
                         .eq(query.getGroupId() != null, DetectionType::getGroupId, query.getGroupId())
                         .eq(query.getDetectorId() != null, DetectionType::getDetectorId, query.getDetectorId())
+                        .eq(StrUtil.isNotBlank(query.getSampleType()), DetectionType::getSampleType, query.getSampleType())
                         .eq(query.getEnabled() != null, DetectionType::getEnabled, query.getEnabled())
                         .orderByDesc(DetectionType::getCreatedTime));
         fillTypeParameterMethodNames(page.getRecords());
@@ -146,7 +148,7 @@ public class DetectionConfigService {
     public List<DetectionDetectorOptionVO> detectorOptions() {
         return labUserMapper.selectList(new LambdaQueryWrapper<LabUser>()
                         .eq(LabUser::getStatus, 1)
-                        .eq(LabUser::getRoleCode, DETECTOR_ROLE_CODE)
+                        .eq(LabUser::getRoleCode, STAFF_ROLE_CODE)
                         .orderByAsc(LabUser::getRealName)
                         .orderByAsc(LabUser::getUsername))
                 .stream()
@@ -665,6 +667,7 @@ public class DetectionConfigService {
         entity.setTypeName(StrUtil.trim(command.getTypeName()));
         applyProjectGroupToType(entity, command.getGroupId());
         applyDetectorToType(entity, command.getDetectorId());
+        entity.setSampleType(StrUtil.trim(command.getSampleType()));
         entity.setParameterIds(normalizeIdList(command.getParameterIds()));
         entity.setParameterNames(StrUtil.trim(command.getParameterNames()));
         if (command.getParameterMethodBindings() != null) {
@@ -732,6 +735,7 @@ public class DetectionConfigService {
 
     private void validateType(DetectionType entity, Long selfId, Long previousDetectorId) {
         validateEnabledFlag(entity.getEnabled(), "检测套餐启用状态不合法");
+        validateDetectionTypeSampleType(entity.getSampleType());
         ensureTypeNameUnique(entity.getTypeName(), selfId);
         validateAndPopulateTypeParameters(entity);
         if (selfId != null && !equalsNullableLong(previousDetectorId, entity.getDetectorId()) && hasProcessingDetections(selfId)) {
@@ -1110,7 +1114,7 @@ public class DetectionConfigService {
         if (!Integer.valueOf(1).equals(detector.getStatus())) {
             throw new BusinessException("绑定的检测员已停用");
         }
-        if (!StrUtil.equalsIgnoreCase(DETECTOR_ROLE_CODE, detector.getRoleCode())) {
+        if (!StrUtil.equalsIgnoreCase(STAFF_ROLE_CODE, detector.getRoleCode())) {
             throw new BusinessException("绑定用户不是检测员角色，不能用于检测套餐");
         }
         return detector;
@@ -1143,6 +1147,15 @@ public class DetectionConfigService {
     private void validateEnabledFlag(Integer enabled, String message) {
         if (enabled == null || (enabled != 0 && enabled != 1)) {
             throw new BusinessException(message);
+        }
+    }
+
+    private void validateDetectionTypeSampleType(String sampleType) {
+        if (StrUtil.isBlank(sampleType)) {
+            return;
+        }
+        if (!LabWorkflowConstants.SAMPLE_TYPES.contains(sampleType)) {
+            throw new BusinessException("\u68c0\u6d4b\u5957\u9910\u7ed1\u5b9a\u7684\u6837\u54c1\u7c7b\u578b\u4e0d\u6b63\u786e");
         }
     }
 

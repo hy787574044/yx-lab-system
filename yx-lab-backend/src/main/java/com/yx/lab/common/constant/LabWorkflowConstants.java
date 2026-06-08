@@ -120,6 +120,18 @@ public final class LabWorkflowConstants {
         }
     }
 
+    public static final class SampleSourceMethod {
+
+        public static final String SAMPLING = "SAMPLING";
+
+        public static final String DELIVERED = "DELIVERED";
+
+        public static final String OUTSOURCED = "OUTSOURCED";
+
+        private SampleSourceMethod() {
+        }
+    }
+
     public static final class SampleStatus {
 
         public static final String LOGGED = "LOGGED";
@@ -251,6 +263,12 @@ public final class LabWorkflowConstants {
             SampleType.RAW,
             SampleType.TERMINAL,
             SampleType.SOURCE_WATER);
+
+    public static final Set<String> SAMPLE_SOURCE_METHODS = unmodifiableSet(
+            SampleSourceMethod.SAMPLING,
+            SampleSourceMethod.DELIVERED,
+            SampleSourceMethod.OUTSOURCED);
+
     public static final Set<String> REPORT_TYPES = unmodifiableSet(
             ReportType.DAILY,
             ReportType.WEEKLY,
@@ -524,6 +542,19 @@ public final class LabWorkflowConstants {
             return "\u6c34\u6e90\u6c34";
         }
         return sampleType;
+    }
+
+    public static String getSampleSourceMethodLabel(String sampleSourceMethod) {
+        if (SampleSourceMethod.SAMPLING.equals(sampleSourceMethod)) {
+            return "\u91c7\u6837";
+        }
+        if (SampleSourceMethod.DELIVERED.equals(sampleSourceMethod)) {
+            return "\u9001\u6837";
+        }
+        if (SampleSourceMethod.OUTSOURCED.equals(sampleSourceMethod)) {
+            return "\u5916\u91c7";
+        }
+        return sampleSourceMethod;
     }
 
     public static String getSampleStatusLabel(String sampleStatus) {

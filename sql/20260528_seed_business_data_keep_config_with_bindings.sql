@@ -302,14 +302,14 @@ INSERT INTO lab_user (
     status, deleted, created_by, created_name, created_time, updated_by, updated_name, updated_time
 )
 VALUES
-(1101, 'sampler01', 'e86f78a8a3caf0b60d8e74e5942aa6d86dc150cd3c03338aef25b7d2d7e3acc7', '陈采样', 802, '采样组', 'SAMPLER', '13810001001', NULL, 1, 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
-(1102, 'sampler02', 'e86f78a8a3caf0b60d8e74e5942aa6d86dc150cd3c03338aef25b7d2d7e3acc7', '李采样', 802, '采样组', 'SAMPLER', '13810001002', NULL, 1, 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
-(1201, 'detector01', 'e86f78a8a3caf0b60d8e74e5942aa6d86dc150cd3c03338aef25b7d2d7e3acc7', '王检测', 803, '检测审核组', 'DETECTOR', '13810002001', NULL, 1, 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
-(1202, 'detector02', 'e86f78a8a3caf0b60d8e74e5942aa6d86dc150cd3c03338aef25b7d2d7e3acc7', '赵检测', 803, '检测审核组', 'DETECTOR', '13810002002', NULL, 1, 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
-(1203, 'detector03', 'e86f78a8a3caf0b60d8e74e5942aa6d86dc150cd3c03338aef25b7d2d7e3acc7', '周检测', 803, '检测审核组', 'DETECTOR', '13810002003', NULL, 1, 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
-(1301, 'reviewer01', 'e86f78a8a3caf0b60d8e74e5942aa6d86dc150cd3c03338aef25b7d2d7e3acc7', '刘审核', 803, '检测审核组', 'REVIEWER', '13810003001', NULL, 1, 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
-(1302, 'reviewer02', 'e86f78a8a3caf0b60d8e74e5942aa6d86dc150cd3c03338aef25b7d2d7e3acc7', '何审核', 803, '检测审核组', 'REVIEWER', '13810003002', NULL, 1, 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
-(1401, 'reporter01', 'e86f78a8a3caf0b60d8e74e5942aa6d86dc150cd3c03338aef25b7d2d7e3acc7', '孙报告', 803, '检测审核组', 'REPORTER', '13810004001', NULL, 1, 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW())
+(1101, 'sampler01', 'e86f78a8a3caf0b60d8e74e5942aa6d86dc150cd3c03338aef25b7d2d7e3acc7', '陈采样', 802, '采样组', 'STAFF', '13810001001', NULL, 1, 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
+(1102, 'sampler02', 'e86f78a8a3caf0b60d8e74e5942aa6d86dc150cd3c03338aef25b7d2d7e3acc7', '李采样', 802, '采样组', 'STAFF', '13810001002', NULL, 1, 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
+(1201, 'detector01', 'e86f78a8a3caf0b60d8e74e5942aa6d86dc150cd3c03338aef25b7d2d7e3acc7', '王检测', 803, '检测审核组', 'STAFF', '13810002001', NULL, 1, 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
+(1202, 'detector02', 'e86f78a8a3caf0b60d8e74e5942aa6d86dc150cd3c03338aef25b7d2d7e3acc7', '赵检测', 803, '检测审核组', 'STAFF', '13810002002', NULL, 1, 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
+(1203, 'detector03', 'e86f78a8a3caf0b60d8e74e5942aa6d86dc150cd3c03338aef25b7d2d7e3acc7', '周检测', 803, '检测审核组', 'STAFF', '13810002003', NULL, 1, 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
+(1301, 'reviewer01', 'e86f78a8a3caf0b60d8e74e5942aa6d86dc150cd3c03338aef25b7d2d7e3acc7', '刘审核', 803, '检测审核组', 'DIRECTOR', '13810003001', NULL, 1, 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
+(1302, 'reviewer02', 'e86f78a8a3caf0b60d8e74e5942aa6d86dc150cd3c03338aef25b7d2d7e3acc7', '何审核', 803, '检测审核组', 'DIRECTOR', '13810003002', NULL, 1, 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW()),
+(1401, 'reporter01', 'e86f78a8a3caf0b60d8e74e5942aa6d86dc150cd3c03338aef25b7d2d7e3acc7', '孙报告', 803, '检测审核组', 'DIRECTOR', '13810004001', NULL, 1, 0, 1001, '系统管理员', NOW(), 1001, '系统管理员', NOW())
 ON DUPLICATE KEY UPDATE
     real_name = VALUES(real_name),
     org_id = VALUES(org_id),
@@ -683,11 +683,11 @@ INSERT INTO lab_login_log (
     remark, deleted, created_by, created_name, created_time, updated_by, updated_name, updated_time
 )
 VALUES
-(870001, 1101, 'sampler01', '陈采样', 'SAMPLER', 'PC', 'SUCCESS', NOW() - INTERVAL 5 DAY, '采样员登录成功。', 0, 1101, '陈采样', NOW() - INTERVAL 5 DAY, 1101, '陈采样', NOW() - INTERVAL 5 DAY),
-(870002, 1201, 'detector01', '王检测', 'DETECTOR', 'MOBILE', 'SUCCESS', NOW() - INTERVAL 4 DAY, '检测员移动端登录成功。', 0, 1201, '王检测', NOW() - INTERVAL 4 DAY, 1201, '王检测', NOW() - INTERVAL 4 DAY),
-(870003, 1301, 'reviewer01', '刘审核', 'REVIEWER', 'PC', 'SUCCESS', NOW() - INTERVAL 3 DAY, '审核员登录成功。', 0, 1301, '刘审核', NOW() - INTERVAL 3 DAY, 1301, '刘审核', NOW() - INTERVAL 3 DAY),
-(870004, 1401, 'reporter01', '孙报告', 'REPORTER', 'PC', 'SUCCESS', NOW() - INTERVAL 2 DAY, '报告员登录成功。', 0, 1401, '孙报告', NOW() - INTERVAL 2 DAY, 1401, '孙报告', NOW() - INTERVAL 2 DAY),
-(870005, 1102, 'sampler02', '李采样', 'SAMPLER', 'PC', 'FAILED', NOW() - INTERVAL 1 DAY, '验证码错误。', 0, 1102, '李采样', NOW() - INTERVAL 1 DAY, 1102, '李采样', NOW() - INTERVAL 1 DAY);
+(870001, 1101, 'sampler01', '陈采样', 'STAFF', 'PC', 'SUCCESS', NOW() - INTERVAL 5 DAY, '员工登录成功。', 0, 1101, '陈采样', NOW() - INTERVAL 5 DAY, 1101, '陈采样', NOW() - INTERVAL 5 DAY),
+(870002, 1201, 'detector01', '王检测', 'STAFF', 'MOBILE', 'SUCCESS', NOW() - INTERVAL 4 DAY, '员工移动端登录成功。', 0, 1201, '王检测', NOW() - INTERVAL 4 DAY, 1201, '王检测', NOW() - INTERVAL 4 DAY),
+(870003, 1301, 'reviewer01', '刘审核', 'DIRECTOR', 'PC', 'SUCCESS', NOW() - INTERVAL 3 DAY, '主任登录成功。', 0, 1301, '刘审核', NOW() - INTERVAL 3 DAY, 1301, '刘审核', NOW() - INTERVAL 3 DAY),
+(870004, 1401, 'reporter01', '孙报告', 'DIRECTOR', 'PC', 'SUCCESS', NOW() - INTERVAL 2 DAY, '主任登录成功。', 0, 1401, '孙报告', NOW() - INTERVAL 2 DAY, 1401, '孙报告', NOW() - INTERVAL 2 DAY),
+(870005, 1102, 'sampler02', '李采样', 'STAFF', 'PC', 'FAILED', NOW() - INTERVAL 1 DAY, '验证码错误。', 0, 1102, '李采样', NOW() - INTERVAL 1 DAY, 1102, '李采样', NOW() - INTERVAL 1 DAY);
 
 SET FOREIGN_KEY_CHECKS = 1;
 

@@ -1,5 +1,6 @@
 package com.yx.lab.modules.detection.controller;
 
+import com.yx.lab.common.constant.LabWorkflowConstants;
 import com.yx.lab.common.model.ApiResponse;
 import com.yx.lab.common.model.PageResult;
 import com.yx.lab.common.security.PermissionConstants;
@@ -83,6 +84,7 @@ public class DetectionConfigController {
                 detectionConfigService.typePage(query).getRecords(),
                 java.util.Arrays.asList(
                         ExcelExportUtil.column("套餐名称", DetectionType::getTypeName),
+                        ExcelExportUtil.column("绑定样品类型", item -> LabWorkflowConstants.getSampleTypeLabel(item.getSampleType())),
                         ExcelExportUtil.column("组内参数", DetectionType::getParameterNames),
                         ExcelExportUtil.column("参数检测方法", DetectionType::getParameterMethodNames),
                         ExcelExportUtil.column("状态", item -> item.getEnabled() != null && item.getEnabled() == 1 ? "启用" : "停用"),

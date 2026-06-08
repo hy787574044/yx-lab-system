@@ -49,6 +49,9 @@ public class ReportPreviewVO {
     @Schema(description = "样品类型中文")
     private String sampleTypeLabel;
 
+    @Schema(description = "样品来源")
+    private String sampleSourceMethodLabel;
+
     @Schema(description = "采样时间")
     private String samplingTime;
 

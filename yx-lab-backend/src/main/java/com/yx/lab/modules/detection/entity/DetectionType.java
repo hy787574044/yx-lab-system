@@ -35,6 +35,10 @@ public class DetectionType extends BaseEntity {
     @TableField("detector_name")
     private String detectorName;
 
+    @Schema(description = "绑定样品类型")
+    @TableField("sample_type")
+    private String sampleType;
+
     @Schema(description = "参数ID集合文本")
     @TableField("parameter_ids")
     private String parameterIds;

@@ -254,6 +254,7 @@ CREATE TABLE lab_sample (
     point_id BIGINT NOT NULL,
     point_name VARCHAR(128) NOT NULL,
     sample_type VARCHAR(32),
+    sample_source_method VARCHAR(32) DEFAULT 'SAMPLING',
     detection_items VARCHAR(1000),
     detection_type_id BIGINT,
     detection_type_name VARCHAR(128),
@@ -298,6 +299,7 @@ CREATE TABLE lab_detection_type (
     group_name VARCHAR(64),
     detector_id BIGINT,
     detector_name VARCHAR(64),
+    sample_type VARCHAR(32),
     parameter_ids VARCHAR(1000),
     parameter_names VARCHAR(1000),
     parameter_method_bindings TEXT,
@@ -598,19 +600,19 @@ CREATE TABLE lab_document_share (
 );
 
 INSERT INTO lab_role (id, role_code, role_name, role_scope, status, remark, deleted, created_name, updated_name)
-VALUES (901, 'ADMIN', '绯荤粺绠＄悊鍛?, '鍏ㄧ郴缁?, 1, '璐熻矗绯荤粺閰嶇疆銆佽处鍙风淮鎶や笌鍩虹璧勬枡绠＄悊', 0, 'system', 'system');
+VALUES (901, 'ADMIN', '系统管理员', '全系统', 1, '系统全部权限', 0, 'system', 'system');
 
 INSERT INTO lab_role (id, role_code, role_name, role_scope, status, remark, deleted, created_name, updated_name)
-VALUES (902, 'SAMPLER', '閲囨牱鍛?, '閲囨牱闂幆', 1, '璐熻矗閲囨牱浠诲姟鎵ц銆佹牱鍝佺櫥褰曚笌鐜板満濉姤', 0, 'system', 'system');
+VALUES (902, 'DIRECTOR', '主任', '全系统', 1, '主任拥有与系统管理员一致的全系统权限', 0, 'system', 'system');
 
 INSERT INTO lab_role (id, role_code, role_name, role_scope, status, remark, deleted, created_name, updated_name)
-VALUES (903, 'DETECTOR', '妫€娴嬪憳', '妫€娴嬮棴鐜?, 1, '璐熻矗妫€娴嬪垎鏋愩€佺粨鏋滃綍鍏ヤ笌閲嶆鎻愪氦', 0, 'system', 'system');
+VALUES (903, 'STAFF', '员工', '业务执行', 1, '员工拥有采样员与检测员组合权限', 0, 'system', 'system');
 
 INSERT INTO lab_role (id, role_code, role_name, role_scope, status, remark, deleted, created_name, updated_name)
-VALUES (904, 'REVIEWER', '瀹℃牳鍛?, '瀹℃牳闂幆', 1, '璐熻矗瀹℃牳閫氳繃銆侀┏鍥炰笌閲嶆闂ㄧ鎺у埗', 0, 'system', 'system');
+VALUES (904, 'REVIEWER_OLD', '审核员（停用）', '审核闭环', 0, '已迁移至主任角色', 1, 'system', 'system');
 
 INSERT INTO lab_role (id, role_code, role_name, role_scope, status, remark, deleted, created_name, updated_name)
-VALUES (905, 'REPORTER', '鎶ュ憡鍛?, '鎶ュ憡闂幆', 1, '璐熻矗姝ｅ紡鎶ュ憡鐢熸垚銆佸彂甯冧笌鎺ㄩ€?, 0, 'system', 'system');
+VALUES (905, 'REPORTER_OLD', '报告员（停用）', '报告闭环', 0, '已迁移至主任角色', 1, 'system', 'system');
 
 INSERT INTO lab_org (id, org_code, org_name, parent_id, parent_name, org_type, status, remark, deleted, created_name, updated_name)
 VALUES (801, 'YX-LAB', '闃虫柊瀹為獙瀹?, NULL, NULL, '涓績瀹為獙瀹?, 1, '绯荤粺榛樿椤剁骇鏈烘瀯', 0, 'system', 'system');
@@ -656,32 +658,32 @@ INSERT INTO lab_flow_config (id, flow_name, flow_type, scope_name, default_flag,
 VALUES (9602, '鎶ュ憡鍙戝竷瀹℃壒', 'PUBLISH', '鍏ㄩ儴鎶ュ憡', 1, 1, '鎶ュ憡鐢熸垚鍚庡厛澶嶆牳锛屽啀纭鍙戝竷銆?, 0, 'system', 'system');
 
 INSERT INTO lab_flow_node (id, flow_id, node_order, node_name, role_name, role_code, assignee_id, assignee_name, required_flag, reject_mode, deleted, created_name, updated_name)
-VALUES (9611, 9601, 1, '鍒濆', '瀹℃牳鍛?, 'REVIEWER', NULL, NULL, 1, 'DETECTION', 0, 'system', 'system');
+VALUES (9611, 9601, 1, '初审', '主任', 'DIRECTOR', NULL, NULL, 1, 'DETECTION', 0, 'system', 'system');
 
 INSERT INTO lab_flow_node (id, flow_id, node_order, node_name, role_name, role_code, assignee_id, assignee_name, required_flag, reject_mode, deleted, created_name, updated_name)
-VALUES (9612, 9601, 2, '澶嶅', '瀹℃牳鍛?, 'REVIEWER', NULL, NULL, 1, 'PREVIOUS', 0, 'system', 'system');
+VALUES (9612, 9601, 2, '复审', '主任', 'DIRECTOR', NULL, NULL, 1, 'PREVIOUS', 0, 'system', 'system');
 
 INSERT INTO lab_flow_node (id, flow_id, node_order, node_name, role_name, role_code, assignee_id, assignee_name, required_flag, reject_mode, deleted, created_name, updated_name)
-VALUES (9613, 9601, 3, '缁堝', '瀹℃牳鍛?, 'REVIEWER', NULL, NULL, 1, 'PREVIOUS', 0, 'system', 'system');
+VALUES (9613, 9601, 3, '终审', '主任', 'DIRECTOR', NULL, NULL, 1, 'PREVIOUS', 0, 'system', 'system');
 
 INSERT INTO lab_flow_node (id, flow_id, node_order, node_name, role_name, role_code, assignee_id, assignee_name, required_flag, reject_mode, deleted, created_name, updated_name)
-VALUES (9621, 9602, 1, '鎶ュ憡澶嶆牳', '鎶ュ憡鍛?, 'REPORTER', NULL, NULL, 1, 'PREVIOUS', 0, 'system', 'system');
+VALUES (9621, 9602, 1, '报告复核', '主任', 'DIRECTOR', NULL, NULL, 1, 'PREVIOUS', 0, 'system', 'system');
 
 INSERT INTO lab_flow_node (id, flow_id, node_order, node_name, role_name, role_code, assignee_id, assignee_name, required_flag, reject_mode, deleted, created_name, updated_name)
-VALUES (9622, 9602, 2, '鍙戝竷纭', '鎶ュ憡鍛?, 'REPORTER', NULL, NULL, 1, 'TERMINATE', 0, 'system', 'system');
+VALUES (9622, 9602, 2, '发布确认', '主任', 'DIRECTOR', NULL, NULL, 1, 'TERMINATE', 0, 'system', 'system');
 
 INSERT INTO lab_user (id, username, password, real_name, role_code, phone, status, deleted, created_name, updated_name)
-VALUES (1001, 'admin', 'e86f78a8a3caf0b60d8e74e5942aa6d86dc150cd3c03338aef25b7d2d7e3acc7', '绯荤粺绠＄悊鍛?, 'ADMIN', '13800000000', 1, 0, 'system', 'system');
+VALUES (1001, 'admin', 'e86f78a8a3caf0b60d8e74e5942aa6d86dc150cd3c03338aef25b7d2d7e3acc7', '系统管理员', 'ADMIN', '13800000000', 1, 0, 'system', 'system');
 
 INSERT INTO lab_user (id, username, password, real_name, role_code, phone, status, deleted, created_name, updated_name)
-VALUES (1002, 'sampler', 'e86f78a8a3caf0b60d8e74e5942aa6d86dc150cd3c03338aef25b7d2d7e3acc7', '閲囨牱鍛?, 'SAMPLER', '13800000001', 1, 0, 'system', 'system');
+VALUES (1002, 'staff', 'e86f78a8a3caf0b60d8e74e5942aa6d86dc150cd3c03338aef25b7d2d7e3acc7', '员工', 'STAFF', '13800000001', 1, 0, 'system', 'system');
 
 INSERT INTO lab_user (id, username, password, real_name, role_code, phone, status, deleted, created_name, updated_name)
-VALUES (1003, 'reviewer', 'e86f78a8a3caf0b60d8e74e5942aa6d86dc150cd3c03338aef25b7d2d7e3acc7', '瀹℃牳鍛?, 'REVIEWER', '13800000002', 1, 0, 'system', 'system');
+VALUES (1003, 'director', 'e86f78a8a3caf0b60d8e74e5942aa6d86dc150cd3c03338aef25b7d2d7e3acc7', '主任', 'DIRECTOR', '13800000002', 1, 0, 'system', 'system');
 
-UPDATE lab_user SET real_name = '绯荤粺绠＄悊鍛?, org_id = 801, org_name = '闃虫柊瀹為獙瀹? WHERE id = 1001;
-UPDATE lab_user SET real_name = '閲囨牱鍛?, org_id = 802, org_name = '閲囨牱缁? WHERE id = 1002;
-UPDATE lab_user SET real_name = '瀹℃牳鍛?, org_id = 803, org_name = '妫€娴嬪鏍哥粍' WHERE id = 1003;
+UPDATE lab_user SET real_name = '系统管理员', org_id = 801, org_name = '阳新实验室' WHERE id = 1001;
+UPDATE lab_user SET real_name = '员工', org_id = 802, org_name = '采样组' WHERE id = 1002;
+UPDATE lab_user SET real_name = '主任', org_id = 803, org_name = '检测审核组' WHERE id = 1003;
 
 INSERT INTO lab_monitoring_point (id, point_name, longitude, latitude, region_name, service_population, frequency_type, owner_id, owner_name, contact_phone, point_type, point_status, created_name, updated_name)
 VALUES (2001, '鍩庝笢姘村巶鍑哄巶姘?, '115.2121', '30.2211', '闃虫柊鍘垮煄涓滅墖鍖?, 36000, 'DAILY', 1002, '閲囨牱鍛?, '13800000001', 'FACTORY', 'ENABLED', 'system', 'system');

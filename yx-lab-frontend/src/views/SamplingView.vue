@@ -106,6 +106,17 @@
                     />
                   </el-select>
                 </label>
+                <label class="toolbar-field">
+                  <span>样品来源</span>
+                  <el-select v-model="sampleQuery.sampleSourceMethod" clearable placeholder="请选择样品来源">
+                    <el-option
+                      v-for="option in sampleSourceMethodOptions"
+                      :key="option.value"
+                      :label="option.label"
+                      :value="option.value"
+                    />
+                  </el-select>
+                </label>
               </template>
             </div>
           </div>
@@ -236,6 +247,11 @@
           <el-table-column label="样品类型" width="120" header-cell-class-name="cell-center" class-name="cell-center">
             <template #default="{ row }">
               {{ getEnumLabel(sampleTypeLabelMap, row.sampleType) }}
+            </template>
+          </el-table-column>
+          <el-table-column label="样品来源" width="120" header-cell-class-name="cell-center" class-name="cell-center">
+            <template #default="{ row }">
+              <span>{{ getEnumLabel(sampleSourceMethodLabelMap, row.sampleSourceMethod) }}</span>
             </template>
           </el-table-column>
           <el-table-column label="样品状态" width="120" header-cell-class-name="cell-center" class-name="cell-center">
@@ -784,6 +800,28 @@
               readonly
             />
           </el-form-item>
+          <el-form-item label="样品来源" :required="!isLoginReadonly">
+            <div class="sample-source-field">
+              <el-input
+                v-if="isLoginReadonly"
+                :model-value="getEnumLabel(sampleSourceMethodLabelMap, loginForm.sampleSourceMethod)"
+                readonly
+              />
+              <el-select
+                v-else
+                v-model="loginForm.sampleSourceMethod"
+                placeholder="请选择样品来源"
+                style="width: 100%"
+              >
+                <el-option
+                  v-for="option in sampleSourceMethodOptions"
+                  :key="option.value"
+                  :label="option.label"
+                  :value="option.value"
+                />
+              </el-select>
+            </div>
+          </el-form-item>
           <el-form-item label="采样人员" :required="!isLoginReadonly">
             <el-input v-model="loginForm.samplerName" readonly />
           </el-form-item>
@@ -802,9 +840,9 @@
               @change="handleLoginDetectionTypeChange"
             >
               <el-option
-                v-for="item in detectionProjectOptions"
+                v-for="item in loginDetectionProjectOptions"
                 :key="item.id"
-                :label="item.typeName"
+                :label="formatLoginDetectionTypeLabel(item)"
                 :value="item.id"
               />
             </el-select>
@@ -1117,7 +1155,10 @@ import {
   retestSampleStatus,
   reviewingSampleStatus,
   routineSamplingType,
+  samplingSampleSourceMethod,
   sampleRegisterStatusLabelMap,
+  sampleSourceMethodLabelMap,
+  sampleSourceMethodOptions,
   sampleStatusLabelMap,
   sampleTypeOptions,
   sampleTypeLabelMap,
@@ -1146,6 +1187,7 @@ const sampleQuery = reactive({
   keyword: '',
   sampleStatus: '',
   sampleType: '',
+  sampleSourceMethod: '',
   pageNum: 1,
   pageSize: DEFAULT_PAGE_SIZE
 })
@@ -1200,6 +1242,7 @@ const loginForm = reactive({
   pointId: null,
   pointName: '',
   sampleType: '',
+  sampleSourceMethod: samplingSampleSourceMethod,
   detectionItems: '',
   detectionTypeId: null,
   detectionTypeName: '',
@@ -1228,6 +1271,23 @@ const loginConfigPanelNote = computed(() => (
     ? '当前仅展示该样品登记时保存的检测参数与检测方法明细，不可在此窗口中修改。'
     : '检测套餐在样品登录时选择，保存后后续检测分析沿用这份参数与方法明细。'
 ))
+
+const loginDetectionProjectOptions = computed(() => {
+  const sampleType = String(loginForm.sampleType || '').trim()
+  if (!sampleType) {
+    return detectionProjectOptions.value
+  }
+  return detectionProjectOptions.value
+    .filter((item) => !item.sampleType || String(item.sampleType) === sampleType)
+    .sort((left, right) => {
+      const leftExact = String(left.sampleType || '') === sampleType ? 1 : 0
+      const rightExact = String(right.sampleType || '') === sampleType ? 1 : 0
+      if (leftExact !== rightExact) {
+        return rightExact - leftExact
+      }
+      return String(left.typeName || '').localeCompare(String(right.typeName || ''), 'zh-CN')
+    })
+})
 
 const planForm = reactive({
   planName: '',
@@ -2040,6 +2100,7 @@ function resetCurrentSceneQuery() {
   sampleQuery.keyword = ''
   sampleQuery.sampleStatus = ''
   sampleQuery.sampleType = ''
+  sampleQuery.sampleSourceMethod = ''
   sampleQuery.pageNum = 1
   activeStatKey.value = 'samples:all'
   loadSamples()
@@ -2071,7 +2132,7 @@ async function loadSamplers() {
     const result = await fetchSystemUsersApi({
       pageNum: 1,
       pageSize: 500,
-      roleCode: 'SAMPLER',
+      roleCode: 'STAFF',
       status: 1
     })
     const records = Array.isArray(result.records) ? result.records : []
@@ -2587,6 +2648,31 @@ function getDetectionTypeById(typeId) {
   return detectionProjectOptions.value.find((item) => String(item.id) === String(typeId || '')) || null
 }
 
+function formatLoginDetectionTypeLabel(item) {
+  if (!item) {
+    return '-'
+  }
+  const sampleTypeLabel = item.sampleType ? getEnumLabel(sampleTypeLabelMap, item.sampleType) : '未绑定样品类型'
+  return `${item.typeName || '-'} / ${sampleTypeLabel}`
+}
+
+function autoSelectLoginDetectionType() {
+  if (isLoginReadonly.value) {
+    return
+  }
+  const options = loginDetectionProjectOptions.value
+  if (!options.length) {
+    loginForm.detectionTypeId = null
+    loginForm.detectionTypeName = ''
+    loginForm.detectionItems = ''
+    loginForm.detectionConfigItems = []
+    return
+  }
+  const current = options.find((item) => String(item.id) === String(loginForm.detectionTypeId || ''))
+  const selected = current || options[0]
+  handleLoginDetectionTypeChange(selected.id)
+}
+
 function buildLoginDetectionConfigItems(detectionType) {
   if (!detectionType) {
     return []
@@ -3017,6 +3103,7 @@ function applyTaskToLoginForm(task) {
   loginForm.pointId = task.pointId || null
   loginForm.pointName = task.pointName || ''
   loginForm.sampleType = task.sampleType || ''
+  loginForm.sampleSourceMethod = samplingSampleSourceMethod
   loginForm.detectionItems = ''
   loginForm.detectionTypeId = null
   loginForm.detectionTypeName = ''
@@ -3027,6 +3114,7 @@ function applyTaskToLoginForm(task) {
   loginForm.weather = ''
   loginForm.storageCondition = ''
   loginForm.remark = task.remark || ''
+  autoSelectLoginDetectionType()
 }
 
 function resetLoginForm() {
@@ -3037,6 +3125,7 @@ function resetLoginForm() {
   loginForm.pointId = null
   loginForm.pointName = ''
   loginForm.sampleType = ''
+  loginForm.sampleSourceMethod = samplingSampleSourceMethod
   loginForm.detectionItems = ''
   loginForm.detectionTypeId = null
   loginForm.detectionTypeName = ''
@@ -3086,6 +3175,7 @@ function applySampleToLoginForm(sample) {
   loginForm.pointId = sample.pointId || null
   loginForm.pointName = sample.pointName || ''
   loginForm.sampleType = sample.sampleType || ''
+  loginForm.sampleSourceMethod = sample.sampleSourceMethod || samplingSampleSourceMethod
   loginForm.detectionItems = parseDetectionItemsText(sample.detectionItems)
   loginForm.detectionTypeId = sample.detectionTypeId || null
   loginForm.detectionTypeName = sample.detectionTypeName || sample.detectionItems || ''
@@ -3137,7 +3227,7 @@ async function submitSampleLogin() {
     ElMessage.warning('没有可登录的任务，请先进行采样任务完成录入')
     return
   }
-  if (!loginForm.pointId || !loginForm.pointName || !loginForm.sampleType || !loginForm.detectionTypeId || !loginForm.detectionItems || !loginForm.samplingTime) {
+  if (!loginForm.pointId || !loginForm.pointName || !loginForm.sampleType || !loginForm.sampleSourceMethod || !loginForm.detectionTypeId || !loginForm.detectionItems || !loginForm.samplingTime) {
     ElMessage.warning('请完整填写样品登录信息')
     return
   }
@@ -3509,6 +3599,19 @@ watch(() => route.fullPath, () => {
   color: var(--text-light);
   font-size: 12px;
   line-height: 1.6;
+}
+
+.sample-source-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.sample-source-field :deep(.el-input),
+.sample-source-field :deep(.el-select) {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .binding-editor__chip {

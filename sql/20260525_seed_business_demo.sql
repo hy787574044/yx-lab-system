@@ -260,12 +260,12 @@ INSERT INTO lab_login_log (
     remark, deleted, created_by, created_name, created_time, updated_by, updated_name, updated_time
 )
 VALUES
-(870001, 1101, 'sampler01', '陈采样', 'SAMPLER', 'PC', 'SUCCESS', NOW() - INTERVAL 5 DAY, '采样员登录成功。', 0, 1101, '陈采样', NOW() - INTERVAL 5 DAY, 1101, '陈采样', NOW() - INTERVAL 5 DAY),
-(870002, 1201, 'detector01', '王检测', 'DETECTOR', 'MOBILE', 'SUCCESS', NOW() - INTERVAL 4 DAY, '移动端登录成功。', 0, 1201, '王检测', NOW() - INTERVAL 4 DAY, 1201, '王检测', NOW() - INTERVAL 4 DAY),
-(870003, 1301, 'reviewer01', '刘审核', 'REVIEWER', 'PC', 'SUCCESS', NOW() - INTERVAL 3 DAY, '审核员登录成功。', 0, 1301, '刘审核', NOW() - INTERVAL 3 DAY, 1301, '刘审核', NOW() - INTERVAL 3 DAY),
-(870004, 1401, 'reporter01', '孙报告', 'REPORTER', 'PC', 'SUCCESS', NOW() - INTERVAL 2 DAY, '报告员登录成功。', 0, 1401, '孙报告', NOW() - INTERVAL 2 DAY, 1401, '孙报告', NOW() - INTERVAL 2 DAY),
-(870005, 1102, 'sampler02', '李采样', 'SAMPLER', 'PC', 'FAILED', NOW() - INTERVAL 1 DAY, '验证码错误。', 0, 1102, '李采样', NOW() - INTERVAL 1 DAY, 1102, '李采样', NOW() - INTERVAL 1 DAY),
-(870006, 1202, 'detector02', '赵检测', 'DETECTOR', 'MOBILE', 'SUCCESS', NOW(), '移动端登录成功。', 0, 1202, '赵检测', NOW(), 1202, '赵检测', NOW());
+(870001, 1101, 'sampler01', '陈采样', 'STAFF', 'PC', 'SUCCESS', NOW() - INTERVAL 5 DAY, '员工登录成功。', 0, 1101, '陈采样', NOW() - INTERVAL 5 DAY, 1101, '陈采样', NOW() - INTERVAL 5 DAY),
+(870002, 1201, 'detector01', '王检测', 'STAFF', 'MOBILE', 'SUCCESS', NOW() - INTERVAL 4 DAY, '移动端登录成功。', 0, 1201, '王检测', NOW() - INTERVAL 4 DAY, 1201, '王检测', NOW() - INTERVAL 4 DAY),
+(870003, 1301, 'reviewer01', '刘审核', 'DIRECTOR', 'PC', 'SUCCESS', NOW() - INTERVAL 3 DAY, '主任登录成功。', 0, 1301, '刘审核', NOW() - INTERVAL 3 DAY, 1301, '刘审核', NOW() - INTERVAL 3 DAY),
+(870004, 1401, 'reporter01', '孙报告', 'DIRECTOR', 'PC', 'SUCCESS', NOW() - INTERVAL 2 DAY, '主任登录成功。', 0, 1401, '孙报告', NOW() - INTERVAL 2 DAY, 1401, '孙报告', NOW() - INTERVAL 2 DAY),
+(870005, 1102, 'sampler02', '李采样', 'STAFF', 'PC', 'FAILED', NOW() - INTERVAL 1 DAY, '验证码错误。', 0, 1102, '李采样', NOW() - INTERVAL 1 DAY, 1102, '李采样', NOW() - INTERVAL 1 DAY),
+(870006, 1202, 'detector02', '赵检测', 'STAFF', 'MOBILE', 'SUCCESS', NOW(), '移动端登录成功。', 0, 1202, '赵检测', NOW(), 1202, '赵检测', NOW());
 
 SET FOREIGN_KEY_CHECKS = 1;
 

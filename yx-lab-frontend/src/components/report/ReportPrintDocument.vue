@@ -33,6 +33,10 @@
                   <td colspan="3">{{ text(previewData.sampleTypeLabel) }}</td>
                 </tr>
                 <tr>
+                  <th>样品来源</th>
+                  <td colspan="5">{{ text(previewData.sampleSourceMethodLabel) }}</td>
+                </tr>
+                <tr>
                   <th>采样点位</th>
                   <td>{{ text(previewData.pointName) }}</td>
                   <th>采样时间</th>

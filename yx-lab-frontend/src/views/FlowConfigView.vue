@@ -367,13 +367,13 @@ function createNode(
 function getDefaultNodes(flowType) {
   if (flowType === FLOW_TYPE_PUBLISH) {
     return [
-      createNode('报告复核', '报告员', '', true, 'PREVIOUS', 'REPORTER'),
-      createNode('发布确认', '报告员', '', true, 'TERMINATE', 'REPORTER')
+      createNode('报告复核', '主任', '', true, 'PREVIOUS', 'DIRECTOR'),
+      createNode('发布确认', '主任', '', true, 'TERMINATE', 'DIRECTOR')
     ]
   }
   return [
-    createNode('初审', '审核员', '', true, 'DETECTION', 'REVIEWER'),
-    createNode('复审', '审核员', '', true, 'PREVIOUS', 'REVIEWER')
+    createNode('初审', '主任', '', true, 'DETECTION', 'DIRECTOR'),
+    createNode('复审', '主任', '', true, 'PREVIOUS', 'DIRECTOR')
   ]
 }
 
