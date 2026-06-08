@@ -1,3 +1,5 @@
+import { setEmbeddedMode } from './embedMode'
+
 const TOKEN_KEY = 'yx-lab-token'
 const USER_KEY = 'yx-lab-user'
 
@@ -12,6 +14,7 @@ export function setToken(token) {
 export function clearToken() {
   localStorage.removeItem(TOKEN_KEY)
   localStorage.removeItem(USER_KEY)
+  setEmbeddedMode(false)
   window.dispatchEvent(new CustomEvent('yx-lab-user-updated', { detail: {} }))
 }
 

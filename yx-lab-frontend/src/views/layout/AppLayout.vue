@@ -1,6 +1,6 @@
 <template>
-  <div class="layout-root">
-    <header class="layout-topbar">
+  <div :class="['layout-root', { 'is-embedded': embeddedMode }]">
+    <header v-if="!embeddedMode" class="layout-topbar">
       <div class="topbar-left">
         <button type="button" class="brand-panel" @click="goRoute('/dashboard')">
           <div class="brand-mark">YX</div>
@@ -82,7 +82,7 @@
     </header>
 
     <div class="layout-main">
-      <aside class="sidebar">
+      <aside v-if="!embeddedMode" class="sidebar">
         <div class="sidebar-body">
           <el-menu
             ref="menuRef"
@@ -205,10 +205,11 @@ import {
   SetUp,
   Tickets
 } from '@element-plus/icons-vue'
-import { changeMyPasswordApi, logoutApi, updateMyProfileApi, uploadStorageFileApi } from '../../api/lab'
-import { clearToken, getUser, setUser } from '../../utils/auth'
+import { changeMyPasswordApi, getMeApi, logoutApi, updateMyProfileApi, uploadStorageFileApi } from '../../api/lab'
+import { clearToken, getToken, getUser, setUser } from '../../utils/auth'
 import { labMenuGroups } from '../../router/menuConfig'
 import { getMenuPermissionCode } from '../../utils/menuPermission'
+import { isEmbeddedMode } from '../../utils/embedMode'
 
 const THEME_STORAGE_KEY = 'yx-lab-theme'
 
@@ -240,6 +241,7 @@ const menuRef = ref()
 const isFullscreen = ref(Boolean(document.fullscreenElement))
 const currentThemeId = ref(themeOptions[0].id)
 const user = ref(getUser() || {})
+const embeddedMode = ref(isEmbeddedMode())
 const profileDialogVisible = ref(false)
 const passwordDialogVisible = ref(false)
 const savingProfile = ref(false)
@@ -461,6 +463,21 @@ async function loadUserAvatar() {
   userAvatarSrc.value = String(user.value.avatarUrl || '').trim()
 }
 
+async function loadCurrentUserIfMissing() {
+  const permissions = Array.isArray(user.value.permissionCodes) ? user.value.permissionCodes : []
+  if (!getToken() || permissions.length > 0) {
+    return
+  }
+  try {
+    const currentUser = await getMeApi()
+    setUser(currentUser)
+    user.value = currentUser || {}
+    loadUserAvatar()
+  } catch {
+    // 接口拦截器会处理失效 token，这里只避免布局初始化中断。
+  }
+}
+
 async function submitPasswordForm() {
   await passwordFormRef.value.validate()
   savingPassword.value = true
@@ -491,6 +508,10 @@ function syncUserFromStorage(event) {
   loadUserAvatar()
 }
 
+function syncEmbeddedMode(event) {
+  embeddedMode.value = typeof event?.detail === 'boolean' ? event.detail : isEmbeddedMode()
+}
+
 watch(
   () => currentPrimaryMenu.value?.id,
   async (menuId) => {
@@ -507,12 +528,15 @@ onMounted(() => {
   document.addEventListener('fullscreenchange', syncFullscreenState)
   initTheme()
   window.addEventListener('yx-lab-user-updated', syncUserFromStorage)
+  window.addEventListener('yx-lab-embedded-mode-updated', syncEmbeddedMode)
   loadUserAvatar()
+  loadCurrentUserIfMissing()
 })
 
 onBeforeUnmount(() => {
   document.removeEventListener('fullscreenchange', syncFullscreenState)
   window.removeEventListener('yx-lab-user-updated', syncUserFromStorage)
+  window.removeEventListener('yx-lab-embedded-mode-updated', syncEmbeddedMode)
   clearAvatarPreview()
   clearUserAvatarSrc()
 })
@@ -525,6 +549,10 @@ onBeforeUnmount(() => {
   padding-top: var(--layout-topbar-height);
   background: var(--bg-page);
   overflow: hidden;
+}
+
+.layout-root.is-embedded {
+  padding-top: 0;
 }
 
 .layout-topbar {
@@ -782,6 +810,11 @@ onBeforeUnmount(() => {
   overflow: hidden;
 }
 
+.layout-root.is-embedded .layout-main {
+  height: 100vh;
+  min-height: 100vh;
+}
+
 .sidebar {
   position: fixed;
   top: var(--layout-topbar-height);
@@ -818,12 +851,22 @@ onBeforeUnmount(() => {
   padding: 10px 14px 14px;
 }
 
+.layout-root.is-embedded .workspace {
+  height: 100vh;
+  margin-left: 0;
+  padding: 0;
+}
+
 .view-body {
   flex: 1;
   min-height: 0;
   min-width: 0;
   overflow: auto;
   padding-top: 0;
+}
+
+.layout-root.is-embedded .view-body {
+  padding: 0;
 }
 
 :deep(.skin-popover) {

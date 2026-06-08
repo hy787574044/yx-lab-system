@@ -1,8 +1,9 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { getToken } from '../utils/auth'
+import { getToken, getUser, setToken } from '../utils/auth'
 import { labMenuGroups, legacyRedirects } from './menuConfig'
 import { hasPermission } from '../utils/permission'
 import { getMenuPermissionCode } from '../utils/menuPermission'
+import { setEmbeddedMode } from '../utils/embedMode'
 
 const componentMap = {
   DashboardView: () => import('../views/DashboardView.vue'),
@@ -73,10 +74,31 @@ const router = createRouter({
   routes
 })
 
+function resolveQueryValue(value) {
+  if (Array.isArray(value)) {
+    return value[0] || ''
+  }
+  return value || ''
+}
+
 router.beforeEach((to, from, next) => {
   document.title = to.meta?.title
     ? `${to.meta.title} - 阳新化验室水质管理平台`
     : '阳新化验室水质管理平台'
+
+  const queryToken = String(resolveQueryValue(to.query?.token) || '').trim()
+  if (queryToken) {
+    setToken(queryToken)
+    setEmbeddedMode(true)
+    const { token, ...queryWithoutToken } = to.query
+    next({
+      path: to.path === '/login' ? '/dashboard' : to.path,
+      query: queryWithoutToken,
+      hash: to.hash,
+      replace: true
+    })
+    return
+  }
 
   if (to.path === '/login') {
     next()
@@ -88,7 +110,9 @@ router.beforeEach((to, from, next) => {
     return
   }
 
-  if (to.meta?.permissionCode && !hasPermission(to.meta.permissionCode)) {
+  const user = getUser()
+  const hasLocalPermissions = Array.isArray(user.permissionCodes) && user.permissionCodes.length > 0
+  if (to.meta?.permissionCode && hasLocalPermissions && !hasPermission(to.meta.permissionCode)) {
     const firstAllowedPath = labMenuGroups
       .flatMap((group) => group.children)
       .map((item) => item.path)
