@@ -236,7 +236,8 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { ElButton } from 'element-plus/es/components/button/index.mjs'
 import { ElDialog } from 'element-plus/es/components/dialog/index.mjs'
 import { ElForm, ElFormItem } from 'element-plus/es/components/form/index.mjs'
@@ -266,6 +267,7 @@ import {
 
 const WAIT_ASSIGN_STATUS = waitAssignDetectionStatus
 const WAIT_DETECT_STATUS = waitDetectDetectionStatus
+const route = useRoute()
 
 const query = reactive({
   keyword: '',
@@ -603,8 +605,36 @@ async function handleExport() {
   }
 }
 
+function syncRouteQuery() {
+  const itemStatus = typeof route.query.itemStatus === 'string' ? route.query.itemStatus : ''
+  if (itemStatus) {
+    query.itemStatus = itemStatus
+    query.pageNum = 1
+  }
+}
+
+function handleRouteAutoOpen() {
+  if (route.query.autoOpen !== '1') {
+    return
+  }
+  const row = records.value.find(isResultEditable)
+  if (!row) {
+    ElMessage.warning('当前没有可录入检测结果的数据')
+    return
+  }
+  openResultDialog(row)
+}
+
 onMounted(async () => {
+  syncRouteQuery()
   await loadData()
+  handleRouteAutoOpen()
+})
+
+watch(() => route.fullPath, async () => {
+  syncRouteQuery()
+  await loadData()
+  handleRouteAutoOpen()
 })
 </script>
 

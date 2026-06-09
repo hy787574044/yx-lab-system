@@ -70,9 +70,10 @@ public class DashboardService {
         LeaderDashboardVO vo = new LeaderDashboardVO();
         vo.setTopMetrics(buildTopMetrics(todayStart, monthStart, yearStart));
         vo.setProcessNodes(buildProcessNodes());
-        vo.setPassRateTrend(buildPassRateTrend(today));
-        vo.setDetectorWorkloadRanking(buildDetectorWorkloadRanking(monthStart));
-        vo.setWarnings(buildWarnings());
+        vo.setQuickTodos(buildQuickTodos());
+        vo.setPassRateTrend(Collections.emptyList());
+        vo.setDetectorWorkloadRanking(Collections.emptyList());
+        vo.setWarnings(Collections.emptyList());
         return vo;
     }
 
@@ -240,11 +241,11 @@ public class DashboardService {
         if (detectorId == null || statuses == null || statuses.length == 0) {
             return 0L;
         }
-        Long count = detectionItemMapper.selectCount(new LambdaQueryWrapper<DetectionItem>()
+        Number count = detectionItemMapper.selectCount(new LambdaQueryWrapper<DetectionItem>()
                 .eq(DetectionItem::getDetectorId, detectorId)
-                .in(DetectionItem::getItemStatus, statuses)
+                .in(DetectionItem::getItemStatus, Arrays.asList(statuses))
                 .ge(startTime != null, DetectionItem::getUpdatedTime, startTime));
-        return count == null ? 0L : count;
+        return count == null ? 0L : count.longValue();
     }
 
     private long calcAverageMinutes(Long detectorId) {
@@ -356,6 +357,80 @@ public class DashboardService {
                 processNode(5, "生成报告", dashboardQueryService.reportStatusTotal(LabWorkflowConstants.ReportStatus.DRAFT), "待生成正式报告", "/report-ledger"),
                 processNode(6, "报告审查", dashboardQueryService.reportStatusTotal(LabWorkflowConstants.ReportStatus.GENERATED), "待发布审批", "/report-ledger"),
                 processNode(7, "检测完成", dashboardQueryService.reportStatusTotal(LabWorkflowConstants.ReportStatus.PUBLISHED), "已发布闭环", "/report-ledger"));
+    }
+
+    private List<LeaderDashboardVO.QuickTodoVO> buildQuickTodos() {
+        return Arrays.asList(
+                quickTodo("sampling", "采样处理",
+                        dashboardQueryService.samplingTaskStatusTotal(
+                                LabWorkflowConstants.SamplingTaskStatus.PENDING,
+                                LabWorkflowConstants.SamplingTaskStatus.IN_PROGRESS),
+                        "待执行、执行中的采样任务",
+                        "brand",
+                        "/task-assign",
+                        query("taskStatus", LabWorkflowConstants.SamplingTaskStatus.PENDING
+                                + "," + LabWorkflowConstants.SamplingTaskStatus.IN_PROGRESS,
+                                "autoOpen", "1")),
+                quickTodo("sampleLogin", "样品登录",
+                        dashboardQueryService.unregisteredCompletedSamplingTaskTotal(),
+                        "已完成采样但尚未登录的样品",
+                        "success",
+                        "/sample-login",
+                        query("taskStatus", LabWorkflowConstants.SamplingTaskStatus.COMPLETED,
+                                "sampleRegisterStatus", LabWorkflowConstants.SampleRegisterStatus.UNREGISTERED,
+                                "autoOpen", "1")),
+                quickTodo("detection", "检测录入",
+                        dashboardQueryService.detectionStatusTotal(LabWorkflowConstants.DetectionStatus.WAIT_DETECT),
+                        "待录入检测结果的检测流程",
+                        "warning",
+                        "/detection-analysis",
+                        query("itemStatus", LabWorkflowConstants.DetectionStatus.WAIT_DETECT,
+                                "autoOpen", "1")),
+                quickTodo("review", "结果审核",
+                        dashboardQueryService.detectionStatusTotal(LabWorkflowConstants.DetectionStatus.SUBMITTED),
+                        "待审核确认的检测结果",
+                        "danger",
+                        "/review-result",
+                        query("reviewScope", "pending",
+                                "autoOpen", "1")),
+                quickTodo("report", "报告处理",
+                        dashboardQueryService.reportStatusTotal(LabWorkflowConstants.ReportStatus.DRAFT)
+                                + dashboardQueryService.reportStatusTotal(LabWorkflowConstants.ReportStatus.GENERATED),
+                        "待生成或待发布的报告",
+                        "info",
+                        "/report-ledger",
+                        query("reportStatus", LabWorkflowConstants.ReportStatus.DRAFT,
+                                "autoOpen", "1"))
+        );
+    }
+
+    private LeaderDashboardVO.QuickTodoVO quickTodo(String key,
+                                                    String label,
+                                                    Long count,
+                                                    String description,
+                                                    String tone,
+                                                    String path,
+                                                    Map<String, String> query) {
+        LeaderDashboardVO.QuickTodoVO vo = new LeaderDashboardVO.QuickTodoVO();
+        vo.setKey(key);
+        vo.setLabel(label);
+        vo.setCount(count == null ? 0L : count);
+        vo.setDescription(description);
+        vo.setTone(tone);
+        vo.setPath(path);
+        vo.setQuery(query);
+        return vo;
+    }
+
+    private Map<String, String> query(String... entries) {
+        Map<String, String> query = new LinkedHashMap<>();
+        if (entries == null) {
+            return query;
+        }
+        for (int index = 0; index + 1 < entries.length; index += 2) {
+            query.put(entries[index], entries[index + 1]);
+        }
+        return query;
     }
 
     private LeaderDashboardVO.ProcessNodeVO processNode(Integer index,

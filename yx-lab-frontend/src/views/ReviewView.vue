@@ -570,6 +570,9 @@ function syncRouteState() {
   activeStatKey.value = 'all'
   query.reviewResult = ''
   query.pageNum = 1
+  if (route.query.reviewScope === 'pending') {
+    activeStatKey.value = 'pending'
+  }
 }
 
 function getReviewResultByStatKey(key) {
@@ -883,6 +886,18 @@ function normalizeReviewRecord(item) {
   }
 }
 
+async function handleRouteAutoOpen() {
+  if (route.query.autoOpen !== '1') {
+    return
+  }
+  const row = visibleRecords.value.find(isPendingRow)
+  if (!row) {
+    ElMessage.warning('当前没有可审核的检测结果')
+    return
+  }
+  await openReviewDialog(row)
+}
+
 async function handleExport() {
   try {
     await exportReviewsApi({
@@ -898,11 +913,13 @@ async function handleExport() {
 onMounted(async () => {
   syncRouteState()
   await Promise.all([loadData(), loadStats()])
+  await handleRouteAutoOpen()
 })
 
-watch(() => route.fullPath, () => {
+watch(() => route.fullPath, async () => {
   syncRouteState()
-  Promise.all([loadData(), loadStats()])
+  await Promise.all([loadData(), loadStats()])
+  await handleRouteAutoOpen()
 })
 </script>
 

@@ -195,7 +195,8 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { ElButton } from 'element-plus/es/components/button/index.mjs'
 import { ElDialog } from 'element-plus/es/components/dialog/index.mjs'
 import { ElInput } from 'element-plus/es/components/input/index.mjs'
@@ -246,6 +247,7 @@ const total = ref(0)
 const statCounts = ref({})
 const activeStatKey = ref('all')
 const vLoading = ElLoadingDirective
+const route = useRoute()
 
 const previewDialogVisible = ref(false)
 const previewData = ref(null)
@@ -337,6 +339,15 @@ function syncActiveStatByQuery() {
     activeStatKey.value = 'published'
   } else {
     activeStatKey.value = 'all'
+  }
+}
+
+function syncRouteQuery() {
+  const reportStatus = typeof route.query.reportStatus === 'string' ? route.query.reportStatus : ''
+  if (reportStatus) {
+    query.reportStatus = reportStatus
+    query.pageNum = 1
+    syncActiveStatByQuery()
   }
 }
 
@@ -445,9 +456,30 @@ function closePreviewDialog() {
   previewError.value = ''
 }
 
-onMounted(() => {
-  Promise.all([loadReports(), loadReportStats()])
+async function handleRouteAutoOpen() {
+  if (route.query.autoOpen !== '1') {
+    return
+  }
+  const row = visibleReports.value[0]
+  if (!row) {
+    ElMessage.warning('当前没有可处理的报告')
+    return
+  }
+  await previewReport(row)
+}
+
+onMounted(async () => {
+  syncRouteQuery()
+  await Promise.all([loadReports(), loadReportStats()])
+  await handleRouteAutoOpen()
 })
+
+watch(() => route.fullPath, async () => {
+  syncRouteQuery()
+  await Promise.all([loadReports(), loadReportStats()])
+  await handleRouteAutoOpen()
+})
+
 onBeforeUnmount(() => {
   previewData.value = null
 })

@@ -10,12 +10,15 @@ import com.yx.lab.modules.detection.mapper.DetectionRecordMapper;
 import com.yx.lab.modules.report.entity.LabReport;
 import com.yx.lab.modules.report.mapper.LabReportMapper;
 import com.yx.lab.modules.sample.entity.LabSample;
+import com.yx.lab.modules.sample.entity.SamplingTask;
 import com.yx.lab.modules.sample.mapper.LabSampleMapper;
+import com.yx.lab.modules.sample.mapper.SamplingTaskMapper;
 import com.yx.lab.modules.statistics.vo.StatisticsDimensionItemVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -28,6 +31,8 @@ import java.util.stream.Collectors;
 public class DashboardQueryService {
 
     private final LabSampleMapper labSampleMapper;
+
+    private final SamplingTaskMapper samplingTaskMapper;
 
     private final DetectionRecordMapper detectionRecordMapper;
 
@@ -162,6 +167,37 @@ public class DashboardQueryService {
     public long sampleStatusTotal(String sampleStatus) {
         return labSampleMapper.selectCount(new LambdaQueryWrapper<LabSample>()
                 .eq(LabSample::getSampleStatus, sampleStatus));
+    }
+
+    /**
+     * 按采样任务状态统计数量。
+     *
+     * @param taskStatuses 采样任务状态
+     * @return 数量
+     */
+    public long samplingTaskStatusTotal(String... taskStatuses) {
+        LambdaQueryWrapper<SamplingTask> wrapper = new LambdaQueryWrapper<>();
+        if (taskStatuses != null && taskStatuses.length > 0) {
+            wrapper.in(SamplingTask::getTaskStatus, Arrays.asList(taskStatuses));
+        }
+        Number count = samplingTaskMapper.selectCount(wrapper);
+        return count == null ? 0L : count.longValue();
+    }
+
+    /**
+     * 统计已完成采样但尚未样品登录的任务数量。
+     *
+     * @return 数量
+     */
+    public long unregisteredCompletedSamplingTaskTotal() {
+        Number count = samplingTaskMapper.selectCount(new LambdaQueryWrapper<SamplingTask>()
+                .eq(SamplingTask::getTaskStatus, LabWorkflowConstants.SamplingTaskStatus.COMPLETED)
+                .isNull(SamplingTask::getSampleId)
+                .and(wrapper -> wrapper
+                        .isNull(SamplingTask::getSampleRegisterStatus)
+                        .or()
+                        .ne(SamplingTask::getSampleRegisterStatus, LabWorkflowConstants.SampleRegisterStatus.REGISTERED)));
+        return count == null ? 0L : count.longValue();
     }
 
     /**

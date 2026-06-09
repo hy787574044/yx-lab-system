@@ -61,8 +61,9 @@ public class SamplingTaskService {
                         .or()
                         .like(SamplingTask::getPointName, query.getKeyword())
                         .or()
-                        .like(SamplingTask::getSampleNo, query.getKeyword()))
-                .eq(StrUtil.isNotBlank(query.getTaskStatus()), SamplingTask::getTaskStatus, query.getTaskStatus());
+                        .like(SamplingTask::getSampleNo, query.getKeyword()));
+        applyTaskStatusFilter(wrapper, query.getTaskStatus());
+        applySampleRegisterStatusFilter(wrapper, query.getSampleRegisterStatus());
         applyTaskSamplerScope(wrapper, scopedSamplerId);
         wrapper.orderByDesc(SamplingTask::getCreatedTime);
         Page<SamplingTask> page = samplingTaskMapper.selectPage(PageUtils.buildPage(query), wrapper);
@@ -170,6 +171,7 @@ public class SamplingTaskService {
     private List<SamplingTask> loadTodoTasks(SamplingTaskQuery query, boolean ignoreTaskStatus) {
         String keyword = query == null ? null : StrUtil.trim(query.getKeyword());
         String taskStatus = query == null ? null : StrUtil.trim(query.getTaskStatus());
+        String sampleRegisterStatus = query == null ? null : StrUtil.trim(query.getSampleRegisterStatus());
         Long scopedSamplerId = resolveScopedSamplerId(query == null ? null : query.getSamplerId());
         LambdaQueryWrapper<SamplingTask> wrapper = new LambdaQueryWrapper<SamplingTask>()
                 .and(StrUtil.isNotBlank(keyword), item -> item
@@ -178,12 +180,15 @@ public class SamplingTaskService {
                         .like(SamplingTask::getPointName, keyword)
                         .or()
                         .like(SamplingTask::getSampleNo, keyword))
-                .eq(!ignoreTaskStatus && StrUtil.isNotBlank(taskStatus), SamplingTask::getTaskStatus, taskStatus)
                 .in(SamplingTask::getTaskStatus,
                         LabWorkflowConstants.SamplingTaskStatus.PENDING,
                         LabWorkflowConstants.SamplingTaskStatus.IN_PROGRESS,
                         LabWorkflowConstants.SamplingTaskStatus.COMPLETED)
                 .orderByDesc(SamplingTask::getCreatedTime);
+        if (!ignoreTaskStatus) {
+            applyTaskStatusFilter(wrapper, taskStatus);
+        }
+        applySampleRegisterStatusFilter(wrapper, sampleRegisterStatus);
         applyTaskSamplerScope(wrapper, scopedSamplerId);
         List<SamplingTask> candidates = samplingTaskMapper.selectList(wrapper);
         if (candidates.isEmpty()) {
@@ -383,6 +388,40 @@ public class SamplingTaskService {
                 .eq(SamplingTask::getSamplerId, samplerId)
                 .or()
                 .like(SamplingTask::getSamplerIds, wrapSamplerId(samplerId)));
+    }
+
+    private void applyTaskStatusFilter(LambdaQueryWrapper<SamplingTask> wrapper, String taskStatus) {
+        if (wrapper == null || StrUtil.isBlank(taskStatus)) {
+            return;
+        }
+        List<String> statuses = Arrays.stream(taskStatus.split(","))
+                .map(StrUtil::trim)
+                .filter(StrUtil::isNotBlank)
+                .distinct()
+                .collect(Collectors.toList());
+        if (statuses.isEmpty()) {
+            return;
+        }
+        if (statuses.size() == 1) {
+            wrapper.eq(SamplingTask::getTaskStatus, statuses.get(0));
+            return;
+        }
+        wrapper.in(SamplingTask::getTaskStatus, statuses);
+    }
+
+    private void applySampleRegisterStatusFilter(LambdaQueryWrapper<SamplingTask> wrapper, String sampleRegisterStatus) {
+        if (wrapper == null || StrUtil.isBlank(sampleRegisterStatus)) {
+            return;
+        }
+        if (LabWorkflowConstants.SampleRegisterStatus.UNREGISTERED.equals(sampleRegisterStatus)) {
+            wrapper.isNull(SamplingTask::getSampleId)
+                    .and(item -> item
+                            .isNull(SamplingTask::getSampleRegisterStatus)
+                            .or()
+                            .eq(SamplingTask::getSampleRegisterStatus, LabWorkflowConstants.SampleRegisterStatus.UNREGISTERED));
+            return;
+        }
+        wrapper.eq(SamplingTask::getSampleRegisterStatus, sampleRegisterStatus);
     }
 
     private boolean isSamplerAssigned(SamplingTask task, Long samplerId) {

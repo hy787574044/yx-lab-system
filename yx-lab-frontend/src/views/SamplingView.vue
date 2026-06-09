@@ -1179,6 +1179,7 @@ const planQuery = reactive({
 const taskQuery = reactive({
   keyword: '',
   taskStatus: '',
+  sampleRegisterStatus: '',
   samplerId: '',
   pageNum: 1,
   pageSize: DEFAULT_PAGE_SIZE
@@ -1833,15 +1834,21 @@ function syncRouteState() {
   activeStatKey.value = getAllStatKeyForCurrentScene()
   planQuery.planStatus = ''
   taskQuery.taskStatus = ''
+  taskQuery.sampleRegisterStatus = ''
   sampleQuery.sampleStatus = ''
   if (isPlanScene.value) {
     planQuery.pageNum = 1
     return
   }
   if (isTaskScene.value) {
+    taskQuery.taskStatus = typeof route.query.taskStatus === 'string' ? route.query.taskStatus : ''
+    taskQuery.sampleRegisterStatus = typeof route.query.sampleRegisterStatus === 'string' ? route.query.sampleRegisterStatus : ''
     taskQuery.pageNum = 1
+    syncActiveStatByCurrentQuery()
     return
   }
+  taskQuery.taskStatus = typeof route.query.taskStatus === 'string' ? route.query.taskStatus : ''
+  taskQuery.sampleRegisterStatus = typeof route.query.sampleRegisterStatus === 'string' ? route.query.sampleRegisterStatus : ''
   sampleQuery.pageNum = 1
 }
 
@@ -1998,7 +2005,8 @@ async function loadLoggableTasks() {
   const result = await fetchSamplingTasksApi({
     pageNum: 1,
     pageSize: 500,
-    taskStatus: completedTaskStatus
+    taskStatus: completedTaskStatus,
+    sampleRegisterStatus: 'UNREGISTERED'
   })
   const records = Array.isArray(result.records) ? result.records : []
   loggableTasks.value = records.filter((item) => !isTaskRegistered(item))
@@ -2030,6 +2038,24 @@ async function loadCurrentSceneData() {
   }
   await Promise.all([loadSamples(), loadSampleStats(), loadTaskStats()])
   await loadLoggableTasks()
+}
+
+async function handleRouteAutoOpen() {
+  if (route.query.autoOpen !== '1') {
+    return
+  }
+  if (baseScene.value.key === 'task-assign') {
+    const task = firstCompletableTask.value
+    if (!task) {
+      ElMessage.warning('当前没有可进行采样录入的任务')
+      return
+    }
+    await openTaskCompleteDialog(task)
+    return
+  }
+  if (baseScene.value.key === 'sample-login') {
+    await openLoginDialog()
+  }
 }
 
 async function handleExportCurrentScene() {
@@ -2091,6 +2117,7 @@ function resetCurrentSceneQuery() {
   if (isTaskScene.value) {
     taskQuery.keyword = ''
     taskQuery.taskStatus = ''
+    taskQuery.sampleRegisterStatus = ''
     taskQuery.samplerId = ''
     taskQuery.pageNum = 1
     activeStatKey.value = 'tasks:all'
@@ -3273,11 +3300,13 @@ async function submitSampleLogin() {
 onMounted(async () => {
   syncRouteState()
   await Promise.all([loadCurrentSceneData(), loadSamplingDictOptions()])
+  await handleRouteAutoOpen()
 })
 
-watch(() => route.fullPath, () => {
+watch(() => route.fullPath, async () => {
   syncRouteState()
-  loadCurrentSceneData()
+  await loadCurrentSceneData()
+  await handleRouteAutoOpen()
 })
 </script>
 
