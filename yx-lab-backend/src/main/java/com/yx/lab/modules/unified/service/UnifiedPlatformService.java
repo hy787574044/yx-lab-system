@@ -24,6 +24,7 @@ import com.yx.lab.modules.unified.vo.UnifiedTokenVO;
 import com.yx.lab.modules.unified.vo.UnifiedUserInfoVO;
 import com.yx.lab.modules.unified.vo.UnifiedUserListVO;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -34,6 +35,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class UnifiedPlatformService {
 
@@ -303,6 +305,9 @@ public class UnifiedPlatformService {
     private RemoteResponse invokeGet(String path, Map<String, Object> params) {
         validateBaseConfig();
         String url = buildUrl(path);
+        String requestUrl = buildFullUrl(path, params);
+        long startTime = System.currentTimeMillis();
+        log.info("统一平台接口请求开始，method=GET, url={}, timeout={}ms", requestUrl, properties.getTimeout());
         HttpRequest request = HttpRequest.get(url).timeout(properties.getTimeout());
         applyHeaders(request);
         for (Map.Entry<String, Object> entry : params.entrySet()) {
@@ -312,6 +317,15 @@ public class UnifiedPlatformService {
         }
         try (HttpResponse response = request.execute()) {
             String body = response.body();
+            long elapsed = System.currentTimeMillis() - startTime;
+            log.info("统一平台接口响应，url="
+                    + requestUrl
+                    + ", status="
+                    + response.getStatus()
+                    + ", elapsed="
+                    + elapsed
+                    + "ms, body="
+                    + body);
             if (response.getStatus() >= 400) {
                 throw new BusinessException("统一平台接口请求失败，HTTP状态码: " + response.getStatus() + "，响应内容: " + body);
             }
@@ -321,8 +335,22 @@ public class UnifiedPlatformService {
             JsonNode root = objectMapper.readTree(body);
             return new RemoteResponse(body, root, unwrapData(root));
         } catch (IOException exception) {
+            log.warn("统一平台接口响应解析失败，url="
+                    + requestUrl
+                    + ", elapsed="
+                    + (System.currentTimeMillis() - startTime)
+                    + "ms, error="
+                    + exception.getMessage(),
+                    exception);
             throw new BusinessException("解析统一平台响应失败: " + exception.getMessage());
         } catch (Exception exception) {
+            log.warn("统一平台接口调用异常，url="
+                    + requestUrl
+                    + ", elapsed="
+                    + (System.currentTimeMillis() - startTime)
+                    + "ms, error="
+                    + exception.getMessage(),
+                    exception);
             if (exception instanceof BusinessException) {
                 throw (BusinessException) exception;
             }
