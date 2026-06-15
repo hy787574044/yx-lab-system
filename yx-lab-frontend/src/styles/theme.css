@@ -579,7 +579,7 @@ textarea {
   border: 1px solid #e5eaf3 !important;
   border-radius: 4px !important;
   box-shadow: 0 2px 10px rgba(31, 45, 61, 0.14) !important;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .el-picker__popper.el-popper[data-popper-placement^="bottom"] .el-popper__arrow::before,
@@ -635,6 +635,7 @@ textarea {
 .el-date-picker__time-header .el-date-picker__editor-wrap {
   flex: 1;
   min-width: 0;
+  position: relative;
 }
 
 .el-picker-panel__content,
@@ -807,7 +808,7 @@ textarea {
 }
 
 .el-time-panel {
-  width: 176px;
+  width: 210px;
 }
 
 .el-time-panel__content {
@@ -820,7 +821,13 @@ textarea {
 }
 
 .el-time-spinner__wrapper {
+  width: 50%;
+  box-sizing: border-box;
   border-left: 1px solid #edf2f7;
+}
+
+.el-time-spinner.has-seconds .el-time-spinner__wrapper {
+  width: 33.3333%;
 }
 
 .el-time-spinner__wrapper:first-child {
@@ -878,7 +885,7 @@ textarea {
 
 .el-date-editor--datetime .el-input__wrapper,
 .el-date-editor--date .el-input__wrapper {
-  min-width: 268px;
+  min-width: 0;
 }
 
 .el-dialog .el-form-item__content {

@@ -142,7 +142,7 @@
           <el-form-item label="地图位置">
             <el-input v-model="form.address" placeholder="地图选点后自动回填，可再次编辑" />
           </el-form-item>
-          <el-form-item label="点位类型">
+          <el-form-item label="点位类型" required>
             <el-select v-model="form.pointType" style="width: 100%">
               <el-option
                 v-for="option in pointTypeOptions"
@@ -208,9 +208,12 @@ import {
   getStatusClass,
   pointStatusOptions,
   pointStatusLabelMap,
-  pointTypeOptions,
-  pointTypeLabelMap
+  sampleTypeOptions,
+  sampleTypeLabelMap
 } from '../utils/labEnums'
+
+const pointTypeOptions = sampleTypeOptions
+const pointTypeLabelMap = sampleTypeLabelMap
 
 const query = reactive({ pageNum: 1, pageSize: DEFAULT_PAGE_SIZE, keyword: '', pointType: '', regionName: '', pointStatus: '' })
 const records = ref([])
@@ -411,6 +414,10 @@ async function submit() {
   }
   if (!payload.regionName) {
     ElMessage.warning('请选择所属水厂')
+    return
+  }
+  if (!payload.pointType) {
+    ElMessage.warning('请选择点位类型')
     return
   }
   if (payload.pointStatus === enabledPointStatus && (!payload.longitude || !payload.latitude)) {

@@ -208,7 +208,7 @@ import {
 import { changeMyPasswordApi, getMeApi, logoutApi, updateMyProfileApi, uploadStorageFileApi } from '../../api/lab'
 import { clearToken, getToken, getUser, setUser } from '../../utils/auth'
 import { labMenuGroups } from '../../router/menuConfig'
-import { getMenuPermissionCode } from '../../utils/menuPermission'
+import { getMenuPermissionCode, isMenuAllowedForRole } from '../../utils/menuPermission'
 import { isEmbeddedMode } from '../../utils/embedMode'
 
 const THEME_STORAGE_KEY = 'yx-lab-theme'
@@ -268,7 +268,8 @@ const primaryMenus = computed(() => {
   const permissionCodes = Array.isArray(user.value.permissionCodes) ? user.value.permissionCodes : []
   const visible = (path) => {
     const code = getMenuPermissionCode(path)
-    return !code || permissionCodes.includes('*') || permissionCodes.includes(code)
+    return isMenuAllowedForRole(path, user.value)
+      && (!code || permissionCodes.includes('*') || permissionCodes.includes(code))
   }
   return labMenuGroups
     .map((group) => ({

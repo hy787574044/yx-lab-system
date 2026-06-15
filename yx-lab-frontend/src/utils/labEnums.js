@@ -10,6 +10,7 @@ export const instrumentCalibratingStatus = 'CALIBRATING'
 export const enabledPointStatus = 'ENABLED'
 export const disabledPointStatus = 'DISABLED'
 
+export const sourceWaterPointType = 'SOURCE_WATER'
 export const factoryPointType = 'FACTORY'
 export const rawPointType = 'RAW'
 export const terminalPointType = 'TERMINAL'
@@ -21,6 +22,7 @@ export const monthlyFrequencyType = 'MONTHLY'
 export const onceCycleType = 'ONCE'
 export const dailyCycleType = 'DAILY'
 export const weeklyCycleType = 'WEEKLY'
+export const halfMonthlyCycleType = 'HALF_MONTHLY'
 export const monthlyCycleType = 'MONTHLY'
 
 export const activePlanStatus = 'ACTIVE'
@@ -94,9 +96,10 @@ export const pointStatusLabelMap = {
 }
 
 export const pointTypeLabelMap = {
+  [sourceWaterPointType]: '水源水',
+  [rawPointType]: '滤前水',
   [factoryPointType]: '出厂水',
-  [rawPointType]: '原水',
-  [terminalPointType]: '管网末梢'
+  [terminalPointType]: '末梢水'
 }
 
 export const frequencyTypeLabelMap = {
@@ -109,6 +112,7 @@ export const cycleTypeLabelMap = {
   [onceCycleType]: '单次',
   [dailyCycleType]: '每日',
   [weeklyCycleType]: '每周',
+  [halfMonthlyCycleType]: '半月',
   [monthlyCycleType]: '每月'
 }
 
@@ -133,16 +137,20 @@ export const sampleRegisterStatusLabelMap = {
 }
 
 export const sampleTypeLabelMap = {
+  [sourceWaterSampleType]: '水源水',
+  [rawSampleType]: '滤前水',
   [factorySampleType]: '出厂水',
-  [rawSampleType]: '原水',
-  [terminalSampleType]: '管网末梢',
-  [sourceWaterSampleType]: '水源水'
+  [terminalSampleType]: '末梢水'
 }
 
 export const sampleSourceMethodLabelMap = {
   [samplingSampleSourceMethod]: '采样',
   [deliveredSampleSourceMethod]: '送样',
   [outsourcedSampleSourceMethod]: '外采'
+}
+
+export const samplingTypeLabelMap = {
+  [routineSamplingType]: '\u5e38\u89c4\u91c7\u6837'
 }
 
 export const sampleStatusLabelMap = {
@@ -291,8 +299,8 @@ export function getStatusClass(type, value) {
 
 const workflowTextLabelMap = {
   FACTORY: '出厂水',
-  RAW: '原水',
-  TERMINAL: '管网末梢',
+  RAW: '滤前水',
+  TERMINAL: '末梢水',
   SAMPLING: '采样',
   DELIVERED: '送样',
   OUTSOURCED: '外采',

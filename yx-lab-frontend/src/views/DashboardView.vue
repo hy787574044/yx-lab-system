@@ -43,12 +43,15 @@
           <strong>{{ section.rows.length }}</strong>
         </div>
         <div v-if="section.rows.length" class="todo-detail-list">
-          <button
+          <div
             v-for="row in section.rows"
             :key="`${section.key}-${getActionRowKey(row)}`"
-            type="button"
+            role="button"
+            tabindex="0"
             :class="['todo-detail-card', `todo-detail-card--${section.key}`]"
             @click="handlePreviewCardClick(section.key, row)"
+            @keydown.enter.prevent="handlePreviewCardClick(section.key, row)"
+            @keydown.space.prevent="handlePreviewCardClick(section.key, row)"
           >
             <div class="todo-detail-card__main">
               <span>{{ getPreviewRowTitle(section.key, row) }}</span>
@@ -67,22 +70,133 @@
                 <strong v-else>{{ field.value || '-' }}</strong>
               </span>
             </div>
-          </button>
+            <el-button
+              v-if="section.key === 'samplingPlan'"
+              v-permission="'samplingPlan:write'"
+              class="todo-detail-card__dispatch"
+              type="primary"
+              size="small"
+              :loading="dispatchingPlanId === row.id"
+              :disabled="dispatchSubmitting || !actionablePlanStatuses.includes(row.planStatus)"
+              @click.stop="dispatchSamplingPlanFromWorkbench(row)"
+              @keydown.stop
+            >
+              派发
+            </el-button>
+          </div>
         </div>
         <div v-else class="todo-detail-empty">暂无待处理数据</div>
       </article>
     </section>
 
     <el-dialog
+      v-model="samplingPlanDetailVisible"
+      class="sampling-plan-detail-dialog"
+      title="采样计划详情"
+      width="760px"
+      align-center
+    >
+      <div v-if="selectedSamplingPlan" class="plan-detail">
+        <div class="plan-detail__title">
+          <strong>{{ selectedSamplingPlan.planName || '-' }}</strong>
+          <span
+            class="status-chip"
+            :class="getStatusClass('planStatus', selectedSamplingPlan.planStatus)"
+          >
+            {{ getEnumLabel(planStatusLabelMap, selectedSamplingPlan.planStatus) }}
+          </span>
+        </div>
+        <div class="plan-detail__grid">
+          <div v-for="field in samplingPlanDetailFields" :key="field.label">
+            <span>{{ field.label }}</span>
+            <strong>{{ field.value || '-' }}</strong>
+          </div>
+        </div>
+        <div class="plan-detail__remark">
+          <span>备注</span>
+          <p>{{ selectedSamplingPlan.remark || '-' }}</p>
+        </div>
+      </div>
+      <template #footer>
+        <el-button @click="samplingPlanDetailVisible = false">关闭</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog
+      v-model="dispatchDialogVisible"
+      class="dispatch-plan-dialog"
+      title="派发采样计划"
+      width="560px"
+      align-center
+      destroy-on-close
+      @closed="resetDispatchForm"
+    >
+      <el-form label-width="96px">
+        <el-form-item label="采样人员" required>
+          <el-select
+            v-model="dispatchForm.samplerIds"
+            multiple
+            collapse-tags
+            collapse-tags-tooltip
+            clearable
+            filterable
+            style="width: 100%"
+            placeholder="请选择采样员，可多选"
+            :loading="samplerLoading"
+            @visible-change="handleSamplerDropdownVisible"
+            @change="handleDispatchSamplerChange"
+          >
+            <el-option
+              v-for="item in samplerOptions"
+              :key="item.id"
+              :label="getSamplerDisplayName(item)"
+              :value="getSamplerOptionId(item)"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="执行时间">
+          <el-date-picker
+            v-model="dispatchForm.samplingTime"
+            type="datetime"
+            format="YYYY-MM-DD HH:mm:ss"
+            value-format="YYYY-MM-DD HH:mm:ss"
+            style="width: 100%"
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button :disabled="dispatchSubmitting" @click="dispatchDialogVisible = false">取消</el-button>
+        <el-button
+          v-permission="'samplingPlan:write'"
+          type="primary"
+          :loading="dispatchSubmitting"
+          :disabled="dispatchSubmitting"
+          @click="submitDispatchForm"
+        >
+          确认派发
+        </el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog
       v-model="workbenchDialogVisible"
       class="workbench-action-dialog"
       :title="activeActionTitle"
-      width="1180px"
+      :width="activeAction === 'sampling' ? '1140px' : activeAction === 'detection' ? '1040px' : '1180px'"
       align-center
       destroy-on-close
       @closed="resetWorkbenchDialog"
     >
-      <div class="workbench-dialog" v-loading="actionLoading">
+      <div
+        :class="[
+          'workbench-dialog',
+          {
+            'workbench-dialog--sampling': activeAction === 'sampling',
+            'workbench-dialog--detection': activeAction === 'detection'
+          }
+        ]"
+        v-loading="actionLoading"
+      >
         <aside class="workbench-dialog__side">
           <div class="workbench-dialog__side-head">
             <span>待处理列表</span>
@@ -106,7 +220,7 @@
         <main class="workbench-dialog__main">
           <template v-if="activeAction === 'sampling'">
             <el-form label-width="96px">
-              <div class="form-grid">
+              <div class="form-grid sampling-entry-grid">
                 <el-form-item label="任务编号">
                   <el-input :model-value="samplingTask?.taskNo || '-'" readonly />
                 </el-form-item>
@@ -252,6 +366,10 @@
             <el-table class="compact-table" :data="reviewForm.items" size="small" border max-height="430">
               <el-table-column prop="parameterName" label="检测参数" min-width="130" />
               <el-table-column prop="methodName" label="检测方法" min-width="150" />
+              <el-table-column label="标准范围" min-width="130">
+                <template #default="{ row }">{{ formatStandardRange(row.standardMin, row.standardMax, row.unit) }}</template>
+              </el-table-column>
+              <el-table-column prop="unit" label="单位" width="90" />
               <el-table-column prop="resultValue" label="检测值" width="100" />
               <el-table-column label="审核操作" min-width="180">
                 <template #default="{ row }">
@@ -286,10 +404,10 @@
 
       <template #footer>
         <el-button @click="workbenchDialogVisible = false">关闭</el-button>
-        <el-button v-if="activeAction === 'sampling'" type="primary" :loading="submitting" @click="submitSampling">保存采样录入</el-button>
-        <el-button v-if="activeAction === 'sampleLogin'" type="primary" :loading="submitting" @click="submitSampleLogin">保存样品登录</el-button>
-        <el-button v-if="activeAction === 'detection'" type="primary" :loading="submitting" @click="submitDetectionResult">提交检测结果</el-button>
-        <el-button v-if="activeAction === 'review'" type="primary" :loading="submitting" @click="submitReviewDecision">提交审核</el-button>
+        <el-button v-if="activeAction === 'sampling'" type="primary" :loading="submitting" @click="submitSampling">保存</el-button>
+        <el-button v-if="activeAction === 'sampleLogin'" type="primary" :loading="submitting" @click="submitSampleLogin">保存</el-button>
+        <el-button v-if="activeAction === 'detection'" type="primary" :loading="submitting" @click="submitDetectionResult">提交</el-button>
+        <el-button v-if="activeAction === 'review'" type="primary" :loading="submitting" @click="submitReviewDecision">提交</el-button>
       </template>
     </el-dialog>
   </div>
@@ -297,7 +415,6 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
 import { ElButton } from 'element-plus/es/components/button/index.mjs'
 import { ElDatePicker } from 'element-plus/es/components/date-picker/index.mjs'
 import { ElDialog } from 'element-plus/es/components/dialog/index.mjs'
@@ -310,6 +427,7 @@ import { ElTable, ElTableColumn } from 'element-plus/es/components/table/index.m
 import { ElLoadingDirective } from 'element-plus/es/components/loading/index.mjs'
 import {
   completeSamplingTaskApi,
+  dispatchSamplingPlanApi,
   fetchDetectionDetailApi,
   fetchDetectionItemsApi,
   fetchDetectionMethodOptionsApi,
@@ -323,6 +441,7 @@ import {
   fetchSamplingPlansApi,
   fetchSamplingTaskDetailApi,
   fetchSamplingTasksApi,
+  fetchSystemUsersApi,
   leaderDashboardApi,
   loginSampleApi,
   startSamplingTaskApi,
@@ -335,6 +454,7 @@ import {
   approvedDetectionStatus,
   approvedReviewResult,
   activePlanStatus,
+  actionablePlanStatuses,
   completedTaskStatus,
   cycleTypeLabelMap,
   draftReportStatus,
@@ -353,6 +473,7 @@ import {
   sampleRegisterStatusLabelMap,
   sampleSourceMethodOptions,
   sampleTypeLabelMap,
+  samplingTypeLabelMap,
   samplingSampleSourceMethod,
   taskStatusLabelMap,
   unregisteredSampleRegisterStatus,
@@ -361,15 +482,21 @@ import {
 
 const FLOW_TYPE_REVIEW = 'REVIEW'
 const vLoading = ElLoadingDirective
-const router = useRouter()
 const loading = ref(false)
 const actionLoading = ref(false)
 const submitting = ref(false)
+const dispatchSubmitting = ref(false)
+const dispatchingPlanId = ref(null)
+const dispatchDialogVisible = ref(false)
 const dashboard = ref({})
 const activeAction = ref('')
 const workbenchDialogVisible = ref(false)
+const samplingPlanDetailVisible = ref(false)
 const actionRows = ref([])
 const activeRow = ref(null)
+const selectedSamplingPlan = ref(null)
+const samplerOptions = ref([])
+const samplerLoading = ref(false)
 const weatherOptions = ref([])
 const storageConditionOptions = ref([])
 const detectionTypes = ref([])
@@ -389,6 +516,14 @@ const previewRows = reactive({
 
 const samplingTask = ref(null)
 const loginTask = ref(null)
+
+const dispatchForm = reactive({
+  planId: null,
+  samplingTime: '',
+  samplerIds: [],
+  samplerId: null,
+  samplerName: ''
+})
 
 const samplingForm = reactive({
   taskId: null,
@@ -523,6 +658,21 @@ const pendingReviewItemCount = computed(() => reviewForm.items.filter((item) => 
 const previewComponent = computed(() => (
   previewData.value?.reportCategory === rawRecordReportCategory ? RawRecordPrintDocument : ReportPrintDocument
 ))
+const samplingPlanDetailFields = computed(() => {
+  const plan = selectedSamplingPlan.value || {}
+  return [
+    { label: '点位名称', value: plan.pointName },
+    { label: '所属地址', value: plan.address },
+    { label: '采样人员', value: plan.samplerName },
+    { label: '样品类型', value: getEnumLabel(sampleTypeLabelMap, plan.sampleType) },
+    { label: '检测套餐', value: plan.detectionTypeName },
+    { label: '采样周期', value: getEnumLabel(cycleTypeLabelMap, plan.cycleType) },
+    { label: '开始时间', value: plan.startTime },
+    { label: '结束时间', value: plan.endTime },
+    { label: '坐标', value: formatPlanCoordinate(plan) },
+    { label: '采样方式', value: getEnumLabel(samplingTypeLabelMap, plan.samplingType) }
+  ]
+})
 
 function toSafeNumber(value) {
   const num = typeof value === 'number' ? value : Number.parseFloat(String(value ?? '').replace(/,/g, '').trim())
@@ -534,6 +684,187 @@ function normalizeDictOptions(items) {
     label: item.itemName || item.label || item.value || item.itemValue,
     value: item.itemValue || item.value || item.itemName || item.label
   })).filter((item) => item.value)
+}
+
+function formatPlanCoordinate(plan) {
+  if (!plan?.longitude && !plan?.latitude) {
+    return ''
+  }
+  return `${plan.longitude || '-'}, ${plan.latitude || '-'}`
+}
+
+function normalizeSamplerIdList(value) {
+  const rawItems = Array.isArray(value)
+    ? value
+    : String(value || '')
+      .split(',')
+      .map((item) => item.trim())
+  return rawItems
+    .map((item) => Number(item))
+    .filter((item) => Number.isFinite(item) && item > 0)
+    .filter((item, index, source) => source.indexOf(item) === index)
+}
+
+function getSamplerOptionId(item) {
+  const id = Number(item?.id ?? item?.userId ?? item?.user_id)
+  return Number.isFinite(id) && id > 0 ? id : item?.id
+}
+
+function getSamplerDisplayName(item) {
+  return String(
+    item?.realName
+    || item?.real_name
+    || item?.name
+    || item?.nickName
+    || item?.nickname
+    || item?.displayName
+    || item?.employeeName
+    || item?.label
+    || item?.username
+    || ''
+  ).trim()
+}
+
+function splitSamplerNames(value) {
+  return String(value || '')
+    .split(/[、,，]/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+}
+
+function normalizeSamplerOption(item) {
+  const id = getSamplerOptionId(item)
+  return {
+    ...item,
+    id,
+    label: getSamplerDisplayName(item) || String(id || '')
+  }
+}
+
+function dedupeSamplerOptions(options) {
+  const idSet = new Set()
+  const nameSet = new Set()
+  const result = []
+  ;(options || []).forEach((item) => {
+    const id = Number(getSamplerOptionId(item))
+    const name = getSamplerDisplayName(item)
+    const idKey = Number.isFinite(id) && id > 0 ? String(id) : ''
+    const nameKey = name || ''
+    if ((idKey && idSet.has(idKey)) || (nameKey && nameSet.has(nameKey))) {
+      return
+    }
+    if (idKey) {
+      idSet.add(idKey)
+    }
+    if (nameKey) {
+      nameSet.add(nameKey)
+    }
+    result.push(item)
+  })
+  return result
+}
+
+function ensureSelectedSamplerOptions(ids, samplerNameText) {
+  const selectedIds = normalizeSamplerIdList(ids)
+  if (!selectedIds.length) {
+    return
+  }
+  const names = splitSamplerNames(samplerNameText)
+  const existingIds = new Set(samplerOptions.value.map((item) => Number(getSamplerOptionId(item))))
+  const existingNames = new Set(samplerOptions.value.map((item) => getSamplerDisplayName(item)).filter(Boolean))
+  const additions = selectedIds
+    .filter((id, index) => !existingIds.has(id) && !existingNames.has(names[index]))
+    .map((id, index) => ({
+      id,
+      realName: names[index] || `采样员${id}`,
+      username: String(id),
+      label: names[index] || `采样员${id}`
+    }))
+  if (additions.length) {
+    samplerOptions.value = dedupeSamplerOptions([...samplerOptions.value, ...additions])
+  }
+}
+
+function resolveSamplerNames(ids) {
+  const selectedIds = normalizeSamplerIdList(ids)
+  return selectedIds
+    .map((id) => samplerOptions.value.find((item) => Number(getSamplerOptionId(item)) === id))
+    .filter(Boolean)
+    .map((item) => getSamplerDisplayName(item))
+    .filter(Boolean)
+    .join('、')
+}
+
+function getRowSamplerIds(row) {
+  const ids = normalizeSamplerIdList(row?.samplerIds || row?.sampler_ids)
+  if (ids.length) {
+    return ids
+  }
+  return normalizeSamplerIdList(row?.samplerId || row?.sampler_id)
+}
+
+function resolveRowSamplerOptionIds(row) {
+  const names = splitSamplerNames(row?.samplerName || row?.sampler_name)
+  const ids = getRowSamplerIds(row)
+  const resolved = ids.map((id, index) => {
+    const idMatched = samplerOptions.value.find((item) => Number(getSamplerOptionId(item)) === id)
+    if (idMatched) {
+      return Number(getSamplerOptionId(idMatched))
+    }
+    const name = names[index]
+    if (!name) {
+      return id
+    }
+    const nameMatched = samplerOptions.value.find((item) => getSamplerDisplayName(item) === name)
+    return nameMatched ? Number(getSamplerOptionId(nameMatched)) : id
+  })
+  return normalizeSamplerIdList(resolved)
+}
+
+function resetDispatchForm() {
+  dispatchForm.planId = null
+  dispatchForm.samplingTime = ''
+  dispatchForm.samplerIds = []
+  dispatchForm.samplerId = null
+  dispatchForm.samplerName = ''
+}
+
+function handleDispatchSamplerChange(userIds) {
+  const ids = normalizeSamplerIdList(userIds)
+  dispatchForm.samplerIds = ids
+  dispatchForm.samplerId = ids[0] || null
+  dispatchForm.samplerName = resolveSamplerNames(ids)
+}
+
+async function loadSamplers(force = false) {
+  if (!force && samplerOptions.value.length) {
+    return
+  }
+  samplerLoading.value = true
+  try {
+    const result = await fetchSystemUsersApi({
+      pageNum: 1,
+      pageSize: 500,
+      roleCode: 'STAFF',
+      status: 1
+    })
+    const records = Array.isArray(result.records) ? result.records : []
+    samplerOptions.value = dedupeSamplerOptions(records.map(normalizeSamplerOption).filter((item) => item.id))
+  } finally {
+    samplerLoading.value = false
+  }
+}
+
+function handleSamplerDropdownVisible(visible) {
+  if (visible) {
+    loadSamplers(true)
+  }
+}
+
+function nowDateTimeText() {
+  const date = new Date()
+  const pad = (value) => String(value).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
 }
 
 async function refreshDashboard() {
@@ -596,10 +927,53 @@ async function loadFlowOptions() {
 
 function handlePreviewCardClick(key, row) {
   if (key === 'samplingPlan') {
-    router.push('/sampling-plan')
+    selectedSamplingPlan.value = row
+    samplingPlanDetailVisible.value = true
     return
   }
   openWorkbenchAction(key, row)
+}
+
+async function dispatchSamplingPlanFromWorkbench(row) {
+  if (!row || dispatchSubmitting.value) {
+    return
+  }
+  await loadSamplers(true)
+  resetDispatchForm()
+  const samplerIds = resolveRowSamplerOptionIds(row)
+  dispatchForm.planId = row.id
+  dispatchForm.samplingTime = row.startTime || nowDateTimeText()
+  ensureSelectedSamplerOptions(samplerIds, row.samplerName || row.sampler_name)
+  handleDispatchSamplerChange(samplerIds)
+  dispatchDialogVisible.value = true
+}
+
+async function submitDispatchForm() {
+  if (dispatchSubmitting.value) {
+    return
+  }
+  if (!dispatchForm.planId || !dispatchForm.samplerIds.length || !dispatchForm.samplerId || !dispatchForm.samplerName) {
+    ElMessage.warning('派发任务前必须指定采样员')
+    return
+  }
+  dispatchSubmitting.value = true
+  dispatchingPlanId.value = dispatchForm.planId
+  try {
+    await dispatchSamplingPlanApi({
+      planId: dispatchForm.planId,
+      samplingTime: dispatchForm.samplingTime || nowDateTimeText(),
+      samplerIds: normalizeSamplerIdList(dispatchForm.samplerIds),
+      samplerId: dispatchForm.samplerId,
+      samplerName: dispatchForm.samplerName
+    })
+    dispatchDialogVisible.value = false
+    ElMessage.success('采样计划已派发，并已同步生成采样任务。')
+    samplingPlanDetailVisible.value = false
+    await Promise.all([refreshDashboard(), loadWorkbenchPreviewRows()])
+  } finally {
+    dispatchSubmitting.value = false
+    dispatchingPlanId.value = null
+  }
 }
 
 async function openWorkbenchAction(key, preferredRow = null) {
@@ -1130,6 +1504,9 @@ async function openReviewForm(row) {
     id: item.id,
     parameterName: item.parameterName || '',
     methodName: item.methodName || '',
+    standardMin: item.standardMin,
+    standardMax: item.standardMax,
+    unit: item.unit || '',
     resultValue: item.resultValue == null ? null : Number(item.resultValue),
     itemStatus: item.itemStatus || '',
     reviewResultDraft: item.itemStatus === approvedDetectionStatus ? approvedReviewResult : '',
@@ -1409,6 +1786,8 @@ onMounted(async () => {
 
 .todo-detail-list {
   display: grid;
+  align-content: start;
+  grid-auto-rows: max-content;
   gap: 10px;
   flex: 1;
   min-height: 0;
@@ -1443,8 +1822,13 @@ onMounted(async () => {
   border-radius: 12px;
   background: #ffffff;
   text-align: left;
+  cursor: pointer;
   box-shadow: 0 8px 18px rgba(17, 54, 99, 0.035);
   transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+}
+
+.todo-detail-card--samplingPlan {
+  padding-right: 88px;
 }
 
 .todo-detail-card::before {
@@ -1479,6 +1863,17 @@ onMounted(async () => {
   border-color: rgba(22, 119, 255, 0.35);
   box-shadow: 0 12px 24px rgba(17, 54, 99, 0.08);
   transform: translateY(-1px);
+}
+
+.todo-detail-card:focus-visible {
+  outline: 2px solid rgba(22, 119, 255, 0.38);
+  outline-offset: 2px;
+}
+
+.todo-detail-card__dispatch {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
 }
 
 .todo-detail-card__main {
@@ -1552,6 +1947,76 @@ onMounted(async () => {
   color: var(--text-sub);
 }
 
+.plan-detail {
+  display: grid;
+  gap: 16px;
+}
+
+.plan-detail__title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #edf2f7;
+}
+
+.plan-detail__title > strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-main);
+  font-size: 18px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.plan-detail__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.plan-detail__grid > div,
+.plan-detail__remark {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid #edf2f7;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.plan-detail__grid span,
+.plan-detail__remark span {
+  color: var(--text-sub);
+  font-size: 12px;
+}
+
+.plan-detail__grid strong,
+.plan-detail__remark p {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  margin: 0;
+  color: var(--text-main);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+:deep(.dispatch-plan-dialog .el-dialog__body) {
+  padding-bottom: 0;
+}
+
+:deep(.dispatch-plan-dialog .el-dialog__footer) {
+  padding-top: 8px;
+  padding-bottom: 16px;
+}
+
+:deep(.el-dialog.dispatch-plan-dialog),
+:deep(.dispatch-plan-dialog) {
+  min-height: auto;
+}
+
 .workbench-action-dialog :deep(.el-dialog__body) {
   padding-top: 10px;
 }
@@ -1561,6 +2026,12 @@ onMounted(async () => {
   grid-template-columns: 280px minmax(0, 1fr);
   gap: 16px;
   min-height: 520px;
+}
+
+.workbench-dialog--sampling {
+  grid-template-columns: 322px minmax(0, 1fr);
+  height: 430px;
+  min-height: 0;
 }
 
 .workbench-dialog__side {
@@ -1583,7 +2054,9 @@ onMounted(async () => {
 
 .workbench-row-list {
   display: grid;
+  align-content: start;
   gap: 8px;
+  min-height: 0;
   overflow-y: auto;
 }
 
@@ -1619,10 +2092,125 @@ onMounted(async () => {
   padding-right: 4px;
 }
 
+.workbench-dialog--sampling .workbench-dialog__main,
+.workbench-dialog--detection .workbench-dialog__main {
+  display: block;
+  overflow: hidden;
+}
+
+.workbench-dialog--sampling :deep(.el-form) {
+  height: 100%;
+}
+
+.workbench-dialog--detection .workbench-dialog__main {
+  display: flex;
+  flex-direction: column;
+  padding-right: 0;
+}
+
+.workbench-dialog--detection .summary-chips {
+  margin-bottom: 16px;
+}
+
+.workbench-dialog--detection .summary-chips span {
+  padding: 10px 14px;
+}
+
+.workbench-dialog--detection .meta-grid {
+  margin-bottom: 18px;
+}
+
+.workbench-dialog--detection .meta-grid div {
+  min-height: 72px;
+  padding: 14px;
+}
+
+.workbench-dialog--detection :deep(.el-form) {
+  display: grid;
+  flex: 1;
+  grid-template-rows: 64px minmax(92px, 1fr) minmax(100px, 1fr);
+  gap: 16px;
+  min-height: 0;
+}
+
+.workbench-dialog--detection :deep(.el-form-item) {
+  margin-bottom: 0;
+}
+
+.workbench-dialog--detection :deep(.el-form-item__label) {
+  line-height: 24px;
+  margin-bottom: 8px;
+}
+
+.workbench-dialog--detection :deep(.el-form-item__content) {
+  min-height: 36px;
+}
+
+.workbench-dialog--detection :deep(.el-textarea),
+.workbench-dialog--detection :deep(.el-textarea__inner) {
+  height: 100%;
+}
+
+.workbench-dialog--detection :deep(.el-textarea__inner) {
+  min-height: 92px !important;
+}
+
 .form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 4px 14px;
+}
+
+.sampling-entry-grid {
+  height: 100%;
+  align-content: stretch;
+  grid-template-rows: repeat(4, 48px) minmax(132px, 1fr);
+  gap: 10px 22px;
+  padding: 2px 0;
+}
+
+.sampling-entry-grid :deep(.el-form-item) {
+  align-items: center;
+  margin-bottom: 0;
+  min-height: 48px;
+}
+
+.sampling-entry-grid :deep(.el-form-item__label) {
+  line-height: 36px;
+  padding-right: 10px;
+  white-space: nowrap;
+}
+
+.sampling-entry-grid :deep(.el-form-item__content) {
+  min-height: 36px;
+  line-height: 36px;
+  min-width: 0;
+}
+
+.sampling-entry-grid .form-span-2 {
+  align-items: stretch;
+  margin-top: 0;
+  min-height: 132px;
+}
+
+.sampling-entry-grid .form-span-2 :deep(.el-form-item__label) {
+  line-height: 36px;
+  padding-top: 0;
+}
+
+.sampling-entry-grid .form-span-2 :deep(.el-form-item__content) {
+  display: flex;
+  min-height: 132px;
+  line-height: 1.5;
+}
+
+.sampling-entry-grid .form-span-2 :deep(.el-textarea) {
+  flex: 1;
+}
+
+.sampling-entry-grid .form-span-2 :deep(.el-textarea__inner) {
+  height: 100%;
+  min-height: 132px !important;
 }
 
 .form-span-2 {
@@ -1700,6 +2288,14 @@ onMounted(async () => {
 
 .review-remark-form {
   margin-top: 12px;
+}
+
+.review-remark-form :deep(.el-form-item) {
+  margin-bottom: 0;
+}
+
+.review-remark-form :deep(.el-textarea__inner) {
+  min-height: 116px !important;
 }
 
 .empty-block {

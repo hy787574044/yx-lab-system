@@ -54,17 +54,17 @@ import java.util.Set;
 public class InstrumentAssetImportService {
 
     private static final List<String> IMPORT_HEADERS = Arrays.asList(
-            "\u8bbe\u5907\u540d\u79f0*",
-            "\u8bbe\u5907\u578b\u53f7",
-            "\u751f\u4ea7\u5382\u5bb6",
-            "\u8d1f\u8d23\u4eba",
-            "\u8bbe\u5907\u72b6\u6001*",
-            "\u5b58\u653e\u4f4d\u7f6e",
-            "\u8d2d\u7f6e\u65e5\u671f(yyyy-MM-dd)",
-            "\u4f7f\u7528\u5e74\u9650",
-            "\u6821\u51c6\u5468\u671f",
-            "\u8bc1\u4e66\u5730\u5740",
-            "\u5907\u6ce8");
+            "设备名称*",
+            "设备型号",
+            "生产厂家",
+            "负责人",
+            "设备状态*",
+            "存放位置",
+            "购置日期(yyyy-MM-dd)",
+            "使用年限",
+            "校准周期",
+            "证书地址",
+            "备注");
 
     private static final Map<String, String> INSTRUMENT_STATUS_LABEL_MAP = createInstrumentStatusLabelMap();
 
@@ -86,7 +86,7 @@ public class InstrumentAssetImportService {
     public byte[] buildInstrumentImportTemplate() {
         try (Workbook workbook = new XSSFWorkbook();
              ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
-            Sheet sheet = workbook.createSheet("\u8bbe\u5907\u53f0\u8d26\u5bfc\u5165\u6a21\u677f");
+            Sheet sheet = workbook.createSheet("设备台账导入模板");
             createHeaderRow(workbook, sheet);
             addStatusValidation(sheet);
             createInstructionSheet(workbook);
@@ -327,15 +327,15 @@ public class InstrumentAssetImportService {
     }
 
     private void createInstructionSheet(Workbook workbook) {
-        Sheet sheet = workbook.createSheet("\u586b\u5199\u8bf4\u660e");
+        Sheet sheet = workbook.createSheet("填写说明");
         String[] lines = new String[]{
-                "1. \u4ec5\u652f\u6301\u5bfc\u5165\u65b0\u589e\u8bbe\u5907\uff0c\u4e0d\u4f1a\u8986\u76d6\u7cfb\u7edf\u4e2d\u5df2\u6709\u8bbe\u5907\u3002",
-                "2. \u5fc5\u586b\u5b57\u6bb5\uff1a\u8bbe\u5907\u540d\u79f0\u3001\u8bbe\u5907\u72b6\u6001\u3002",
-                "3. \u8bbe\u5907\u72b6\u6001\u53ea\u5141\u8bb8\uff1a\u6b63\u5e38\u3001\u505c\u7528\u3001\u7ef4\u62a4\u4e2d\u3001\u5f85\u6821\u51c6\u3002",
-                "4. \u8d2d\u7f6e\u65e5\u671f\u683c\u5f0f\u5fc5\u987b\u4e3a yyyy-MM-dd\u3002",
-                "5. \u4f7f\u7528\u5e74\u9650\u5fc5\u987b\u4e3a\u975e\u8d1f\u6574\u6570\u3002",
-                "6. \u7cfb\u7edf\u4f1a\u6821\u9a8c\u5bfc\u5165\u6587\u4ef6\u5185\u91cd\u590d\u6570\u636e\uff0c\u4ee5\u53ca\u7cfb\u7edf\u4e2d\u5df2\u5b58\u5728\u7684\u540c\u540d\u540c\u578b\u53f7\u540c\u5382\u5bb6\u8bbe\u5907\u3002",
-                "7. \u53ea\u8981\u6709\u4e00\u884c\u6821\u9a8c\u5931\u8d25\uff0c\u672c\u6b21\u5bfc\u5165\u4e0d\u4f1a\u5165\u5e93\uff0c\u8bf7\u4fee\u6b63\u540e\u91cd\u65b0\u5bfc\u5165\u3002"
+                "1. 仅支持导入新增设备，不会覆盖系统中已有设备。",
+                "2. 必填字段：设备名称、设备状态。",
+                "3. 设备状态只允许：正常、停用、维护中、待校准。",
+                "4. 购置日期格式必须为 yyyy-MM-dd。",
+                "5. 使用年限必须为非负整数。",
+                "6. 系统会校验导入文件内重复数据，以及系统中已存在的同名同型号同厂家设备。",
+                "7. 只要有一行校验失败，本次导入不会入库，请修正后重新导入。"
         };
         for (int i = 0; i < lines.length; i++) {
             Row row = sheet.createRow(i);
@@ -357,10 +357,10 @@ public class InstrumentAssetImportService {
 
     private static Map<String, String> createInstrumentStatusLabelMap() {
         Map<String, String> statusMap = new LinkedHashMap<>();
-        statusMap.put(LabWorkflowConstants.InstrumentStatus.NORMAL, "\u6b63\u5e38");
-        statusMap.put(LabWorkflowConstants.InstrumentStatus.DISABLED, "\u505c\u7528");
-        statusMap.put(LabWorkflowConstants.InstrumentStatus.MAINTENANCE, "\u7ef4\u62a4\u4e2d");
-        statusMap.put(LabWorkflowConstants.InstrumentStatus.CALIBRATING, "\u5f85\u6821\u51c6");
+        statusMap.put(LabWorkflowConstants.InstrumentStatus.NORMAL, "正常");
+        statusMap.put(LabWorkflowConstants.InstrumentStatus.DISABLED, "停用");
+        statusMap.put(LabWorkflowConstants.InstrumentStatus.MAINTENANCE, "维护中");
+        statusMap.put(LabWorkflowConstants.InstrumentStatus.CALIBRATING, "待校准");
         return statusMap;
     }
 

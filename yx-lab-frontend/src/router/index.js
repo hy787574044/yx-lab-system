@@ -2,7 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { getToken, getUser, setToken, setUser } from '../utils/auth'
 import { labMenuGroups, legacyRedirects } from './menuConfig'
 import { hasPermission } from '../utils/permission'
-import { getMenuPermissionCode } from '../utils/menuPermission'
+import { getMenuPermissionCode, isMenuAllowedForRole } from '../utils/menuPermission'
 import { setEmbeddedMode } from '../utils/embedMode'
 import { API_BASE_URL } from '../config/appConfig'
 
@@ -17,6 +17,7 @@ const componentMap = {
   DetectionMethodView: () => import('../views/DetectionMethodView.vue'),
   ReviewView: () => import('../views/ReviewView.vue'),
   ReportView: () => import('../views/ReportView.vue'),
+  SummaryReportManageView: () => import('../views/SummaryReportManageView.vue'),
   AssetView: () => import('../views/AssetView.vue'),
   InstrumentMaintenanceView: () => import('../views/InstrumentMaintenanceView.vue'),
   SystemManagementView: () => import('../views/SystemManagementView.vue'),
@@ -150,6 +151,10 @@ router.beforeEach(async (to, from, next) => {
   }
 
   const user = getUser()
+  if (!isMenuAllowedForRole(to.path, user)) {
+    next('/report-daily-manage')
+    return
+  }
   const hasLocalPermissions = Array.isArray(user.permissionCodes) && user.permissionCodes.length > 0
   if (to.meta?.permissionCode && hasLocalPermissions && !hasPermission(to.meta.permissionCode)) {
     const firstAllowedPath = labMenuGroups

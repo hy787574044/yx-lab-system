@@ -1070,8 +1070,8 @@ public class ReportService {
                         .append(safeText(previewData.getReportTypeLabel())).append("</td><td class=\"label\">报告状态</td><td>").append(safeText(previewData.getReportStatusLabel())).append("</td></tr>")
                         .append("<tr><td class=\"label\">样品编号</td><td>").append(safeText(previewData.getSampleNo())).append("</td><td class=\"label\">点位名称</td><td>")
                         .append(safeText(previewData.getPointName())).append("</td><td class=\"label\">采样人员</td><td>").append(safeText(previewData.getSamplerName())).append("</td></tr>")
-                        .append("<tr><td class=\"label\">\u6837\u54c1\u7c7b\u578b</td><td>").append(safeText(previewData.getSampleTypeLabel())).append("</td><td class=\"label\">\u6837\u54c1\u6765\u6e90</td><td>")
-                        .append(safeText(previewData.getSampleSourceMethodLabel())).append("</td><td class=\"label\">\u6837\u54c1\u72b6\u6001</td><td>").append(safeText(previewData.getSampleStatusLabel())).append("</td></tr>")
+                        .append("<tr><td class=\"label\">样品类型</td><td>").append(safeText(previewData.getSampleTypeLabel())).append("</td><td class=\"label\">样品来源</td><td>")
+                        .append(safeText(previewData.getSampleSourceMethodLabel())).append("</td><td class=\"label\">样品状态</td><td>").append(safeText(previewData.getSampleStatusLabel())).append("</td></tr>")
                         .append("<tr><td class=\"label\">结果摘要</td><td colspan=\"5\">").append(safeText(previewData.getResultSummary())).append("</td></tr>")
                         .append("<tr><td class=\"label\">采样时间</td><td>").append(safeText(previewData.getSamplingTime())).append("</td><td class=\"label\">天气情况</td><td>")
                         .append(safeText(previewData.getWeather())).append("</td><td class=\"label\">保存条件</td><td>").append(safeText(previewData.getStorageCondition())).append("</td></tr>")
@@ -1237,10 +1237,10 @@ public class ReportService {
                         .append("<table class=\"report-table info-table\"><tbody>")
                         .append("<tr><th>样品编号</th><td>").append(safeText(data.getSampleNo())).append("</td><th>样品类型</th><td>")
                         .append(safeText(data.getSampleTypeLabel())).append("</td></tr>")
-                        .append("<tr><th>\u6837\u54c1\u6765\u6e90</th><td colspan=\"3\">").append(safeText(data.getSampleSourceMethodLabel())).append("</td></tr>")
+                        .append("<tr><th>样品来源</th><td colspan=\"3\">").append(safeText(data.getSampleSourceMethodLabel())).append("</td></tr>")
                         .append("<tr><th>采样点位</th><td>").append(safeText(data.getPointName())).append("</td><th>采样时间</th><td>")
                         .append(safeText(data.getSamplingTime())).append("</td></tr>")
-                        .append("<tr><th>\u91c7\u6837\u4eba\u5458</th><td colspan=\"3\">").append(safeText(data.getSamplerName())).append("</td></tr>")
+                        .append("<tr><th>采样人员</th><td colspan=\"3\">").append(safeText(data.getSamplerName())).append("</td></tr>")
                         .append("</tbody></table></section>");
             }
 
@@ -1418,7 +1418,7 @@ public class ReportService {
     private boolean isAbnormalJudgment(ReportPreviewItemVO item) {
         String label = item == null ? "" : StrUtil.trimToEmpty(item.getJudgmentLabel());
         return label.contains("异常") || label.contains("超标") || label.contains("不合格")
-                || label.contains("寮傚父") || label.contains("瓒呮爣") || label.contains("涓嶅悎鏍");
+                || label.contains("ABNORMAL") || label.contains("FAIL") || label.contains("UNQUALIFIED");
     }
 
     private String formatPreviewJudgment(ReportPreviewItemVO item) {
@@ -1892,7 +1892,7 @@ public class ReportService {
         }
         String result = text;
         result = result.replaceAll("\\bFACTORY\\b", "出厂水");
-        result = result.replaceAll("\\bRAW\\b", "原水");
+        result = result.replaceAll("\\bRAW\\b", "滤前水");
         result = result.replaceAll("\\bTERMINAL\\b", "末梢水");
         result = result.replaceAll("\\bLOGGED\\b", "已登记");
         result = result.replaceAll("\\bREVIEWING\\b", "审核中");

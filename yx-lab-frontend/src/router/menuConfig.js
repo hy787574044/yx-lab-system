@@ -166,8 +166,29 @@ export const labMenuGroups = [
     title: '报告管理',
     shortTitle: '报告',
     iconKey: 'Document',
-    defaultPath: '/report-ledger',
+    defaultPath: '/report-daily-manage',
     children: [
+      {
+        path: '/report-daily-manage',
+        title: '日报管理',
+        shortTitle: '日报',
+        subtitle: '按所属水厂、采样日期与时间段汇总检测结果，便于查看当日水质情况。',
+        componentKey: 'SummaryReportManageView'
+      },
+      {
+        path: '/report-weekly-manage',
+        title: '周报管理',
+        shortTitle: '周报',
+        subtitle: '按周周期汇总各水厂检测点的检测结果，用于查看周期性监测数据。',
+        componentKey: 'SummaryReportManageView'
+      },
+      {
+        path: '/report-half-month-manage',
+        title: '半月报管理',
+        shortTitle: '半月报',
+        subtitle: '按每月上半月、下半月汇总半月周期管网水检测结果。',
+        componentKey: 'SummaryReportManageView'
+      },
       {
         path: '/report-ledger',
         title: '报告台账',
@@ -195,9 +216,9 @@ export const labMenuGroups = [
       },
       {
         path: '/instrument-maintenance',
-        title: '设备维修',
-        shortTitle: '设备维修',
-        subtitle: '展示设备维修记录，并维护正式维修台账。',
+        title: '设备维护',
+        shortTitle: '设备维护',
+        subtitle: '展示设备维护记录，并维护正式维护台账。',
         componentKey: 'InstrumentMaintenanceView'
       }
     ]

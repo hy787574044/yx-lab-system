@@ -317,7 +317,7 @@ public class LabSampleService {
                 StrUtil.trim(command.getSampleSourceMethod()),
                 LabWorkflowConstants.SampleSourceMethod.SAMPLING);
         if (!LabWorkflowConstants.SAMPLE_SOURCE_METHODS.contains(sampleSourceMethod)) {
-            throw new BusinessException("\u6837\u54c1\u6765\u6e90\u65b9\u5f0f\u4e0d\u6b63\u786e");
+            throw new BusinessException("样品来源方式不正确");
         }
         return sampleSourceMethod;
     }

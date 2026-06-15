@@ -352,6 +352,10 @@ export const submitReviewApi = (data) => request.post('/api/reviews', data)
 export const fetchReportsApi = (params) => request.get('/api/reports', { params })
 export const fetchReportStatsApi = () => request.get('/api/reports/stats')
 export const exportReportsApi = (params) => downloadExcel('/api/reports/export', params, '报告台账.xlsx')
+export const fetchSummaryReportsApi = (params) => request.get('/api/reportSummaries', { params })
+export const previewSummaryReportApi = (params) => request.get('/api/reportSummaries/preview', { params })
+export const exportSummaryReportsApi = (params) => downloadExcel('/api/reportSummaries/export', params, '汇总报表列表.xlsx')
+export const exportSummaryReportDetailApi = (params) => downloadExcel('/api/reportSummaries/detailExport', params, '汇总报表明细.xlsx')
 /**
  * 获取报告模板分页。
  *

@@ -13,6 +13,9 @@ const MENU_PERMISSION_MAP = {
   '/review-result': 'review:view',
   '/review-history': 'review:view',
   '/review-ledger': 'review:view',
+  '/report-daily-manage': 'report:view',
+  '/report-weekly-manage': 'report:view',
+  '/report-half-month-manage': 'report:view',
   '/report-ledger': 'report:view',
   '/instrument-ledger': 'asset:view',
   '/instrument-maintenance': 'asset:view',
@@ -32,6 +35,31 @@ const MENU_PERMISSION_MAP = {
   '/detection-projects': 'detectionConfig:view',
   '/detection-methods': 'detectionConfig:view',
   '/detection-project-groups': 'detectionConfig:view'
+}
+
+const STAFF_ALLOWED_MENU_PATHS = new Set([
+  '/dashboard',
+  '/sample-login',
+  '/sample-ledger',
+  '/sampling-plan',
+  '/task-assign',
+  '/task-history',
+  '/task-ledger',
+  '/detection-analysis',
+  '/detection-history',
+  '/detection-ledger',
+  '/report-daily-manage'
+])
+
+export function isStaffRole(user) {
+  return String(user?.roleCode || '').trim().toUpperCase() === 'STAFF'
+}
+
+export function isMenuAllowedForRole(path, user) {
+  if (!isStaffRole(user)) {
+    return true
+  }
+  return STAFF_ALLOWED_MENU_PATHS.has(String(path || '').trim())
 }
 
 export function getMenuPermissionCode(path) {

@@ -276,6 +276,7 @@ public class SamplingPlanService {
                         LabWorkflowConstants.CycleType.ONCE,
                         LabWorkflowConstants.CycleType.DAILY,
                         LabWorkflowConstants.CycleType.WEEKLY,
+                        LabWorkflowConstants.CycleType.HALF_MONTHLY,
                         LabWorkflowConstants.CycleType.MONTHLY)
                 .orderByAsc(SamplingPlan::getStartTime))) {
             LocalDateTime scheduledTime = resolveScheduledTime(plan, dispatchTime);
@@ -510,9 +511,35 @@ public class SamplingPlanService {
         plan.setDetectionTypeId(null);
         plan.setDetectionTypeName(null);
         plan.setDetectionConfigSnapshot(null);
-        plan.setCycleType(StrUtil.trim(command.getCycleType()));
+        plan.setCycleType(normalizePlanCycleType(command.getCycleType()));
         plan.setPlanStatus(StrUtil.trim(command.getPlanStatus()));
         plan.setRemark(StrUtil.trim(command.getRemark()));
+    }
+
+    private String normalizePlanCycleType(String cycleType) {
+        String value = StrUtil.trim(cycleType);
+        if (StrUtil.isBlank(value)) {
+            return value;
+        }
+        if (LabWorkflowConstants.CYCLE_TYPES.contains(value)) {
+            return value;
+        }
+        if ("一次".equals(value)) {
+            return LabWorkflowConstants.CycleType.ONCE;
+        }
+        if ("每日".equals(value) || "每天".equals(value)) {
+            return LabWorkflowConstants.CycleType.DAILY;
+        }
+        if ("每周".equals(value) || "周".equals(value)) {
+            return LabWorkflowConstants.CycleType.WEEKLY;
+        }
+        if ("半月".equals(value) || "每半月".equals(value)) {
+            return LabWorkflowConstants.CycleType.HALF_MONTHLY;
+        }
+        if ("每月".equals(value) || "月".equals(value)) {
+            return LabWorkflowConstants.CycleType.MONTHLY;
+        }
+        return value;
     }
 
     private void validatePlan(SamplingPlan plan) {
@@ -552,6 +579,9 @@ public class SamplingPlanService {
         plan.setPointName(StrUtil.trim(point.getPointName()));
         plan.setLatitude(StrUtil.trim(point.getLatitude()));
         plan.setLongitude(StrUtil.trim(point.getLongitude()));
+        if (StrUtil.isNotBlank(point.getPointType())) {
+            plan.setSampleType(StrUtil.trim(point.getPointType()));
+        }
         if (StrUtil.isBlank(plan.getAddress())) {
             plan.setAddress(StrUtil.blankToDefault(StrUtil.trim(point.getAddress()), StrUtil.trim(point.getPointName())));
         }
@@ -690,11 +720,25 @@ public class SamplingPlanService {
             DayOfWeek targetDay = plan.getStartTime().getDayOfWeek();
             return today.getDayOfWeek() == targetDay ? today : null;
         }
+        if (LabWorkflowConstants.CycleType.HALF_MONTHLY.equals(plan.getCycleType())) {
+            return resolveHalfMonthlyScheduleDate(plan, today);
+        }
         if (LabWorkflowConstants.CycleType.MONTHLY.equals(plan.getCycleType())) {
             int dayOfMonth = plan.getStartTime().getDayOfMonth();
             return today.getDayOfMonth() == dayOfMonth ? today : null;
         }
         return null;
+    }
+
+    private LocalDate resolveHalfMonthlyScheduleDate(SamplingPlan plan, LocalDate today) {
+        int startDay = plan.getStartTime().getDayOfMonth();
+        int firstDay = startDay <= 15 ? startDay : startDay - 15;
+        int secondDay = startDay <= 15 ? startDay + 15 : startDay;
+        int lastDay = today.lengthOfMonth();
+        int normalizedFirstDay = Math.min(firstDay, lastDay);
+        int normalizedSecondDay = Math.min(secondDay, lastDay);
+        int todayDay = today.getDayOfMonth();
+        return todayDay == normalizedFirstDay || todayDay == normalizedSecondDay ? today : null;
     }
 
     private String resolvePlanStatusAfterDispatch(SamplingPlan plan) {

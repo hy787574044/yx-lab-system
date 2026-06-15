@@ -473,12 +473,29 @@
               <el-option label="手工填写点位" value="CUSTOM" />
             </el-select>
           </el-form-item>
+          <el-form-item v-if="planForm.pointSource === 'EXISTING'" label="所属水厂" required>
+            <el-select
+              v-model="planForm.regionName"
+              filterable
+              style="width: 100%"
+              placeholder="请选择所属水厂"
+              @change="handlePlanRegionChange"
+            >
+              <el-option
+                v-for="option in waterPlantOptions"
+                :key="option.value"
+                :label="option.label"
+                :value="option.value"
+              />
+            </el-select>
+          </el-form-item>
           <el-form-item v-if="planForm.pointSource === 'EXISTING'" label="监测点位" required>
             <el-select
               v-model="planForm.pointId"
               style="width: 100%"
-              placeholder="请选择已创建的监测点位"
+              :placeholder="planForm.regionName ? '请选择已创建的监测点位' : '请先选择所属水厂'"
               :loading="monitoringPointLoading"
+              :disabled="!planForm.regionName"
               @change="handlePlanPointChange"
             >
               <el-option
@@ -511,7 +528,7 @@
             <el-input v-model="planForm.address" readonly placeholder="地图选点后自动回填" />
           </el-form-item>
           <el-form-item label="样品类型" required>
-            <el-select v-model="planForm.sampleType" style="width: 100%">
+            <el-select v-model="planForm.sampleType" style="width: 100%" :disabled="planForm.pointSource === 'EXISTING'">
               <el-option
                 v-for="option in sampleTypeOptions"
                 :key="option.value"
@@ -553,23 +570,28 @@
             </el-select>
           </el-form-item>
           <el-form-item label="开始时间" required>
-            <el-date-picker
-              v-model="planForm.startTime"
-              type="datetime"
-              format="YYYY-MM-DD HH:mm:ss"
-              value-format="YYYY-MM-DD HH:mm:ss"
-              style="width: 100%"
-            />
+            <div class="plan-hour-picker" data-plan-hour-picker>
+              <button
+                ref="startPlanHourTriggerRef"
+                type="button"
+                class="plan-hour-picker__trigger"
+                @click="togglePlanHourPanel('start')"
+              >
+                {{ getPlanDateTimeText('start') }}
+              </button>
+            </div>
           </el-form-item>
           <el-form-item label="截止时间">
-            <el-date-picker
-              v-model="planForm.endTime"
-              type="datetime"
-              format="YYYY-MM-DD HH:mm:ss"
-              value-format="YYYY-MM-DD HH:mm:ss"
-              style="width: 100%"
-              placeholder="单次计划可不填，周期计划建议填写"
-            />
+            <div class="plan-hour-picker" data-plan-hour-picker>
+              <button
+                ref="endPlanHourTriggerRef"
+                type="button"
+                class="plan-hour-picker__trigger"
+                @click="togglePlanHourPanel('end')"
+              >
+                {{ getPlanDateTimeText('end') || '单次计划可不填，周期计划建议填写' }}
+              </button>
+            </div>
           </el-form-item>
           <el-form-item class="plan-form-span-2" label="备注">
             <el-input v-model="planForm.remark" type="textarea" :rows="3" placeholder="可补充客户要求、执行说明等信息" />
@@ -581,6 +603,37 @@
         <el-button v-permission="'samplingPlan:write'" type="primary" :loading="submitting" @click="submitPlanForm">保存</el-button>
       </template>
     </el-dialog>
+
+    <Teleport to="body">
+      <div
+        v-if="activePlanHourPanel"
+        class="plan-hour-picker__panel plan-hour-picker__panel--floating"
+        data-plan-hour-picker
+        :style="planHourPanelStyle"
+      >
+        <div class="plan-hour-picker__body">
+          <el-date-picker-panel
+            :model-value="getPlanDatePart(activePlanHourPanel)"
+            type="date"
+            value-format="YYYY-MM-DD"
+            :show-footer="false"
+            @update:model-value="handlePlanDateChange(activePlanHourPanel, $event)"
+          />
+          <div class="plan-hour-picker__hours">
+            <span>选择小时</span>
+            <button
+              v-for="item in hourOptions"
+              :key="`${activePlanHourPanel}-hour-${item}`"
+              type="button"
+              :class="['plan-hour-option', { 'is-active': getPlanHourPart(activePlanHourPanel) === item }]"
+              @click="handlePlanHourChange(activePlanHourPanel, item)"
+            >
+              {{ item }}:00
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
 
     <el-dialog
       v-model="taskCompleteDialogVisible"
@@ -1084,10 +1137,11 @@
 
 <script setup>
 import dayjs from 'dayjs'
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElButton } from 'element-plus/es/components/button/index.mjs'
 import { ElDatePicker } from 'element-plus/es/components/date-picker/index.mjs'
+import { ElDatePickerPanel } from 'element-plus/es/components/date-picker-panel/index.mjs'
 import { ElDialog } from 'element-plus/es/components/dialog/index.mjs'
 import { ElForm, ElFormItem } from 'element-plus/es/components/form/index.mjs'
 import { ElInput } from 'element-plus/es/components/input/index.mjs'
@@ -1217,6 +1271,7 @@ const taskLocationViewerValue = reactive({ pointName: '', address: '', latitude:
 const taskDetailDialogVisible = ref(false)
 const weatherOptions = ref([])
 const storageConditionOptions = ref([])
+const waterPlantOptions = ref([])
 const editingPlanId = ref(null)
 const submitting = ref(false)
 const taskCompleteSubmitting = ref(false)
@@ -1236,6 +1291,11 @@ const taskCompletePreview = ref(null)
 const taskCompletePhotoList = ref([])
 const taskDetailPhotoList = ref([])
 const taskDetail = ref(null)
+const activePlanHourPanel = ref('')
+const startPlanHourTriggerRef = ref(null)
+const endPlanHourTriggerRef = ref(null)
+const planHourPanelStyle = ref({})
+const hourOptions = Array.from({ length: 24 }, (_, index) => String(index).padStart(2, '0'))
 
 const loginForm = reactive({
   taskId: null,
@@ -1293,6 +1353,7 @@ const loginDetectionProjectOptions = computed(() => {
 const planForm = reactive({
   planName: '',
   pointSource: 'EXISTING',
+  regionName: '',
   pointId: null,
   pointName: '',
   address: '',
@@ -2133,8 +2194,10 @@ function resetCurrentSceneQuery() {
   loadSamples()
 }
 
-async function loadMonitoringPoints() {
-  if (monitoringPointOptions.value.length) {
+async function loadMonitoringPoints(regionName = planForm.regionName) {
+  const normalizedRegionName = String(regionName || '').trim()
+  if (!normalizedRegionName) {
+    monitoringPointOptions.value = []
     return
   }
   monitoringPointLoading.value = true
@@ -2142,6 +2205,7 @@ async function loadMonitoringPoints() {
     const result = await fetchMonitoringPointsApi({
       pageNum: 1,
       pageSize: 500,
+      regionName: normalizedRegionName,
       pointStatus: enabledPointStatus
     })
     monitoringPointOptions.value = result.records || []
@@ -2150,8 +2214,8 @@ async function loadMonitoringPoints() {
   }
 }
 
-async function loadSamplers() {
-  if (samplerOptions.value.length) {
+async function loadSamplers(force = false) {
+  if (!force && samplerOptions.value.length) {
     return
   }
   samplerLoading.value = true
@@ -2163,7 +2227,7 @@ async function loadSamplers() {
       status: 1
     })
     const records = Array.isArray(result.records) ? result.records : []
-    samplerOptions.value = records
+    samplerOptions.value = dedupeSamplerOptions(records.map(normalizeSamplerOption).filter((item) => item.id))
   } finally {
     samplerLoading.value = false
   }
@@ -2171,17 +2235,19 @@ async function loadSamplers() {
 
 function handleSamplerDropdownVisible(visible) {
   if (visible) {
-    loadSamplers()
+    loadSamplers(true)
   }
 }
 
 async function loadSamplingDictOptions() {
-  const [weatherItems, storageItems] = await Promise.all([
+  const [weatherItems, storageItems, waterPlantItems] = await Promise.all([
     fetchDictItemsApi('weather_condition'),
-    fetchDictItemsApi('storage_condition')
+    fetchDictItemsApi('storage_condition'),
+    fetchDictItemsApi('water_plant')
   ])
   weatherOptions.value = normalizeDictOptions(weatherItems)
   storageConditionOptions.value = normalizeDictOptions(storageItems)
+  waterPlantOptions.value = normalizeDictOptions(waterPlantItems)
 }
 
 function normalizeSamplerIdList(value) {
@@ -2197,7 +2263,7 @@ function normalizeSamplerIdList(value) {
 }
 
 function getSamplerOptionId(item) {
-  const id = Number(item?.id)
+  const id = Number(item?.id ?? item?.userId ?? item?.user_id)
   return Number.isFinite(id) && id > 0 ? id : item?.id
 }
 
@@ -2216,6 +2282,66 @@ function getSamplerDisplayName(item) {
   ).trim()
 }
 
+function splitSamplerNames(value) {
+  return String(value || '')
+    .split(/[、,，]/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+}
+
+function normalizeSamplerOption(item) {
+  const id = getSamplerOptionId(item)
+  return {
+    ...item,
+    id,
+    label: getSamplerDisplayName(item) || String(id || '')
+  }
+}
+
+function dedupeSamplerOptions(options) {
+  const idSet = new Set()
+  const nameSet = new Set()
+  const result = []
+  ;(options || []).forEach((item) => {
+    const id = Number(getSamplerOptionId(item))
+    const name = getSamplerDisplayName(item)
+    const idKey = Number.isFinite(id) && id > 0 ? String(id) : ''
+    const nameKey = name || ''
+    if ((idKey && idSet.has(idKey)) || (nameKey && nameSet.has(nameKey))) {
+      return
+    }
+    if (idKey) {
+      idSet.add(idKey)
+    }
+    if (nameKey) {
+      nameSet.add(nameKey)
+    }
+    result.push(item)
+  })
+  return result
+}
+
+function ensureSelectedSamplerOptions(ids, samplerNameText) {
+  const selectedIds = normalizeSamplerIdList(ids)
+  if (!selectedIds.length) {
+    return
+  }
+  const names = splitSamplerNames(samplerNameText)
+  const existingIds = new Set(samplerOptions.value.map((item) => Number(getSamplerOptionId(item))))
+  const existingNames = new Set(samplerOptions.value.map((item) => getSamplerDisplayName(item)).filter(Boolean))
+  const additions = selectedIds
+    .filter((id, index) => !existingIds.has(id) && !existingNames.has(names[index]))
+    .map((id, index) => ({
+      id,
+      realName: names[index] || `采样员${id}`,
+      username: String(id),
+      label: names[index] || `采样员${id}`
+    }))
+  if (additions.length) {
+    samplerOptions.value = dedupeSamplerOptions([...samplerOptions.value, ...additions])
+  }
+}
+
 function resolveSamplerNames(ids) {
   const selectedIds = normalizeSamplerIdList(ids)
   return selectedIds
@@ -2232,6 +2358,24 @@ function getRowSamplerIds(row) {
     return ids
   }
   return normalizeSamplerIdList(row?.samplerId || row?.sampler_id)
+}
+
+function resolveRowSamplerOptionIds(row) {
+  const names = splitSamplerNames(row?.samplerName || row?.sampler_name)
+  const ids = getRowSamplerIds(row)
+  const resolved = ids.map((id, index) => {
+    const idMatched = samplerOptions.value.find((item) => Number(getSamplerOptionId(item)) === id)
+    if (idMatched) {
+      return Number(getSamplerOptionId(idMatched))
+    }
+    const name = names[index]
+    if (!name) {
+      return id
+    }
+    const nameMatched = samplerOptions.value.find((item) => getSamplerDisplayName(item) === name)
+    return nameMatched ? Number(getSamplerOptionId(nameMatched)) : id
+  })
+  return normalizeSamplerIdList(resolved)
 }
 
 function getDefaultSamplerIds() {
@@ -2289,10 +2433,92 @@ function handleDispatchSamplerChange(userIds) {
   dispatchForm.samplerName = resolveSamplerNames(ids)
 }
 
+function getPlanDateTime(prefix) {
+  const value = planForm[`${prefix}Time`]
+  const parsed = value ? dayjs(value) : null
+  return parsed?.isValid() ? parsed : null
+}
+
+function getPlanDatePart(prefix) {
+  return getPlanDateTime(prefix)?.format('YYYY-MM-DD') || ''
+}
+
+function getPlanDateTimeText(prefix) {
+  return getPlanDateTime(prefix)?.format('YYYY-MM-DD HH:mm:ss') || ''
+}
+
+function getPlanHourPart(prefix) {
+  return getPlanDateTime(prefix)?.format('HH') || '00'
+}
+
+function buildPlanHourDateTimeText(date, hour) {
+  return date ? `${date} ${hour || '00'}:00:00` : ''
+}
+
+function handlePlanDateChange(prefix, value) {
+  planForm[`${prefix}Time`] = buildPlanHourDateTimeText(value, getPlanHourPart(prefix))
+}
+
+function handlePlanHourChange(prefix, value) {
+  const date = getPlanDatePart(prefix) || dayjs().format('YYYY-MM-DD')
+  planForm[`${prefix}Time`] = buildPlanHourDateTimeText(date, value)
+  activePlanHourPanel.value = ''
+}
+
+function updatePlanHourPanelPosition(prefix = activePlanHourPanel.value) {
+  if (!prefix) {
+    return
+  }
+  const trigger = prefix === 'start' ? startPlanHourTriggerRef.value : endPlanHourTriggerRef.value
+  if (!trigger) {
+    return
+  }
+  const rect = trigger.getBoundingClientRect()
+  const preferredWidth = 700
+  const viewportGap = 12
+  const panelWidth = Math.min(preferredWidth, window.innerWidth - viewportGap * 2)
+  const panelHeight = 430
+  const bottomTop = rect.bottom + 6
+  const topTop = rect.top - panelHeight - 6
+  const top = bottomTop + panelHeight + viewportGap > window.innerHeight
+    ? Math.max(viewportGap, topTop)
+    : bottomTop
+  const left = Math.min(Math.max(rect.left, viewportGap), window.innerWidth - panelWidth - viewportGap)
+  planHourPanelStyle.value = {
+    top: `${top}px`,
+    left: `${left}px`,
+    width: `${panelWidth}px`
+  }
+}
+
+async function togglePlanHourPanel(prefix) {
+  const nextPanel = activePlanHourPanel.value === prefix ? '' : prefix
+  activePlanHourPanel.value = nextPanel
+  if (!planForm[`${prefix}Time`]) {
+    planForm[`${prefix}Time`] = buildPlanHourDateTimeText(dayjs().format('YYYY-MM-DD'), '00')
+  }
+  if (nextPanel) {
+    await nextTick()
+    updatePlanHourPanelPosition(nextPanel)
+  }
+}
+
+function handlePlanHourOutsideClick(event) {
+  if (!event.target?.closest?.('[data-plan-hour-picker]')) {
+    activePlanHourPanel.value = ''
+  }
+}
+
+function handlePlanHourViewportChange() {
+  updatePlanHourPanelPosition()
+}
+
 function resetPlanForm() {
   editingPlanId.value = null
+  activePlanHourPanel.value = ''
   planForm.planName = ''
   planForm.pointSource = 'EXISTING'
+  planForm.regionName = ''
   planForm.pointId = null
   planForm.pointName = ''
   planForm.address = ''
@@ -2314,21 +2540,18 @@ async function openPlanDialog() {
   planForm.planName = `采样计划-${dayjs().format('MMDD-HHmm')}`
   planForm.startTime = dayjs().format('YYYY-MM-DD HH:mm:ss')
   planForm.endTime = dayjs().add(7, 'day').format('YYYY-MM-DD HH:mm:ss')
-  await Promise.all([loadMonitoringPoints(), loadSamplers()])
-  if (monitoringPointOptions.value.length) {
-    handlePlanPointChange(monitoringPointOptions.value[0].id)
-  } else {
-    planForm.pointSource = 'CUSTOM'
-  }
+  monitoringPointOptions.value = []
+  await loadSamplers(true)
   applyDefaultPlanSampler()
   planDialogVisible.value = true
 }
 
 async function openPlanEditDialog(row) {
-  await Promise.all([loadMonitoringPoints(), loadSamplers()])
+  await loadSamplers(true)
   editingPlanId.value = row.id
   planForm.planName = row.planName || ''
   planForm.pointSource = row.pointId ? 'EXISTING' : 'CUSTOM'
+  planForm.regionName = ''
   planForm.pointId = row.pointId || null
   planForm.pointName = row.pointName || ''
   planForm.address = row.address || ''
@@ -2336,14 +2559,16 @@ async function openPlanEditDialog(row) {
   planForm.longitude = row.longitude || ''
   planForm.startTime = row.startTime || ''
   planForm.endTime = row.endTime || ''
-  planForm.samplerIds = getRowSamplerIds(row)
+  planForm.samplerIds = resolveRowSamplerOptionIds(row)
+  ensureSelectedSamplerOptions(planForm.samplerIds, row.samplerName || row.sampler_name)
   planForm.samplerId = planForm.samplerIds[0] || null
-  planForm.samplerName = row.samplerName || resolveSamplerNames(planForm.samplerIds)
+  planForm.samplerName = resolveSamplerNames(planForm.samplerIds) || row.samplerName || row.sampler_name || ''
   planForm.samplingType = row.samplingType || routineSamplingType
   planForm.sampleType = row.sampleType || ''
   planForm.cycleType = row.cycleType || dailyCycleType
   planForm.remark = row.remark || ''
   if (planForm.pointSource === 'EXISTING' && planForm.pointId) {
+    await loadMonitoringPointForEdit(row)
     handlePlanPointChange(planForm.pointId)
   }
   planDialogVisible.value = true
@@ -2351,16 +2576,36 @@ async function openPlanEditDialog(row) {
 
 function handlePlanPointSourceChange(value) {
   if (value === 'CUSTOM') {
+    planForm.regionName = ''
     planForm.pointId = null
     planForm.pointName = ''
     planForm.address = ''
     planForm.latitude = ''
     planForm.longitude = ''
+    planForm.sampleType = ''
+    monitoringPointOptions.value = []
     return
   }
-  if (monitoringPointOptions.value.length) {
-    handlePlanPointChange(planForm.pointId || monitoringPointOptions.value[0].id)
+  planForm.pointId = null
+  planForm.pointName = ''
+  planForm.address = ''
+  planForm.latitude = ''
+  planForm.longitude = ''
+  planForm.sampleType = ''
+  monitoringPointOptions.value = []
+  if (planForm.regionName) {
+    loadMonitoringPoints(planForm.regionName)
   }
+}
+
+async function handlePlanRegionChange(regionName) {
+  planForm.pointId = null
+  planForm.pointName = ''
+  planForm.address = ''
+  planForm.latitude = ''
+  planForm.longitude = ''
+  planForm.sampleType = ''
+  await loadMonitoringPoints(regionName)
 }
 
 function handlePlanPointChange(pointId) {
@@ -2370,6 +2615,39 @@ function handlePlanPointChange(pointId) {
   planForm.address = point?.address || point?.pointName || ''
   planForm.latitude = point?.latitude || ''
   planForm.longitude = point?.longitude || ''
+  planForm.sampleType = point?.pointType || ''
+  if (point?.regionName) {
+    planForm.regionName = point.regionName
+  }
+}
+
+async function loadMonitoringPointForEdit(row) {
+  const rowPointId = row?.pointId
+  if (!rowPointId) {
+    monitoringPointOptions.value = []
+    return
+  }
+  if (row.regionName) {
+    planForm.regionName = row.regionName
+    await loadMonitoringPoints(row.regionName)
+    return
+  }
+  monitoringPointLoading.value = true
+  try {
+    const result = await fetchMonitoringPointsApi({
+      pageNum: 1,
+      pageSize: 500,
+      pointStatus: enabledPointStatus
+    })
+    const records = result.records || []
+    const point = records.find((item) => item.id === rowPointId)
+    planForm.regionName = point?.regionName || ''
+    monitoringPointOptions.value = planForm.regionName
+      ? records.filter((item) => item.regionName === planForm.regionName)
+      : records
+  } finally {
+    monitoringPointLoading.value = false
+  }
 }
 
 function buildPlanPayload() {
@@ -2406,9 +2684,15 @@ async function submitPlanForm() {
     ElMessage.warning('请选择采样人员')
     return
   }
-  if (planForm.pointSource === 'EXISTING' && !payload.pointId) {
-    ElMessage.warning('请选择监测点位')
-    return
+  if (planForm.pointSource === 'EXISTING') {
+    if (!planForm.regionName) {
+      ElMessage.warning('请选择所属水厂')
+      return
+    }
+    if (!payload.pointId) {
+      ElMessage.warning('请选择监测点位')
+      return
+    }
   }
   if (!payload.latitude || !payload.longitude) {
     ElMessage.warning('请从地图选择采样点位坐标')
@@ -2443,11 +2727,13 @@ async function openDispatchDialog(row) {
   if (dispatchSubmitting.value) {
     return
   }
-  await loadSamplers()
+  await loadSamplers(true)
   resetDispatchForm()
   dispatchForm.planId = row.id
   dispatchForm.samplingTime = row.startTime || dayjs().format('YYYY-MM-DD HH:mm:ss')
-  handleDispatchSamplerChange(getRowSamplerIds(row))
+  const samplerIds = resolveRowSamplerOptionIds(row)
+  ensureSelectedSamplerOptions(samplerIds, row.samplerName || row.sampler_name)
+  handleDispatchSamplerChange(samplerIds)
   dispatchDialogVisible.value = true
 }
 
@@ -3298,9 +3584,18 @@ async function submitSampleLogin() {
 }
 
 onMounted(async () => {
+  document.addEventListener('click', handlePlanHourOutsideClick)
+  window.addEventListener('resize', handlePlanHourViewportChange)
+  window.addEventListener('scroll', handlePlanHourViewportChange, true)
   syncRouteState()
   await Promise.all([loadCurrentSceneData(), loadSamplingDictOptions()])
   await handleRouteAutoOpen()
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('click', handlePlanHourOutsideClick)
+  window.removeEventListener('resize', handlePlanHourViewportChange)
+  window.removeEventListener('scroll', handlePlanHourViewportChange, true)
 })
 
 watch(() => route.fullPath, async () => {
@@ -3691,6 +3986,109 @@ watch(() => route.fullPath, async () => {
 
 .plan-form-new-row {
   grid-column: 1 / span 1;
+}
+
+.plan-hour-picker {
+  position: relative;
+  width: 100%;
+}
+
+.plan-hour-picker__trigger {
+  width: 100%;
+  height: 34px;
+  padding: 0 12px;
+  border: 1px solid #cfd9e6;
+  border-radius: 3px;
+  background: #ffffff;
+  color: var(--text-main);
+  font: inherit;
+  line-height: 32px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.plan-hour-picker__trigger:hover,
+.plan-hour-picker__trigger:focus {
+  border-color: var(--brand);
+  outline: none;
+}
+
+.plan-hour-picker__panel {
+  z-index: 4000;
+  border: 1px solid #d9e3ef;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 10px 28px rgba(31, 45, 61, 0.18);
+  overflow: hidden;
+}
+
+.plan-hour-picker__panel--floating {
+  position: fixed;
+}
+
+.plan-hour-picker__body {
+  display: grid;
+  grid-template-columns: minmax(320px, 1.2fr) minmax(300px, 1fr);
+  align-items: stretch;
+}
+
+.plan-hour-picker__body :deep(.el-date-picker) {
+  width: 100% !important;
+  box-shadow: none !important;
+}
+
+.plan-hour-picker__body :deep(.el-picker-panel__body-wrapper),
+.plan-hour-picker__body :deep(.el-picker-panel__body) {
+  min-width: 0;
+}
+
+.plan-hour-picker__hours {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  align-content: start;
+  gap: 12px;
+  padding: 18px;
+  border-left: 1px solid #eef2f6;
+}
+
+.plan-hour-picker__hours > span {
+  grid-column: 1 / -1;
+  color: var(--text-light);
+  font-size: 15px;
+  line-height: 24px;
+}
+
+.plan-hour-option {
+  height: 38px;
+  border: 0;
+  border-radius: 5px;
+  background: #ffffff;
+  color: var(--text-sub);
+  font-size: 16px;
+  line-height: 38px;
+  cursor: pointer;
+}
+
+.plan-hour-option:hover {
+  background: var(--brand-soft);
+  color: var(--brand);
+}
+
+.plan-hour-option.is-active {
+  background: color-mix(in srgb, var(--brand) 12%, #ffffff 88%);
+  color: var(--brand);
+  font-weight: 700;
+}
+
+@media (max-width: 760px) {
+  .plan-hour-picker__body {
+    grid-template-columns: 1fr;
+  }
+
+  .plan-hour-picker__hours {
+    border-top: 1px solid #eef2f6;
+    border-left: 0;
+  }
 }
 
 .scene-copy p {

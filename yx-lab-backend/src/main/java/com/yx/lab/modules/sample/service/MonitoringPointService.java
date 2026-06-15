@@ -103,6 +103,16 @@ public class MonitoringPointService {
     }
 
     private void validatePoint(MonitoringPoint point) {
+        if (StrUtil.isBlank(point.getRegionName())) {
+            throw new BusinessException("所属水厂不能为空");
+        }
+        if (StrUtil.isBlank(point.getPointType())) {
+            throw new BusinessException("点位类型不能为空");
+        }
+        if (!LabWorkflowConstants.POINT_TYPES.contains(point.getPointType())) {
+            throw new BusinessException("点位类型不合法");
+        }
+        ensureUniqueRegionPointType(point);
         if (!LabWorkflowConstants.PointStatus.ENABLED.equals(point.getPointStatus())) {
             return;
         }
@@ -122,6 +132,16 @@ public class MonitoringPointService {
             }
         } catch (NumberFormatException ex) {
             throw new BusinessException("监测点位" + label + "格式不正确");
+        }
+    }
+
+    private void ensureUniqueRegionPointType(MonitoringPoint point) {
+        Long count = monitoringPointMapper.selectCount(new LambdaQueryWrapper<MonitoringPoint>()
+                .eq(MonitoringPoint::getRegionName, point.getRegionName())
+                .eq(MonitoringPoint::getPointType, point.getPointType())
+                .ne(point.getId() != null, MonitoringPoint::getId, point.getId()));
+        if (count != null && count > 0) {
+            throw new BusinessException("同一所属水厂下已存在该点位类型的监测点位");
         }
     }
 }

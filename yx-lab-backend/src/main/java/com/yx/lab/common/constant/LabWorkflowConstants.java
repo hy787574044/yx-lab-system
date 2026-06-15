@@ -36,6 +36,8 @@ public final class LabWorkflowConstants {
 
     public static final class PointType {
 
+        public static final String SOURCE_WATER = "SOURCE_WATER";
+
         public static final String FACTORY = "FACTORY";
 
         public static final String RAW = "RAW";
@@ -51,6 +53,8 @@ public final class LabWorkflowConstants {
         public static final String DAILY = "DAILY";
 
         public static final String WEEKLY = "WEEKLY";
+
+        public static final String HALF_MONTHLY = "HALF_MONTHLY";
 
         public static final String MONTHLY = "MONTHLY";
 
@@ -226,6 +230,8 @@ public final class LabWorkflowConstants {
 
         public static final String WEEKLY = "WEEKLY";
 
+        public static final String HALF_MONTHLY = "HALF_MONTHLY";
+
         public static final String MONTHLY = "MONTHLY";
 
         private CycleType() {
@@ -243,6 +249,7 @@ public final class LabWorkflowConstants {
             PointStatus.DISABLED);
 
     public static final Set<String> POINT_TYPES = unmodifiableSet(
+            PointType.SOURCE_WATER,
             PointType.FACTORY,
             PointType.RAW,
             PointType.TERMINAL);
@@ -256,6 +263,7 @@ public final class LabWorkflowConstants {
             CycleType.ONCE,
             CycleType.DAILY,
             CycleType.WEEKLY,
+            CycleType.HALF_MONTHLY,
             CycleType.MONTHLY);
 
     public static final Set<String> SAMPLE_TYPES = unmodifiableSet(
@@ -385,6 +393,7 @@ public final class LabWorkflowConstants {
     public static boolean isRecurringCycle(String cycleType) {
         return CycleType.DAILY.equals(cycleType)
                 || CycleType.WEEKLY.equals(cycleType)
+                || CycleType.HALF_MONTHLY.equals(cycleType)
                 || CycleType.MONTHLY.equals(cycleType);
     }
 
@@ -419,14 +428,17 @@ public final class LabWorkflowConstants {
     }
 
     public static String getPointTypeLabel(String pointType) {
+        if (PointType.SOURCE_WATER.equals(pointType)) {
+            return "水源水";
+        }
         if (PointType.FACTORY.equals(pointType)) {
             return "出厂水";
         }
         if (PointType.RAW.equals(pointType)) {
-            return "原水";
+            return "滤前水";
         }
         if (PointType.TERMINAL.equals(pointType)) {
-            return "管网末梢";
+            return "末梢水";
         }
         return pointType;
     }
@@ -453,6 +465,9 @@ public final class LabWorkflowConstants {
         }
         if (CycleType.WEEKLY.equals(cycleType)) {
             return "每周";
+        }
+        if (CycleType.HALF_MONTHLY.equals(cycleType)) {
+            return "半月";
         }
         if (CycleType.MONTHLY.equals(cycleType)) {
             return "每月";
@@ -530,29 +545,29 @@ public final class LabWorkflowConstants {
 
     public static String getSampleTypeLabel(String sampleType) {
         if (SampleType.FACTORY.equals(sampleType)) {
-            return "\u51fa\u5382\u6c34";
+            return "出厂水";
         }
         if (SampleType.RAW.equals(sampleType)) {
-            return "\u539f\u6c34";
+            return "滤前水";
         }
         if (SampleType.TERMINAL.equals(sampleType)) {
-            return "\u7ba1\u7f51\u672b\u68a2";
+            return "末梢水";
         }
         if (SampleType.SOURCE_WATER.equals(sampleType)) {
-            return "\u6c34\u6e90\u6c34";
+            return "水源水";
         }
         return sampleType;
     }
 
     public static String getSampleSourceMethodLabel(String sampleSourceMethod) {
         if (SampleSourceMethod.SAMPLING.equals(sampleSourceMethod)) {
-            return "\u91c7\u6837";
+            return "采样";
         }
         if (SampleSourceMethod.DELIVERED.equals(sampleSourceMethod)) {
-            return "\u9001\u6837";
+            return "送样";
         }
         if (SampleSourceMethod.OUTSOURCED.equals(sampleSourceMethod)) {
-            return "\u5916\u91c7";
+            return "外采";
         }
         return sampleSourceMethod;
     }
@@ -650,8 +665,8 @@ public final class LabWorkflowConstants {
         }
         String result = text;
         result = result.replaceAll("\\bFACTORY\\b", "出厂水");
-        result = result.replaceAll("\\bRAW\\b", "原水");
-        result = result.replaceAll("\\bTERMINAL\\b", "管网末梢");
+        result = result.replaceAll("\\bRAW\\b", "滤前水");
+        result = result.replaceAll("\\bTERMINAL\\b", "末梢水");
         result = result.replaceAll("\\bLOGGED\\b", "已登记");
         result = result.replaceAll("\\bREVIEWING\\b", "审核中");
         result = result.replaceAll("\\bRETEST\\b", "待重检");
@@ -682,6 +697,7 @@ public final class LabWorkflowConstants {
         result = result.replaceAll("\\bDISABLED\\b", "停用");
         result = result.replaceAll("\\bDAILY\\b", "每日");
         result = result.replaceAll("\\bWEEKLY\\b", "每周");
+        result = result.replaceAll("\\bHALF_MONTHLY\\b", "半月");
         result = result.replaceAll("\\bMONTHLY\\b", "每月");
         result = result.replaceAll("\\bONCE\\b", "一次性");
         result = result.replaceAll("\\bMAINTENANCE\\b", "维修中");

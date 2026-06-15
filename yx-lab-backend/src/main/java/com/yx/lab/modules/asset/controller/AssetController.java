@@ -128,7 +128,7 @@ public class AssetController {
     @Operation(summary = "下载仪器导入模板")
     public ResponseEntity<byte[]> downloadInstrumentImportTemplate() {
         ContentDisposition contentDisposition = ContentDisposition.attachment()
-                .filename("\u8bbe\u5907\u53f0\u8d26\u5bfc\u5165\u6a21\u677f.xlsx", StandardCharsets.UTF_8)
+                .filename("设备台账导入模板.xlsx", StandardCharsets.UTF_8)
                 .build();
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, contentDisposition.toString())
@@ -160,7 +160,7 @@ public class AssetController {
     @RequirePermission(PermissionConstants.ASSET_WRITE)
     public ApiResponse<Void> saveInstrument(@Valid @RequestBody InstrumentSaveCommand command) {
         instrumentAssetService.saveInstrument(command);
-        return ApiResponse.successMessage("\u65b0\u589e\u6210\u529f");
+        return ApiResponse.successMessage("新增成功");
     }
 
     /**
@@ -175,7 +175,7 @@ public class AssetController {
     @RequirePermission(PermissionConstants.ASSET_WRITE)
     public ApiResponse<Void> updateInstrument(@PathVariable Long id, @Valid @RequestBody InstrumentSaveCommand command) {
         instrumentAssetService.updateInstrument(id, command);
-        return ApiResponse.successMessage("\u66f4\u65b0\u6210\u529f");
+        return ApiResponse.successMessage("更新成功");
     }
 
     /**
@@ -189,7 +189,7 @@ public class AssetController {
     @RequirePermission(PermissionConstants.ASSET_WRITE)
     public ApiResponse<Void> deleteInstrument(@PathVariable Long id) {
         instrumentAssetService.deleteInstrument(id);
-        return ApiResponse.successMessage("\u5220\u9664\u6210\u529f");
+        return ApiResponse.successMessage("删除成功");
     }
 
     /**
@@ -248,7 +248,7 @@ public class AssetController {
     @RequirePermission(PermissionConstants.ASSET_WRITE)
     public ApiResponse<Void> saveMaintenance(@Valid @RequestBody InstrumentMaintenanceSaveCommand command) {
         instrumentAssetService.saveMaintenance(command);
-        return ApiResponse.successMessage("\u65b0\u589e\u6210\u529f");
+        return ApiResponse.successMessage("新增成功");
     }
 
     /**
@@ -263,7 +263,7 @@ public class AssetController {
     @RequirePermission(PermissionConstants.ASSET_WRITE)
     public ApiResponse<Void> updateMaintenance(@PathVariable Long id, @Valid @RequestBody InstrumentMaintenanceSaveCommand command) {
         instrumentAssetService.updateMaintenance(id, command);
-        return ApiResponse.successMessage("\u66f4\u65b0\u6210\u529f");
+        return ApiResponse.successMessage("更新成功");
     }
 
     /**
@@ -277,7 +277,7 @@ public class AssetController {
     @RequirePermission(PermissionConstants.ASSET_WRITE)
     public ApiResponse<Void> deleteMaintenance(@PathVariable Long id) {
         instrumentAssetService.deleteMaintenance(id);
-        return ApiResponse.successMessage("\u5220\u9664\u6210\u529f");
+        return ApiResponse.successMessage("删除成功");
     }
 
     /**
@@ -370,7 +370,7 @@ public class AssetController {
     @RequirePermission(PermissionConstants.ASSET_WRITE)
     public ApiResponse<Void> saveDocument(@Valid @RequestBody DocumentSaveCommand command) {
         assetDocumentService.saveDocument(command);
-        return ApiResponse.successMessage("\u65b0\u589e\u6210\u529f");
+        return ApiResponse.successMessage("新增成功");
     }
 
     /**
@@ -385,7 +385,7 @@ public class AssetController {
     @RequirePermission(PermissionConstants.ASSET_WRITE)
     public ApiResponse<Void> updateDocument(@PathVariable Long id, @Valid @RequestBody DocumentSaveCommand command) {
         assetDocumentService.updateDocument(id, command);
-        return ApiResponse.successMessage("\u66f4\u65b0\u6210\u529f");
+        return ApiResponse.successMessage("更新成功");
     }
 
     /**
@@ -399,6 +399,6 @@ public class AssetController {
     @RequirePermission(PermissionConstants.ASSET_WRITE)
     public ApiResponse<Void> deleteDocument(@PathVariable Long id) {
         assetDocumentService.deleteDocumentWithPermission(id);
-        return ApiResponse.successMessage("\u5220\u9664\u6210\u529f");
+        return ApiResponse.successMessage("删除成功");
     }
 }

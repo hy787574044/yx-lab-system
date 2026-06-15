@@ -232,9 +232,10 @@ public class DictManagementService {
                 "系统内置：监测点位启停状态统一使用。"));
         definitions.add(new BuiltInDictDefinition("point_type", "监测点类型", "采样管理",
                 buildItemText(mapOf(
+                        "SOURCE_WATER", "水源水",
+                        "RAW", "滤前水",
                         "FACTORY", "出厂水",
-                        "RAW", "原水",
-                        "TERMINAL", "管网末梢"
+                        "TERMINAL", "末梢水"
                 )),
                 "系统内置：监测点位类型统一使用。"));
         definitions.add(new BuiltInDictDefinition("frequency_type", "监测频次", "采样管理",
@@ -249,6 +250,7 @@ public class DictManagementService {
                         "ONCE", "单次",
                         "DAILY", "每日",
                         "WEEKLY", "每周",
+                        "HALF_MONTHLY", "半月",
                         "MONTHLY", "每月"
                 )),
                 "系统内置：周期计划与自动任务周期统一使用。"));
@@ -283,8 +285,8 @@ public class DictManagementService {
         definitions.add(new BuiltInDictDefinition("sample_type", "样品类型", "采样管理",
                 buildItemText(mapOf(
                         "FACTORY", "出厂水",
-                        "RAW", "原水",
-                        "TERMINAL", "管网末梢",
+                        "RAW", "滤前水",
+                        "TERMINAL", "末梢水",
                         "SOURCE_WATER", "水源水"
                 )),
                 "系统内置：样品登录、样品台账统一使用。"));

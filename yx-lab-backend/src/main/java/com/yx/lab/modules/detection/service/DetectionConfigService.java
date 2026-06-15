@@ -1155,7 +1155,7 @@ public class DetectionConfigService {
             return;
         }
         if (!LabWorkflowConstants.SAMPLE_TYPES.contains(sampleType)) {
-            throw new BusinessException("\u68c0\u6d4b\u5957\u9910\u7ed1\u5b9a\u7684\u6837\u54c1\u7c7b\u578b\u4e0d\u6b63\u786e");
+            throw new BusinessException("检测套餐绑定的样品类型不正确");
         }
     }
 
