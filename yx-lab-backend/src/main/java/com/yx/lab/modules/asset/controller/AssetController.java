@@ -205,7 +205,7 @@ public class AssetController {
     }
 
     @GetMapping("/maintenances/stats")
-    @Operation(summary = "维修记录统计")
+    @Operation(summary = "维护记录统计")
     public ApiResponse<List<StatusCountVO>> maintenanceStats() {
         return ApiResponse.success(instrumentAssetService.maintenanceStats());
     }
@@ -221,17 +221,17 @@ public class AssetController {
     public ResponseEntity<byte[]> exportMaintenances(@Validated MaintenanceQuery query) {
         ExcelExportUtil.prepareExportQuery(query);
         return ExcelExportUtil.buildResponse(
-                "设备维修.xlsx",
-                "设备维修",
+                "设备维护.xlsx",
+                "设备维护",
                 instrumentAssetService.maintenancePage(query).getRecords(),
                 java.util.Arrays.asList(
                         ExcelExportUtil.column("设备名称", InstrumentMaintenance::getInstrumentName),
-                        ExcelExportUtil.column("维修时间", InstrumentMaintenance::getMaintenanceTime),
-                        ExcelExportUtil.column("维修原因", InstrumentMaintenance::getMaintenanceReason),
-                        ExcelExportUtil.column("维修人", InstrumentMaintenance::getMaintainerName),
-                        ExcelExportUtil.column("维修公司", InstrumentMaintenance::getMaintenanceCompany),
-                        ExcelExportUtil.column("维修结果", InstrumentMaintenance::getMaintenanceResult),
-                        ExcelExportUtil.column("维修费用", InstrumentMaintenance::getMaintenanceCost),
+                        ExcelExportUtil.column("维护时间", InstrumentMaintenance::getMaintenanceTime),
+                        ExcelExportUtil.column("维护原因", InstrumentMaintenance::getMaintenanceReason),
+                        ExcelExportUtil.column("维护人", InstrumentMaintenance::getMaintainerName),
+                        ExcelExportUtil.column("维护公司", InstrumentMaintenance::getMaintenanceCompany),
+                        ExcelExportUtil.column("维护结果", InstrumentMaintenance::getMaintenanceResult),
+                        ExcelExportUtil.column("维护费用", InstrumentMaintenance::getMaintenanceCost),
                         ExcelExportUtil.column("备注", InstrumentMaintenance::getRemark),
                         ExcelExportUtil.column("更新时间", InstrumentMaintenance::getUpdatedTime)
                 ));

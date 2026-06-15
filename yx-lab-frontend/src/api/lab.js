@@ -432,33 +432,33 @@ export const exportInstrumentsApi = (params) => downloadExcel('/api/assets/instr
  */
 export const getInstrumentDetailApi = (id) => request.get(`/api/assets/instruments/${id}`)
 /**
- * 获取设备维修分页。
+ * 获取设备维护分页。
  *
  * @param {Object} params 查询条件。
- * @returns {Promise<any>} 设备维修分页结果。
+ * @returns {Promise<any>} 设备维护分页结果。
  */
 export const fetchInstrumentMaintenancesApi = (params) => request.get('/api/assets/maintenances', { params })
 export const fetchInstrumentMaintenanceStatsApi = () => request.get('/api/assets/maintenances/stats')
-export const exportInstrumentMaintenancesApi = (params) => downloadExcel('/api/assets/maintenances/export', params, '设备维修.xlsx')
+export const exportInstrumentMaintenancesApi = (params) => downloadExcel('/api/assets/maintenances/export', params, '设备维护.xlsx')
 /**
- * 新增设备维修记录。
+ * 新增设备维护记录。
  *
- * @param {Object} data 设备维修表单。
+ * @param {Object} data 设备维护表单。
  * @returns {Promise<any>} 保存结果。
  */
 export const createInstrumentMaintenanceApi = (data) => request.post('/api/assets/maintenances', data)
 /**
- * 更新设备维修记录。
+ * 更新设备维护记录。
  *
- * @param {number} id 维修主键。
- * @param {Object} data 设备维修表单。
+ * @param {number} id 维护主键。
+ * @param {Object} data 设备维护表单。
  * @returns {Promise<any>} 更新结果。
  */
 export const updateInstrumentMaintenanceApi = (id, data) => request.post(`/api/assets/maintenances/${id}`, data)
 /**
- * 删除设备维修记录。
+ * 删除设备维护记录。
  *
- * @param {number} id 维修主键。
+ * @param {number} id 维护主键。
  * @returns {Promise<any>} 删除结果。
  */
 export const deleteInstrumentMaintenanceApi = (id) => request.post(`/api/assets/maintenances/${id}/delete`)

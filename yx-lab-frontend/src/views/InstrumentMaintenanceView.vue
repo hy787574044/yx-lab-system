@@ -3,7 +3,7 @@
     <section class="glass-panel section-block fixed-table-section">
       <div class="section-head">
         <div>
-          <h3 class="section-title">维修台账</h3>
+          <h3 class="section-title">维护台账</h3>
         </div>
       </div>
 
@@ -24,7 +24,7 @@
       <div class="toolbar-panel">
         <div class="toolbar-row">
           <div class="toolbar-main">
-            <el-button type="primary" class="toolbar-primary-button" @click="openDialog()">新增维修</el-button>
+            <el-button type="primary" class="toolbar-primary-button" @click="openDialog()">新增维护</el-button>
             <div class="toolbar-fields">
               <label class="toolbar-field">
                 <span>设备名称</span>
@@ -47,15 +47,15 @@
                 <el-input
                   v-model="query.keyword"
                   clearable
-                  placeholder="可按维修原因、维修人、维修公司、维修结果或备注筛选当前页"
+                  placeholder="可按维护原因、维护人、维护公司、维护结果或备注筛选当前页"
                 />
               </label>
               <label class="toolbar-field">
-                <span>维修公司</span>
+                <span>维护公司</span>
                 <el-input
                   v-model="query.maintenanceCompany"
                   clearable
-                  placeholder="请输入维修公司"
+                  placeholder="请输入维护公司"
                   @keyup.enter="handleSearch"
                 />
               </label>
@@ -78,15 +78,15 @@
           stripe
           height="100%"
           v-loading="loading"
-          empty-text="暂无设备维修记录数据"
+          empty-text="暂无设备维护记录数据"
         >
           <el-table-column prop="instrumentName" label="设备名称" min-width="180" />
-          <el-table-column prop="maintenanceTime" label="维修时间" width="180" />
-          <el-table-column prop="maintenanceReason" label="维修原因" min-width="180" show-overflow-tooltip />
-          <el-table-column prop="maintainerName" label="维修人" width="120" />
-          <el-table-column prop="maintenanceCompany" label="维修公司" min-width="160" show-overflow-tooltip />
-          <el-table-column prop="maintenanceResult" label="维修结果" min-width="180" show-overflow-tooltip />
-          <el-table-column label="维修费用" width="120" header-cell-class-name="cell-center" class-name="cell-center">
+          <el-table-column prop="maintenanceTime" label="维护时间" width="180" />
+          <el-table-column prop="maintenanceReason" label="维护原因" min-width="180" show-overflow-tooltip />
+          <el-table-column prop="maintainerName" label="维护人" width="120" />
+          <el-table-column prop="maintenanceCompany" label="维护公司" min-width="160" show-overflow-tooltip />
+          <el-table-column prop="maintenanceResult" label="维护结果" min-width="180" show-overflow-tooltip />
+          <el-table-column label="维护费用" width="120" header-cell-class-name="cell-center" class-name="cell-center">
             <template #default="{ row }">
               {{ formatMoney(row.maintenanceCost) }}
             </template>
@@ -114,7 +114,7 @@
 
     <el-dialog
       v-model="dialogVisible"
-      :title="form.id ? '编辑维修记录' : '新增维修记录'"
+      :title="form.id ? '编辑维护记录' : '新增维护记录'"
       width="760px"
       destroy-on-close
       @closed="resetForm"
@@ -137,39 +137,39 @@
               />
             </el-select>
           </el-form-item>
-          <el-form-item label="维修时间" prop="maintenanceTime">
+          <el-form-item label="维护时间" prop="maintenanceTime">
             <el-date-picker
               v-model="form.maintenanceTime"
               type="datetime"
               format="YYYY-MM-DD HH:mm:ss"
               value-format="YYYY-MM-DD HH:mm:ss"
-              placeholder="请选择维修时间"
+              placeholder="请选择维护时间"
               style="width: 100%"
             />
           </el-form-item>
-          <el-form-item class="form-span-2" label="维修原因" prop="maintenanceReason">
+          <el-form-item class="form-span-2" label="维护原因" prop="maintenanceReason">
             <el-input
               v-model="form.maintenanceReason"
               type="textarea"
               :rows="2"
-              placeholder="请输入维修原因"
+              placeholder="请输入维护原因"
             />
           </el-form-item>
-          <el-form-item label="维修人" prop="maintainerName">
-            <el-input v-model="form.maintainerName" placeholder="请输入维修人" />
+          <el-form-item label="维护人" prop="maintainerName">
+            <el-input v-model="form.maintainerName" placeholder="请输入维护人" />
           </el-form-item>
-          <el-form-item label="维修公司" prop="maintenanceCompany">
-            <el-input v-model="form.maintenanceCompany" placeholder="请输入维修公司" />
+          <el-form-item label="维护公司" prop="maintenanceCompany">
+            <el-input v-model="form.maintenanceCompany" placeholder="请输入维护公司" />
           </el-form-item>
-          <el-form-item class="form-span-2" label="维修结果" prop="maintenanceResult">
+          <el-form-item class="form-span-2" label="维护结果" prop="maintenanceResult">
             <el-input
               v-model="form.maintenanceResult"
               type="textarea"
               :rows="2"
-              placeholder="请输入维修结果"
+              placeholder="请输入维护结果"
             />
           </el-form-item>
-          <el-form-item label="维修费用" prop="maintenanceCost">
+          <el-form-item label="维护费用" prop="maintenanceCost">
             <el-input-number
               v-model="form.maintenanceCost"
               :min="0"
@@ -186,7 +186,7 @@
               v-model="form.remark"
               type="textarea"
               :rows="3"
-              placeholder="可填写维修留痕、附件说明或后续处理建议"
+              placeholder="可填写维护留痕、附件说明或后续处理建议"
             />
           </el-form-item>
         </div>
@@ -265,8 +265,8 @@ const form = reactive(emptyForm())
 
 const rules = {
   instrumentId: [{ required: true, message: '请选择设备', trigger: 'change' }],
-  maintenanceTime: [{ required: true, message: '请选择维修时间', trigger: 'change' }],
-  maintenanceReason: [{ required: true, message: '请输入维修原因', trigger: 'blur' }]
+  maintenanceTime: [{ required: true, message: '请选择维护时间', trigger: 'change' }],
+  maintenanceReason: [{ required: true, message: '请输入维护原因', trigger: 'blur' }]
 }
 
 function toSafeNumber(value) {
@@ -307,27 +307,27 @@ const stats = computed(() => [
   {
     label: '全部记录',
     value: getCount('ALL'),
-    desc: '设备维修分页总量'
+    desc: '设备维护分页总量'
   },
   {
     label: '最近7天',
     value: getCount('RECENT_7_DAYS'),
-    desc: '近 7 天内的维修记录'
+    desc: '近 7 天内的维护记录'
   },
   {
-    label: '本月维修',
+    label: '本月维护',
     value: getCount('CURRENT_MONTH'),
-    desc: '本月发生的维修记录'
+    desc: '本月发生的维护记录'
   },
   {
-    label: '外部维修',
+    label: '外部维护',
     value: getCount('EXTERNAL'),
-    desc: '由外部维修公司处理的记录'
+    desc: '由外部维护公司处理的记录'
   },
   {
-    label: '高成本维修',
+    label: '高成本维护',
     value: getCount('HIGH_COST'),
-    desc: '维修费用不低于 1000 元的记录'
+    desc: '维护费用不低于 1000 元的记录'
   }
 ])
 
@@ -335,13 +335,13 @@ const visibleRecords = computed(() => {
   if (activeStatKey.value === '最近7天') {
     return keywordFilteredRecords.value.filter((item) => dayjs(item.maintenanceTime).isAfter(dayjs().subtract(7, 'day')))
   }
-  if (activeStatKey.value === '本月维修') {
+  if (activeStatKey.value === '本月维护') {
     return keywordFilteredRecords.value.filter((item) => dayjs(item.maintenanceTime).isSame(dayjs(), 'month'))
   }
-  if (activeStatKey.value === '外部维修') {
+  if (activeStatKey.value === '外部维护') {
     return keywordFilteredRecords.value.filter((item) => String(item.maintenanceCompany || '').trim())
   }
-  if (activeStatKey.value === '高成本维修') {
+  if (activeStatKey.value === '高成本维护') {
     return keywordFilteredRecords.value.filter((item) => toSafeNumber(item.maintenanceCost) >= 1000)
   }
   return keywordFilteredRecords.value
@@ -408,9 +408,9 @@ async function loadStats() {
 async function handleExport() {
   try {
     await exportInstrumentMaintenancesApi({ ...query })
-    ElMessage.success('设备维修导出成功')
+    ElMessage.success('设备维护导出成功')
   } catch (error) {
-    ElMessage.error(error.message || '设备维修导出失败')
+    ElMessage.error(error.message || '设备维护导出失败')
   }
 }
 
@@ -451,10 +451,10 @@ async function submitForm() {
 
     if (form.id) {
       await updateInstrumentMaintenanceApi(form.id, payload)
-      ElMessage.success('维修记录已更新。')
+      ElMessage.success('维护记录已更新。')
     } else {
       await createInstrumentMaintenanceApi(payload)
-      ElMessage.success('维修记录已新增。')
+      ElMessage.success('维护记录已新增。')
     }
 
     dialogVisible.value = false
@@ -466,13 +466,13 @@ async function submitForm() {
 
 async function removeRow(row) {
   try {
-    await ElMessageBox.confirm(`确认删除设备“${row.instrumentName}”的这条维修记录吗？`, '删除确认', {
+    await ElMessageBox.confirm(`确认删除设备“${row.instrumentName}”的这条维护记录吗？`, '删除确认', {
       type: 'warning',
       confirmButtonText: '删除',
       cancelButtonText: '取消'
     })
     await deleteInstrumentMaintenanceApi(row.id)
-    ElMessage.success('维修记录已删除。')
+    ElMessage.success('维护记录已删除。')
     if (records.value.length === 1 && query.pageNum > 1) {
       query.pageNum -= 1
     }
