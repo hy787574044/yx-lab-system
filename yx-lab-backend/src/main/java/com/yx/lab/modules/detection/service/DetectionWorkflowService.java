@@ -96,6 +96,7 @@ public class DetectionWorkflowService {
                 PageUtils.buildPage(query),
                 buildRecordQueryWrapper(query, false, true));
         detectionPendingFlowService.fillRecordSummaries(page.getRecords());
+        fillRecordSampleInfo(page.getRecords());
         return new PageResult<>(page.getTotal(), page.getRecords());
     }
 
@@ -457,12 +458,15 @@ public class DetectionWorkflowService {
         Map<Long, LabSample> sampleMap = loadSampleMap(recordMap.values());
         return items.stream().map(item -> {
             DetectionRecord record = recordMap.get(item.getRecordId());
-            LabSample sample = record == null ? null : sampleMap.get(record.getSampleId());
+            LabSample sample = resolveRecordSample(record, sampleMap);
             DetectionItemPageVO vo = new DetectionItemPageVO();
             vo.setId(item.getId());
             vo.setRecordId(item.getRecordId());
             vo.setSampleId(record == null ? null : record.getSampleId());
             vo.setSampleNo(record == null ? null : record.getSampleNo());
+            vo.setPointName(sample == null ? null : sample.getPointName());
+            vo.setSampleType(sample == null ? null : sample.getSampleType());
+            vo.setSampleTypeLabel(sample == null ? null : LabWorkflowConstants.getSampleTypeLabel(sample.getSampleType()));
             vo.setSampleSourceMethod(sample == null ? null : sample.getSampleSourceMethod());
             vo.setSampleSourceMethodLabel(sample == null ? null : LabWorkflowConstants.getSampleSourceMethodLabel(sample.getSampleSourceMethod()));
             vo.setDetectionTypeId(record == null ? null : record.getDetectionTypeId());
@@ -488,6 +492,22 @@ public class DetectionWorkflowService {
             vo.setUpdatedTime(item.getUpdatedTime());
             return vo;
         }).collect(Collectors.toList());
+    }
+
+    private void fillRecordSampleInfo(List<DetectionRecord> records) {
+        if (records == null || records.isEmpty()) {
+            return;
+        }
+        Map<Long, LabSample> sampleMap = loadSampleMap(records);
+        for (DetectionRecord record : records) {
+            LabSample sample = resolveRecordSample(record, sampleMap);
+            if (sample == null) {
+                continue;
+            }
+            record.setPointName(sample.getPointName());
+            record.setSampleType(sample.getSampleType());
+            record.setSampleTypeLabel(LabWorkflowConstants.getSampleTypeLabel(sample.getSampleType()));
+        }
     }
 
     private Map<Long, DetectionRecord> loadDetectionRecordMap(List<DetectionItem> items) {
@@ -518,6 +538,19 @@ public class DetectionWorkflowService {
                         .in(LabSample::getId, sampleIds))
                 .stream()
                 .collect(Collectors.toMap(LabSample::getId, item -> item, (left, right) -> left));
+    }
+
+    private LabSample resolveRecordSample(DetectionRecord record, Map<Long, LabSample> sampleMap) {
+        if (record == null) {
+            return null;
+        }
+        LabSample sample = record.getSampleId() == null ? null : sampleMap.get(record.getSampleId());
+        if (sample != null || StrUtil.isBlank(record.getSampleNo())) {
+            return sample;
+        }
+        return labSampleMapper.selectOne(new LambdaQueryWrapper<LabSample>()
+                .eq(LabSample::getSampleNo, record.getSampleNo())
+                .last("limit 1"));
     }
 
     private void insertSubmittedRecord(LabSample sample,

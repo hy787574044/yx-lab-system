@@ -49,6 +49,7 @@ public class UnifiedPlatformService {
     private static final String USER_INFO_BY_JOB_NO_PATH = "/HData/DevApi/proxy/openapi/user/infoByJobNO";
     private static final String USER_LIST_BY_ROLE_ID_PATH = "/HData/DevApi/proxy/openapi/user/listByRoleld";
     private static final String USER_MENU_PATH = "/HData/DevApi/proxy/openapi/user/menu";
+    private static final String ACCESS_CHECK_PATH = "/HData/DevApi/proxy/api/auth-api/oauth2/accessCheck";
 
     private final UnifiedPlatformProperties properties;
 
@@ -200,6 +201,10 @@ public class UnifiedPlatformService {
         result.setRawBody(response.getBody());
         result.setRaw(response.getRoot());
         return result;
+    }
+
+    public void accessCheck(String hDataApiToken) {
+        invokePost(ACCESS_CHECK_PATH, hDataApiToken);
     }
 
     public String describeUserLookupUrl(String userId, String jobNo) {
@@ -358,9 +363,68 @@ public class UnifiedPlatformService {
         }
     }
 
+    private RemoteResponse invokePost(String path, String hDataApiToken) {
+        validateBaseConfig();
+        String url = buildUrl(path);
+        long startTime = System.currentTimeMillis();
+        log.info("统一平台接口请求开始，method=POST, url={}, timeout={}ms", url, properties.getTimeout());
+        HttpRequest request = HttpRequest.post(url).timeout(properties.getTimeout());
+        applyHeaders(request, hDataApiToken);
+        try (HttpResponse response = request.execute()) {
+            String body = response.body();
+            long elapsed = System.currentTimeMillis() - startTime;
+            log.info("统一平台接口响应，url="
+                    + url
+                    + ", status="
+                    + response.getStatus()
+                    + ", elapsed="
+                    + elapsed
+                    + "ms, body="
+                    + body);
+            if (response.getStatus() >= 400) {
+                throw new BusinessException("统一平台接口请求失败，HTTP状态码: " + response.getStatus() + "，响应内容: " + body);
+            }
+            if (StrUtil.isBlank(body)) {
+                JsonNode root = objectMapper.createObjectNode();
+                return new RemoteResponse("", root, root);
+            }
+            JsonNode root = objectMapper.readTree(body);
+            RemoteResponse remoteResponse = new RemoteResponse(body, root, unwrapData(root));
+            if (!detectSuccess(remoteResponse)) {
+                throw new BusinessException(firstNonBlank(pickText(remoteResponse, "message", "msg", "resultMsg"), "统一平台授权校验未通过"));
+            }
+            return remoteResponse;
+        } catch (IOException exception) {
+            log.warn("统一平台接口响应解析失败，url="
+                    + url
+                    + ", elapsed="
+                    + (System.currentTimeMillis() - startTime)
+                    + "ms, error="
+                    + exception.getMessage(),
+                    exception);
+            throw new BusinessException("解析统一平台响应失败: " + exception.getMessage());
+        } catch (Exception exception) {
+            log.warn("统一平台接口调用异常，url="
+                    + url
+                    + ", elapsed="
+                    + (System.currentTimeMillis() - startTime)
+                    + "ms, error="
+                    + exception.getMessage(),
+                    exception);
+            if (exception instanceof BusinessException) {
+                throw (BusinessException) exception;
+            }
+            throw new BusinessException("调用统一平台接口失败: " + exception.getMessage());
+        }
+    }
+
     private void applyHeaders(HttpRequest request) {
-        if (StrUtil.isNotBlank(properties.getApiToken())) {
-            request.header("HDataApiToken", properties.getApiToken());
+        applyHeaders(request, properties.getApiToken());
+    }
+
+    private void applyHeaders(HttpRequest request, String hDataApiToken) {
+        if (StrUtil.isNotBlank(hDataApiToken)) {
+            request.header("HDataApiToken", hDataApiToken);
         }
         for (Map.Entry<String, String> entry : properties.getHeaders().entrySet()) {
             if (StrUtil.isNotBlank(entry.getValue())) {

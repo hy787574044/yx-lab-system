@@ -15,3 +15,5 @@ Port 5173 is in use, trying another one...
 [2m17:56:56[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/router/menuConfig.js[22m
 [2m17:58:56[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/utils/menuPermission.js[22m
 [2m17:59:19[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/router/index.js[22m
+[2m18:16:40[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/LoginView.vue[22m
+[2m18:17:16[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/LoginView.vue[22m

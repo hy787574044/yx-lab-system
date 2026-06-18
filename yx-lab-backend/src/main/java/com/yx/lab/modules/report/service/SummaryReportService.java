@@ -265,6 +265,7 @@ public class SummaryReportService {
                 .filter(task -> filterTaskByPoint(task, pointName))
                 .filter(task -> filterTaskBySummaryPlanCycle(task, planMap.get(task.getPlanId()), summaryType))
                 .filter(task -> filterTaskByExpectedPeriod(task, summaryType, expectedStart, expectedEnd))
+                .filter(task -> filterTaskByWeeklyFixedTime(task, summaryType))
                 .collect(Collectors.toList());
         if (filteredTasks.isEmpty()) {
             return Collections.emptyList();
@@ -999,7 +1000,7 @@ public class SummaryReportService {
 
     private boolean filterTaskBySummaryPlanCycle(SamplingTask task, SamplingPlan plan, String summaryType) {
         if (SUMMARY_TYPE_WEEKLY.equals(summaryType)) {
-            return plan != null && LabWorkflowConstants.CycleType.WEEKLY.equals(plan.getCycleType());
+            return plan != null && LabWorkflowConstants.CycleType.DAILY.equals(plan.getCycleType());
         }
         if (SUMMARY_TYPE_HALF_MONTHLY.equals(summaryType)) {
             return plan != null && LabWorkflowConstants.CycleType.HALF_MONTHLY.equals(plan.getCycleType());
@@ -1016,6 +1017,18 @@ public class SummaryReportService {
         }
         SummaryPeriod period = resolveSummaryPeriod(summaryType, task.getSamplingTime());
         return expectedStart.equals(period.start) && expectedEnd.equals(period.end);
+    }
+
+    private boolean filterTaskByWeeklyFixedTime(SamplingTask task, String summaryType) {
+        if (!SUMMARY_TYPE_WEEKLY.equals(summaryType)) {
+            return true;
+        }
+        if (task == null || task.getSamplingTime() == null) {
+            return false;
+        }
+        LocalDateTime samplingTime = task.getSamplingTime();
+        return samplingTime.getDayOfWeek() == DayOfWeek.THURSDAY
+                && samplingTime.getHour() == 10;
     }
 
     private String resolveRegionName(MonitoringPoint point) {

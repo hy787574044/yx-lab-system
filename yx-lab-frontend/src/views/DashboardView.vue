@@ -55,10 +55,10 @@
           >
             <div class="todo-detail-card__main">
               <span>{{ getPreviewRowTitle(section.key, row) }}</span>
-              <p>{{ getPreviewDisplayRowMeta(section.key, row) }}</p>
+              <p v-if="getPreviewDisplayRowMeta(section.key, row)">{{ getPreviewDisplayRowMeta(section.key, row) }}</p>
             </div>
             <div class="todo-detail-card__fields">
-              <span v-for="field in getPreviewDisplayFields(section.key, row)" :key="field.label">
+              <span v-for="field in getVisiblePreviewFields(section.key, row)" :key="field.label">
                 <em>{{ field.label }}</em>
                 <strong
                   v-if="field.statusType || field.statusClass"
@@ -73,7 +73,7 @@
             <el-button
               v-if="section.key === 'samplingPlan'"
               v-permission="'samplingPlan:write'"
-              class="todo-detail-card__dispatch"
+              class="todo-detail-card__action"
               type="primary"
               size="small"
               :loading="dispatchingPlanId === row.id"
@@ -82,6 +82,17 @@
               @keydown.stop
             >
               派发
+            </el-button>
+            <el-button
+              v-if="section.key === 'sampling'"
+              v-permission="'sample:write'"
+              class="todo-detail-card__action"
+              type="primary"
+              size="small"
+              @click.stop="openWorkbenchAction('sampleLogin', row)"
+              @keydown.stop
+            >
+              样品登录
             </el-button>
           </div>
         </div>
@@ -182,7 +193,7 @@
       v-model="workbenchDialogVisible"
       class="workbench-action-dialog"
       :title="activeActionTitle"
-      :width="activeAction === 'sampling' ? '1140px' : activeAction === 'detection' ? '1040px' : '1180px'"
+      :width="activeAction === 'sampling' ? '1140px' : activeAction === 'detection' ? '1080px' : '1180px'"
       align-center
       destroy-on-close
       @closed="resetWorkbenchDialog"
@@ -233,24 +244,20 @@
                 <el-form-item label="采样人员">
                   <el-input :model-value="samplingTask?.samplerName || '-'" readonly />
                 </el-form-item>
-                <el-form-item label="天气">
-                  <el-select v-model="samplingForm.weather" allow-create clearable filterable default-first-option style="width: 100%">
-                    <el-option v-for="option in weatherOptions" :key="option.value" :label="option.label" :value="option.value" />
-                  </el-select>
+                <el-form-item label="样品类型">
+                  <el-input :model-value="getEnumLabel(sampleTypeLabelMap, samplingTask?.sampleType) || '-'" readonly />
                 </el-form-item>
-                <el-form-item label="温度">
-                  <el-input v-model="samplingForm.temperature" placeholder="例如：26℃" />
+                <el-form-item label="任务状态">
+                  <el-input :model-value="getEnumLabel(taskStatusLabelMap, samplingTask?.taskStatus) || '-'" readonly />
                 </el-form-item>
-                <el-form-item label="采样总容量">
-                  <el-input v-model="samplingForm.sampleTotalVolume" placeholder="请输入采样总容量">
-                    <template #append>mL</template>
-                  </el-input>
+                <el-form-item label="计划时间">
+                  <el-input :model-value="samplingTask?.samplingTime || '-'" readonly />
                 </el-form-item>
-                <el-form-item label="采样瓶数">
-                  <el-input-number v-model="samplingForm.sampleBottleCount" :min="0" :precision="0" style="width: 100%" />
+                <el-form-item label="登记状态">
+                  <el-input :model-value="getEnumLabel(sampleRegisterStatusLabelMap, samplingTask?.sampleRegisterStatus || unregisteredSampleRegisterStatus)" readonly />
                 </el-form-item>
                 <el-form-item class="form-span-2" label="备注">
-                  <el-input v-model="samplingForm.remark" type="textarea" :rows="3" placeholder="可补充采样过程、异常情况等说明" />
+                  <el-input :model-value="samplingTask?.remark || '-'" type="textarea" :rows="3" readonly />
                 </el-form-item>
               </div>
             </el-form>
@@ -337,18 +344,27 @@
               <div><span>标准范围</span><strong>{{ formatStandardRange(resultForm.standardMin, resultForm.standardMax, resultForm.unit) }}</strong></div>
               <div><span>单位</span><strong>{{ resultForm.unit || '-' }}</strong></div>
             </div>
+            <div class="detection-step-row">
+              <span>检测步骤</span>
+              <p>{{ resultForm.methodBasis || '-' }}</p>
+            </div>
             <el-form label-position="top">
               <el-form-item label="检测结果" required>
                 <div class="result-value-field">
-                  <el-input-number v-model="resultForm.resultValue" :precision="4" :step="0.01" controls-position="right" class="result-value-input" />
+                  <el-input
+                    v-model="resultForm.resultValue"
+                    inputmode="decimal"
+                    class="result-value-input"
+                    @input="handleDetectionResultInput"
+                  />
                   <span v-if="resultForm.unit" class="result-value-unit">{{ resultForm.unit }}</span>
                 </div>
               </el-form-item>
-              <el-form-item label="异常说明">
-                <el-input v-model="resultForm.abnormalRemark" type="textarea" :rows="2" />
+              <el-form-item class="detection-textarea-item" label="异常说明">
+                <el-input v-model="resultForm.abnormalRemark" type="textarea" :rows="3" />
               </el-form-item>
-              <el-form-item label="备注">
-                <el-input v-model="resultForm.remark" type="textarea" :rows="2" />
+              <el-form-item class="detection-textarea-item" label="备注">
+                <el-input v-model="resultForm.remark" type="textarea" :rows="3" />
               </el-form-item>
             </el-form>
           </template>
@@ -404,7 +420,6 @@
 
       <template #footer>
         <el-button @click="workbenchDialogVisible = false">关闭</el-button>
-        <el-button v-if="activeAction === 'sampling'" type="primary" :loading="submitting" @click="submitSampling">保存</el-button>
         <el-button v-if="activeAction === 'sampleLogin'" type="primary" :loading="submitting" @click="submitSampleLogin">保存</el-button>
         <el-button v-if="activeAction === 'detection'" type="primary" :loading="submitting" @click="submitDetectionResult">提交</el-button>
         <el-button v-if="activeAction === 'review'" type="primary" :loading="submitting" @click="submitReviewDecision">提交</el-button>
@@ -414,19 +429,17 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { ElButton } from 'element-plus/es/components/button/index.mjs'
 import { ElDatePicker } from 'element-plus/es/components/date-picker/index.mjs'
 import { ElDialog } from 'element-plus/es/components/dialog/index.mjs'
 import { ElForm, ElFormItem } from 'element-plus/es/components/form/index.mjs'
 import { ElInput } from 'element-plus/es/components/input/index.mjs'
-import { ElInputNumber } from 'element-plus/es/components/input-number/index.mjs'
 import { ElMessage } from 'element-plus/es/components/message/index.mjs'
 import { ElOption, ElSelect } from 'element-plus/es/components/select/index.mjs'
 import { ElTable, ElTableColumn } from 'element-plus/es/components/table/index.mjs'
 import { ElLoadingDirective } from 'element-plus/es/components/loading/index.mjs'
 import {
-  completeSamplingTaskApi,
   dispatchSamplingPlanApi,
   fetchDetectionDetailApi,
   fetchDetectionItemsApi,
@@ -444,7 +457,6 @@ import {
   fetchSystemUsersApi,
   leaderDashboardApi,
   loginSampleApi,
-  startSamplingTaskApi,
   submitDetectionApi,
   submitReviewApi
 } from '../api/lab'
@@ -455,14 +467,12 @@ import {
   approvedReviewResult,
   activePlanStatus,
   actionablePlanStatuses,
-  completedTaskStatus,
   cycleTypeLabelMap,
   draftReportStatus,
   detectionStatusLabelMap,
   generatedReportStatus,
   getEnumLabel,
   getStatusClass,
-  pendingTaskStatus,
   planStatusLabelMap,
   rawRecordReportCategory,
   reportCategoryLabelMap,
@@ -479,6 +489,8 @@ import {
   unregisteredSampleRegisterStatus,
   waitDetectDetectionStatus
 } from '../utils/labEnums'
+import { getUser } from '../utils/auth'
+import { isStaffRole } from '../utils/menuPermission'
 
 const FLOW_TYPE_REVIEW = 'REVIEW'
 const vLoading = ElLoadingDirective
@@ -487,6 +499,7 @@ const actionLoading = ref(false)
 const submitting = ref(false)
 const dispatchSubmitting = ref(false)
 const dispatchingPlanId = ref(null)
+const currentUser = ref(getUser() || {})
 const dispatchDialogVisible = ref(false)
 const dashboard = ref({})
 const activeAction = ref('')
@@ -523,15 +536,6 @@ const dispatchForm = reactive({
   samplerIds: [],
   samplerId: null,
   samplerName: ''
-})
-
-const samplingForm = reactive({
-  taskId: null,
-  weather: '',
-  temperature: '',
-  sampleTotalVolume: '',
-  sampleBottleCount: null,
-  remark: ''
 })
 
 const loginForm = reactive({
@@ -585,38 +589,46 @@ const reviewForm = reactive({
   items: []
 })
 
-const workbenchSections = computed(() => [
-  {
-    key: 'samplingPlan',
-    title: '采样计划',
-    rows: previewRows.samplingPlan
-  },
-  {
-    key: 'sampling',
-    title: '采样任务',
-    rows: previewRows.sampling
-  },
-  {
-    key: 'sampleLogin',
-    title: '样品登录',
-    rows: previewRows.sampleLogin
-  },
-  {
-    key: 'detection',
-    title: '检测录入',
-    rows: previewRows.detection
-  },
-  {
-    key: 'review',
-    title: '结果审核',
-    rows: previewRows.review
-  },
-  {
-    key: 'report',
-    title: '报告处理',
-    rows: previewRows.report
+const staffWorkbenchSectionKeys = new Set(['sampling', 'detection', 'report'])
+const hiddenAdminWorkbenchSectionKeys = new Set(['samplingPlan', 'sampleLogin'])
+const workbenchSections = computed(() => {
+  const sections = [
+    {
+      key: 'samplingPlan',
+      title: '采样计划',
+      rows: previewRows.samplingPlan
+    },
+    {
+      key: 'sampling',
+      title: '采样任务',
+      rows: previewRows.sampling
+    },
+    {
+      key: 'sampleLogin',
+      title: '样品登录',
+      rows: previewRows.sampleLogin
+    },
+    {
+      key: 'detection',
+      title: '检测录入',
+      rows: previewRows.detection
+    },
+    {
+      key: 'review',
+      title: '结果审核',
+      rows: previewRows.review
+    },
+    {
+      key: 'report',
+      title: '报告处理',
+      rows: previewRows.report
+    }
+  ]
+  if (isStaffRole(currentUser.value)) {
+    return sections.filter((section) => staffWorkbenchSectionKeys.has(section.key))
   }
-])
+  return sections.filter((section) => !hiddenAdminWorkbenchSectionKeys.has(section.key))
+})
 const workflowOverviewItems = computed(() => {
   const defaultItems = [
     { key: 'sampleLogin', label: '样品登录', action: 'sampleLogin' },
@@ -641,7 +653,7 @@ const latestPassRate = computed(() => {
   return toSafeNumber(latest?.value).toFixed(0)
 })
 const activeActionTitle = computed(() => ({
-  sampling: '采样录入',
+  sampling: '采样任务',
   sampleLogin: '样品登录',
   detection: '检测结果录入',
   review: '结果审核',
@@ -875,8 +887,8 @@ async function loadWorkbenchPreviewRows() {
   const previewPageSize = 12
   const [planResult, samplingResult, loginResult, detectionResult, reviewResult, draftReportResult] = await Promise.all([
     fetchSamplingPlansApi({ pageNum: 1, pageSize: previewPageSize, planStatus: activePlanStatus }),
-    fetchSamplingTasksApi({ pageNum: 1, pageSize: previewPageSize, taskStatus: `${pendingTaskStatus},IN_PROGRESS` }),
-    fetchSamplingTasksApi({ pageNum: 1, pageSize: previewPageSize, taskStatus: completedTaskStatus, sampleRegisterStatus: 'UNREGISTERED' }),
+    fetchSamplingTasksApi({ pageNum: 1, pageSize: previewPageSize, sampleRegisterStatus: 'UNREGISTERED' }),
+    fetchSamplingTasksApi({ pageNum: 1, pageSize: previewPageSize, sampleRegisterStatus: 'UNREGISTERED' }),
     fetchDetectionItemsApi({ pageNum: 1, pageSize: previewPageSize, itemStatus: waitDetectDetectionStatus }),
     fetchDetectionsApi({ pageNum: 1, pageSize: previewPageSize, detectionStatus: reviewPendingDetectionStatus }),
     fetchReportsApi({ pageNum: 1, pageSize: previewPageSize, reportStatus: draftReportStatus })
@@ -987,6 +999,8 @@ async function openWorkbenchAction(key, preferredRow = null) {
       : null
     if (selected) {
       await selectActionRow(selected)
+    } else if (actionRows.value.length) {
+      await selectActionRow(actionRows.value[0])
     } else {
       activeRow.value = null
     }
@@ -999,7 +1013,7 @@ async function loadActionRows(key) {
   previewData.value = null
   previewError.value = ''
   if (key === 'sampling') {
-    const result = await fetchSamplingTasksApi({ pageNum: 1, pageSize: 30, taskStatus: `${pendingTaskStatus},IN_PROGRESS` })
+    const result = await fetchSamplingTasksApi({ pageNum: 1, pageSize: 30, sampleRegisterStatus: 'UNREGISTERED' })
     actionRows.value = result.records || []
     return
   }
@@ -1008,7 +1022,6 @@ async function loadActionRows(key) {
     const result = await fetchSamplingTasksApi({
       pageNum: 1,
       pageSize: 30,
-      taskStatus: completedTaskStatus,
       sampleRegisterStatus: 'UNREGISTERED'
     })
     actionRows.value = result.records || []
@@ -1086,19 +1099,35 @@ function getPreviewRowTitle(key, row) {
   if (key === 'samplingPlan') {
     return row?.planName || row?.pointName || '-'
   }
-  if (key === 'sampling' || key === 'sampleLogin') {
+  if (key === 'sampleLogin') {
     return row?.sampleNo || row?.taskNo || '未生成编号'
   }
+  if (key === 'sampling') {
+    return buildSampleContextTitle(row, row?.taskNo || '未生成编号')
+  }
   if (key === 'detection') {
-    return `${row?.sampleNo || '-'} / ${row?.parameterName || '-'}`
+    return buildSampleContextTitle(row, row?.parameterName)
   }
   if (key === 'review') {
-    return row?.sampleNo || row?.detectionTypeName || '-'
+    return buildSampleContextTitle(row, row?.detectionTypeName)
   }
   if (key === 'report') {
-    return row?.reportName || row?.sampleNo || '-'
+    return buildSampleContextTitle(row, row?.reportName || getEnumLabel(reportCategoryLabelMap, row?.reportCategory) || row?.reportCategory)
   }
   return '-'
+}
+
+function buildSampleContextTitle(row, suffix = '') {
+  const pointName = firstNonBlank(row?.pointName, row?.monitoringPointName)
+  const sampleType = firstNonBlank(row?.sampleTypeLabel, getEnumLabel(sampleTypeLabelMap, row?.sampleType), row?.sampleType)
+  const tail = String(suffix || '').trim() === '-' ? '' : String(suffix || '').trim()
+  return `监测点：${pointName || '未填'} 样品类型：${sampleType || '未填'}${tail ? ` / ${tail}` : ''}`
+}
+
+function firstNonBlank(...values) {
+  return values
+    .map((value) => String(value ?? '').trim())
+    .find((value) => value && value !== '-') || ''
 }
 
 function getPreviewRowMeta(key, row) {
@@ -1106,16 +1135,16 @@ function getPreviewRowMeta(key, row) {
     return `${row?.pointName || '-'} / ${row?.samplerName || '-'}`
   }
   if (key === 'sampling' || key === 'sampleLogin') {
-    return `${row?.pointName || '-'} / ${row?.samplerName || '-'}`
+    return row?.samplerName || ''
   }
   if (key === 'detection') {
-    return `${row?.methodName || '-'} / ${row?.detectorName || '-'}`
+    return ''
   }
   if (key === 'review') {
-    return `${row?.detectionTypeName || '-'} / ${row?.detectorName || '-'}`
+    return firstNonBlank(row?.detectorName) ? `检测人员：${row.detectorName}` : ''
   }
   if (key === 'report') {
-    return `${row?.reportStatus || '-'} / ${row?.reportCategory || '-'}`
+    return ''
   }
   return ''
 }
@@ -1123,23 +1152,22 @@ function getPreviewRowMeta(key, row) {
 function getPreviewFields(key, row) {
   if (key === 'sampling') {
     return [
-      { label: '任务编号', value: row?.taskNo },
       { label: '任务状态', value: row?.taskStatus },
-      { label: '计划时间', value: row?.samplingTime }
+      { label: '计划时间', value: row?.samplingTime },
+      { label: '采样人员', value: row?.samplerName }
     ]
   }
   if (key === 'sampleLogin') {
     return [
       { label: '任务编号', value: row?.taskNo },
-      { label: '样品类型', value: getEnumLabel(sampleTypeLabelMap, row?.sampleType) },
-      { label: '完成时间', value: row?.finishedTime }
+      { label: '计划时间', value: row?.samplingTime }
     ]
   }
   if (key === 'detection') {
     return [
-      { label: '检测参数', value: row?.parameterName },
       { label: '检测方法', value: row?.methodName },
-      { label: '检测人员', value: row?.detectorName }
+      { label: '检测人员', value: row?.detectorName },
+      { label: '更新时间', value: row?.updatedTime }
     ]
   }
   if (key === 'review') {
@@ -1152,17 +1180,13 @@ function getPreviewFields(key, row) {
   if (key === 'report') {
     return [
       { label: '报告状态', value: row?.reportStatus },
-      { label: '生成时间', value: row?.generatedTime },
-      { label: '样品编号', value: row?.sampleNo }
+      { label: '生成时间', value: row?.generatedTime }
     ]
   }
   return []
 }
 
 function getPreviewDisplayRowMeta(key, row) {
-  if (key === 'report') {
-    return `${getEnumLabel(reportStatusLabelMap, row?.reportStatus)} / ${getEnumLabel(reportCategoryLabelMap, row?.reportCategory)}`
-  }
   return getPreviewRowMeta(key, row)
 }
 
@@ -1181,14 +1205,14 @@ function getPreviewDisplayFields(key, row) {
   }
   if (key === 'sampling') {
     return [
-      { label: '任务编号', value: row?.taskNo },
       {
         label: '任务状态',
         value: getEnumLabel(taskStatusLabelMap, row?.taskStatus),
         statusType: 'taskStatus',
         statusValue: row?.taskStatus
       },
-      { label: '计划时间', value: row?.samplingTime }
+      { label: '计划时间', value: row?.samplingTime },
+      { label: '采样人员', value: row?.samplerName }
     ]
   }
   if (key === 'sampleLogin') {
@@ -1199,30 +1223,30 @@ function getPreviewDisplayFields(key, row) {
         value: getEnumLabel(sampleRegisterStatusLabelMap, row?.sampleRegisterStatus || unregisteredSampleRegisterStatus),
         statusClass: row?.sampleRegisterStatus && row.sampleRegisterStatus !== unregisteredSampleRegisterStatus ? 'success' : 'warning'
       },
-      { label: '完成时间', value: row?.finishedTime }
+      { label: '计划时间', value: row?.samplingTime }
     ]
   }
   if (key === 'detection') {
     return [
-      { label: '检测参数', value: row?.parameterName },
       {
         label: '检测状态',
         value: getEnumLabel(detectionStatusLabelMap, row?.itemStatus),
         statusType: 'detectionStatus',
         statusValue: row?.itemStatus
       },
+      { label: '检测方法', value: row?.methodName },
       { label: '检测人员', value: row?.detectorName }
     ]
   }
   if (key === 'review') {
     return [
-      { label: '检测套餐', value: row?.detectionTypeName },
       {
         label: '审核状态',
         value: getEnumLabel(detectionStatusLabelMap, reviewPendingDetectionStatus),
         statusType: 'detectionStatus',
         statusValue: reviewPendingDetectionStatus
       },
+      { label: '参数进度', value: `${row?.completedCount ?? 0}/${row?.parameterCount ?? 0}` },
       { label: '更新时间', value: row?.updatedTime }
     ]
   }
@@ -1234,58 +1258,20 @@ function getPreviewDisplayFields(key, row) {
         statusType: 'reportStatus',
         statusValue: row?.reportStatus
       },
-      { label: '生成时间', value: row?.generatedTime },
-      { label: '样品编号', value: row?.sampleNo }
+      { label: '生成时间', value: row?.generatedTime }
     ]
   }
   return getPreviewFields(key, row)
+}
+
+function getVisiblePreviewFields(key, row) {
+  return getPreviewDisplayFields(key, row).filter((field) => field?.statusType || field?.statusClass || firstNonBlank(field?.value))
 }
 
 async function openSamplingForm(row) {
   const detail = await fetchSamplingTaskDetailApi(row.id)
   const task = detail || row
   samplingTask.value = task
-  samplingForm.taskId = task.id
-  samplingForm.weather = task.weather || ''
-  samplingForm.temperature = task.temperature || ''
-  samplingForm.sampleTotalVolume = extractSampleVolumeNumber(task.sampleTotalVolume || '')
-  samplingForm.sampleBottleCount = task.sampleBottleCount ?? null
-  samplingForm.remark = task.remark || ''
-}
-
-function extractSampleVolumeNumber(value) {
-  const match = String(value || '').match(/[\d.]+/)
-  return match ? match[0] : ''
-}
-
-function buildSampleVolumePayload(value) {
-  const text = String(value || '').trim()
-  return text ? `${text}mL` : ''
-}
-
-async function submitSampling() {
-  if (!samplingForm.taskId) {
-    ElMessage.warning('请选择采样任务')
-    return
-  }
-  submitting.value = true
-  try {
-    if (samplingTask.value?.taskStatus === pendingTaskStatus) {
-      await startSamplingTaskApi(samplingTask.value.id, { remark: '工作台采样录入时自动开始任务' })
-    }
-    await completeSamplingTaskApi({
-      taskId: samplingForm.taskId,
-      weather: samplingForm.weather,
-      temperature: samplingForm.temperature,
-      sampleTotalVolume: buildSampleVolumePayload(samplingForm.sampleTotalVolume),
-      sampleBottleCount: samplingForm.sampleBottleCount == null ? '' : String(samplingForm.sampleBottleCount),
-      remark: samplingForm.remark
-    })
-    ElMessage.success('采样录入已保存')
-    await reloadActiveAction()
-  } finally {
-    submitting.value = false
-  }
 }
 
 async function openSampleLoginForm(task) {
@@ -1420,7 +1406,7 @@ function openResultForm(row) {
   resultForm.unit = row.unit || ''
   resultForm.referenceStandard = row.referenceStandard || ''
   resultForm.detectorName = row.detectorName || ''
-  resultForm.resultValue = row.resultValue == null ? null : Number(row.resultValue)
+  resultForm.resultValue = row.resultValue == null ? null : String(row.resultValue)
   resultForm.abnormalRemark = row.abnormalRemark || ''
   resultForm.remark = row.remark || ''
   resultForm.itemStatus = row.itemStatus || ''
@@ -1454,6 +1440,19 @@ function isResultValueAbnormal(item) {
   return item.standardMax != null && value > Number(item.standardMax)
 }
 
+function handleDetectionResultInput(value) {
+  resultForm.resultValue = normalizeDetectionResultInput(value)
+}
+
+function normalizeDetectionResultInput(value) {
+  const text = String(value ?? '').replace(/[^\d.]/g, '')
+  const [integerPart, ...decimalParts] = text.split('.')
+  if (!decimalParts.length) {
+    return integerPart
+  }
+  return `${integerPart}.${decimalParts.join('')}`
+}
+
 async function submitDetectionResult() {
   if (!resultForm.sampleId || !resultForm.detectionTypeId || !resultForm.recordId || !resultForm.id) {
     ElMessage.warning('当前检测子流程缺少必要信息')
@@ -1482,7 +1481,7 @@ async function submitDetectionResult() {
         parameterName: resultForm.parameterName,
         standardMin: resultForm.standardMin,
         standardMax: resultForm.standardMax,
-        resultValue: resultForm.resultValue,
+        resultValue: Number(resultForm.resultValue),
         unit: resultForm.unit
       }]
     })
@@ -1590,7 +1589,13 @@ function resetWorkbenchDialog() {
   previewError.value = ''
 }
 
+function syncCurrentUser(event) {
+  currentUser.value = event?.detail || getUser() || {}
+}
+
 onMounted(async () => {
+  currentUser.value = getUser() || {}
+  window.addEventListener('yx-lab-user-updated', syncCurrentUser)
   loading.value = true
   try {
     await Promise.all([refreshDashboard(), loadWorkbenchPreviewRows(), loadDictOptions()])
@@ -1600,6 +1605,10 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
+})
+
+onUnmounted(() => {
+  window.removeEventListener('yx-lab-user-updated', syncCurrentUser)
 })
 </script>
 
@@ -1827,7 +1836,8 @@ onMounted(async () => {
   transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
 }
 
-.todo-detail-card--samplingPlan {
+.todo-detail-card--samplingPlan,
+.todo-detail-card--sampling {
   padding-right: 88px;
 }
 
@@ -1870,7 +1880,7 @@ onMounted(async () => {
   outline-offset: 2px;
 }
 
-.todo-detail-card__dispatch {
+.todo-detail-card__action {
   position: absolute;
   right: 12px;
   bottom: 12px;
@@ -2021,6 +2031,10 @@ onMounted(async () => {
   padding-top: 10px;
 }
 
+:deep(.el-dialog.workbench-action-dialog) {
+  max-width: calc(100vw - 32px);
+}
+
 .workbench-dialog {
   display: grid;
   grid-template-columns: 280px minmax(0, 1fr);
@@ -2031,6 +2045,13 @@ onMounted(async () => {
 .workbench-dialog--sampling {
   grid-template-columns: 322px minmax(0, 1fr);
   height: 430px;
+  min-height: 0;
+}
+
+.workbench-dialog--detection {
+  grid-template-columns: 320px minmax(0, 1fr);
+  width: 100%;
+  height: 650px;
   min-height: 0;
 }
 
@@ -2058,6 +2079,31 @@ onMounted(async () => {
   gap: 8px;
   min-height: 0;
   overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(100, 116, 139, 0.32) transparent;
+}
+
+.workbench-row-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.workbench-row-list::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(100, 116, 139, 0.28);
+}
+
+.workbench-row-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.workbench-dialog--detection .workbench-row-list {
+  max-height: 582px;
+  padding-right: 4px;
+}
+
+.workbench-dialog--detection .workbench-row-card {
+  min-height: 68px;
+  padding: 10px 12px;
 }
 
 .workbench-row-card {
@@ -2103,34 +2149,60 @@ onMounted(async () => {
 }
 
 .workbench-dialog--detection .workbench-dialog__main {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  align-content: start;
+  gap: 14px;
   padding-right: 0;
 }
 
 .workbench-dialog--detection .summary-chips {
-  margin-bottom: 16px;
+  margin-bottom: 0;
 }
 
 .workbench-dialog--detection .summary-chips span {
-  padding: 10px 14px;
+  min-height: 36px;
+  padding: 8px 12px;
 }
 
 .workbench-dialog--detection .meta-grid {
-  margin-bottom: 18px;
+  margin-bottom: 0;
 }
 
 .workbench-dialog--detection .meta-grid div {
-  min-height: 72px;
-  padding: 14px;
+  min-height: 64px;
+  padding: 10px 12px;
+}
+
+.detection-step-row {
+  display: grid;
+  gap: 8px;
+  min-height: 120px;
+  padding: 12px 14px;
+  border: 1px solid rgba(214, 225, 241, 0.9);
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.detection-step-row span {
+  color: var(--text-sub);
+  font-size: 12px;
+}
+
+.detection-step-row p {
+  min-height: 68px;
+  max-height: 92px;
+  overflow-y: auto;
+  margin: 0;
+  color: var(--text-main);
+  font-size: 13px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
 }
 
 .workbench-dialog--detection :deep(.el-form) {
   display: grid;
-  flex: 1;
-  grid-template-rows: 64px minmax(92px, 1fr) minmax(100px, 1fr);
-  gap: 16px;
-  min-height: 0;
+  grid-template-rows: 64px 112px 112px;
+  gap: 14px;
 }
 
 .workbench-dialog--detection :deep(.el-form-item) {
@@ -2138,7 +2210,7 @@ onMounted(async () => {
 }
 
 .workbench-dialog--detection :deep(.el-form-item__label) {
-  line-height: 24px;
+  line-height: 26px;
   margin-bottom: 8px;
 }
 
@@ -2146,13 +2218,9 @@ onMounted(async () => {
   min-height: 36px;
 }
 
-.workbench-dialog--detection :deep(.el-textarea),
-.workbench-dialog--detection :deep(.el-textarea__inner) {
-  height: 100%;
-}
-
-.workbench-dialog--detection :deep(.el-textarea__inner) {
-  min-height: 92px !important;
+.workbench-dialog--detection .detection-textarea-item :deep(.el-textarea__inner) {
+  height: 76px;
+  min-height: 76px !important;
 }
 
 .form-grid {

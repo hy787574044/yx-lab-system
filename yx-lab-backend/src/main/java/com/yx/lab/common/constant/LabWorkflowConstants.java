@@ -496,16 +496,16 @@ public final class LabWorkflowConstants {
 
     public static String getSamplingTaskStatusLabel(String taskStatus) {
         if (SamplingTaskStatus.PENDING.equals(taskStatus)) {
-            return "待执行";
+            return "未采样";
         }
         if (SamplingTaskStatus.IN_PROGRESS.equals(taskStatus)) {
-            return "执行中";
+            return "未采样";
         }
         if (SamplingTaskStatus.ABANDONED.equals(taskStatus)) {
             return "已废弃";
         }
         if (SamplingTaskStatus.COMPLETED.equals(taskStatus)) {
-            return "已完成";
+            return "已采样";
         }
         return taskStatus;
     }

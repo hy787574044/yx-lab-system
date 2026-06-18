@@ -90,7 +90,7 @@ function buildApiUrl(path) {
 }
 
 async function exchangeEmbedToken(query) {
-  const response = await fetch(buildApiUrl('/api/auth/embedLogin'), {
+  const response = await fetch(buildApiUrl('/api/auth/accessCheckLogin'), {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'

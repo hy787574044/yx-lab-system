@@ -14,8 +14,10 @@ import com.yx.lab.modules.sample.dto.SamplingTaskActionCommand;
 import com.yx.lab.modules.sample.dto.SamplingTaskCompleteCommand;
 import com.yx.lab.modules.sample.dto.SamplingTaskQuery;
 import com.yx.lab.modules.sample.entity.LabSample;
+import com.yx.lab.modules.sample.entity.SamplingPlan;
 import com.yx.lab.modules.sample.entity.SamplingTask;
 import com.yx.lab.modules.sample.mapper.LabSampleMapper;
+import com.yx.lab.modules.sample.mapper.SamplingPlanMapper;
 import com.yx.lab.modules.sample.mapper.SamplingTaskMapper;
 import com.yx.lab.modules.sample.vo.StatusCountVO;
 import com.yx.lab.modules.storage.service.StorageService;
@@ -42,6 +44,8 @@ public class SamplingTaskService {
 
     private final LabSampleMapper labSampleMapper;
 
+    private final SamplingPlanMapper samplingPlanMapper;
+
     private final SamplingPlanService samplingPlanService;
 
     private final StorageService storageService;
@@ -67,8 +71,7 @@ public class SamplingTaskService {
         applyTaskSamplerScope(wrapper, scopedSamplerId);
         wrapper.orderByDesc(SamplingTask::getCreatedTime);
         Page<SamplingTask> page = samplingTaskMapper.selectPage(PageUtils.buildPage(query), wrapper);
-        page.getRecords().forEach(this::normalizeTaskFileUrlsForView);
-        page.getRecords().forEach(this::enrichTaskDetectionConfigSnapshotForView);
+        prepareTasksForView(page.getRecords());
         return new PageResult<>(page.getTotal(), page.getRecords());
     }
 
@@ -78,6 +81,8 @@ public class SamplingTaskService {
         }
         return Arrays.asList(
                 statusCount("ALL", countTasksByStatus(null)),
+                statusCount("UNSAMPLED", countUnregisteredTasks()),
+                statusCount("SAMPLED", countRegisteredTasks()),
                 statusCount(LabWorkflowConstants.SamplingTaskStatus.PENDING,
                         countTasksByStatus(LabWorkflowConstants.SamplingTaskStatus.PENDING)),
                 statusCount(LabWorkflowConstants.SamplingTaskStatus.IN_PROGRESS,
@@ -110,11 +115,25 @@ public class SamplingTaskService {
 
     private Long countUnloggedCompletedTasks() {
         LambdaQueryWrapper<SamplingTask> wrapper = new LambdaQueryWrapper<SamplingTask>()
-                .eq(SamplingTask::getTaskStatus, LabWorkflowConstants.SamplingTaskStatus.COMPLETED);
+                .ne(SamplingTask::getTaskStatus, LabWorkflowConstants.SamplingTaskStatus.ABANDONED);
         applyTaskSamplerScope(wrapper, resolveScopedSamplerId(null));
-        List<SamplingTask> completedTasks = samplingTaskMapper.selectList(wrapper);
-        return completedTasks.stream()
+        List<SamplingTask> tasks = samplingTaskMapper.selectList(wrapper);
+        return tasks.stream()
                 .filter(task -> !isTaskRegistered(task))
+                .count();
+    }
+
+    private Long countUnregisteredTasks() {
+        return countUnloggedCompletedTasks();
+    }
+
+    private Long countRegisteredTasks() {
+        LambdaQueryWrapper<SamplingTask> wrapper = new LambdaQueryWrapper<SamplingTask>()
+                .ne(SamplingTask::getTaskStatus, LabWorkflowConstants.SamplingTaskStatus.ABANDONED);
+        applyTaskSamplerScope(wrapper, resolveScopedSamplerId(null));
+        List<SamplingTask> tasks = samplingTaskMapper.selectList(wrapper);
+        return tasks.stream()
+                .filter(this::isTaskRegistered)
                 .count();
     }
 
@@ -142,28 +161,24 @@ public class SamplingTaskService {
         List<SamplingTask> pageRecords = total == 0L
                 ? Collections.emptyList()
                 : new ArrayList<>(records.subList(fromIndex, toIndex));
-        pageRecords.forEach(this::normalizeTaskFileUrlsForView);
-        pageRecords.forEach(this::enrichTaskDetectionConfigSnapshotForView);
+        prepareTasksForView(pageRecords);
         return new PageResult<>(total, pageRecords);
     }
 
     private List<StatusCountVO> todoStatusStats(SamplingTaskQuery query) {
         List<SamplingTask> records = loadTodoTasks(query, true);
         long pendingCount = records.stream()
-                .filter(task -> LabWorkflowConstants.SamplingTaskStatus.PENDING.equals(task.getTaskStatus()))
-                .count();
-        long progressCount = records.stream()
-                .filter(task -> LabWorkflowConstants.SamplingTaskStatus.IN_PROGRESS.equals(task.getTaskStatus()))
+                .filter(task -> !isTaskRegistered(task))
                 .count();
         long unloggedCount = records.stream()
-                .filter(task -> LabWorkflowConstants.SamplingTaskStatus.COMPLETED.equals(task.getTaskStatus()))
+                .filter(task -> !isTaskRegistered(task))
                 .count();
-        long todoCount = pendingCount + progressCount + unloggedCount;
+        long todoCount = pendingCount;
         return Arrays.asList(
                 statusCount("TODO", todoCount),
                 statusCount("ALL", todoCount),
                 statusCount(LabWorkflowConstants.SamplingTaskStatus.PENDING, pendingCount),
-                statusCount(LabWorkflowConstants.SamplingTaskStatus.IN_PROGRESS, progressCount),
+                statusCount("UNSAMPLED", pendingCount),
                 statusCount("UNLOGGED", unloggedCount)
         );
     }
@@ -219,16 +234,14 @@ public class SamplingTaskService {
         if (task == null) {
             return false;
         }
-        if (LabWorkflowConstants.TODO_TASK_STATUSES.contains(task.getTaskStatus())) {
-            return true;
-        }
-        return LabWorkflowConstants.SamplingTaskStatus.COMPLETED.equals(task.getTaskStatus()) && sample == null;
+        return !LabWorkflowConstants.SamplingTaskStatus.ABANDONED.equals(task.getTaskStatus())
+                && !isTaskRegistered(task)
+                && sample == null;
     }
 
     public SamplingTask detail(Long id) {
         SamplingTask task = requireTask(id);
-        normalizeTaskFileUrlsForView(task);
-        enrichTaskDetectionConfigSnapshotForView(task);
+        prepareTasksForView(Collections.singletonList(task));
         return task;
     }
 
@@ -239,8 +252,7 @@ public class SamplingTaskService {
         applyTaskSamplerScope(wrapper, currentUser.getUserId());
         wrapper.orderByAsc(SamplingTask::getSamplingTime);
         List<SamplingTask> tasks = samplingTaskMapper.selectList(wrapper);
-        tasks.forEach(this::normalizeTaskFileUrlsForView);
-        tasks.forEach(this::enrichTaskDetectionConfigSnapshotForView);
+        prepareTasksForView(tasks);
         return tasks;
     }
 
@@ -353,6 +365,57 @@ public class SamplingTaskService {
         }
     }
 
+    private void prepareTasksForView(List<SamplingTask> tasks) {
+        if (tasks == null || tasks.isEmpty()) {
+            return;
+        }
+        fillTaskSampleContext(tasks);
+        tasks.forEach(this::normalizeTaskFileUrlsForView);
+        tasks.forEach(this::enrichTaskDetectionConfigSnapshotForView);
+    }
+
+    private void fillTaskSampleContext(List<SamplingTask> tasks) {
+        Map<Long, LabSample> sampleMap = loadSampleMapByTaskIds(tasks);
+        Map<Long, SamplingPlan> planMap = loadPlanMap(tasks);
+        for (SamplingTask task : tasks) {
+            LabSample sample = sampleMap.get(task.getId());
+            SamplingPlan plan = task.getPlanId() == null ? null : planMap.get(task.getPlanId());
+            if (sample != null) {
+                fillBlankTaskSampleContext(task, sample.getPointName(), sample.getSampleType());
+            }
+            if (plan != null) {
+                fillBlankTaskSampleContext(task, plan.getPointName(), plan.getSampleType());
+            }
+        }
+    }
+
+    private Map<Long, SamplingPlan> loadPlanMap(List<SamplingTask> tasks) {
+        List<Long> planIds = tasks.stream()
+                .map(SamplingTask::getPlanId)
+                .filter(id -> id != null)
+                .distinct()
+                .collect(Collectors.toList());
+        if (planIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        return samplingPlanMapper.selectList(new LambdaQueryWrapper<SamplingPlan>()
+                        .in(SamplingPlan::getId, planIds))
+                .stream()
+                .collect(Collectors.toMap(SamplingPlan::getId, plan -> plan, (left, right) -> left, LinkedHashMap::new));
+    }
+
+    private void fillBlankTaskSampleContext(SamplingTask task, String pointName, String sampleType) {
+        if (task == null) {
+            return;
+        }
+        if (StrUtil.isBlank(task.getPointName()) && StrUtil.isNotBlank(pointName)) {
+            task.setPointName(pointName);
+        }
+        if (StrUtil.isBlank(task.getSampleType()) && StrUtil.isNotBlank(sampleType)) {
+            task.setSampleType(sampleType);
+        }
+    }
+
     private void enrichTaskDetectionConfigSnapshotForView(SamplingTask task) {
         if (task != null) {
             task.setDetectionConfigSnapshot(samplingPlanService.enrichDetectionConfigSnapshotForView(task.getDetectionConfigSnapshot()));
@@ -414,11 +477,19 @@ public class SamplingTaskService {
             return;
         }
         if (LabWorkflowConstants.SampleRegisterStatus.UNREGISTERED.equals(sampleRegisterStatus)) {
-            wrapper.isNull(SamplingTask::getSampleId)
+            wrapper.ne(SamplingTask::getTaskStatus, LabWorkflowConstants.SamplingTaskStatus.ABANDONED)
+                    .isNull(SamplingTask::getSampleId)
                     .and(item -> item
                             .isNull(SamplingTask::getSampleRegisterStatus)
                             .or()
                             .eq(SamplingTask::getSampleRegisterStatus, LabWorkflowConstants.SampleRegisterStatus.UNREGISTERED));
+            return;
+        }
+        if (LabWorkflowConstants.SampleRegisterStatus.REGISTERED.equals(sampleRegisterStatus)) {
+            wrapper.and(item -> item
+                    .eq(SamplingTask::getSampleRegisterStatus, LabWorkflowConstants.SampleRegisterStatus.REGISTERED)
+                    .or()
+                    .isNotNull(SamplingTask::getSampleId));
             return;
         }
         wrapper.eq(SamplingTask::getSampleRegisterStatus, sampleRegisterStatus);

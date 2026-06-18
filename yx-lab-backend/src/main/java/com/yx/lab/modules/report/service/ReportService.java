@@ -54,6 +54,10 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -105,8 +109,36 @@ public class ReportService {
                         .eq(StrUtil.isNotBlank(query.getReportStatus()), LabReport::getReportStatus, query.getReportStatus())
                         .in(scopedReportIds != null, LabReport::getId, scopedReportIds)
                         .orderByDesc(LabReport::getGeneratedTime));
+        fillReportSampleInfo(page.getRecords());
         page.getRecords().forEach(this::refreshStoredContentSnapshotIfNeeded);
         return new PageResult<>(page.getTotal(), page.getRecords());
+    }
+
+    private void fillReportSampleInfo(List<LabReport> reports) {
+        if (reports == null || reports.isEmpty()) {
+            return;
+        }
+        Set<Long> sampleIds = reports.stream()
+                .map(LabReport::getSampleId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        Map<Long, LabSample> sampleMap = sampleIds.isEmpty()
+                ? Collections.emptyMap()
+                : labSampleMapper.selectBatchIds(sampleIds).stream()
+                .collect(Collectors.toMap(LabSample::getId, Function.identity(), (left, right) -> left));
+        for (LabReport report : reports) {
+            LabSample sample = report.getSampleId() == null ? null : sampleMap.get(report.getSampleId());
+            if (sample == null && StrUtil.isNotBlank(report.getSampleNo())) {
+                sample = labSampleMapper.selectOne(new LambdaQueryWrapper<LabSample>()
+                        .eq(LabSample::getSampleNo, report.getSampleNo())
+                        .last("limit 1"));
+            }
+            if (sample != null) {
+                report.setPointName(sample.getPointName());
+                report.setSampleType(sample.getSampleType());
+                report.setSampleTypeLabel(LabWorkflowConstants.getSampleTypeLabel(sample.getSampleType()));
+            }
+        }
     }
 
     public List<StatusCountVO> statusStats() {

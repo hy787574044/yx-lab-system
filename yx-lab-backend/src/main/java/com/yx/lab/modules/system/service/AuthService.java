@@ -222,6 +222,22 @@ public class AuthService {
         return issueLoginToken(user);
     }
 
+    public LoginVO accessCheckLogin(EmbedLoginRequest request) {
+        if (request == null || StrUtil.isBlank(request.getToken())) {
+            throw new BusinessException("third party token must not be blank");
+        }
+        unifiedPlatformService.accessCheck(StrUtil.trim(request.getToken()));
+        LabUser user = resolveEmbedLocalUser(request);
+        if (user == null) {
+            throw new BusinessException("no matching local user account");
+        }
+        if (user.getStatus() == null || user.getStatus() != 1) {
+            throw new BusinessException("user does not exist or has been disabled");
+        }
+        saveLoginLog(user, user.getUsername(), resolveEmbedLoginChannel(request), LOGIN_STATUS_SUCCESS, "third party access check login success");
+        return issueLoginToken(user);
+    }
+
     public UserProfileVO me() {
         return buildProfile(requireCurrentUserEntity());
     }
@@ -327,6 +343,14 @@ public class AuthService {
         return null;
     }
 
+    private LabUser resolveEmbedLocalUser(EmbedLoginRequest request) {
+        LabUser user = selectActiveUserByUsername(firstNonBlank(request.getUsername(), request.getJobNo()));
+        if (user != null) {
+            return user;
+        }
+        return selectActiveUserByRealName(request.getUsername());
+    }
+
     private UnifiedUserInfoVO resolveUnifiedUser(EmbedLoginRequest request) {
         try {
             if (StrUtil.isNotBlank(request.getUserId())) {
@@ -358,6 +382,16 @@ public class AuthService {
         }
         return labUserMapper.selectOne(new LambdaQueryWrapper<LabUser>()
                 .eq(LabUser::getUsername, StrUtil.trim(username))
+                .eq(LabUser::getStatus, 1)
+                .last("limit 1"));
+    }
+
+    private LabUser selectActiveUserByRealName(String realName) {
+        if (StrUtil.isBlank(realName)) {
+            return null;
+        }
+        return labUserMapper.selectOne(new LambdaQueryWrapper<LabUser>()
+                .eq(LabUser::getRealName, StrUtil.trim(realName))
                 .eq(LabUser::getStatus, 1)
                 .last("limit 1"));
     }

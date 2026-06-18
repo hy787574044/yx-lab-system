@@ -125,10 +125,10 @@ export const planStatusLabelMap = {
 }
 
 export const taskStatusLabelMap = {
-  [pendingTaskStatus]: '待处理',
-  [inProgressTaskStatus]: '进行中',
+  [pendingTaskStatus]: '未采样',
+  [inProgressTaskStatus]: '未采样',
   [abandonedTaskStatus]: '已废弃',
-  [completedTaskStatus]: '已完成'
+  [completedTaskStatus]: '已采样'
 }
 
 export const sampleRegisterStatusLabelMap = {
@@ -310,15 +310,15 @@ const workflowTextLabelMap = {
   PAUSED: '已暂停',
   DISPATCHED: '已派发',
   UNPUBLISHED: '待派发',
-  PENDING: '待处理',
-  IN_PROGRESS: '进行中',
+  PENDING: '未采样',
+  IN_PROGRESS: '未采样',
   ABANDONED: '已废弃',
   UNREGISTERED: '未登记',
   REGISTERED: '已登记',
   LOGGED: '已登录',
   REVIEWING: '审核中',
   RETEST: '待重检',
-  COMPLETED: '已完成',
+  COMPLETED: '已采样',
   WAIT_ASSIGN: '待分配',
   WAIT_DETECT: '待检测',
   SUBMITTED: '待审核',

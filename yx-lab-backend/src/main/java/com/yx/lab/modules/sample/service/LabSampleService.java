@@ -193,8 +193,12 @@ public class LabSampleService {
 
         task.setSampleRegisterStatus(LabWorkflowConstants.SampleRegisterStatus.REGISTERED);
         task.setSampleId(sample.getId());
+        if (task.getStartedTime() == null) {
+            task.setStartedTime(DateUtil.toLocalDateTime(DateUtil.date()));
+        }
+        task.setTaskStatus(LabWorkflowConstants.SamplingTaskStatus.COMPLETED);
+        task.setFinishedTime(DateUtil.toLocalDateTime(DateUtil.date()));
         samplingTaskMapper.updateById(task);
-        abandonOtherTasksInSamePlan(task, currentUser);
         // 样品一旦登录完成，立即补齐后续待分配检测主流程与参数子流程。
         detectionPendingFlowService.createPendingFlowIfMissing(sample);
         enrichSampleDetectionConfigSnapshotForView(sample);
@@ -288,7 +292,7 @@ public class LabSampleService {
 
     private SamplingTask resolveTaskForLogin(SampleLoginCommand command) {
         if (command.getTaskId() == null) {
-            throw new BusinessException("请选择已完成采样的任务后再进行样品登录。");
+            throw new BusinessException("请选择待登录任务后再进行样品登录。");
         }
         SamplingTask task = samplingTaskMapper.selectById(command.getTaskId());
         if (task == null) {
@@ -298,18 +302,27 @@ public class LabSampleService {
     }
 
     private void validateTaskForSampleLogin(SamplingTask task, CurrentUser currentUser) {
-        if (!LabWorkflowConstants.SamplingTaskStatus.COMPLETED.equals(task.getTaskStatus())) {
-            throw new BusinessException("采样任务未完成，不能进行样品登录。");
+        if (LabWorkflowConstants.SamplingTaskStatus.ABANDONED.equals(task.getTaskStatus())) {
+            throw new BusinessException("采样任务已废弃，不能进行样品登录。");
+        }
+        if (isTaskRegistered(task)) {
+            throw new BusinessException("该采样任务已完成样品登录，不能重复登录。");
         }
         validateTaskOperator(task, currentUser);
         if (StrUtil.isBlank(task.getSampleNo())) {
-            throw new BusinessException("采样任务尚未生成样品编号，请先完成采样录入。");
+            throw new BusinessException("采样任务尚未生成样品编号，请重新生成任务后再登录。");
         }
         Number existingCount = labSampleMapper.selectCount(new LambdaQueryWrapper<LabSample>()
                 .eq(LabSample::getTaskId, task.getId()));
         if (existingCount != null && existingCount.longValue() > 0) {
             throw new BusinessException("该采样任务已完成样品登录，不能重复登录。");
         }
+    }
+
+    private boolean isTaskRegistered(SamplingTask task) {
+        return task != null
+                && (task.getSampleId() != null
+                || LabWorkflowConstants.SampleRegisterStatus.REGISTERED.equals(task.getSampleRegisterStatus()));
     }
 
     private String resolveSampleSourceMethod(SampleLoginCommand command) {

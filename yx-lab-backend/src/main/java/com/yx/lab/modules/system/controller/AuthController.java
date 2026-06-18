@@ -49,6 +49,12 @@ public class AuthController {
         return ApiResponse.success("登录成功", authService.embedLogin(request));
     }
 
+    @PostMapping("/accessCheckLogin")
+    @Operation(summary = "第三方跳转令牌校验登录")
+    public ApiResponse<LoginVO> accessCheckLogin(@Validated @RequestBody EmbedLoginRequest request) {
+        return ApiResponse.success("登录成功", authService.accessCheckLogin(request));
+    }
+
     @GetMapping("/me")
     @Operation(summary = "获取当前登录人信息")
     public ApiResponse<UserProfileVO> me() {

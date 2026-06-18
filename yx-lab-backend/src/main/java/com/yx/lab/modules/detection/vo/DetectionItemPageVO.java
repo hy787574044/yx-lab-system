@@ -17,6 +17,12 @@ public class DetectionItemPageVO {
 
     private String sampleNo;
 
+    private String pointName;
+
+    private String sampleType;
+
+    private String sampleTypeLabel;
+
     private String sampleSourceMethod;
 
     private String sampleSourceMethodLabel;

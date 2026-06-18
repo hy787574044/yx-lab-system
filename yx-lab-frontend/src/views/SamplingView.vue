@@ -46,7 +46,7 @@
                 </label>
                 <label class="toolbar-field">
                   <span>任务状态</span>
-                  <el-select v-model="taskQuery.taskStatus" clearable placeholder="请选择任务状态">
+                  <el-select v-model="taskQuery.sampleRegisterStatus" clearable placeholder="请选择任务状态">
                     <el-option
                       v-for="option in taskStatusOptions"
                       :key="option.value"
@@ -177,15 +177,15 @@
             </template>
           </el-table-column>
           <el-table-column prop="samplingTime" label="计划采样时间" width="170" />
-          <el-table-column prop="startedTime" label="开始时间" width="170" />
-          <el-table-column prop="finishedTime" label="完成时间" width="170" />
+          <el-table-column prop="startedTime" label="采样开始时间" width="170" />
+          <el-table-column prop="finishedTime" label="采样时间" width="170" />
           <el-table-column prop="weather" label="天气" width="110" />
           <el-table-column prop="temperature" label="温度" width="110" />
           <el-table-column prop="abandonReason" label="废弃原因" min-width="160" show-overflow-tooltip />
           <el-table-column prop="remark" label="备注" min-width="180" show-overflow-tooltip />
           <el-table-column
             label="操作"
-            :width="baseScene.allowTaskActions ? 370 : 140"
+            :width="baseScene.allowTaskActions ? 220 : 140"
             fixed="right"
             header-cell-class-name="cell-center"
             class-name="cell-center task-action-cell"
@@ -194,34 +194,12 @@
               <div class="action-row task-action-row">
                 <el-button
                   v-if="baseScene.allowTaskActions"
-                  v-permission="'samplingTask:write'"
                   type="primary"
                   size="small"
-                  :loading="isRowActionLoading('task', 'complete', row.id)"
-                  :disabled="!isTaskCompleteEntryEnabled(row)"
-                  @click="openTaskCompleteDialog(row)"
+                  :disabled="isTaskRegistered(row)"
+                  @click="openLoginDialog(row)"
                 >
-                  采样录入
-                </el-button>
-                <el-button
-                  v-if="baseScene.allowTaskActions"
-                  v-permission="'samplingTask:write'"
-                  size="small"
-                  :loading="isRowActionLoading('task', 'abandon', row.id)"
-                  @click="abandonTask(row)"
-                  :disabled="isRowActionLoading('task', 'resume', row.id) || !abandonableTaskStatuses.includes(row.taskStatus)"
-                >
-                  废弃
-                </el-button>
-                <el-button
-                  v-if="baseScene.allowTaskActions"
-                  v-permission="'samplingTask:write'"
-                  size="small"
-                  :loading="isRowActionLoading('task', 'resume', row.id)"
-                  @click="resumeTask(row)"
-                  :disabled="isRowActionLoading('task', 'abandon', row.id) || row.taskStatus !== abandonedTaskStatus"
-                >
-                  恢复
+                  样品登录
                 </el-button>
                 <el-button
                   size="small"
@@ -821,7 +799,7 @@
             <el-select
               v-else
               v-model="loginForm.taskId"
-              placeholder="请选择已完成采样且未登录的任务"
+              placeholder="请选择未采样且未登录的任务"
               style="width: 100%"
               @change="handleLoginTaskChange"
             >
@@ -1442,22 +1420,22 @@ const sceneMap = {
   '/task-assign': {
     key: 'task-assign',
     title: '采样任务',
-    subtitle: '聚焦待处理采样任务，适合班组长或调度人员快速推进采样执行。',
-    tableTitle: '待办采样任务',
-    tableSubtitle: '默认聚焦待处理任务，并保留开始、废弃、恢复、完成等现场执行动作。',
-    note: '采样任务页强调今天要做什么，样品编号会在任务生成时按规则自动生成，上方统计卡可切换到进行中、已完成、已废弃视角。',
-    guide: '如需安排周期计划，请进入独立的采样计划页面；任务完成后再进入样品登录。',
+    subtitle: '展示未采样任务，任务无需单独完成，样品登录后自动变为已采样。',
+    tableTitle: '采样任务',
+    tableSubtitle: '默认聚焦未采样任务，可直接进入样品登录。',
+    note: '采样任务页只展示任务和样品编号，状态按未采样、已采样两种展示。',
+    guide: '如需安排周期计划，请进入采样计划；未采样任务可直接在样品登录中选择并登记。',
     mode: 'task',
-    defaultStatKey: 'tasks:pending',
+    defaultStatKey: 'tasks:unsampled',
     allowTaskActions: true,
     showPlanSection: false,
-    emptyText: '暂无待处理采样任务数据',
+    emptyText: '暂无未采样任务数据',
     taskFilter: () => true,
     sampleFilter: () => true,
     quickLinks: [
       { path: '/sampling-plan', label: '采样计划', desc: '独立维护周期计划并执行手动派发' },
-      { path: '/sample-login', label: '样品登录', desc: '将已完成采样任务登记为正式样品' },
-      { path: '/task-history', label: '历史任务', desc: '查看已完成或已废弃的采样执行记录' },
+      { path: '/sample-login', label: '样品登录', desc: '选择未采样任务并登记为正式样品' },
+      { path: '/task-history', label: '历史任务', desc: '查看已采样或已废弃的采样记录' },
       { path: '/sample-ledger', label: '样品台账', desc: '查看样品编号、状态与流程留痕' }
     ]
   },
@@ -1478,24 +1456,24 @@ const sceneMap = {
     sampleFilter: () => true,
     quickLinks: [
       { path: '/task-assign', label: '采样任务', desc: '查看计划派发后生成的待执行采样任务' },
-      { path: '/sample-login', label: '样品登录', desc: '承接完成采样后的样品登记流程' },
+      { path: '/sample-login', label: '样品登录', desc: '选择未采样任务并登记样品' },
       { path: '/task-ledger', label: '任务台账', desc: '追踪计划转任务后的全量执行记录' }
     ]
   },
   '/task-history': {
     key: 'task-history',
     title: '历史任务',
-    subtitle: '回看已经完成或已废弃的采样任务，方便核对现场执行情况与补录链路。',
+    subtitle: '回看已经采样或已废弃的采样任务，方便核对现场执行情况与补录链路。',
     tableTitle: '历史采样任务',
-    tableSubtitle: '本页聚焦已完成、已废弃任务，操作区切换为只读查询视角。',
+    tableSubtitle: '本页聚焦已采样、已废弃任务，操作区切换为只读查询视角。',
     note: '历史任务页用于追溯与复盘，不再承载现场执行按钮，避免误操作。',
     guide: '如历史任务已形成样品，可直接跳转到样品台账继续核验编号与留痕。',
     mode: 'task',
-    defaultStatKey: 'tasks:completed',
+    defaultStatKey: 'tasks:sampled',
     allowTaskActions: false,
     showPlanSection: false,
     emptyText: '暂无历史采样任务数据',
-    taskFilter: (item) => [completedTaskStatus, abandonedTaskStatus].includes(item.taskStatus),
+    taskFilter: (item) => isTaskRegistered(item) || item.taskStatus === abandonedTaskStatus,
     sampleFilter: () => true,
     quickLinks: [
       { path: '/sample-ledger', label: '样品台账', desc: '查看历史任务生成的样品与流程留痕' },
@@ -1519,19 +1497,19 @@ const sceneMap = {
     taskFilter: () => true,
     sampleFilter: () => true,
     quickLinks: [
-      { path: '/sample-login', label: '样品登录', desc: '承接已完成任务并延续已有样品编号' },
-      { path: '/task-history', label: '历史任务', desc: '只看已完成与已废弃任务' },
+      { path: '/sample-login', label: '样品登录', desc: '承接未采样任务并延续已有样品编号' },
+      { path: '/task-history', label: '历史任务', desc: '只看已采样与已废弃任务' },
       { path: '/detection-analysis', label: '检测分析', desc: '继续进入化验室检测流程' }
     ]
   },
   '/sample-login': {
     key: 'sample-login',
     title: '样品登录',
-    subtitle: '将已完成采样任务转成正式样品，沿用任务已生成的样品编号并承接后续检测、审核、报告链路。',
+    subtitle: '选择未采样任务直接登记为正式样品，沿用任务已生成的样品编号并承接后续检测、审核、报告链路。',
     tableTitle: '已登记样品',
     tableSubtitle: '默认展示已登记样品，并通过统计卡切换到待审核、退回重检、闭环完成等状态。',
-    note: '样品登录页优先解决未登记任务，直接选择已完成采样的任务后回显任务已生成的样品编号。',
-    guide: '如本页没有可登录样品，请先回到采样任务完成采样任务；若样品已登记，可继续前往检测分析。',
+    note: '样品登录页优先解决未采样任务，选择任务后回显任务已生成的样品编号。',
+    guide: '如本页没有可登录任务，请先确认采样计划是否已生成任务；若样品已登记，可继续前往检测分析。',
     mode: 'sample',
     defaultStatKey: 'samples:logged',
     allowTaskActions: false,
@@ -1540,7 +1518,7 @@ const sceneMap = {
     taskFilter: () => true,
     sampleFilter: () => true,
     quickLinks: [
-      { path: '/task-assign', label: '采样任务', desc: '先完成现场采样任务，再进行样品登录' },
+      { path: '/task-assign', label: '采样任务', desc: '查看未采样任务清单' },
       { path: '/detection-analysis', label: '检测分析', desc: '样品登录完成后进入化验室检测流程' },
       { path: '/sample-ledger', label: '样品台账', desc: '查看全量样品编号与流程留痕' }
     ]
@@ -1575,7 +1553,10 @@ const isTaskTodoScene = computed(() => baseScene.value.key === 'task-assign')
 const taskSceneRecords = computed(() => tasks.value.filter((item) => baseScene.value.taskFilter(item)))
 const sampleSceneRecords = computed(() => samples.value.filter((item) => baseScene.value.sampleFilter(item)))
 const planStatusOptions = computed(() => Object.entries(planStatusLabelMap).map(([value, label]) => ({ value, label })))
-const taskStatusOptions = computed(() => Object.entries(taskStatusLabelMap).map(([value, label]) => ({ value, label })))
+const taskStatusOptions = computed(() => [
+  { value: 'UNREGISTERED', label: '未采样' },
+  { value: 'REGISTERED', label: '已采样' }
+])
 const sampleStatusOptions = computed(() => Object.entries(sampleStatusLabelMap).map(([value, label]) => ({ value, label })))
 
 function isTaskRegistered(task) {
@@ -1589,7 +1570,7 @@ function isTaskRegistered(task) {
 }
 
 function isTaskCompleteEntryEnabled(task) {
-  return [pendingTaskStatus, inProgressTaskStatus].includes(task?.taskStatus)
+  return task && !isTaskRegistered(task) && task.taskStatus !== abandonedTaskStatus
 }
 
 const pendingLoggableCount = computed(() =>
@@ -1597,7 +1578,7 @@ const pendingLoggableCount = computed(() =>
 )
 
 const firstCompletableTask = computed(() =>
-  taskSceneRecords.value.find((item) => completableTaskStatuses.includes(item.taskStatus))
+  taskSceneRecords.value.find((item) => isTaskCompleteEntryEnabled(item))
 )
 
 const firstLoggableTask = computed(() =>
@@ -1644,19 +1625,14 @@ const currentScene = computed(() => ({
     : isTaskScene.value
     ? [
         {
-          label: '待处理',
-          value: getCount(taskStatCounts.value, pendingTaskStatus),
+          label: '未采样',
+          value: getCount(taskStatCounts.value, 'UNSAMPLED') || getCount(taskStatCounts.value, 'UNLOGGED'),
           type: 'warning'
         },
         {
-          label: '进行中',
-          value: getCount(taskStatCounts.value, inProgressTaskStatus),
-          type: 'info'
-        },
-        {
-          label: '待样品登录',
-          value: getCount(taskStatCounts.value, 'UNLOGGED'),
-          type: getCount(taskStatCounts.value, 'UNLOGGED') ? 'warning' : 'success'
+          label: '已采样',
+          value: getCount(taskStatCounts.value, 'SAMPLED') || getCount(taskStatCounts.value, completedTaskStatus),
+          type: 'success'
         }
       ]
     : [
@@ -1686,31 +1662,19 @@ const currentStats = computed(() => {
   if (isTaskScene.value) {
     if (isTaskTodoScene.value) {
       const todoTotal = getCount(taskStatCounts.value, 'TODO')
-      const unloggedCount = getCount(taskStatCounts.value, 'UNLOGGED')
+      const unsampledCount = getCount(taskStatCounts.value, 'UNSAMPLED') || getCount(taskStatCounts.value, 'UNLOGGED')
       return [
         {
           key: 'tasks:all',
-          label: '采样待办',
+          label: '未采样任务',
           value: todoTotal,
-          desc: '待执行和待样品登录任务'
+          desc: '尚未登记为样品的采样任务'
         },
         {
-          key: 'tasks:pending',
-          label: '待处理',
-          value: getCount(taskStatCounts.value, pendingTaskStatus),
-          desc: '尚未开始执行的采样任务'
-        },
-        {
-          key: 'tasks:progress',
-          label: '进行中',
-          value: getCount(taskStatCounts.value, inProgressTaskStatus),
-          desc: '正在现场执行的采样任务'
-        },
-        {
-          key: 'tasks:unlogged',
-          label: '待样品登录',
-          value: unloggedCount,
-          desc: '已完成采样但尚未登记为样品的任务'
+          key: 'tasks:unsampled',
+          label: '未采样',
+          value: unsampledCount,
+          desc: '可直接在样品登录中选择登记'
         }
       ]
     }
@@ -1722,22 +1686,16 @@ const currentStats = computed(() => {
         desc: '采样任务台账总量'
       },
       {
-        key: 'tasks:pending',
-        label: '待处理',
-        value: getCount(taskStatCounts.value, pendingTaskStatus),
-        desc: '尚未开始执行的采样任务'
+        key: 'tasks:unsampled',
+        label: '未采样',
+        value: getCount(taskStatCounts.value, 'UNSAMPLED') || getCount(taskStatCounts.value, 'UNLOGGED'),
+        desc: '尚未登记为样品的采样任务'
       },
       {
-        key: 'tasks:progress',
-        label: '进行中',
-        value: getCount(taskStatCounts.value, inProgressTaskStatus),
-        desc: '正在现场执行的采样任务'
-      },
-      {
-        key: 'tasks:completed',
-        label: '已完成',
-        value: getCount(taskStatCounts.value, completedTaskStatus),
-        desc: '已经完成采样并可进入样品登录的任务'
+        key: 'tasks:sampled',
+        label: '已采样',
+        value: getCount(taskStatCounts.value, 'SAMPLED') || getCount(taskStatCounts.value, completedTaskStatus),
+        desc: '已经完成样品登录的任务'
       },
       {
         key: 'tasks:abandoned',
@@ -1749,7 +1707,7 @@ const currentStats = computed(() => {
         key: 'tasks:unlogged',
         label: '待样品登录',
         value: getCount(taskStatCounts.value, 'UNLOGGED'),
-        desc: '已完成采样但尚未生成样品的任务'
+        desc: '未采样且尚未生成样品的任务'
       }
     ]
   }
@@ -1788,29 +1746,26 @@ const currentStats = computed(() => {
     {
       key: 'samples:todo-login',
       label: '待登录任务',
-      value: getCount(taskStatCounts.value, 'UNLOGGED'),
-      desc: '已完成采样但尚未登记为样品的任务数量'
+      value: getCount(taskStatCounts.value, 'UNSAMPLED') || getCount(taskStatCounts.value, 'UNLOGGED'),
+      desc: '未采样且尚未登记为样品的任务数量'
     }
   ]
 })
 
 const visibleTasks = computed(() => {
   const records = taskSceneRecords.value
-  if (activeStatKey.value === 'tasks:pending') {
-    return records.filter((item) => item.taskStatus === pendingTaskStatus)
+  if (activeStatKey.value === 'tasks:unsampled') {
+    return records.filter((item) => !isTaskRegistered(item) && item.taskStatus !== abandonedTaskStatus)
   }
-  if (activeStatKey.value === 'tasks:progress') {
-    return records.filter((item) => item.taskStatus === inProgressTaskStatus)
-  }
-  if (activeStatKey.value === 'tasks:completed') {
-    return records.filter((item) => item.taskStatus === completedTaskStatus)
+  if (activeStatKey.value === 'tasks:sampled') {
+    return records.filter((item) => isTaskRegistered(item))
   }
   if (activeStatKey.value === 'tasks:abandoned') {
     return records.filter((item) => item.taskStatus === abandonedTaskStatus)
   }
   if (activeStatKey.value === 'tasks:unlogged') {
     return records.filter((item) =>
-      item.taskStatus === completedTaskStatus && !isTaskRegistered(item)
+      !isTaskRegistered(item) && item.taskStatus !== abandonedTaskStatus
     )
   }
   return records
@@ -1935,6 +1890,7 @@ function applyStatToCurrentSceneQuery(key) {
   }
   if (isTaskScene.value) {
     taskQuery.taskStatus = getTaskStatusByStatKey(key) || ''
+    taskQuery.sampleRegisterStatus = getTaskRegisterStatusByStatKey(key) || ''
     taskQuery.pageNum = 1
     return
   }
@@ -1965,11 +1921,17 @@ function getPlanStatusByStatKey(key) {
 
 function getTaskStatusByStatKey(key) {
   const statusMap = {
-    'tasks:pending': pendingTaskStatus,
-    'tasks:progress': inProgressTaskStatus,
-    'tasks:completed': completedTaskStatus,
     'tasks:abandoned': abandonedTaskStatus,
-    'tasks:unlogged': completedTaskStatus
+    'tasks:unlogged': ''
+  }
+  return statusMap[key]
+}
+
+function getTaskRegisterStatusByStatKey(key) {
+  const statusMap = {
+    'tasks:unsampled': 'UNREGISTERED',
+    'tasks:unlogged': 'UNREGISTERED',
+    'tasks:sampled': 'REGISTERED'
   }
   return statusMap[key]
 }
@@ -2000,12 +1962,10 @@ function syncActiveStatByCurrentQuery() {
     return
   }
   if (isTaskScene.value) {
-    if (taskQuery.taskStatus === pendingTaskStatus) {
-      activeStatKey.value = 'tasks:pending'
-    } else if (taskQuery.taskStatus === inProgressTaskStatus) {
-      activeStatKey.value = 'tasks:progress'
-    } else if (taskQuery.taskStatus === completedTaskStatus) {
-      activeStatKey.value = 'tasks:completed'
+    if (taskQuery.sampleRegisterStatus === 'UNREGISTERED') {
+      activeStatKey.value = 'tasks:unsampled'
+    } else if (taskQuery.sampleRegisterStatus === 'REGISTERED') {
+      activeStatKey.value = 'tasks:sampled'
     } else if (taskQuery.taskStatus === abandonedTaskStatus) {
       activeStatKey.value = 'tasks:abandoned'
     } else {
@@ -2066,11 +2026,10 @@ async function loadLoggableTasks() {
   const result = await fetchSamplingTasksApi({
     pageNum: 1,
     pageSize: 500,
-    taskStatus: completedTaskStatus,
     sampleRegisterStatus: 'UNREGISTERED'
   })
   const records = Array.isArray(result.records) ? result.records : []
-  loggableTasks.value = records.filter((item) => !isTaskRegistered(item))
+  loggableTasks.value = records.filter((item) => !isTaskRegistered(item) && item.taskStatus !== abandonedTaskStatus)
 }
 
 async function loadSamples() {
@@ -2164,6 +2123,9 @@ function resetPlanQuery() {
 
 function handleCurrentSceneSearch() {
   if (isTaskScene.value) {
+    if (taskQuery.sampleRegisterStatus) {
+      taskQuery.taskStatus = ''
+    }
     taskQuery.pageNum = 1
     syncActiveStatByCurrentQuery()
     Promise.all([loadTasks(), loadTaskStats()])
@@ -3457,7 +3419,7 @@ async function openLoginDialog(task = null) {
   await Promise.all([loadSamples(), loadLoggableTasks(), loadTaskStats()])
   const loggableTask = task || firstLoggableTask.value || pendingLoggableTasks.value[0]
   if (!loggableTask) {
-    ElMessage.warning('没有可登录的任务，请先进行采样任务完成录入')
+    ElMessage.warning('没有可登录的任务，请先确认采样计划是否已生成任务')
     return
   }
   await Promise.all([loadDetectionProjects(), loadFlowOptions()])
@@ -3537,7 +3499,7 @@ function formatPendingTaskLabel(task) {
 
 async function submitSampleLogin() {
   if (!loginForm.taskId) {
-    ElMessage.warning('没有可登录的任务，请先进行采样任务完成录入')
+    ElMessage.warning('没有可登录的任务，请先确认采样计划是否已生成任务')
     return
   }
   if (!loginForm.pointId || !loginForm.pointName || !loginForm.sampleType || !loginForm.sampleSourceMethod || !loginForm.detectionTypeId || !loginForm.detectionItems || !loginForm.samplingTime) {

@@ -26,6 +26,18 @@ public class DetectionRecord extends BaseEntity {
     @TableField("sample_no")
     private String sampleNo;
 
+    @Schema(description = "监测点位名称")
+    @TableField(exist = false)
+    private String pointName;
+
+    @Schema(description = "样品类型")
+    @TableField(exist = false)
+    private String sampleType;
+
+    @Schema(description = "样品类型名称")
+    @TableField(exist = false)
+    private String sampleTypeLabel;
+
     @Schema(description = "检测套餐ID")
     @TableField("detection_type_id")
     private Long detectionTypeId;
