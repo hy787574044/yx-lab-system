@@ -203,7 +203,10 @@
           'workbench-dialog',
           {
             'workbench-dialog--sampling': activeAction === 'sampling',
-            'workbench-dialog--detection': activeAction === 'detection'
+            'workbench-dialog--sample-login': activeAction === 'sampleLogin',
+            'workbench-dialog--detection': activeAction === 'detection',
+            'workbench-dialog--report': activeAction === 'report',
+            'workbench-dialog--report-half-month': activeAction === 'report' && previewData?.previewMode === 'HALF_MONTHLY_TERMINAL_TEMPLATE'
           }
         ]"
         v-loading="actionLoading"
@@ -265,7 +268,7 @@
 
           <template v-else-if="activeAction === 'sampleLogin'">
             <el-form label-width="96px">
-              <div class="form-grid">
+              <div class="form-grid sample-login-grid">
                 <el-form-item label="待登录任务">
                   <el-input :model-value="formatTaskLabel(loginTask)" readonly />
                 </el-form-item>
@@ -322,7 +325,14 @@
                 </el-form-item>
               </div>
             </el-form>
-            <el-table v-if="loginForm.detectionConfigItems.length" class="compact-table" :data="loginForm.detectionConfigItems" size="small" border max-height="260">
+            <el-table
+              v-if="loginForm.detectionConfigItems.length"
+              class="compact-table sample-login-config-table"
+              :data="loginForm.detectionConfigItems"
+              size="small"
+              border
+              max-height="190"
+            >
               <el-table-column prop="parameterName" label="检测参数" min-width="140" />
               <el-table-column label="标准范围" min-width="120">
                 <template #default="{ row }">{{ formatStandardRange(row.standardMin, row.standardMax, row.unit) }}</template>
@@ -408,11 +418,15 @@
 
           <template v-else-if="activeAction === 'report'">
             <div v-if="previewError" class="empty-block">{{ previewError }}</div>
-            <component
-              v-else-if="previewData"
-              :is="previewComponent"
-              :preview-data="previewData"
-            />
+            <div v-else-if="previewData && previewComponent" class="workbench-report-preview">
+              <div class="workbench-report-preview__scale">
+                <component
+                  :is="previewComponent"
+                  :preview-data="previewData"
+                />
+              </div>
+            </div>
+            <div v-else-if="previewData" class="empty-block">暂无可预览模板</div>
             <div v-else class="empty-block">请选择左侧报告进行预览</div>
           </template>
         </main>
@@ -449,34 +463,31 @@ import {
   fetchDetectionTypesApi,
   fetchDictItemsApi,
   fetchFlowConfigOptionsApi,
-  fetchReportPreviewDataApi,
-  fetchReportsApi,
   fetchSamplingPlansApi,
   fetchSamplingTaskDetailApi,
   fetchSamplingTasksApi,
+  fetchSummaryReportsApi,
   fetchSystemUsersApi,
   leaderDashboardApi,
   loginSampleApi,
+  previewSummaryReportApi,
   submitDetectionApi,
   submitReviewApi
 } from '../api/lab'
-import ReportPrintDocument from '../components/report/ReportPrintDocument.vue'
-import RawRecordPrintDocument from '../components/report/RawRecordPrintDocument.vue'
+import DailyExternalSummaryTemplate from '../components/report/DailyExternalSummaryTemplate.vue'
+import DailyInternalSummaryTemplate from '../components/report/DailyInternalSummaryTemplate.vue'
+import HalfMonthlyTerminalSummaryTemplate from '../components/report/HalfMonthlyTerminalSummaryTemplate.vue'
+import WeeklyFactorySummaryTemplate from '../components/report/WeeklyFactorySummaryTemplate.vue'
 import {
   approvedDetectionStatus,
   approvedReviewResult,
   activePlanStatus,
   actionablePlanStatuses,
   cycleTypeLabelMap,
-  draftReportStatus,
   detectionStatusLabelMap,
-  generatedReportStatus,
   getEnumLabel,
   getStatusClass,
   planStatusLabelMap,
-  rawRecordReportCategory,
-  reportCategoryLabelMap,
-  reportStatusLabelMap,
   rejectedDetectionStatus,
   rejectedReviewResult,
   reviewPendingDetectionStatus,
@@ -493,6 +504,9 @@ import { getUser } from '../utils/auth'
 import { isStaffRole } from '../utils/menuPermission'
 
 const FLOW_TYPE_REVIEW = 'REVIEW'
+const SUMMARY_TYPE_DAILY = 'DAILY'
+const SUMMARY_TYPE_WEEKLY = 'WEEKLY'
+const SUMMARY_TYPE_HALF_MONTHLY = 'HALF_MONTHLY'
 const vLoading = ElLoadingDirective
 const loading = ref(false)
 const actionLoading = ref(false)
@@ -667,9 +681,7 @@ const loginDetectionTypeOptions = computed(() => {
   return detectionTypes.value.filter((item) => !item.sampleType || String(item.sampleType) === sampleType)
 })
 const pendingReviewItemCount = computed(() => reviewForm.items.filter((item) => item.itemStatus === reviewPendingDetectionStatus).length)
-const previewComponent = computed(() => (
-  previewData.value?.reportCategory === rawRecordReportCategory ? RawRecordPrintDocument : ReportPrintDocument
-))
+const previewComponent = computed(() => resolveSummaryPreviewComponent(previewData.value?.previewMode))
 const samplingPlanDetailFields = computed(() => {
   const plan = selectedSamplingPlan.value || {}
   return [
@@ -885,25 +897,53 @@ async function refreshDashboard() {
 
 async function loadWorkbenchPreviewRows() {
   const previewPageSize = 12
-  const [planResult, samplingResult, loginResult, detectionResult, reviewResult, draftReportResult] = await Promise.all([
+  const [planResult, samplingResult, loginResult, detectionResult, reviewResult, summaryReportRows] = await Promise.all([
     fetchSamplingPlansApi({ pageNum: 1, pageSize: previewPageSize, planStatus: activePlanStatus }),
     fetchSamplingTasksApi({ pageNum: 1, pageSize: previewPageSize, sampleRegisterStatus: 'UNREGISTERED' }),
     fetchSamplingTasksApi({ pageNum: 1, pageSize: previewPageSize, sampleRegisterStatus: 'UNREGISTERED' }),
     fetchDetectionItemsApi({ pageNum: 1, pageSize: previewPageSize, itemStatus: waitDetectDetectionStatus }),
     fetchDetectionsApi({ pageNum: 1, pageSize: previewPageSize, detectionStatus: reviewPendingDetectionStatus }),
-    fetchReportsApi({ pageNum: 1, pageSize: previewPageSize, reportStatus: draftReportStatus })
+    loadWorkbenchSummaryReportRows(previewPageSize)
   ])
   previewRows.samplingPlan = planResult.records || []
   previewRows.sampling = samplingResult.records || []
   previewRows.sampleLogin = loginResult.records || []
   previewRows.detection = detectionResult.records || []
   previewRows.review = reviewResult.records || []
-  if (draftReportResult.records?.length) {
-    previewRows.report = draftReportResult.records
-    return
+  previewRows.report = summaryReportRows
+}
+
+function getWorkbenchSummaryTypes() {
+  if (isStaffRole(currentUser.value)) {
+    return [SUMMARY_TYPE_DAILY]
   }
-  const generatedReportResult = await fetchReportsApi({ pageNum: 1, pageSize: previewPageSize, reportStatus: generatedReportStatus })
-  previewRows.report = generatedReportResult.records || []
+  return [SUMMARY_TYPE_DAILY, SUMMARY_TYPE_WEEKLY, SUMMARY_TYPE_HALF_MONTHLY]
+}
+
+async function loadWorkbenchSummaryReportRows(pageSize) {
+  const size = Number(pageSize || 12)
+  const results = await Promise.all(
+    getWorkbenchSummaryTypes().map((summaryType) => fetchSummaryReportsApi({
+      pageNum: 1,
+      pageSize: size,
+      summaryType
+    }))
+  )
+  return results
+    .flatMap((result) => Array.isArray(result.records) ? result.records : [])
+    .sort(compareSummaryReportRows)
+    .slice(0, size)
+}
+
+function compareSummaryReportRows(left, right) {
+  const rightTime = Date.parse(right?.periodStart || right?.latestSamplingTime || '')
+  const leftTime = Date.parse(left?.periodStart || left?.latestSamplingTime || '')
+  const safeRightTime = Number.isFinite(rightTime) ? rightTime : 0
+  const safeLeftTime = Number.isFinite(leftTime) ? leftTime : 0
+  if (safeRightTime !== safeLeftTime) {
+    return safeRightTime - safeLeftTime
+  }
+  return String(left?.reportName || '').localeCompare(String(right?.reportName || ''))
 }
 
 async function loadDictOptions() {
@@ -1038,8 +1078,7 @@ async function loadActionRows(key) {
     return
   }
   if (key === 'report') {
-    const result = await fetchReportsApi({ pageNum: 1, pageSize: 30, reportStatus: draftReportStatus })
-    actionRows.value = result.records?.length ? result.records : (await fetchReportsApi({ pageNum: 1, pageSize: 30, reportStatus: generatedReportStatus })).records || []
+    actionRows.value = await loadWorkbenchSummaryReportRows(30)
   }
 }
 
@@ -1059,7 +1098,7 @@ async function selectActionRow(row) {
 }
 
 function getActionRowKey(row) {
-  return row?.id || row?.taskId || row?.recordId || row?.sampleNo || JSON.stringify(row)
+  return row?.id || row?.reportKey || row?.taskId || row?.recordId || row?.sampleNo || JSON.stringify(row)
 }
 
 function isActionRowActive(row) {
@@ -1090,7 +1129,7 @@ function getActionRowMeta(row) {
     return `${row?.detectionTypeName || '-'} / ${row?.detectorName || '-'}`
   }
   if (activeAction.value === 'report') {
-    return `${row?.reportStatus || '-'} / ${row?.generatedTime || '-'}`
+    return `${row?.summaryTypeLabel || row?.summaryType || '-'} / ${row?.periodLabel || '-'}`
   }
   return ''
 }
@@ -1112,7 +1151,7 @@ function getPreviewRowTitle(key, row) {
     return buildSampleContextTitle(row, row?.detectionTypeName)
   }
   if (key === 'report') {
-    return buildSampleContextTitle(row, row?.reportName || getEnumLabel(reportCategoryLabelMap, row?.reportCategory) || row?.reportCategory)
+    return row?.reportName || row?.summaryTypeLabel || '-'
   }
   return '-'
 }
@@ -1121,7 +1160,7 @@ function buildSampleContextTitle(row, suffix = '') {
   const pointName = firstNonBlank(row?.pointName, row?.monitoringPointName)
   const sampleType = firstNonBlank(row?.sampleTypeLabel, getEnumLabel(sampleTypeLabelMap, row?.sampleType), row?.sampleType)
   const tail = String(suffix || '').trim() === '-' ? '' : String(suffix || '').trim()
-  return `监测点：${pointName || '未填'} 样品类型：${sampleType || '未填'}${tail ? ` / ${tail}` : ''}`
+  return `监测点：${pointName || '未填'}\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0样品类型：${sampleType || '未填'}${tail ? ` / ${tail}` : ''}`
 }
 
 function firstNonBlank(...values) {
@@ -1144,12 +1183,19 @@ function getPreviewRowMeta(key, row) {
     return firstNonBlank(row?.detectorName) ? `检测人员：${row.detectorName}` : ''
   }
   if (key === 'report') {
-    return ''
+    return `${row?.summaryTypeLabel || row?.summaryType || '-'} / ${row?.periodLabel || '-'}`
   }
   return ''
 }
 
 function getPreviewFields(key, row) {
+  if (key === 'report') {
+    return [
+      { label: '报表类型', value: row?.summaryTypeLabel || row?.summaryType },
+      { label: '周期范围', value: row?.periodLabel },
+      { label: '报表状态', value: row?.reportStatusLabel || row?.reportStatus }
+    ]
+  }
   if (key === 'sampling') {
     return [
       { label: '任务状态', value: row?.taskStatus },
@@ -1191,6 +1237,17 @@ function getPreviewDisplayRowMeta(key, row) {
 }
 
 function getPreviewDisplayFields(key, row) {
+  if (key === 'report') {
+    return [
+      {
+        label: '报表状态',
+        value: row?.reportStatusLabel || row?.reportStatus,
+        statusClass: resolveSummaryReportStatusClass(row?.reportStatus)
+      },
+      { label: '报表类型', value: row?.summaryTypeLabel || row?.summaryType },
+      { label: '周期范围', value: row?.periodLabel }
+    ]
+  }
   if (key === 'samplingPlan') {
     return [
       {
@@ -1566,10 +1623,49 @@ async function openReportPreview(row) {
   previewData.value = null
   previewError.value = ''
   try {
-    previewData.value = await fetchReportPreviewDataApi(row.id)
+    previewData.value = await previewSummaryReportApi(buildSummaryPreviewParams(row))
   } catch (error) {
     previewError.value = error?.message || '报告预览失败'
   }
+}
+
+function buildSummaryPreviewParams(row) {
+  const params = {
+    summaryType: row?.summaryType || SUMMARY_TYPE_DAILY,
+    regionName: row?.regionName || '',
+    periodStart: row?.periodStart,
+    periodEnd: row?.periodEnd
+  }
+  if (params.summaryType === SUMMARY_TYPE_DAILY) {
+    params.dailyReportType = row?.dailyReportType || ''
+  }
+  return params
+}
+
+function resolveSummaryPreviewComponent(previewMode) {
+  if (previewMode === 'DAILY_INTERNAL_TEMPLATE') {
+    return DailyInternalSummaryTemplate
+  }
+  if (previewMode === 'DAILY_EXTERNAL_TEMPLATE') {
+    return DailyExternalSummaryTemplate
+  }
+  if (previewMode === 'WEEKLY_FACTORY_TEMPLATE') {
+    return WeeklyFactorySummaryTemplate
+  }
+  if (previewMode === 'HALF_MONTHLY_TERMINAL_TEMPLATE') {
+    return HalfMonthlyTerminalSummaryTemplate
+  }
+  return null
+}
+
+function resolveSummaryReportStatusClass(status) {
+  if (status === 'COMPLETE') {
+    return 'success'
+  }
+  if (status === 'PARTIAL') {
+    return 'warning'
+  }
+  return 'info'
 }
 
 async function reloadActiveAction() {
@@ -1926,6 +2022,18 @@ onUnmounted(() => {
   padding: 0;
 }
 
+.todo-detail-card--sampling .todo-detail-card__fields,
+.todo-detail-card--detection .todo-detail-card__fields,
+.todo-detail-card--review .todo-detail-card__fields {
+  gap: 8px 20px;
+}
+
+.todo-detail-card--sampling .todo-detail-card__fields span,
+.todo-detail-card--detection .todo-detail-card__fields span,
+.todo-detail-card--review .todo-detail-card__fields span {
+  gap: 6px;
+}
+
 .todo-detail-card__fields em {
   color: var(--text-sub);
   font-size: 12px;
@@ -2055,6 +2163,20 @@ onUnmounted(() => {
   min-height: 0;
 }
 
+.workbench-dialog--sample-login {
+  grid-template-columns: 320px minmax(0, 1fr);
+  width: 100%;
+  height: 560px;
+  min-height: 0;
+}
+
+.workbench-dialog--report {
+  grid-template-columns: 320px minmax(0, 1fr);
+  width: 100%;
+  height: 650px;
+  min-height: 0;
+}
+
 .workbench-dialog__side {
   display: flex;
   flex-direction: column;
@@ -2077,6 +2199,7 @@ onUnmounted(() => {
   display: grid;
   align-content: start;
   gap: 8px;
+  flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
   scrollbar-width: thin;
@@ -2101,7 +2224,27 @@ onUnmounted(() => {
   padding-right: 4px;
 }
 
+.workbench-dialog--sample-login .workbench-row-list {
+  max-height: 492px;
+  padding-right: 4px;
+}
+
+.workbench-dialog--report .workbench-row-list {
+  max-height: 582px;
+  padding-right: 4px;
+}
+
 .workbench-dialog--detection .workbench-row-card {
+  min-height: 68px;
+  padding: 10px 12px;
+}
+
+.workbench-dialog--sample-login .workbench-row-card {
+  min-height: 68px;
+  padding: 10px 12px;
+}
+
+.workbench-dialog--report .workbench-row-card {
   min-height: 68px;
   padding: 10px 12px;
 }
@@ -2142,6 +2285,53 @@ onUnmounted(() => {
 .workbench-dialog--detection .workbench-dialog__main {
   display: block;
   overflow: hidden;
+}
+
+.workbench-dialog--sample-login .workbench-dialog__main {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  padding-right: 0;
+}
+
+.workbench-dialog--report .workbench-dialog__main {
+  min-height: 0;
+  overflow: hidden;
+  padding-right: 0;
+}
+
+.workbench-report-preview {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  overflow: auto;
+  padding: 0 4px 4px 0;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(100, 116, 139, 0.32) transparent;
+}
+
+.workbench-report-preview::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.workbench-report-preview::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(100, 116, 139, 0.28);
+}
+
+.workbench-report-preview::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.workbench-report-preview__scale {
+  min-width: 820px;
+}
+
+.workbench-dialog--report-half-month .workbench-report-preview__scale {
+  min-width: 1180px;
+  zoom: 0.78;
 }
 
 .workbench-dialog--sampling :deep(.el-form) {
@@ -2227,6 +2417,19 @@ onUnmounted(() => {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 4px 14px;
+}
+
+.sample-login-grid {
+  gap: 2px 14px;
+}
+
+.workbench-dialog--sample-login :deep(.el-form-item) {
+  margin-bottom: 12px;
+}
+
+.sample-login-config-table {
+  flex: 0 1 auto;
+  min-height: 0;
 }
 
 .sampling-entry-grid {

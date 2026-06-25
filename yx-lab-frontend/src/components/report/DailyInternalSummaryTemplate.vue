@@ -12,7 +12,7 @@
         <span>{{ dateParts.day }}</span>
         <span>日</span>
       </div>
-      <div class="meta-cell">星期：{{ previewData?.weekdayLabel || '-' }}</div>
+      <div class="meta-cell">{{ previewData?.weekdayLabel || '-' }}</div>
       <div class="meta-cell">天气：{{ previewData?.weather || '-' }}</div>
     </div>
 
