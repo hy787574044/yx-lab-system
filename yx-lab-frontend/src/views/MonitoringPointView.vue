@@ -214,10 +214,13 @@ import {
 
 const pointTypeOptions = sampleTypeOptions
 const pointTypeLabelMap = sampleTypeLabelMap
+const SUMMARY_PAGE_SIZE = 10000
 
 const query = reactive({ pageNum: 1, pageSize: DEFAULT_PAGE_SIZE, keyword: '', pointType: '', regionName: '', pointStatus: '' })
 const records = ref([])
 const total = ref(0)
+const summaryRecords = ref([])
+const summaryTotal = ref(0)
 const dialogVisible = ref(false)
 const activeStatKey = ref('all')
 const editingId = ref(null)
@@ -242,25 +245,33 @@ const form = reactive(defaultForm())
 const dialogTitle = computed(() => (editingId.value ? '编辑监测点位' : '新增监测点位'))
 
 const stats = computed(() => [
-  { key: 'all', label: '点位总数', value: total.value, desc: '当前监测点位总量' },
-  { key: 'page', label: '本页记录', value: records.value.length, desc: '当前分页加载的点位数量' },
+  { key: 'all', label: '点位总数', value: summaryTotal.value, desc: '当前监测点位总量' },
   {
     key: 'enabled',
     label: '启用点位',
-    value: records.value.filter((item) => item.pointStatus === enabledPointStatus).length,
-    desc: '当前页状态为启用的点位'
+    value: summaryRecords.value.filter((item) => item.pointStatus === enabledPointStatus).length,
+    desc: '状态为启用的点位'
+  },
+  {
+    key: 'disabled',
+    label: '停用点位',
+    value: summaryRecords.value.filter((item) => item.pointStatus === disabledPointStatus).length,
+    desc: '状态为停用的点位'
   },
   {
     key: 'factory',
     label: '出厂水点位',
-    value: records.value.filter((item) => item.pointType === factoryPointType).length,
-    desc: '当前页出厂水监测点位数量'
+    value: summaryRecords.value.filter((item) => item.pointType === factoryPointType).length,
+    desc: '出厂水监测点位数量'
   }
 ])
 
 const visibleRecords = computed(() => {
   if (activeStatKey.value === 'enabled') {
     return records.value.filter((item) => item.pointStatus === enabledPointStatus)
+  }
+  if (activeStatKey.value === 'disabled') {
+    return records.value.filter((item) => item.pointStatus === disabledPointStatus)
   }
   if (activeStatKey.value === 'factory') {
     return records.value.filter((item) => item.pointType === factoryPointType)
@@ -271,7 +282,7 @@ const visibleRecords = computed(() => {
 function handleStatClick(key) {
   const nextKey = key === activeStatKey.value ? 'all' : key
   activeStatKey.value = nextKey
-  query.pointStatus = nextKey === 'enabled' ? enabledPointStatus : ''
+  query.pointStatus = nextKey === 'enabled' ? enabledPointStatus : nextKey === 'disabled' ? disabledPointStatus : ''
   query.pointType = nextKey === 'factory' ? factoryPointType : ''
   query.pageNum = 1
   loadData()
@@ -317,6 +328,8 @@ function resetQuery() {
 function syncActiveStatByQuery() {
   if (query.pointStatus === enabledPointStatus && !query.pointType) {
     activeStatKey.value = 'enabled'
+  } else if (query.pointStatus === disabledPointStatus && !query.pointType) {
+    activeStatKey.value = 'disabled'
   } else if (query.pointType === factoryPointType && !query.pointStatus) {
     activeStatKey.value = 'factory'
   } else {
@@ -380,6 +393,15 @@ async function loadData() {
   total.value = result.total || 0
 }
 
+async function loadSummary() {
+  const result = await fetchMonitoringPointsApi({
+    pageNum: 1,
+    pageSize: SUMMARY_PAGE_SIZE
+  })
+  summaryRecords.value = result.records || []
+  summaryTotal.value = Number(result.total || 0)
+}
+
 function normalizeDictOptions(items) {
   if (!Array.isArray(items)) {
     return []
@@ -437,7 +459,7 @@ async function submit() {
     }
     dialogVisible.value = false
     resetForm()
-    await loadData()
+    await Promise.all([loadData(), loadSummary()])
   } finally {
     submitting.value = false
   }
@@ -457,7 +479,7 @@ async function togglePointStatus(row) {
   try {
     await updateMonitoringPointApi(row.id, buildPayload({ ...row, pointStatus: nextStatus }))
     ElMessage.success(`点位已${actionText}`)
-    await loadData()
+    await Promise.all([loadData(), loadSummary()])
   } finally {
     statusUpdatingId.value = null
   }
@@ -465,6 +487,7 @@ async function togglePointStatus(row) {
 
 onMounted(() => {
   loadData()
+  loadSummary()
   loadWaterPlants()
 })
 </script>

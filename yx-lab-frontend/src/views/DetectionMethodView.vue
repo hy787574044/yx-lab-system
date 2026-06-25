@@ -369,6 +369,7 @@ import {
 } from '../api/lab'
 import { DEFAULT_PAGE_SIZE } from '../utils/labEnums'
 
+const SUMMARY_PAGE_SIZE = 10000
 const currentScene = {
   title: '检测方法',
   subtitle: '维护化验室检测方法基础台账，为后续检测配置和引用提供统一口径。',
@@ -386,6 +387,8 @@ const currentScene = {
 const activeStatKey = ref('all')
 const rows = ref([])
 const total = ref(0)
+const summaryRows = ref([])
+const summaryTotal = ref(0)
 const parameterOptions = ref([])
 const instrumentModelOptions = ref([])
 const dialogVisible = ref(false)
@@ -439,10 +442,10 @@ const visibleRows = computed(() => {
 })
 
 const currentStats = computed(() => [
-  { key: 'all', label: '全部方法', value: total.value, desc: '检测方法全量台账' },
-  { key: 'bound', label: '已绑定型号', value: rows.value.filter((item) => Number(item.instrumentModelCount || 0) > 0).length, desc: '已配置设备型号的方法' },
-  { key: 'unbound', label: '未绑定型号', value: rows.value.filter((item) => Number(item.instrumentModelCount || 0) === 0).length, desc: '尚未配置设备型号的方法' },
-  { key: 'disabled', label: '停用方法', value: rows.value.filter((item) => item.enabled === 0).length, desc: '已停用或暂不使用的方法' }
+  { key: 'all', label: '全部方法', value: summaryTotal.value, desc: '检测方法全量台账' },
+  { key: 'bound', label: '已绑定型号', value: summaryRows.value.filter((item) => Number(item.instrumentModelCount || 0) > 0).length, desc: '已配置设备型号的方法' },
+  { key: 'unbound', label: '未绑定型号', value: summaryRows.value.filter((item) => Number(item.instrumentModelCount || 0) === 0).length, desc: '尚未配置设备型号的方法' },
+  { key: 'disabled', label: '停用方法', value: summaryRows.value.filter((item) => item.enabled === 0).length, desc: '已停用或暂不使用的方法' }
 ])
 
 const modelBindingDialogTitle = computed(() => (
@@ -639,7 +642,7 @@ async function submitModelBindings() {
     await saveDetectionMethodInstrumentModelBindingsApi(modelBindingForm.methodId, buildModelBindingPayload())
     ElMessage.success('设备型号绑定已保存')
     modelBindingDialogVisible.value = false
-    await loadRows()
+    await Promise.all([loadRows(), loadSummaryRows()])
   } finally {
     savingModelBinding.value = false
   }
@@ -651,7 +654,7 @@ async function clearMethodModelBindings(row) {
   })
   await saveDetectionMethodInstrumentModelBindingsApi(row.id, { items: [] })
   ElMessage.success('已清空当前检测方法的设备型号绑定')
-  await loadRows()
+  await Promise.all([loadRows(), loadSummaryRows()])
 }
 
 async function removeSingleMethodModelBinding(row, model) {
@@ -668,7 +671,7 @@ async function removeSingleMethodModelBinding(row, model) {
   }
   await saveDetectionMethodInstrumentModelBindingsApi(row.id, buildModelBindingPayload(remainingKeys))
   ElMessage.success('已解除当前设备型号绑定')
-  await loadRows()
+  await Promise.all([loadRows(), loadSummaryRows()])
 }
 
 async function submitForm() {
@@ -701,7 +704,7 @@ async function submitForm() {
     }
     ElMessage.success(form.id ? '检测方法已更新' : '检测方法已新增')
     dialogVisible.value = false
-    await loadRows()
+    await Promise.all([loadRows(), loadSummaryRows()])
   } finally {
     saving.value = false
   }
@@ -713,7 +716,7 @@ async function removeRow(row) {
   })
   await deleteDetectionMethodApi(row.id)
   ElMessage.success('检测方法已删除')
-  await loadRows()
+  await Promise.all([loadRows(), loadSummaryRows()])
 }
 
 function handleSearch() {
@@ -759,6 +762,15 @@ async function loadRows() {
   total.value = Number(result.total || 0)
 }
 
+async function loadSummaryRows() {
+  const result = await fetchDetectionMethodsApi({
+    pageNum: 1,
+    pageSize: SUMMARY_PAGE_SIZE
+  })
+  summaryRows.value = result.records || []
+  summaryTotal.value = Number(result.total || 0)
+}
+
 async function handleExport() {
   try {
     await exportDetectionMethodsApi({ ...query })
@@ -769,7 +781,7 @@ async function handleExport() {
 }
 
 onMounted(async () => {
-  await Promise.all([loadRows(), loadParameterOptions(), loadInstrumentModelOptions()])
+  await Promise.all([loadRows(), loadSummaryRows(), loadParameterOptions(), loadInstrumentModelOptions()])
 })
 </script>
 

@@ -1661,18 +1661,25 @@ const currentStats = computed(() => {
 
   if (isTaskScene.value) {
     if (isTaskTodoScene.value) {
-      const todoTotal = getCount(taskStatCounts.value, 'TODO')
+      const totalCount = getCount(taskStatCounts.value, 'ALL')
       const unsampledCount = getCount(taskStatCounts.value, 'UNSAMPLED') || getCount(taskStatCounts.value, 'UNLOGGED')
+      const sampledCount = getCount(taskStatCounts.value, 'SAMPLED') || getCount(taskStatCounts.value, completedTaskStatus)
       return [
         {
           key: 'tasks:all',
-          label: '未采样任务',
-          value: todoTotal,
-          desc: '尚未登记为样品的采样任务'
+          label: '总采样任务',
+          value: totalCount,
+          desc: '采样任务总量'
+        },
+        {
+          key: 'tasks:sampled',
+          label: '已采样任务',
+          value: sampledCount,
+          desc: '已经完成样品登录的任务'
         },
         {
           key: 'tasks:unsampled',
-          label: '未采样',
+          label: '未采样任务',
           value: unsampledCount,
           desc: '可直接在样品登录中选择登记'
         }
@@ -2009,7 +2016,11 @@ function buildTaskQueryPayload(extra = {}) {
 }
 
 function buildTaskStatsQueryPayload() {
-  return buildTaskQueryPayload({ taskStatus: '' })
+  return {
+    pageNum: 1,
+    pageSize: 1,
+    scope: isTaskTodoScene.value ? 'todo' : ''
+  }
 }
 
 async function loadTasks() {
@@ -2128,7 +2139,7 @@ function handleCurrentSceneSearch() {
     }
     taskQuery.pageNum = 1
     syncActiveStatByCurrentQuery()
-    Promise.all([loadTasks(), loadTaskStats()])
+    loadTasks()
     return
   }
   sampleQuery.pageNum = 1
@@ -2144,7 +2155,7 @@ function resetCurrentSceneQuery() {
     taskQuery.samplerId = ''
     taskQuery.pageNum = 1
     activeStatKey.value = 'tasks:all'
-    Promise.all([loadTasks(), loadTaskStats()])
+    loadTasks()
     return
   }
   sampleQuery.keyword = ''

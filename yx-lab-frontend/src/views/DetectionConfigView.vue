@@ -707,15 +707,20 @@ import {
 } from '../utils/labEnums'
 
 const route = useRoute()
+const SUMMARY_PAGE_SIZE = 10000
 
 const activeStatKey = ref('all')
 const parameterRows = ref([])
 const parameterTotal = ref(0)
+const parameterSummaryRows = ref([])
+const parameterSummaryTotal = ref(0)
 const allParameters = ref([])
 const detectionMethodOptions = ref([])
 const detectorOptions = ref([])
 const groupRows = ref([])
 const groupTotal = ref(0)
+const groupSummaryRows = ref([])
+const groupSummaryTotal = ref(0)
 
 const parameterDialogVisible = ref(false)
 const groupDialogVisible = ref(false)
@@ -954,17 +959,17 @@ const currentTags = computed(() => (
 const currentStats = computed(() => (
   isParameterScene.value
     ? [
-      { key: 'all', label: '全部参数', value: parameterTotal.value, desc: '检测参数全量台账' },
+      { key: 'all', label: '全部参数', value: parameterSummaryTotal.value, desc: '检测参数全量台账' },
       { key: 'enabled', label: '启用参数', value: allParameters.value.filter((item) => item.enabled === 1).length, desc: '可用于新建项目组的参数' },
-      { key: 'bound', label: '已绑定参数', value: parameterRows.value.filter((item) => Number(item.methodCount || 0) > 0).length, desc: '已配置检测方法的参数' },
-      { key: 'unbound', label: '未绑定参数', value: parameterRows.value.filter((item) => Number(item.methodCount || 0) === 0).length, desc: '尚未配置检测方法的参数' },
+      { key: 'bound', label: '已绑定参数', value: parameterSummaryRows.value.filter((item) => Number(item.methodCount || 0) > 0).length, desc: '已配置检测方法的参数' },
+      { key: 'unbound', label: '未绑定参数', value: parameterSummaryRows.value.filter((item) => Number(item.methodCount || 0) === 0).length, desc: '尚未配置检测方法的参数' },
       { key: 'disabled', label: '停用参数', value: allParameters.value.filter((item) => item.enabled === 0).length, desc: '暂不建议继续使用的参数' }
     ]
     : [
-      { key: 'all', label: '全部套餐', value: groupTotal.value, desc: '检测套餐全量台账' },
-      { key: 'enabled', label: '启用套餐', value: groupRows.value.filter((item) => item.enabled === 1).length, desc: '样品登录可选检测套餐' },
-      { key: 'disabled', label: '停用套餐', value: groupRows.value.filter((item) => item.enabled === 0).length, desc: '已停用检测套餐' },
-      { key: 'multi', label: '多参数组', value: groupRows.value.filter((item) => countParameterIds(item.parameterIds) >= 2).length, desc: '组内包含多个检测参数' }
+      { key: 'all', label: '全部套餐', value: groupSummaryTotal.value, desc: '检测套餐全量台账' },
+      { key: 'enabled', label: '启用套餐', value: groupSummaryRows.value.filter((item) => item.enabled === 1).length, desc: '样品登录可选检测套餐' },
+      { key: 'disabled', label: '停用套餐', value: groupSummaryRows.value.filter((item) => item.enabled === 0).length, desc: '已停用检测套餐' },
+      { key: 'multi', label: '多参数组', value: groupSummaryRows.value.filter((item) => countParameterIds(item.parameterIds) >= 2).length, desc: '组内包含多个检测参数' }
     ]
 ))
 
@@ -1627,7 +1632,7 @@ async function loadDetectorOptions() {
 }
 
 async function loadParameterOptions() {
-  const result = await fetchDetectionParametersApi({ pageNum: 1, pageSize: 500 })
+  const result = await fetchDetectionParametersApi({ pageNum: 1, pageSize: SUMMARY_PAGE_SIZE })
   allParameters.value = result.records || []
 }
 
@@ -1642,10 +1647,28 @@ async function loadParameters() {
   parameterTotal.value = Number(result.total || 0)
 }
 
+async function loadParameterSummaryRows() {
+  const result = await fetchDetectionParameterMethodBindingsApi({
+    pageNum: 1,
+    pageSize: SUMMARY_PAGE_SIZE
+  })
+  parameterSummaryRows.value = result.records || []
+  parameterSummaryTotal.value = Number(result.total || 0)
+}
+
 async function loadGroups() {
   const result = await fetchDetectionTypesApi({ ...groupQuery })
   groupRows.value = result.records || []
   groupTotal.value = Number(result.total || 0)
+}
+
+async function loadGroupSummaryRows() {
+  const result = await fetchDetectionTypesApi({
+    pageNum: 1,
+    pageSize: SUMMARY_PAGE_SIZE
+  })
+  groupSummaryRows.value = result.records || []
+  groupSummaryTotal.value = Number(result.total || 0)
 }
 
 async function handleExportCurrentScene() {
@@ -1664,7 +1687,7 @@ async function handleExportCurrentScene() {
 
 async function refreshAll() {
   await Promise.all([loadParameterOptions(), loadMethodOptions(), loadDetectorOptions()])
-  await Promise.all([loadParameters(), loadGroups()])
+  await Promise.all([loadParameters(), loadParameterSummaryRows(), loadGroups(), loadGroupSummaryRows()])
 }
 
 function syncRouteState() {

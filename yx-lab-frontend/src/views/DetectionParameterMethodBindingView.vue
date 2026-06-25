@@ -256,9 +256,12 @@ import {
 } from '../api/lab'
 import { DEFAULT_PAGE_SIZE } from '../utils/labEnums'
 
+const SUMMARY_PAGE_SIZE = 10000
 const activeStatKey = ref('all')
 const rows = ref([])
 const total = ref(0)
+const summaryRows = ref([])
+const summaryTotal = ref(0)
 const methodOptions = ref([])
 const dialogVisible = ref(false)
 const saving = ref(false)
@@ -306,10 +309,10 @@ const selectedMethodCount = computed(() => bindingForm.methodIds.length)
 const pendingMethodCount = computed(() => methodOptions.value.filter((item) => isPendingMethod(item)).length)
 
 const statCards = computed(() => [
-  { key: 'all', label: '全部参数', value: total.value, desc: '检测参数绑定总览' },
-  { key: 'bound', label: '已绑定参数', value: rows.value.filter((item) => Number(item.methodCount || 0) > 0).length, desc: '当前页已有方法绑定的参数' },
-  { key: 'unbound', label: '未绑定参数', value: rows.value.filter((item) => Number(item.methodCount || 0) === 0).length, desc: '当前页尚未配置方法的参数' },
-  { key: 'disabled', label: '停用参数', value: rows.value.filter((item) => item.enabled !== 1).length, desc: '当前页停用状态的参数' }
+  { key: 'all', label: '全部参数', value: summaryTotal.value, desc: '检测参数绑定总览' },
+  { key: 'bound', label: '已绑定参数', value: summaryRows.value.filter((item) => Number(item.methodCount || 0) > 0).length, desc: '已有方法绑定的参数' },
+  { key: 'unbound', label: '未绑定参数', value: summaryRows.value.filter((item) => Number(item.methodCount || 0) === 0).length, desc: '尚未配置方法的参数' },
+  { key: 'disabled', label: '停用参数', value: summaryRows.value.filter((item) => item.enabled !== 1).length, desc: '停用状态的参数' }
 ])
 
 const dialogTitle = computed(() => {
@@ -492,13 +495,22 @@ async function loadRows() {
   total.value = Number(result.total || 0)
 }
 
+async function loadSummaryRows() {
+  const result = await fetchDetectionParameterMethodBindingsApi({
+    pageNum: 1,
+    pageSize: SUMMARY_PAGE_SIZE
+  })
+  summaryRows.value = result.records || []
+  summaryTotal.value = Number(result.total || 0)
+}
+
 async function loadMethodOptions() {
   const result = await fetchDetectionMethodOptionsApi()
   methodOptions.value = Array.isArray(result) ? result : []
 }
 
 async function reloadData() {
-  await Promise.all([loadRows(), loadMethodOptions()])
+  await Promise.all([loadRows(), loadSummaryRows(), loadMethodOptions()])
 }
 
 async function clearBindings(row) {

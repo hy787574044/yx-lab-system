@@ -474,6 +474,7 @@ import { labMenuGroups } from '../router/menuConfig'
 import { DEFAULT_PAGE_SIZE } from '../utils/labEnums'
 
 const route = useRoute()
+const SUMMARY_PAGE_SIZE = 10000
 
 const loading = ref(false)
 const savingDict = ref(false)
@@ -556,10 +557,16 @@ const dictRows = ref([])
 const dictTotal = ref(0)
 const orgRows = ref([])
 const orgTotal = ref(0)
+const orgSummaryRows = ref([])
+const orgSummaryTotal = ref(0)
 const userRows = ref([])
 const userTotal = ref(0)
 const roleRows = ref([])
 const roleTotal = ref(0)
+const roleSummaryRows = ref([])
+const roleSummaryTotal = ref(0)
+const dictSummaryRows = ref([])
+const dictSummaryTotal = ref(0)
 const logPageRows = ref([])
 const logPageTotal = ref(0)
 const userSummaryRows = ref([])
@@ -1009,43 +1016,43 @@ const currentTags = computed(() => {
 const currentStats = computed(() => {
   if (isUserScene.value) {
     return [
-      { key: 'all', label: '全部用户', value: userTotal.value, desc: '当前用户分页总记录数' },
-      { key: 'enabled', label: '启用用户', value: userRows.value.filter((item) => Number(item.status) === 1).length, desc: '当前页启用状态账号数' },
-      { key: 'disabled', label: '停用用户', value: userRows.value.filter((item) => Number(item.status) === 0).length, desc: '当前页停用状态账号数' },
-      { key: 'role', label: '已配角色', value: userRows.value.filter((item) => normalizeText(item.roleCode) !== '-').length, desc: '当前页已绑定角色的账号数' }
+      { key: 'all', label: '全部用户', value: userSummaryTotal.value, desc: '用户台账总记录数' },
+      { key: 'enabled', label: '启用用户', value: userSummaryRows.value.filter((item) => Number(item.status) === 1).length, desc: '启用状态账号数' },
+      { key: 'disabled', label: '停用用户', value: userSummaryRows.value.filter((item) => Number(item.status) === 0).length, desc: '停用状态账号数' },
+      { key: 'role', label: '已配角色', value: userSummaryRows.value.filter((item) => normalizeText(item.roleCode) !== '-').length, desc: '已绑定角色的账号数' }
     ]
   }
 
   if (isOrgScene.value) {
     return [
-      { key: 'all', label: '全部机构', value: orgTotal.value, desc: '当前机构分页总记录数' },
-      { key: 'enabled', label: '启用机构', value: orgRows.value.filter((item) => Number(item.status) === 1).length, desc: '当前页启用状态机构数' },
-      { key: 'disabled', label: '停用机构', value: orgRows.value.filter((item) => Number(item.status) === 0).length, desc: '当前页停用状态机构数' },
-      { key: 'inuse', label: '已绑用户', value: orgRows.value.filter((item) => Number(item.memberCount || 0) > 0).length, desc: '当前页已绑定用户的机构数' }
+      { key: 'all', label: '全部机构', value: orgSummaryTotal.value, desc: '机构台账总记录数' },
+      { key: 'enabled', label: '启用机构', value: orgSummaryRows.value.filter((item) => Number(item.status) === 1).length, desc: '启用状态机构数' },
+      { key: 'disabled', label: '停用机构', value: orgSummaryRows.value.filter((item) => Number(item.status) === 0).length, desc: '停用状态机构数' },
+      { key: 'inuse', label: '已绑用户', value: orgSummaryRows.value.filter((item) => Number(item.memberCount || 0) > 0).length, desc: '已绑定用户的机构数' }
     ]
   }
 
   if (isDictScene.value) {
     return [
-      { key: 'all', label: '全部字典', value: dictTotal.value, desc: '当前数据字典分页总记录数' },
-      { key: 'enabled', label: '启用字典', value: dictRows.value.filter((item) => Number(item.status) === 1).length, desc: '当前页启用状态字典数' },
-      { key: 'status', label: '状态字典', value: dictRows.value.filter((item) => String(item.dictCode || '').includes('status')).length, desc: '当前页用于流程状态控制的字典数' },
-      { key: 'business', label: '业务字典', value: dictRows.value.filter((item) => String(item.moduleName || '') !== '基础配置').length, desc: '当前页直接服务业务流程的字典数' }
+      { key: 'all', label: '全部字典', value: dictSummaryTotal.value, desc: '数据字典总记录数' },
+      { key: 'enabled', label: '启用字典', value: dictSummaryRows.value.filter((item) => Number(item.status) === 1).length, desc: '启用状态字典数' },
+      { key: 'status', label: '状态字典', value: dictSummaryRows.value.filter((item) => String(item.dictCode || '').includes('status')).length, desc: '用于流程状态控制的字典数' },
+      { key: 'business', label: '业务字典', value: dictSummaryRows.value.filter((item) => String(item.moduleName || '') !== '基础配置').length, desc: '直接服务业务流程的字典数' }
     ]
   }
 
   if (isRoleScene.value) {
     return [
-      { key: 'all', label: '全部角色', value: roleTotal.value, desc: '当前角色分页总记录数' },
-      { key: 'enabled', label: '启用角色', value: roleRows.value.filter((item) => Number(item.status) === 1).length, desc: '当前页启用状态角色数' },
-      { key: 'disabled', label: '停用角色', value: roleRows.value.filter((item) => Number(item.status) === 0).length, desc: '当前页停用状态角色数' },
-      { key: 'inuse', label: '已被使用', value: roleRows.value.filter((item) => Number(item.userCount || 0) > 0).length, desc: '当前页已绑定用户的角色数' }
+      { key: 'all', label: '全部角色', value: roleSummaryTotal.value, desc: '角色台账总记录数' },
+      { key: 'enabled', label: '启用角色', value: roleSummaryRows.value.filter((item) => Number(item.status) === 1).length, desc: '启用状态角色数' },
+      { key: 'disabled', label: '停用角色', value: roleSummaryRows.value.filter((item) => Number(item.status) === 0).length, desc: '停用状态角色数' },
+      { key: 'inuse', label: '已被使用', value: roleSummaryRows.value.filter((item) => Number(item.userCount || 0) > 0).length, desc: '已绑定用户的角色数' }
     ]
   }
 
   if (isLogScene.value) {
     return [
-      { key: 'all', label: '全部日志', value: logSummary.totalCount, desc: '关键字条件下的全部日志数' },
+      { key: 'all', label: '全部日志', value: logSummary.totalCount, desc: '系统日志总数' },
       { key: 'login', label: '登录日志', value: logSummary.loginCount, desc: '登录认证相关日志数' },
       { key: 'process', label: '流程日志', value: logSummary.processCount, desc: '样品、检测、审核三类流程日志数' },
       { key: 'push', label: '推送日志', value: logSummary.pushCount, desc: '报告推送相关日志数' }
@@ -1334,23 +1341,23 @@ function handleStatClick(key) {
 
 async function loadPageData() {
   if (isUserScene.value) {
-    await Promise.all([loadUsers(), loadOrgOptions(), loadRoleOptions()])
+    await Promise.all([loadUsers(), loadUserSummary(), loadOrgOptions(), loadRoleOptions()])
     return
   }
   if (isOrgScene.value) {
-    await Promise.all([loadOrgs(), loadOrgOptions()])
+    await Promise.all([loadOrgs(), loadOrgSummary(), loadOrgOptions()])
     return
   }
   if (isDictScene.value) {
-    await loadDicts()
+    await Promise.all([loadDicts(), loadDictSummary()])
     return
   }
   if (isRoleScene.value) {
-    await loadRoles()
+    await Promise.all([loadRoles(), loadRoleSummary()])
     return
   }
   if (isLogScene.value) {
-    await loadLogs()
+    await Promise.all([loadLogs(), loadLogSummary()])
   }
 }
 
@@ -1389,10 +1396,6 @@ async function loadLogs() {
   if (!isLogScene.value) {
     logPageRows.value = []
     logPageTotal.value = 0
-    logSummary.totalCount = 0
-    logSummary.loginCount = 0
-    logSummary.processCount = 0
-    logSummary.pushCount = 0
     return
   }
 
@@ -1406,13 +1409,27 @@ async function loadLogs() {
     })
     logPageRows.value = Array.isArray(result.records) ? result.records : []
     logPageTotal.value = Number(result.total || 0)
+    syncLogActiveStatKey()
+  } finally {
+    loading.value = false
+  }
+}
+
+async function loadLogSummary() {
+  try {
+    const result = await fetchSystemLogsApi({
+      pageNum: 1,
+      pageSize: 1
+    })
     logSummary.totalCount = Number(result.totalCount || 0)
     logSummary.loginCount = Number(result.loginCount || 0)
     logSummary.processCount = Number(result.processCount || 0)
     logSummary.pushCount = Number(result.pushCount || 0)
-    syncLogActiveStatKey()
-  } finally {
-    loading.value = false
+  } catch (error) {
+    logSummary.totalCount = 0
+    logSummary.loginCount = 0
+    logSummary.processCount = 0
+    logSummary.pushCount = 0
   }
 }
 
@@ -1512,13 +1529,55 @@ async function loadUserSummary() {
   try {
     const result = await fetchSystemUsersApi({
       pageNum: 1,
-      pageSize: 200
+      pageSize: SUMMARY_PAGE_SIZE
     })
     userSummaryRows.value = Array.isArray(result.records) ? result.records : []
     userSummaryTotal.value = Number(result.total || 0)
   } catch (error) {
     userSummaryRows.value = []
     userSummaryTotal.value = 0
+  }
+}
+
+async function loadOrgSummary() {
+  try {
+    const result = await fetchSystemOrgsApi({
+      pageNum: 1,
+      pageSize: SUMMARY_PAGE_SIZE
+    })
+    orgSummaryRows.value = Array.isArray(result.records) ? result.records : []
+    orgSummaryTotal.value = Number(result.total || 0)
+  } catch (error) {
+    orgSummaryRows.value = []
+    orgSummaryTotal.value = 0
+  }
+}
+
+async function loadDictSummary() {
+  try {
+    const result = await fetchSystemDictsApi({
+      pageNum: 1,
+      pageSize: SUMMARY_PAGE_SIZE
+    })
+    dictSummaryRows.value = Array.isArray(result.records) ? result.records : []
+    dictSummaryTotal.value = Number(result.total || 0)
+  } catch (error) {
+    dictSummaryRows.value = []
+    dictSummaryTotal.value = 0
+  }
+}
+
+async function loadRoleSummary() {
+  try {
+    const result = await fetchSystemRolesApi({
+      pageNum: 1,
+      pageSize: SUMMARY_PAGE_SIZE
+    })
+    roleSummaryRows.value = Array.isArray(result.records) ? result.records : []
+    roleSummaryTotal.value = Number(result.total || 0)
+  } catch (error) {
+    roleSummaryRows.value = []
+    roleSummaryTotal.value = 0
   }
 }
 
@@ -1742,7 +1801,7 @@ async function submitDictForm() {
     }
 
     dictDialogVisible.value = false
-    await loadDicts()
+    await Promise.all([loadDicts(), loadDictSummary()])
   } finally {
     savingDict.value = false
   }
@@ -1771,7 +1830,7 @@ async function submitOrgForm() {
 
     orgDialogVisible.value = false
     await loadOrgOptions()
-    await loadOrgs()
+    await Promise.all([loadOrgs(), loadOrgSummary()])
   } finally {
     savingOrg.value = false
   }
@@ -1904,8 +1963,8 @@ async function submitRoleForm() {
     }
 
     roleDialogVisible.value = false
-    await loadRoles()
     await loadRoleOptions()
+    await Promise.all([loadRoles(), loadRoleSummary()])
   } finally {
     savingRole.value = false
   }
@@ -1920,7 +1979,7 @@ async function removeDict(row) {
   if (dictRows.value.length === 1 && dictQuery.pageNum > 1) {
     dictQuery.pageNum -= 1
   }
-  await loadDicts()
+  await Promise.all([loadDicts(), loadDictSummary()])
 }
 
 async function removeOrg(row) {
@@ -1933,7 +1992,7 @@ async function removeOrg(row) {
     orgQuery.pageNum -= 1
   }
   await loadOrgOptions()
-  await loadOrgs()
+  await Promise.all([loadOrgs(), loadOrgSummary()])
 }
 
 async function removeUser(row) {
@@ -1958,8 +2017,8 @@ async function removeRole(row) {
   if (roleRows.value.length === 1 && roleQuery.pageNum > 1) {
     roleQuery.pageNum -= 1
   }
-  await loadRoles()
   await loadRoleOptions()
+  await Promise.all([loadRoles(), loadRoleSummary()])
 }
 
 function syncLogActiveStatKey() {
