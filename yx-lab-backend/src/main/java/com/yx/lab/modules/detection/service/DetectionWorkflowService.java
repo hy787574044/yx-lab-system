@@ -334,10 +334,12 @@ public class DetectionWorkflowService {
                 .eq(scopedDetectorId != null,
                         DetectionRecord::getDetectorId,
                         scopedDetectorId);
-        if (!ignoreStatusFilter && StrUtil.isNotBlank(status)) {
-            wrapper.eq(DetectionRecord::getDetectionStatus, status);
-        } else {
-            applyRecordScope(wrapper, scope);
+        if (!ignoreStatusFilter) {
+            if (StrUtil.isNotBlank(status)) {
+                wrapper.eq(DetectionRecord::getDetectionStatus, status);
+            } else {
+                applyRecordScope(wrapper, scope);
+            }
         }
         if (withOrder) {
             wrapper.orderByDesc(DetectionRecord::getDetectionTime)
@@ -348,16 +350,26 @@ public class DetectionWorkflowService {
 
     private void applyRecordScope(LambdaQueryWrapper<DetectionRecord> wrapper, String scope) {
         if (StrUtil.equals(scope, "detection-split")) {
-            wrapper.eq(DetectionRecord::getDetectionStatus, LabWorkflowConstants.DetectionStatus.WAIT_ASSIGN);
+            // 检测分样：待分配 + 待检测 + 待审查
+            wrapper.in(DetectionRecord::getDetectionStatus,
+                    LabWorkflowConstants.DetectionStatus.WAIT_ASSIGN,
+                    LabWorkflowConstants.DetectionStatus.WAIT_DETECT,
+                    LabWorkflowConstants.DetectionStatus.SUBMITTED);
+            return;
+        }
+        if (StrUtil.equals(scope, "detection-analysis")) {
+            // 检测分析：待分配 + 待检测 + 待审查（与 detection-split 一致）
+            wrapper.in(DetectionRecord::getDetectionStatus,
+                    LabWorkflowConstants.DetectionStatus.WAIT_ASSIGN,
+                    LabWorkflowConstants.DetectionStatus.WAIT_DETECT,
+                    LabWorkflowConstants.DetectionStatus.SUBMITTED);
             return;
         }
         if (StrUtil.equals(scope, "detection-history")) {
-            wrapper.and(condition -> condition
-                    .in(DetectionRecord::getDetectionStatus,
-                            LabWorkflowConstants.DetectionStatus.APPROVED,
-                            LabWorkflowConstants.DetectionStatus.REJECTED)
-                    .or()
-                    .eq(DetectionRecord::getDetectionResult, LabWorkflowConstants.DetectionResult.ABNORMAL));
+            // 历史检测：已通过 + 已驳回
+            wrapper.in(DetectionRecord::getDetectionStatus,
+                    LabWorkflowConstants.DetectionStatus.APPROVED,
+                    LabWorkflowConstants.DetectionStatus.REJECTED);
         }
     }
 
@@ -365,6 +377,10 @@ public class DetectionWorkflowService {
         LambdaQueryWrapper<DetectionRecord> wrapper = buildRecordQueryWrapper(query, true, false);
         if (StrUtil.isNotBlank(status)) {
             wrapper.eq(DetectionRecord::getDetectionStatus, status);
+        } else {
+            // 统计 total 时，应用 scope 过滤，保持与列表查询一致
+            String scope = query == null ? null : query.getScope();
+            applyRecordScope(wrapper, scope);
         }
         Number count = detectionRecordMapper.selectCount(wrapper);
         return count == null ? 0L : count.longValue();
@@ -437,9 +453,15 @@ public class DetectionWorkflowService {
     }
 
     private Long resolveScopedDetectorId(CurrentUser currentUser, Boolean mine) {
+        // 明确选择"仅看我的"
         if (Boolean.TRUE.equals(mine) && currentUser != null) {
             return currentUser.getUserId();
         }
+        // 明确选择"查看全部"，不应用角色过滤
+        if (Boolean.FALSE.equals(mine)) {
+            return null;
+        }
+        // mine 为空时，根据角色决定默认行为
         if (dataScopeHelper.isAdmin()) {
             return null;
         }
