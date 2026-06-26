@@ -499,7 +499,7 @@ public final class LabWorkflowConstants {
             return "未采样";
         }
         if (SamplingTaskStatus.IN_PROGRESS.equals(taskStatus)) {
-            return "未采样";
+            return "采样中";
         }
         if (SamplingTaskStatus.ABANDONED.equals(taskStatus)) {
             return "已废弃";

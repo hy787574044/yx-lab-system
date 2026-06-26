@@ -492,6 +492,8 @@ public class DetectionPendingFlowService {
         if (LabWorkflowConstants.SampleStatus.COMPLETED.equals(sample.getSampleStatus())) {
             return;
         }
+        // 直接更新样品状态（此处不经过 LabSampleService 以避免循环依赖）
+        // 状态流转校验已在调用方完成
         sample.setSampleStatus(LabWorkflowConstants.SampleStatus.REVIEWING);
         labSampleMapper.updateById(sample);
     }

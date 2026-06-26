@@ -569,7 +569,7 @@ async function loadData() {
     mine: query.mine === '' ? undefined : query.mine
   }
   const summaryQuery = {
-    mine: undefined
+    mine: query.mine === '' ? undefined : query.mine
   }
   const [pageResult, summaryResult] = await Promise.all([
     fetchDetectionItemsApi(requestQuery),

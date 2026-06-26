@@ -288,7 +288,11 @@ public class ReportService {
         }
         LabReport report = new LabReport();
         report.setId(existing.getId());
-        report.setReportStatus(LabWorkflowConstants.ReportStatus.DRAFT);
+        // 回退到 GENERATED 状态，而非 DRAFT
+        report.setReportStatus(LabWorkflowConstants.ReportStatus.GENERATED);
+        report.setPublishedTime(null);
+        report.setPublishedBy(null);
+        report.setPublishedByName(null);
         labReportMapper.updateById(report);
         if (existing.getSampleId() != null) {
             labSampleService.appendTrace(existing.getSampleId(),
@@ -1611,10 +1615,24 @@ public class ReportService {
     }
 
     private void registerPdfFonts(PdfRendererBuilder builder) {
-        registerPdfFont(builder, "C:/Windows/Fonts/Deng.ttf", "DengXian");
-        registerPdfFont(builder, "C:/Windows/Fonts/simfang.ttf", "FangSong");
-        registerPdfFont(builder, "C:/Windows/Fonts/simhei.ttf", "SimHei");
-        registerPdfFont(builder, "C:/Windows/Fonts/simsunb.ttf", "SimSun");
+        String os = System.getProperty("os.name", "").toLowerCase();
+        String fontDir;
+        if (os.contains("win")) {
+            fontDir = "C:/Windows/Fonts";
+        } else if (os.contains("mac")) {
+            fontDir = "/System/Library/Fonts";
+        } else {
+            // Linux 默认字体目录
+            fontDir = "/usr/share/fonts";
+        }
+        // 尝试注册字体，如果文件不存在则跳过（使用默认字体）
+        registerPdfFont(builder, fontDir + "/Deng.ttf", "DengXian");
+        registerPdfFont(builder, fontDir + "/simfang.ttf", "FangSong");
+        registerPdfFont(builder, fontDir + "/simhei.ttf", "SimHei");
+        registerPdfFont(builder, fontDir + "/simsunb.ttf", "SimSun");
+        // Linux 常用中文字体
+        registerPdfFont(builder, fontDir + "/truetype/wqy/wqy-zenhei.ttc", "WenQuanYi Zen Hei");
+        registerPdfFont(builder, fontDir + "/truetype/droid/DroidSansFallbackFull.ttf", "Droid Sans");
     }
 
     private void registerPdfFont(PdfRendererBuilder builder, String fontPath, String family) {

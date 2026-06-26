@@ -72,24 +72,42 @@ public class ReviewService {
      */
     public PageResult<ReviewRecord> page(ReviewQuery query) {
         CurrentUser currentUser = SecurityContext.getCurrentUser();
+        Long scopedReviewerId = resolveScopedReviewerId(currentUser, query.getMine());
         Page<ReviewRecord> page = reviewRecordMapper.selectPage(
                 PageUtils.buildPage(query),
                 new LambdaQueryWrapper<ReviewRecord>()
                         .and(StrUtil.isNotBlank(query.getKeyword()), wrapper -> wrapper
                                 .like(ReviewRecord::getSampleNo, query.getKeyword()))
                         .eq(StrUtil.isNotBlank(query.getReviewResult()), ReviewRecord::getReviewResult, query.getReviewResult())
-                        .eq(Boolean.TRUE.equals(query.getMine()), ReviewRecord::getReviewerId, currentUser.getUserId())
-                        .eq(Boolean.FALSE.equals(query.getMine()) && dataScopeHelper.onlySelfScope(),
-                                ReviewRecord::getReviewerId,
-                                dataScopeHelper.currentUserId())
+                        .eq(scopedReviewerId != null, ReviewRecord::getReviewerId, scopedReviewerId)
                         .orderByDesc(ReviewRecord::getReviewTime));
         fillReviewRecordSummaries(page.getRecords());
         return new PageResult<>(page.getTotal(), page.getRecords());
     }
 
+    /**
+     * 解析审查记录的范围过滤条件。
+     * STAFF 角色默认只能看到自己的记录，ADMIN/DIRECTOR 可以看到全部。
+     */
+    private Long resolveScopedReviewerId(CurrentUser currentUser, Boolean mine) {
+        // 明确选择"仅看我的"
+        if (Boolean.TRUE.equals(mine) && currentUser != null) {
+            return currentUser.getUserId();
+        }
+        // STAFF 角色默认只能看自己的（无论 mine 是 null 还是 false）
+        if (dataScopeHelper.isRole("STAFF") && currentUser != null) {
+            return currentUser.getUserId();
+        }
+        // ADMIN/DIRECTOR 看全部
+        return null;
+    }
+
     public List<StatusCountVO> statusStats() {
+        // 统计接口也需要应用相同的角色过滤
+        Long scopedDetectorId = resolveScopedDetectorIdForStats();
         Long pendingCount = detectionRecordMapper.selectCount(new LambdaQueryWrapper<DetectionRecord>()
-                .eq(DetectionRecord::getDetectionStatus, LabWorkflowConstants.DetectionStatus.SUBMITTED));
+                .eq(DetectionRecord::getDetectionStatus, LabWorkflowConstants.DetectionStatus.SUBMITTED)
+                .eq(scopedDetectorId != null, DetectionRecord::getDetectorId, scopedDetectorId));
         return java.util.Arrays.asList(
                 statusCount("ALL", safeCount(pendingCount) + countReviewsByResult(null)),
                 statusCount("PENDING", pendingCount),
@@ -98,6 +116,19 @@ public class ReviewService {
                 statusCount(LabWorkflowConstants.ReviewResult.REJECTED,
                         countReviewsByResult(LabWorkflowConstants.ReviewResult.REJECTED))
         );
+    }
+
+    /**
+     * 统计接口的角色过滤，与列表接口保持一致。
+     */
+    private Long resolveScopedDetectorIdForStats() {
+        CurrentUser currentUser = SecurityContext.getCurrentUser();
+        // STAFF 角色只能看自己的
+        if (dataScopeHelper.isRole("STAFF") && currentUser != null) {
+            return currentUser.getUserId();
+        }
+        // ADMIN/DIRECTOR 看全部
+        return null;
     }
 
     private StatusCountVO statusCount(String status, Long count) {

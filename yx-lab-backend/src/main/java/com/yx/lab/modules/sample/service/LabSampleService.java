@@ -266,10 +266,61 @@ public class LabSampleService {
         if (sample == null) {
             throw new BusinessException("样品不存在。");
         }
+        // 校验状态流转合法性
+        validateSampleStatusTransition(sample.getSampleStatus(), status);
         sample.setSampleStatus(status);
         sample.setResultSummary(LabWorkflowConstants.getDetectionResultLabel(resultSummary));
         appendTraceLog(sample, traceMessage);
         labSampleMapper.updateById(sample);
+    }
+
+    /**
+     * 校验样品状态流转是否合法。
+     * 合法的状态转换：
+     * - LOGGED -> REVIEWING（检测结果提交后）
+     * - REVIEWING -> COMPLETED（审核通过）
+     * - REVIEWING -> RETEST（审核驳回）
+     * - RETEST -> REVIEWING（重检结果提交后）
+     *
+     * @param currentStatus 当前状态
+     * @param targetStatus 目标状态
+     */
+    private void validateSampleStatusTransition(String currentStatus, String targetStatus) {
+        if (StrUtil.isBlank(currentStatus) || StrUtil.isBlank(targetStatus)) {
+            throw new BusinessException("样品状态不能为空。");
+        }
+        // 相同状态允许重复设置（幂等）
+        if (currentStatus.equals(targetStatus)) {
+            return;
+        }
+        boolean valid = false;
+        switch (currentStatus) {
+            case LabWorkflowConstants.SampleStatus.LOGGED:
+                valid = LabWorkflowConstants.SampleStatus.REVIEWING.equals(targetStatus);
+                break;
+            case LabWorkflowConstants.SampleStatus.REVIEWING:
+                valid = LabWorkflowConstants.SampleStatus.COMPLETED.equals(targetStatus)
+                        || LabWorkflowConstants.SampleStatus.RETEST.equals(targetStatus);
+                break;
+            case LabWorkflowConstants.SampleStatus.RETEST:
+                valid = LabWorkflowConstants.SampleStatus.REVIEWING.equals(targetStatus);
+                break;
+            case LabWorkflowConstants.SampleStatus.COMPLETED:
+                // 已完成的样品不允许再变更状态
+                valid = false;
+                break;
+            default:
+                valid = false;
+                break;
+        }
+        if (!valid) {
+            throw new BusinessException("不允许从「" + getSampleStatusLabel(currentStatus)
+                    + "」变更为「" + getSampleStatusLabel(targetStatus) + "」。");
+        }
+    }
+
+    private String getSampleStatusLabel(String status) {
+        return LabWorkflowConstants.getSampleStatusLabel(status);
     }
 
     /**

@@ -633,10 +633,12 @@ const roleRules = {
 
 const orgOptionsForUser = computed(() => {
   const options = [...orgOptions.value]
-  const currentValue = Number(userForm.orgId || 0)
-  if (currentValue && !options.some((item) => Number(item.value) === currentValue)) {
+  const currentValue = String(userForm.orgId || '').trim()
+  if (currentValue && !options.some((item) => String(item.value) === currentValue)) {
+    // 使用用户详情中的 orgName，而不是显示 ID
+    const orgName = userForm.orgName || `机构${currentValue}`
     options.unshift({
-      label: `当前机构 ${currentValue}`,
+      label: `${orgName}（当前）`,
       value: currentValue
     })
   }
@@ -644,8 +646,18 @@ const orgOptionsForUser = computed(() => {
 })
 
 const parentOrgOptions = computed(() => {
-  const currentId = Number(orgForm.id || 0)
-  return orgOptions.value.filter((item) => Number(item.value) !== currentId)
+  const currentId = String(orgForm.id || '').trim()
+  const options = orgOptions.value.filter((item) => String(item.value) !== currentId)
+  const currentValue = String(orgForm.parentId || '').trim()
+  if (currentValue && !options.some((item) => String(item.value) === currentValue)) {
+    // 使用机构详情中的 parentName 回显
+    const parentName = orgForm.parentName || `机构${currentValue}`
+    options.unshift({
+      label: `${parentName}（当前）`,
+      value: currentValue
+    })
+  }
+  return options
 })
 
 const roleOptionsForUser = computed(() => {
@@ -1150,6 +1162,7 @@ function createDefaultOrgForm() {
     orgCode: '',
     orgName: '',
     parentId: '',
+    parentName: '',
     orgType: '',
     status: 1,
     remark: ''
@@ -1163,6 +1176,7 @@ function createDefaultUserForm() {
     password: '',
     realName: '',
     orgId: '',
+    orgName: '',
     roleCode: '',
     phone: '',
     avatarUrl: '',
@@ -1587,7 +1601,7 @@ async function loadOrgOptions() {
     orgOptions.value = Array.isArray(result)
       ? result.map((item) => ({
           label: `${item.orgName} ${item.orgCode}`,
-          value: Number(item.id)
+          value: String(item.id)  // 使用字符串避免精度丢失
         }))
       : []
   } catch (error) {
@@ -1719,7 +1733,8 @@ function openOrgDialog(row) {
     orgForm.id = row.id
     orgForm.orgCode = row.orgCode || ''
     orgForm.orgName = row.orgName || ''
-    orgForm.parentId = row.parentId || ''
+    orgForm.parentId = row.parentId ? String(row.parentId) : ''  // 使用字符串避免精度丢失
+    orgForm.parentName = row.parentName || ''  // 保存上级机构名称用于回显
     orgForm.orgType = row.orgType || ''
     orgForm.status = Number(row.status) === 0 ? 0 : 1
     orgForm.remark = row.remark || ''
@@ -1733,7 +1748,8 @@ function openUserDialog(row) {
     userForm.id = row.id
     userForm.username = row.username || ''
     userForm.realName = row.realName || ''
-    userForm.orgId = row.orgId || ''
+    userForm.orgId = row.orgId ? String(row.orgId) : ''  // 使用字符串避免精度丢失
+    userForm.orgName = row.orgName || ''  // 保存机构名称用于回显
     userForm.roleCode = row.roleCode || ''
     userForm.phone = row.phone || ''
     userForm.avatarUrl = row.avatarUrl || ''
@@ -1814,7 +1830,7 @@ async function submitOrgForm() {
     const payload = {
       orgCode: String(orgForm.orgCode || '').trim(),
       orgName: String(orgForm.orgName || '').trim(),
-      parentId: orgForm.parentId ? Number(orgForm.parentId) : null,
+      parentId: orgForm.parentId ? String(orgForm.parentId).trim() : null,
       orgType: String(orgForm.orgType || '').trim(),
       status: Number(orgForm.status) === 0 ? 0 : 1,
       remark: String(orgForm.remark || '').trim()
@@ -1849,7 +1865,7 @@ async function submitUserForm() {
       username: String(userForm.username || '').trim(),
       password: String(userForm.password || '').trim(),
       realName: String(userForm.realName || '').trim(),
-      orgId: Number(userForm.orgId),
+      orgId: String(userForm.orgId || '').trim(),
       roleCode: String(userForm.roleCode || '').trim(),
       phone: String(userForm.phone || '').trim(),
       avatarUrl,

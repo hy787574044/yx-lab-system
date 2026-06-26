@@ -5,6 +5,7 @@ import com.yx.lab.common.exception.BusinessException;
 import com.yx.lab.modules.sample.mapper.SampleNoSequenceMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -19,6 +20,7 @@ public class SampleNoGeneratorService {
 
     private final SampleNoSequenceMapper sampleNoSequenceMapper;
 
+    @Transactional(rollbackFor = Exception.class)
     public String nextSampleNo() {
         String sequenceDate = LocalDate.now().format(DATE_FORMATTER);
         sampleNoSequenceMapper.nextValue(sequenceDate);

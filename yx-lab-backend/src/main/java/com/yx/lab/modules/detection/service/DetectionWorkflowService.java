@@ -377,9 +377,10 @@ public class DetectionWorkflowService {
         LambdaQueryWrapper<DetectionRecord> wrapper = buildRecordQueryWrapper(query, true, false);
         if (StrUtil.isNotBlank(status)) {
             wrapper.eq(DetectionRecord::getDetectionStatus, status);
-        } else {
-            // 统计 total 时，应用 scope 过滤，保持与列表查询一致
-            String scope = query == null ? null : query.getScope();
+        }
+        // 始终应用 scope 过滤，保持统计与列表一致
+        String scope = query == null ? null : query.getScope();
+        if (StrUtil.isNotBlank(scope)) {
             applyRecordScope(wrapper, scope);
         }
         Number count = detectionRecordMapper.selectCount(wrapper);
@@ -457,17 +458,11 @@ public class DetectionWorkflowService {
         if (Boolean.TRUE.equals(mine) && currentUser != null) {
             return currentUser.getUserId();
         }
-        // 明确选择"查看全部"，不应用角色过滤
-        if (Boolean.FALSE.equals(mine)) {
-            return null;
+        // STAFF 角色默认只能看自己的（无论 mine 是 null 还是 false）
+        if (dataScopeHelper.isRole("STAFF") && currentUser != null) {
+            return currentUser.getUserId();
         }
-        // mine 为空时，根据角色决定默认行为
-        if (dataScopeHelper.isAdmin()) {
-            return null;
-        }
-        if (dataScopeHelper.isRole("STAFF") && dataScopeHelper.currentUserId() != null) {
-            return dataScopeHelper.currentUserId();
-        }
+        // ADMIN/DIRECTOR 看全部
         return null;
     }
 
