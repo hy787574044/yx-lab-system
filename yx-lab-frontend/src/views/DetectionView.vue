@@ -563,7 +563,7 @@ const sceneMap = {
     title: '检测分样',
     subtitle: '样品登录后按套餐参数生成检测子流程，默认由采样员自采自检；特殊情况可在本页调整人员。',
     tableTitle: '检测流程队列',
-    tableSubtitle: '点击每条主流程后的“查看检测项”，即可查看套餐参数列表；特殊情况可重新分配检测人员。',
+    tableSubtitle: '点击每条主流程后的”查看检测项”，即可查看套餐参数列表；特殊情况可重新分配检测人员。',
     note: '当前页面重点处理需要人工调整检测人员的特殊检测流程，调整完成后即可继续检测执行。',
     guide: '常规样品会默认分配采样员检测，仅在需要协同或改派时进入本页调整。',
     defaultStatKey: 'all',
@@ -571,7 +571,7 @@ const sceneMap = {
     allowAssign: true,
     includePendingFallback: false,
     statKeys: ['all', 'waitAssign', 'waitDetect', 'pendingReview'],
-    recordFilter: (item) => item.detectionStatus === WAIT_ASSIGN_STATUS,
+    recordFilter: (item) => [WAIT_ASSIGN_STATUS, WAIT_DETECT_STATUS].includes(item.detectionStatus),
     quickLinks: [
       { path: '/sample-login', label: '样品登录', desc: '样品登录后默认自采自检，特殊情况再进入检测分样调整人员' },
       { path: '/review-result', label: '结果审查', desc: '检测完成提交后进入结果审查闭环' },
@@ -609,9 +609,8 @@ const sceneMap = {
     emptyText: '暂无历史检测数据',
     allowAssign: false,
     includePendingFallback: false,
-    recordFilter: (item) =>
-      [approvedDetectionStatus, rejectedDetectionStatus].includes(item.detectionStatus)
-      || item.detectionResult === abnormalDetectionResult,
+    statKeys: ['all', 'approved', 'rejected'],
+    recordFilter: (item) => [approvedDetectionStatus, rejectedDetectionStatus].includes(item.detectionStatus),
     quickLinks: [
       { path: '/review-history', label: '历史审查', desc: '继续查看检测结果的审查处理结论' },
       { path: '/detection-ledger', label: '检测台账', desc: '切换到全量检测主流程台账视角' },
@@ -1463,7 +1462,8 @@ async function loadData() {
     mine: query.mine === '' ? undefined : query.mine
   }
   const summaryQuery = {
-    scope: baseScene.value.key
+    scope: baseScene.value.key,
+    mine: query.mine === '' ? undefined : query.mine
   }
   const [detectionResult, summaryResult] = await Promise.all([
     fetchDetectionsApi(detectionQuery),
