@@ -331,7 +331,7 @@
               <el-radio-button :label="0">停用</el-radio-button>
             </el-radio-group>
           </el-form-item>
-          <el-form-item v-if="parameterForm.id" class="form-span-2" label="可选检测方法">
+          <el-form-item v-if="showParameterMethodPicker" class="form-span-2" label="可选检测方法">
             <div class="parameter-method-editor">
               <div class="parameter-method-editor__summary">
                 <span class="binding-editor__chip">
@@ -726,6 +726,7 @@ const parameterDialogVisible = ref(false)
 const groupDialogVisible = ref(false)
 const savingParameter = ref(false)
 const savingGroup = ref(false)
+const showParameterMethodPicker = false
 const currentBindingParameterId = ref('')
 const parameterBindingDialogVisible = ref(false)
 const savingParameterBinding = ref(false)
