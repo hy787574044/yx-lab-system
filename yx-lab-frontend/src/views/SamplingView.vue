@@ -451,16 +451,16 @@
               <el-option label="手工填写点位" value="CUSTOM" />
             </el-select>
           </el-form-item>
-          <el-form-item v-if="planForm.pointSource === 'EXISTING'" label="所属水厂" required>
+          <el-form-item label="所属机构" required>
             <el-select
-              v-model="planForm.regionName"
+              v-model="planForm.orgId"
               filterable
               style="width: 100%"
-              placeholder="请选择所属水厂"
-              @change="handlePlanRegionChange"
+              placeholder="请选择所属机构"
+              @change="handlePlanOrgChange"
             >
               <el-option
-                v-for="option in waterPlantOptions"
+                v-for="option in orgOptions"
                 :key="option.value"
                 :label="option.label"
                 :value="option.value"
@@ -471,9 +471,9 @@
             <el-select
               v-model="planForm.pointId"
               style="width: 100%"
-              :placeholder="planForm.regionName ? '请选择已创建的监测点位' : '请先选择所属水厂'"
+              :placeholder="planForm.orgId ? '请选择已创建的监测点位' : '请先选择所属机构'"
               :loading="monitoringPointLoading"
-              :disabled="!planForm.regionName"
+              :disabled="!planForm.orgId"
               @change="handlePlanPointChange"
             >
               <el-option
@@ -492,6 +492,7 @@
               v-model="planForm.pointName"
               :readonly="planForm.pointSource === 'EXISTING'"
               placeholder="请输入采样点位名称"
+              @input="handlePlanPointNameChange"
             />
           </el-form-item>
           <el-form-item label="点位坐标" required>
@@ -1143,6 +1144,7 @@ import {
   fetchDetectionMethodOptionsApi,
   fetchDetectionParametersApi,
   fetchMonitoringPointsApi,
+  fetchMonitoringPointOrgOptionsApi,
   fetchDetectionTypesApi,
   fetchFlowConfigOptionsApi,
   fetchSamplesApi,
@@ -1249,7 +1251,7 @@ const taskLocationViewerValue = reactive({ pointName: '', address: '', latitude:
 const taskDetailDialogVisible = ref(false)
 const weatherOptions = ref([])
 const storageConditionOptions = ref([])
-const waterPlantOptions = ref([])
+const orgOptions = ref([])
 const editingPlanId = ref(null)
 const submitting = ref(false)
 const taskCompleteSubmitting = ref(false)
@@ -1330,8 +1332,8 @@ const loginDetectionProjectOptions = computed(() => {
 
 const planForm = reactive({
   planName: '',
-  pointSource: 'EXISTING',
-  regionName: '',
+  pointSource: 'CUSTOM',
+  orgId: '',
   pointId: null,
   pointName: '',
   address: '',
@@ -2167,9 +2169,9 @@ function resetCurrentSceneQuery() {
   loadSamples()
 }
 
-async function loadMonitoringPoints(regionName = planForm.regionName) {
-  const normalizedRegionName = String(regionName || '').trim()
-  if (!normalizedRegionName) {
+async function loadMonitoringPoints(orgId = planForm.orgId) {
+  const normalizedOrgId = String(orgId || '').trim()
+  if (!normalizedOrgId) {
     monitoringPointOptions.value = []
     return
   }
@@ -2178,7 +2180,7 @@ async function loadMonitoringPoints(regionName = planForm.regionName) {
     const result = await fetchMonitoringPointsApi({
       pageNum: 1,
       pageSize: 500,
-      regionName: normalizedRegionName,
+      orgId: normalizedOrgId,
       pointStatus: enabledPointStatus
     })
     monitoringPointOptions.value = result.records || []
@@ -2208,19 +2210,55 @@ async function loadSamplers(force = false) {
 
 function handleSamplerDropdownVisible(visible) {
   if (visible) {
-    loadSamplers(true)
+    // 如果已选择机构，按机构加载人员；否则加载所有人员
+    if (planForm.orgId) {
+      loadSamplersByOrg(planForm.orgId)
+    } else {
+      loadSamplers(true)
+    }
+  }
+}
+
+async function loadSamplersByOrg(orgId) {
+  const normalizedOrgId = String(orgId || '').trim()
+  if (!normalizedOrgId) {
+    samplerOptions.value = []
+    return
+  }
+  samplerLoading.value = true
+  try {
+    const result = await fetchSystemUsersApi({
+      pageNum: 1,
+      pageSize: 500,
+      orgId: normalizedOrgId,
+      status: 1
+    })
+    const records = Array.isArray(result.records) ? result.records : []
+    samplerOptions.value = dedupeSamplerOptions(records.map(normalizeSamplerOption).filter((item) => item.id))
+    // 自动选中所有人员（如果只有一个则选中，多个则全部选中）
+    if (samplerOptions.value.length > 0) {
+      const samplerIds = samplerOptions.value.map((item) => getSamplerOptionId(item))
+      const samplerNames = samplerOptions.value.map((item) => getSamplerDisplayName(item)).filter(Boolean)
+      planForm.samplerIds = samplerIds
+      planForm.samplerId = samplerIds[0] || null
+      planForm.samplerName = samplerNames.join('、')
+    }
+  } finally {
+    samplerLoading.value = false
   }
 }
 
 async function loadSamplingDictOptions() {
-  const [weatherItems, storageItems, waterPlantItems] = await Promise.all([
+  const [weatherItems, storageItems, orgItems] = await Promise.all([
     fetchDictItemsApi('weather_condition'),
     fetchDictItemsApi('storage_condition'),
-    fetchDictItemsApi('water_plant')
+    fetchMonitoringPointOrgOptionsApi()
   ])
   weatherOptions.value = normalizeDictOptions(weatherItems)
   storageConditionOptions.value = normalizeDictOptions(storageItems)
-  waterPlantOptions.value = normalizeDictOptions(waterPlantItems)
+  orgOptions.value = Array.isArray(orgItems)
+    ? orgItems.map((item) => ({ label: item.orgName, value: String(item.id) }))
+    : []
 }
 
 function normalizeSamplerIdList(value) {
@@ -2230,14 +2268,17 @@ function normalizeSamplerIdList(value) {
       .split(',')
       .map((item) => item.trim())
   return rawItems
-    .map((item) => Number(item))
-    .filter((item) => Number.isFinite(item) && item > 0)
+    .filter((item) => item && item !== '0' && item !== 'null' && item !== 'undefined')
     .filter((item, index, source) => source.indexOf(item) === index)
 }
 
 function getSamplerOptionId(item) {
-  const id = Number(item?.id ?? item?.userId ?? item?.user_id)
-  return Number.isFinite(id) && id > 0 ? id : item?.id
+  const rawId = item?.id ?? item?.userId ?? item?.user_id
+  // 保持字符串类型，避免大数字精度丢失
+  if (rawId !== null && rawId !== undefined && rawId !== '') {
+    return String(rawId)
+  }
+  return rawId
 }
 
 function getSamplerDisplayName(item) {
@@ -2276,9 +2317,9 @@ function dedupeSamplerOptions(options) {
   const nameSet = new Set()
   const result = []
   ;(options || []).forEach((item) => {
-    const id = Number(getSamplerOptionId(item))
+    const id = getSamplerOptionId(item)
     const name = getSamplerDisplayName(item)
-    const idKey = Number.isFinite(id) && id > 0 ? String(id) : ''
+    const idKey = id ? String(id) : ''
     const nameKey = name || ''
     if ((idKey && idSet.has(idKey)) || (nameKey && nameSet.has(nameKey))) {
       return
@@ -2300,10 +2341,10 @@ function ensureSelectedSamplerOptions(ids, samplerNameText) {
     return
   }
   const names = splitSamplerNames(samplerNameText)
-  const existingIds = new Set(samplerOptions.value.map((item) => Number(getSamplerOptionId(item))))
+  const existingIds = new Set(samplerOptions.value.map((item) => String(getSamplerOptionId(item))))
   const existingNames = new Set(samplerOptions.value.map((item) => getSamplerDisplayName(item)).filter(Boolean))
   const additions = selectedIds
-    .filter((id, index) => !existingIds.has(id) && !existingNames.has(names[index]))
+    .filter((id, index) => !existingIds.has(String(id)) && !existingNames.has(names[index]))
     .map((id, index) => ({
       id,
       realName: names[index] || `采样员${id}`,
@@ -2318,7 +2359,7 @@ function ensureSelectedSamplerOptions(ids, samplerNameText) {
 function resolveSamplerNames(ids) {
   const selectedIds = normalizeSamplerIdList(ids)
   return selectedIds
-    .map((id) => samplerOptions.value.find((item) => Number(getSamplerOptionId(item)) === id))
+    .map((id) => samplerOptions.value.find((item) => String(getSamplerOptionId(item)) === String(id)))
     .filter(Boolean)
     .map((item) => getSamplerDisplayName(item))
     .filter(Boolean)
@@ -2337,16 +2378,16 @@ function resolveRowSamplerOptionIds(row) {
   const names = splitSamplerNames(row?.samplerName || row?.sampler_name)
   const ids = getRowSamplerIds(row)
   const resolved = ids.map((id, index) => {
-    const idMatched = samplerOptions.value.find((item) => Number(getSamplerOptionId(item)) === id)
+    const idMatched = samplerOptions.value.find((item) => String(getSamplerOptionId(item)) === String(id))
     if (idMatched) {
-      return Number(getSamplerOptionId(idMatched))
+      return getSamplerOptionId(idMatched)
     }
     const name = names[index]
     if (!name) {
       return id
     }
     const nameMatched = samplerOptions.value.find((item) => getSamplerDisplayName(item) === name)
-    return nameMatched ? Number(getSamplerOptionId(nameMatched)) : id
+    return nameMatched ? getSamplerOptionId(nameMatched) : id
   })
   return normalizeSamplerIdList(resolved)
 }
@@ -2430,12 +2471,36 @@ function buildPlanHourDateTimeText(date, hour) {
 
 function handlePlanDateChange(prefix, value) {
   planForm[`${prefix}Time`] = buildPlanHourDateTimeText(value, getPlanHourPart(prefix))
+  // 如果修改的是开始时间
+  if (prefix === 'start') {
+    // 已有点位名称，自动更新计划名称
+    if (planForm.pointName && planForm.startTime) {
+      const startTime = dayjs(planForm.startTime)
+      planForm.planName = `${planForm.pointName}-${startTime.format('MMDD')}-${startTime.format('HH')}`
+    }
+    // 自动设置截止时间为24小时后
+    if (planForm.startTime) {
+      planForm.endTime = dayjs(planForm.startTime).add(24, 'hour').format('YYYY-MM-DD HH:mm:ss')
+    }
+  }
 }
 
 function handlePlanHourChange(prefix, value) {
   const date = getPlanDatePart(prefix) || dayjs().format('YYYY-MM-DD')
   planForm[`${prefix}Time`] = buildPlanHourDateTimeText(date, value)
   activePlanHourPanel.value = ''
+  // 如果修改的是开始时间
+  if (prefix === 'start') {
+    // 已有点位名称，自动更新计划名称
+    if (planForm.pointName && planForm.startTime) {
+      const startTime = dayjs(planForm.startTime)
+      planForm.planName = `${planForm.pointName}-${startTime.format('MMDD')}-${startTime.format('HH')}`
+    }
+    // 自动设置截止时间为24小时后
+    if (planForm.startTime) {
+      planForm.endTime = dayjs(planForm.startTime).add(24, 'hour').format('YYYY-MM-DD HH:mm:ss')
+    }
+  }
 }
 
 function updatePlanHourPanelPosition(prefix = activePlanHourPanel.value) {
@@ -2490,8 +2555,8 @@ function resetPlanForm() {
   editingPlanId.value = null
   activePlanHourPanel.value = ''
   planForm.planName = ''
-  planForm.pointSource = 'EXISTING'
-  planForm.regionName = ''
+  planForm.pointSource = 'CUSTOM'
+  planForm.orgId = ''
   planForm.pointId = null
   planForm.pointName = ''
   planForm.address = ''
@@ -2512,19 +2577,17 @@ async function openPlanDialog() {
   resetPlanForm()
   planForm.planName = `采样计划-${dayjs().format('MMDD-HHmm')}`
   planForm.startTime = dayjs().format('YYYY-MM-DD HH:mm:ss')
-  planForm.endTime = dayjs().add(7, 'day').format('YYYY-MM-DD HH:mm:ss')
+  planForm.endTime = dayjs().add(24, 'hour').format('YYYY-MM-DD HH:mm:ss')
   monitoringPointOptions.value = []
-  await loadSamplers(true)
-  applyDefaultPlanSampler()
+  samplerOptions.value = []
   planDialogVisible.value = true
 }
 
 async function openPlanEditDialog(row) {
-  await loadSamplers(true)
   editingPlanId.value = row.id
   planForm.planName = row.planName || ''
   planForm.pointSource = row.pointId ? 'EXISTING' : 'CUSTOM'
-  planForm.regionName = ''
+  planForm.orgId = ''
   planForm.pointId = row.pointId || null
   planForm.pointName = row.pointName || ''
   planForm.address = row.address || ''
@@ -2533,9 +2596,8 @@ async function openPlanEditDialog(row) {
   planForm.startTime = row.startTime || ''
   planForm.endTime = row.endTime || ''
   planForm.samplerIds = resolveRowSamplerOptionIds(row)
-  ensureSelectedSamplerOptions(planForm.samplerIds, row.samplerName || row.sampler_name)
   planForm.samplerId = planForm.samplerIds[0] || null
-  planForm.samplerName = resolveSamplerNames(planForm.samplerIds) || row.samplerName || row.sampler_name || ''
+  planForm.samplerName = row.samplerName || row.sampler_name || ''
   planForm.samplingType = row.samplingType || routineSamplingType
   planForm.sampleType = row.sampleType || ''
   planForm.cycleType = row.cycleType || dailyCycleType
@@ -2543,13 +2605,18 @@ async function openPlanEditDialog(row) {
   if (planForm.pointSource === 'EXISTING' && planForm.pointId) {
     await loadMonitoringPointForEdit(row)
     handlePlanPointChange(planForm.pointId)
+    // 根据机构加载人员
+    if (planForm.orgId) {
+      await loadSamplersByOrg(planForm.orgId)
+      ensureSelectedSamplerOptions(planForm.samplerIds, planForm.samplerName)
+    }
   }
   planDialogVisible.value = true
 }
 
 function handlePlanPointSourceChange(value) {
   if (value === 'CUSTOM') {
-    planForm.regionName = ''
+    planForm.orgId = ''
     planForm.pointId = null
     planForm.pointName = ''
     planForm.address = ''
@@ -2566,19 +2633,32 @@ function handlePlanPointSourceChange(value) {
   planForm.longitude = ''
   planForm.sampleType = ''
   monitoringPointOptions.value = []
-  if (planForm.regionName) {
-    loadMonitoringPoints(planForm.regionName)
+  if (planForm.orgId) {
+    loadMonitoringPoints(planForm.orgId)
   }
 }
 
-async function handlePlanRegionChange(regionName) {
+async function handlePlanOrgChange(orgId) {
   planForm.pointId = null
   planForm.pointName = ''
   planForm.address = ''
   planForm.latitude = ''
   planForm.longitude = ''
   planForm.sampleType = ''
-  await loadMonitoringPoints(regionName)
+  planForm.samplerIds = []
+  planForm.samplerId = null
+  planForm.samplerName = ''
+  await loadMonitoringPoints(orgId)
+  // 加载该机构下的人员并自动选中
+  await loadSamplersByOrg(orgId)
+}
+
+function handlePlanPointNameChange(pointName) {
+  // 点位名称变化时，自动更新计划名称
+  if (pointName && planForm.startTime) {
+    const startTime = dayjs(planForm.startTime)
+    planForm.planName = `${pointName}-${startTime.format('MMDD')}-${startTime.format('HH')}`
+  }
 }
 
 function handlePlanPointChange(pointId) {
@@ -2589,8 +2669,13 @@ function handlePlanPointChange(pointId) {
   planForm.latitude = point?.latitude || ''
   planForm.longitude = point?.longitude || ''
   planForm.sampleType = point?.pointType || ''
-  if (point?.regionName) {
-    planForm.regionName = point.regionName
+  if (point?.orgId) {
+    planForm.orgId = String(point.orgId)
+  }
+  // 自动生成计划名称：点位名称-月日-小时
+  if (point?.pointName && planForm.startTime) {
+    const startTime = dayjs(planForm.startTime)
+    planForm.planName = `${point.pointName}-${startTime.format('MMDD')}-${startTime.format('HH')}`
   }
 }
 
@@ -2600,11 +2685,7 @@ async function loadMonitoringPointForEdit(row) {
     monitoringPointOptions.value = []
     return
   }
-  if (row.regionName) {
-    planForm.regionName = row.regionName
-    await loadMonitoringPoints(row.regionName)
-    return
-  }
+  // 先加载监测点位详情，获取所属机构
   monitoringPointLoading.value = true
   try {
     const result = await fetchMonitoringPointsApi({
@@ -2614,10 +2695,12 @@ async function loadMonitoringPointForEdit(row) {
     })
     const records = result.records || []
     const point = records.find((item) => item.id === rowPointId)
-    planForm.regionName = point?.regionName || ''
-    monitoringPointOptions.value = planForm.regionName
-      ? records.filter((item) => item.regionName === planForm.regionName)
-      : records
+    if (point?.orgId) {
+      planForm.orgId = String(point.orgId)
+      monitoringPointOptions.value = records.filter((item) => String(item.orgId) === planForm.orgId)
+    } else {
+      monitoringPointOptions.value = records
+    }
   } finally {
     monitoringPointLoading.value = false
   }
@@ -2658,8 +2741,8 @@ async function submitPlanForm() {
     return
   }
   if (planForm.pointSource === 'EXISTING') {
-    if (!planForm.regionName) {
-      ElMessage.warning('请选择所属水厂')
+    if (!planForm.orgId) {
+      ElMessage.warning('请选择所属机构')
       return
     }
     if (!payload.pointId) {
@@ -3164,6 +3247,11 @@ function confirmPlanMapSelection() {
   planForm.longitude = mapSelectorValue.longitude
   if (planForm.pointSource === 'CUSTOM') {
     planForm.pointName = mapSelectorValue.pointName || mapSelectorValue.address || planForm.pointName
+    // 自动生成计划名称：点位名称-月日-小时
+    if (planForm.pointName && planForm.startTime) {
+      const startTime = dayjs(planForm.startTime)
+      planForm.planName = `${planForm.pointName}-${startTime.format('MMDD')}-${startTime.format('HH')}`
+    }
   }
   planMapSelectorVisible.value = false
 }
@@ -3501,11 +3589,16 @@ function handleLoginDetectionTypeChange(typeId) {
 }
 
 function formatPendingTaskLabel(task) {
-  const pointName = task?.pointName || '未命名点位'
-  const samplerName = task?.samplerName || '未指定采样员'
-  const taskNo = task?.taskNo || '未生成任务编号'
-  const sampleNo = task?.sampleNo || '任务生成时自动生成样品编号'
-  return `${taskNo} / ${sampleNo} / ${pointName} / ${samplerName}`
+  const planName = task?.planName || task?.pointName || '未命名任务'
+  if (task?.samplingTime) {
+    const date = new Date(task.samplingTime)
+    const yyyy = date.getFullYear()
+    const mm = String(date.getMonth() + 1).padStart(2, '0')
+    const dd = String(date.getDate()).padStart(2, '0')
+    const hh = String(date.getHours()).padStart(2, '0')
+    return `${planName}/${yyyy}${mm}${dd}-${hh}`
+  }
+  return planName
 }
 
 async function submitSampleLogin() {

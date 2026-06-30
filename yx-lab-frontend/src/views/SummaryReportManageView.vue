@@ -24,15 +24,15 @@
           <div class="toolbar-main">
             <div class="toolbar-fields">
               <label class="toolbar-field toolbar-field--plant">
-                <span>所属水厂</span>
+                <span>所属机构</span>
                 <el-select
-                  v-model="query.regionName"
+                  v-model="query.orgId"
                   clearable
                   filterable
-                  placeholder="请选择所属水厂"
+                  placeholder="请选择所属机构"
                 >
                   <el-option
-                    v-for="option in waterPlantOptions"
+                    v-for="option in orgOptions"
                     :key="option.value"
                     :label="option.label"
                     :value="option.value"
@@ -97,7 +97,7 @@
             empty-text="暂无汇总报表数据"
           >
             <el-table-column prop="reportName" label="报表名称" min-width="230" />
-            <el-table-column prop="regionName" label="所属水厂" min-width="150" />
+            <el-table-column prop="regionName" label="所属机构" min-width="150" />
             <el-table-column
               v-if="showDailyReportType"
               prop="dailyReportTypeLabel"
@@ -242,6 +242,7 @@ import {
   exportSummaryReportDetailApi,
   exportSummaryReportsApi,
   fetchDictItemsApi,
+  fetchMonitoringPointOrgOptionsApi,
   fetchSummaryReportsApi,
   previewSummaryReportApi
 } from '../api/lab'
@@ -293,7 +294,7 @@ const vLoading = ElLoadingDirective
 const query = reactive({
   pageNum: 1,
   pageSize: DEFAULT_PAGE_SIZE,
-  regionName: '',
+  orgId: '',
   reportStatus: '',
   dailyReportType: '',
   dateRange: []
@@ -305,7 +306,7 @@ const exporting = ref(false)
 const detailExportingKey = ref('')
 const records = ref([])
 const total = ref(0)
-const waterPlantOptions = ref([])
+const orgOptions = ref([])
 
 const previewDialogVisible = ref(false)
 const previewLoading = ref(false)
@@ -373,7 +374,7 @@ function applyRouteState(resetPage = true) {
   currentSummaryType.value = resolveSummaryTypeByPath(route.path)
   query.pageNum = resetPage ? 1 : query.pageNum
   query.dateRange = buildDefaultDateRange(currentSummaryType.value)
-  query.regionName = ''
+  query.orgId = ''
   query.reportStatus = ''
   query.dailyReportType = ''
 }
@@ -383,7 +384,7 @@ function buildListParams() {
     pageNum: query.pageNum,
     pageSize: query.pageSize,
     summaryType: currentSummaryType.value,
-    regionName: query.regionName?.trim() || '',
+    orgId: query.orgId?.trim() || '',
     reportStatus: query.reportStatus || ''
   }
   if (showDailyReportType.value) {
@@ -442,12 +443,14 @@ function normalizeDictOptions(items) {
     .filter((item) => item.label && item.value)
 }
 
-async function loadWaterPlants() {
+async function loadOrgOptions() {
   try {
-    const result = await fetchDictItemsApi('water_plant')
-    waterPlantOptions.value = normalizeDictOptions(result)
+    const result = await fetchMonitoringPointOrgOptionsApi()
+    orgOptions.value = Array.isArray(result)
+      ? result.map((item) => ({ label: item.orgName, value: String(item.id) }))
+      : []
   } catch (error) {
-    waterPlantOptions.value = []
+    orgOptions.value = []
   }
 }
 
@@ -528,7 +531,7 @@ function closePreview() {
 }
 
 onMounted(() => {
-  loadWaterPlants()
+  loadOrgOptions()
   applyRouteState()
   loadRecords()
 })

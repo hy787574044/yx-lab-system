@@ -87,6 +87,7 @@ export const fetchMonitoringPointsApi = (params) => request.get('/api/monitoring
 export const exportMonitoringPointsApi = (params) => downloadExcel('/api/monitoringPoints/export', params, '监测点位.xlsx')
 export const createMonitoringPointApi = (data) => request.post('/api/monitoringPoints', data)
 export const updateMonitoringPointApi = (id, data) => request.post(`/api/monitoringPoints/${id}`, data)
+export const fetchMonitoringPointOrgOptionsApi = () => request.get('/api/monitoringPoints/orgOptions')
 
 // 采样计划
 export const fetchSamplingPlansApi = (params) => request.get('/api/samplingPlans', { params })

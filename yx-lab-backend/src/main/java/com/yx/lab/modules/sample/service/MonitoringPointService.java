@@ -6,11 +6,16 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.yx.lab.common.constant.LabWorkflowConstants;
 import com.yx.lab.common.exception.BusinessException;
 import com.yx.lab.common.model.PageResult;
+import com.yx.lab.common.security.CurrentUser;
+import com.yx.lab.common.security.DataScopeHelper;
+import com.yx.lab.common.security.SecurityContext;
 import com.yx.lab.common.util.PageUtils;
 import com.yx.lab.modules.sample.dto.MonitoringPointQuery;
 import com.yx.lab.modules.sample.dto.MonitoringPointSaveCommand;
 import com.yx.lab.modules.sample.entity.MonitoringPoint;
 import com.yx.lab.modules.sample.mapper.MonitoringPointMapper;
+import com.yx.lab.modules.system.entity.LabOrg;
+import com.yx.lab.modules.system.service.OrgManagementService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -23,6 +28,10 @@ public class MonitoringPointService {
 
     private final MonitoringPointMapper monitoringPointMapper;
 
+    private final OrgManagementService orgManagementService;
+
+    private final DataScopeHelper dataScopeHelper;
+
     /**
      * 分页查询监测点位列表。
      *
@@ -30,14 +39,17 @@ public class MonitoringPointService {
      * @return 点位分页结果
      */
     public PageResult<MonitoringPoint> page(MonitoringPointQuery query) {
+        Long scopedOrgId = resolveScopedOrgId();
         Page<MonitoringPoint> page = monitoringPointMapper.selectPage(
                 PageUtils.buildPage(query),
                 new LambdaQueryWrapper<MonitoringPoint>()
                         .like(StrUtil.isNotBlank(query.getKeyword()), MonitoringPoint::getPointName, query.getKeyword())
                         .eq(StrUtil.isNotBlank(query.getPointType()), MonitoringPoint::getPointType, query.getPointType())
-                        .eq(StrUtil.isNotBlank(query.getRegionName()), MonitoringPoint::getRegionName, query.getRegionName())
+                        .eq(query.getOrgId() != null, MonitoringPoint::getOrgId, query.getOrgId())
+                        .eq(scopedOrgId != null, MonitoringPoint::getOrgId, scopedOrgId)
                         .eq(StrUtil.isNotBlank(query.getPointStatus()), MonitoringPoint::getPointStatus, query.getPointStatus())
                         .orderByDesc(MonitoringPoint::getCreatedTime));
+        fillOrgName(page.getRecords());
         return new PageResult<>(page.getTotal(), page.getRecords());
     }
 
@@ -48,7 +60,9 @@ public class MonitoringPointService {
      * @return 点位详情
      */
     public MonitoringPoint detail(Long id) {
-        return requirePoint(id);
+        MonitoringPoint point = requirePoint(id);
+        fillOrgName(point);
+        return point;
     }
 
     /**
@@ -92,19 +106,20 @@ public class MonitoringPointService {
     }
 
     private void applyCommand(MonitoringPoint point, MonitoringPointSaveCommand command) {
+        LabOrg org = orgManagementService.validateOrgUsable(command.getOrgId());
         point.setPointName(StrUtil.trim(command.getPointName()));
         point.setAddress(StrUtil.trim(command.getAddress()));
         point.setLongitude(StrUtil.trim(command.getLongitude()));
         point.setLatitude(StrUtil.trim(command.getLatitude()));
-        point.setRegionName(StrUtil.trim(command.getRegionName()));
+        point.setOrgId(org.getId());
         point.setPointType(StrUtil.trim(command.getPointType()));
         point.setPointStatus(StrUtil.trim(command.getPointStatus()));
         validatePoint(point);
     }
 
     private void validatePoint(MonitoringPoint point) {
-        if (StrUtil.isBlank(point.getRegionName())) {
-            throw new BusinessException("所属水厂不能为空");
+        if (point.getOrgId() == null) {
+            throw new BusinessException("所属机构不能为空");
         }
         if (StrUtil.isBlank(point.getPointType())) {
             throw new BusinessException("点位类型不能为空");
@@ -112,7 +127,7 @@ public class MonitoringPointService {
         if (!LabWorkflowConstants.POINT_TYPES.contains(point.getPointType())) {
             throw new BusinessException("点位类型不合法");
         }
-        ensureUniqueRegionPointType(point);
+        ensureUniqueOrgPointType(point);
         if (!LabWorkflowConstants.PointStatus.ENABLED.equals(point.getPointStatus())) {
             return;
         }
@@ -135,13 +150,60 @@ public class MonitoringPointService {
         }
     }
 
-    private void ensureUniqueRegionPointType(MonitoringPoint point) {
+    private void ensureUniqueOrgPointType(MonitoringPoint point) {
         Long count = monitoringPointMapper.selectCount(new LambdaQueryWrapper<MonitoringPoint>()
-                .eq(MonitoringPoint::getRegionName, point.getRegionName())
+                .eq(MonitoringPoint::getOrgId, point.getOrgId())
                 .eq(MonitoringPoint::getPointType, point.getPointType())
                 .ne(point.getId() != null, MonitoringPoint::getId, point.getId()));
         if (count != null && count > 0) {
-            throw new BusinessException("同一所属水厂下已存在该点位类型的监测点位");
+            throw new BusinessException("同一所属机构下已存在该点位类型的监测点位");
+        }
+    }
+
+    /**
+     * 解析当前用户的机构过滤条件。
+     * ADMIN/DIRECTOR 可以看到所有监测点位。
+     * STAFF 只能看到自己所属机构的监测点位。
+     */
+    private Long resolveScopedOrgId() {
+        CurrentUser currentUser = SecurityContext.getCurrentUser();
+        if (dataScopeHelper.isAdmin() || dataScopeHelper.isRole("DIRECTOR")) {
+            return null; // 不过滤
+        }
+        // STAFF 只能看自己机构的监测点位
+        return currentUser != null ? currentUser.getOrgId() : null;
+    }
+
+    /**
+     * 填充机构名称。
+     */
+    private void fillOrgName(java.util.List<MonitoringPoint> records) {
+        if (records == null || records.isEmpty()) {
+            return;
+        }
+        java.util.List<Long> orgIds = records.stream()
+                .map(MonitoringPoint::getOrgId)
+                .filter(id -> id != null)
+                .distinct()
+                .collect(java.util.stream.Collectors.toList());
+        if (orgIds.isEmpty()) {
+            return;
+        }
+        java.util.Map<Long, String> orgNameMap = orgManagementService.getOrgNameMap(orgIds);
+        for (MonitoringPoint point : records) {
+            if (point.getOrgId() != null) {
+                point.setOrgName(orgNameMap.get(point.getOrgId()));
+            }
+        }
+    }
+
+    private void fillOrgName(MonitoringPoint point) {
+        if (point == null || point.getOrgId() == null) {
+            return;
+        }
+        LabOrg org = orgManagementService.getOrgById(point.getOrgId());
+        if (org != null) {
+            point.setOrgName(org.getOrgName());
         }
     }
 }

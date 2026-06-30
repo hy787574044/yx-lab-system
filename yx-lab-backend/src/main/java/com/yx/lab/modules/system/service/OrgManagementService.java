@@ -237,6 +237,59 @@ public class OrgManagementService {
                 .collect(Collectors.groupingBy(id -> id, Collectors.counting()));
     }
 
+    /**
+     * 获取一级机构选项（顶级机构的子机构）。
+     *
+     * @return 一级机构下拉选项
+     */
+    public List<OrgOptionVO> getFirstLevelOrgs() {
+        // 获取顶级机构（parent_id 为 NULL）
+        LabOrg topOrg = labOrgMapper.selectOne(new LambdaQueryWrapper<LabOrg>()
+                .isNull(LabOrg::getParentId)
+                .eq(LabOrg::getStatus, 1)
+                .last("limit 1"));
+        if (topOrg == null) {
+            return Collections.emptyList();
+        }
+        // 获取顶级机构的子机构
+        return labOrgMapper.selectList(new LambdaQueryWrapper<LabOrg>()
+                        .eq(LabOrg::getParentId, topOrg.getId())
+                        .eq(LabOrg::getStatus, 1)
+                        .orderByAsc(LabOrg::getOrgCode))
+                .stream()
+                .map(this::toOption)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 根据ID获取机构信息。
+     *
+     * @param orgId 机构ID
+     * @return 机构信息
+     */
+    public LabOrg getOrgById(Long orgId) {
+        if (orgId == null) {
+            return null;
+        }
+        return labOrgMapper.selectById(orgId);
+    }
+
+    /**
+     * 批量获取机构名称映射。
+     *
+     * @param orgIds 机构ID列表
+     * @return 机构ID -> 机构名称映射
+     */
+    public Map<Long, String> getOrgNameMap(List<Long> orgIds) {
+        if (orgIds == null || orgIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        return labOrgMapper.selectList(new LambdaQueryWrapper<LabOrg>()
+                        .in(LabOrg::getId, orgIds))
+                .stream()
+                .collect(Collectors.toMap(LabOrg::getId, LabOrg::getOrgName, (left, right) -> left));
+    }
+
     private OrgOptionVO toOption(LabOrg entity) {
         OrgOptionVO vo = new OrgOptionVO();
         vo.setId(entity.getId());

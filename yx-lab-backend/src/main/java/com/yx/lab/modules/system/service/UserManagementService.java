@@ -65,6 +65,7 @@ public class UserManagementService {
                                 .like(LabUser::getRoleCode, keyword))
                         .eq(query.getStatus() != null, LabUser::getStatus, query.getStatus())
                         .eq(StrUtil.isNotBlank(query.getRoleCode()), LabUser::getRoleCode, StrUtil.trim(query.getRoleCode()))
+                        .eq(query.getOrgId() != null, LabUser::getOrgId, query.getOrgId())
                         .orderByDesc(LabUser::getCreatedTime));
         Map<String, String> roleNameMap = loadRoleNameMap(page.getRecords());
         List<LabUserVO> records = page.getRecords().stream()

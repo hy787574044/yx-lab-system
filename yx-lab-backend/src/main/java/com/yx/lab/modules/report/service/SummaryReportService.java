@@ -1032,7 +1032,7 @@ public class SummaryReportService {
     }
 
     private String resolveRegionName(MonitoringPoint point) {
-        return StrUtil.blankToDefault(point == null ? null : StrUtil.trim(point.getRegionName()), DEFAULT_REGION_NAME);
+        return StrUtil.blankToDefault(point == null ? null : StrUtil.trim(point.getOrgName()), DEFAULT_REGION_NAME);
     }
 
     private List<String> parseExpectedParameters(String detectionItems) {

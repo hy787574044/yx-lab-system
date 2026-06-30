@@ -10,6 +10,8 @@ import com.yx.lab.modules.sample.dto.MonitoringPointQuery;
 import com.yx.lab.modules.sample.dto.MonitoringPointSaveCommand;
 import com.yx.lab.modules.sample.entity.MonitoringPoint;
 import com.yx.lab.modules.sample.service.MonitoringPointService;
+import com.yx.lab.modules.system.service.OrgManagementService;
+import com.yx.lab.modules.system.vo.OrgOptionVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.Valid;
 import java.util.Arrays;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/monitoringPoints")
@@ -34,10 +37,18 @@ public class MonitoringPointController {
 
     private final MonitoringPointService monitoringPointService;
 
+    private final OrgManagementService orgManagementService;
+
     @GetMapping
     @Operation(summary = "监测点位分页")
     public ApiResponse<PageResult<MonitoringPoint>> page(@Validated MonitoringPointQuery query) {
         return ApiResponse.success(monitoringPointService.page(query));
+    }
+
+    @GetMapping("/orgOptions")
+    @Operation(summary = "获取一级机构选项")
+    public ApiResponse<List<OrgOptionVO>> orgOptions() {
+        return ApiResponse.success(orgManagementService.getFirstLevelOrgs());
     }
 
     @GetMapping("/export")
@@ -51,7 +62,7 @@ public class MonitoringPointController {
                 Arrays.asList(
                         ExcelExportUtil.column("点位名称", MonitoringPoint::getPointName),
                         ExcelExportUtil.column("地图位置", MonitoringPoint::getAddress),
-                        ExcelExportUtil.column("所属水厂", MonitoringPoint::getRegionName),
+                        ExcelExportUtil.column("所属机构", item -> item.getOrgName() != null ? item.getOrgName() : "-"),
                         ExcelExportUtil.column("点位类型", item -> LabWorkflowConstants.getPointTypeLabel(item.getPointType())),
                         ExcelExportUtil.column("经度", MonitoringPoint::getLongitude),
                         ExcelExportUtil.column("纬度", MonitoringPoint::getLatitude),

@@ -11,8 +11,7 @@
             v-for="item in workflowOverviewItems"
             :key="item.key"
             type="button"
-            :disabled="!item.action"
-            @click="item.action && openWorkbenchAction(item.action)"
+            @click="openWorkbenchAction(item.action)"
           >
             {{ item.label }}
           </button>
@@ -86,7 +85,7 @@
             <el-button
               v-if="section.key === 'sampling'"
               v-permission="'sample:write'"
-              class="todo-detail-card__action"
+              class="todo-detail-card__action todo-detail-card__action--center"
               type="primary"
               size="small"
               @click.stop="openWorkbenchAction('sampleLogin', row)"
@@ -193,7 +192,7 @@
       v-model="workbenchDialogVisible"
       class="workbench-action-dialog"
       :title="activeActionTitle"
-      :width="activeAction === 'sampling' ? '1140px' : activeAction === 'detection' ? '1080px' : '1180px'"
+      :width="activeAction === 'sampling' ? '1140px' : (activeAction === 'detection' || activeAction === 'detectionSplit') ? '1080px' : activeAction === 'samplingPlan' ? '900px' : '1180px'"
       align-center
       destroy-on-close
       @closed="resetWorkbenchDialog"
@@ -254,7 +253,7 @@
                   <el-input :model-value="getEnumLabel(taskStatusLabelMap, samplingTask?.taskStatus) || '-'" readonly />
                 </el-form-item>
                 <el-form-item label="计划时间">
-                  <el-input :model-value="samplingTask?.samplingTime || '-'" readonly />
+                  <el-input :model-value="formatDate(samplingTask?.samplingTime) || '-'" readonly />
                 </el-form-item>
                 <el-form-item label="登记状态">
                   <el-input :model-value="getEnumLabel(sampleRegisterStatusLabelMap, samplingTask?.sampleRegisterStatus || unregisteredSampleRegisterStatus)" readonly />
@@ -433,6 +432,7 @@
       </div>
 
       <template #footer>
+        <el-button v-if="activeAction === 'sampling'" type="primary" @click="openWorkbenchAction('sampleLogin', activeRow)">样品登录</el-button>
         <el-button @click="workbenchDialogVisible = false">关闭</el-button>
         <el-button v-if="activeAction === 'sampleLogin'" type="primary" :loading="submitting" @click="submitSampleLogin">保存</el-button>
         <el-button v-if="activeAction === 'detection'" type="primary" :loading="submitting" @click="submitDetectionResult">提交</el-button>
@@ -501,6 +501,7 @@ import {
   waitDetectDetectionStatus
 } from '../utils/labEnums'
 import { getUser } from '../utils/auth'
+import { hasPermission } from '../utils/permission'
 import { isStaffRole } from '../utils/menuPermission'
 
 const FLOW_TYPE_REVIEW = 'REVIEW'
@@ -645,17 +646,21 @@ const workbenchSections = computed(() => {
 })
 const workflowOverviewItems = computed(() => {
   const defaultItems = [
-    { key: 'sampleLogin', label: '样品登录', action: 'sampleLogin' },
-    { key: 'detectionSplit', label: '检测分样', action: '' },
-    { key: 'detection', label: '化验检测', action: 'detection' },
-    { key: 'review', label: '结果审查', action: 'review' },
-    { key: 'report', label: '生成报告', action: 'report' }
+    { key: 'samplingPlan', label: '采样计划', action: 'samplingPlan', permission: 'samplingPlan:view' },
+    { key: 'sampling', label: '采样任务', action: 'sampling', permission: 'samplingTask:view' },
+    { key: 'sampleLogin', label: '样品登录', action: 'sampleLogin', permission: 'sample:view' },
+    { key: 'detectionSplit', label: '检测分样', action: 'detectionSplit', permission: 'detection:view' },
+    { key: 'detection', label: '化验检测', action: 'detection', permission: 'detection:view' },
+    { key: 'review', label: '结果审查', action: 'review', permission: 'review:view' },
+    { key: 'report', label: '生成报告', action: 'report', permission: 'report:view' }
   ]
+  // 根据权限过滤
+  const filteredItems = defaultItems.filter((item) => hasPermission(item.permission))
   const processNodes = dashboard.value.processNodes || []
   if (!processNodes.length) {
-    return defaultItems
+    return filteredItems
   }
-  return defaultItems.map((item) => {
+  return filteredItems.map((item) => {
     const matched = processNodes.find((node) => node.label === item.label)
     return matched ? { ...item, label: matched.label || item.label } : item
   })
@@ -667,8 +672,10 @@ const latestPassRate = computed(() => {
   return toSafeNumber(latest?.value).toFixed(0)
 })
 const activeActionTitle = computed(() => ({
+  samplingPlan: '采样计划',
   sampling: '采样任务',
   sampleLogin: '样品登录',
+  detectionSplit: '检测分样',
   detection: '检测结果录入',
   review: '结果审核',
   report: '报告处理'
@@ -691,8 +698,8 @@ const samplingPlanDetailFields = computed(() => {
     { label: '样品类型', value: getEnumLabel(sampleTypeLabelMap, plan.sampleType) },
     { label: '检测套餐', value: plan.detectionTypeName },
     { label: '采样周期', value: getEnumLabel(cycleTypeLabelMap, plan.cycleType) },
-    { label: '开始时间', value: plan.startTime },
-    { label: '结束时间', value: plan.endTime },
+    { label: '开始时间', value: formatDate(plan.startTime) },
+    { label: '结束时间', value: formatDate(plan.endTime) },
     { label: '坐标', value: formatPlanCoordinate(plan) },
     { label: '采样方式', value: getEnumLabel(samplingTypeLabelMap, plan.samplingType) }
   ]
@@ -1052,8 +1059,13 @@ async function openWorkbenchAction(key, preferredRow = null) {
 async function loadActionRows(key) {
   previewData.value = null
   previewError.value = ''
+  if (key === 'samplingPlan') {
+    const result = await fetchSamplingPlansApi({ pageNum: 1, pageSize: 30, planStatus: 'ACTIVE' })
+    actionRows.value = result.records || []
+    return
+  }
   if (key === 'sampling') {
-    const result = await fetchSamplingTasksApi({ pageNum: 1, pageSize: 30, sampleRegisterStatus: 'UNREGISTERED' })
+    const result = await fetchSamplingTasksApi({ pageNum: 1, pageSize: 30, taskStatus: 'PENDING' })
     actionRows.value = result.records || []
     return
   }
@@ -1067,7 +1079,7 @@ async function loadActionRows(key) {
     actionRows.value = result.records || []
     return
   }
-  if (key === 'detection') {
+  if (key === 'detectionSplit' || key === 'detection') {
     const result = await fetchDetectionItemsApi({ pageNum: 1, pageSize: 30, itemStatus: waitDetectDetectionStatus })
     actionRows.value = result.records || []
     return
@@ -1084,11 +1096,13 @@ async function loadActionRows(key) {
 
 async function selectActionRow(row) {
   activeRow.value = row
-  if (activeAction.value === 'sampling') {
+  if (activeAction.value === 'samplingPlan') {
+    // 采样计划暂无详情表单
+  } else if (activeAction.value === 'sampling') {
     await openSamplingForm(row)
   } else if (activeAction.value === 'sampleLogin') {
     await openSampleLoginForm(row)
-  } else if (activeAction.value === 'detection') {
+  } else if (activeAction.value === 'detectionSplit' || activeAction.value === 'detection') {
     openResultForm(row)
   } else if (activeAction.value === 'review') {
     await openReviewForm(row)
@@ -1106,10 +1120,13 @@ function isActionRowActive(row) {
 }
 
 function getActionRowTitle(row) {
+  if (activeAction.value === 'samplingPlan') {
+    return row?.planName || row?.pointName || '-'
+  }
   if (activeAction.value === 'sampling' || activeAction.value === 'sampleLogin') {
     return row?.taskNo || row?.sampleNo || '-'
   }
-  if (activeAction.value === 'detection' || activeAction.value === 'review') {
+  if (activeAction.value === 'detectionSplit' || activeAction.value === 'detection' || activeAction.value === 'review') {
     return row?.sampleNo || row?.parameterName || '-'
   }
   if (activeAction.value === 'report') {
@@ -1119,10 +1136,13 @@ function getActionRowTitle(row) {
 }
 
 function getActionRowMeta(row) {
+  if (activeAction.value === 'samplingPlan') {
+    return `${row?.pointName || '-'} / ${row?.cycleType || '-'}`
+  }
   if (activeAction.value === 'sampling' || activeAction.value === 'sampleLogin') {
     return `${row?.pointName || '-'} / ${row?.samplerName || '-'}`
   }
-  if (activeAction.value === 'detection') {
+  if (activeAction.value === 'detectionSplit' || activeAction.value === 'detection') {
     return `${row?.parameterName || '-'} / ${row?.methodName || '-'}`
   }
   if (activeAction.value === 'review') {
@@ -1157,10 +1177,9 @@ function getPreviewRowTitle(key, row) {
 }
 
 function buildSampleContextTitle(row, suffix = '') {
-  const pointName = firstNonBlank(row?.pointName, row?.monitoringPointName)
+  const planName = firstNonBlank(row?.planName, row?.pointName, row?.monitoringPointName)
   const sampleType = firstNonBlank(row?.sampleTypeLabel, getEnumLabel(sampleTypeLabelMap, row?.sampleType), row?.sampleType)
-  const tail = String(suffix || '').trim() === '-' ? '' : String(suffix || '').trim()
-  return `监测点：${pointName || '未填'}\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0样品类型：${sampleType || '未填'}${tail ? ` / ${tail}` : ''}`
+  return `计划名称：${planName || '未填'}      样品类型：${sampleType || '未填'}`
 }
 
 function firstNonBlank(...values) {
@@ -1169,12 +1188,25 @@ function firstNonBlank(...values) {
     .find((value) => value && value !== '-') || ''
 }
 
+function formatDate(dateStr) {
+  if (!dateStr) return '-'
+  const date = new Date(dateStr)
+  if (isNaN(date.getTime())) return dateStr
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 function getPreviewRowMeta(key, row) {
   if (key === 'samplingPlan') {
     return `${row?.pointName || '-'} / ${row?.samplerName || '-'}`
   }
-  if (key === 'sampling' || key === 'sampleLogin') {
+  if (key === 'sampleLogin') {
     return row?.samplerName || ''
+  }
+  if (key === 'sampling') {
+    return ''
   }
   if (key === 'detection') {
     return ''
@@ -1189,6 +1221,13 @@ function getPreviewRowMeta(key, row) {
 }
 
 function getPreviewFields(key, row) {
+  if (key === 'samplingPlan') {
+    return [
+      { label: '计划状态', value: getEnumLabel(planStatusLabelMap, row?.planStatus) },
+      { label: '周期类型', value: getEnumLabel(cycleTypeLabelMap, row?.cycleType) },
+      { label: '开始时间', value: formatDate(row?.startTime) }
+    ]
+  }
   if (key === 'report') {
     return [
       { label: '报表类型', value: row?.summaryTypeLabel || row?.summaryType },
@@ -1199,14 +1238,13 @@ function getPreviewFields(key, row) {
   if (key === 'sampling') {
     return [
       { label: '任务状态', value: row?.taskStatus },
-      { label: '计划时间', value: row?.samplingTime },
-      { label: '采样人员', value: row?.samplerName }
+      { label: '计划时间', value: formatDate(row?.samplingTime) }
     ]
   }
   if (key === 'sampleLogin') {
     return [
       { label: '任务编号', value: row?.taskNo },
-      { label: '计划时间', value: row?.samplingTime }
+      { label: '计划时间', value: formatDate(row?.samplingTime) }
     ]
   }
   if (key === 'detection') {
@@ -1257,7 +1295,7 @@ function getPreviewDisplayFields(key, row) {
         statusValue: row?.planStatus
       },
       { label: '周期', value: getEnumLabel(cycleTypeLabelMap, row?.cycleType) },
-      { label: '开始时间', value: row?.startTime }
+      { label: '开始时间', value: formatDate(row?.startTime) }
     ]
   }
   if (key === 'sampling') {
@@ -1268,7 +1306,7 @@ function getPreviewDisplayFields(key, row) {
         statusType: 'taskStatus',
         statusValue: row?.taskStatus
       },
-      { label: '计划时间', value: row?.samplingTime },
+      { label: '计划时间', value: formatDate(row?.samplingTime) },
       { label: '采样人员', value: row?.samplerName }
     ]
   }
@@ -1280,7 +1318,7 @@ function getPreviewDisplayFields(key, row) {
         value: getEnumLabel(sampleRegisterStatusLabelMap, row?.sampleRegisterStatus || unregisteredSampleRegisterStatus),
         statusClass: row?.sampleRegisterStatus && row.sampleRegisterStatus !== unregisteredSampleRegisterStatus ? 'success' : 'warning'
       },
-      { label: '计划时间', value: row?.samplingTime }
+      { label: '计划时间', value: formatDate(row?.samplingTime) }
     ]
   }
   if (key === 'detection') {
@@ -1429,6 +1467,18 @@ async function submitSampleLogin() {
   }
   submitting.value = true
   try {
+    // 验证任务状态，防止长时间未刷新导致重复登录
+    const taskDetail = await fetchSamplingTaskDetailApi(loginForm.taskId)
+    if (taskDetail.sampleRegisterStatus === 'REGISTERED') {
+      ElMessage.warning('该任务已被其他人完成样品登录，请刷新页面')
+      await reloadActiveAction()
+      return
+    }
+    if (taskDetail.taskStatus === 'ABANDONED') {
+      ElMessage.warning('该任务已被废弃，请刷新页面')
+      await reloadActiveAction()
+      return
+    }
     const sample = await loginSampleApi({
       ...loginForm,
       detectionConfigItems: loginForm.detectionConfigItems
@@ -1444,7 +1494,7 @@ function formatTaskLabel(task) {
   if (!task) {
     return '-'
   }
-  return `${task.taskNo || '-'} / ${task.sampleNo || '-'} / ${task.pointName || '-'}`
+  return task.planName || task.pointName || '-'
 }
 
 function openResultForm(row) {
@@ -1980,6 +2030,12 @@ onUnmounted(() => {
   position: absolute;
   right: 12px;
   bottom: 12px;
+}
+
+.todo-detail-card__action--center {
+  top: 50%;
+  bottom: auto;
+  transform: translateY(-50%);
 }
 
 .todo-detail-card__main {

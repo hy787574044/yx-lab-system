@@ -12,7 +12,7 @@ public class MonitoringPointQuery extends PageQuery {
 
     private String pointType;
 
-    private String regionName;
+    private Long orgId;
 
     private String pointStatus;
 }

@@ -27,10 +27,10 @@
               <el-button type="primary" class="toolbar-primary-button" @click="openCreateDialog">新增点位</el-button>
               <div class="toolbar-fields">
                 <label class="toolbar-field">
-                  <span>所属水厂</span>
-                  <el-select v-model="query.regionName" placeholder="请选择所属水厂" clearable filterable>
+                  <span>所属机构</span>
+                  <el-select v-model="query.orgId" placeholder="请选择所属机构" clearable filterable>
                     <el-option
-                      v-for="option in waterPlantOptions"
+                      v-for="option in orgOptions"
                     :key="option.value"
                     :label="option.label"
                     :value="option.value"
@@ -68,7 +68,9 @@
         <el-table class="list-table" :data="visibleRecords" stripe height="100%" empty-text="暂无监测点位数据">
           <el-table-column prop="pointName" label="点位名称" min-width="180" />
           <el-table-column prop="address" label="地图位置" min-width="220" />
-          <el-table-column prop="regionName" label="所属水厂" min-width="160" />
+          <el-table-column prop="orgName" label="所属机构" min-width="160">
+            <template #default="{ row }">{{ row.orgName || '-' }}</template>
+          </el-table-column>
           <el-table-column label="点位类型" width="120">
             <template #default="{ row }">
               {{ getEnumLabel(pointTypeLabelMap, row.pointType) }}
@@ -121,10 +123,10 @@
           <el-form-item label="点位名称" required>
             <el-input v-model="form.pointName" placeholder="请输入点位名称" />
           </el-form-item>
-          <el-form-item label="所属水厂" required>
-            <el-select v-model="form.regionName" filterable style="width: 100%" placeholder="请选择所属水厂">
+          <el-form-item label="所属机构" required>
+            <el-select v-model="form.orgId" filterable style="width: 100%" placeholder="请选择所属机构">
               <el-option
-                v-for="option in waterPlantOptions"
+                v-for="option in orgOptions"
                 :key="option.value"
                 :label="option.label"
                 :value="option.value"
@@ -196,7 +198,7 @@ import { ElMessage } from 'element-plus/es/components/message/index.mjs'
 import { ElMessageBox } from 'element-plus/es/components/message-box/index.mjs'
 import { ElOption, ElSelect } from 'element-plus/es/components/select/index.mjs'
 import { ElTable, ElTableColumn } from 'element-plus/es/components/table/index.mjs'
-import { createMonitoringPointApi, exportMonitoringPointsApi, fetchDictItemsApi, fetchMonitoringPointsApi, updateMonitoringPointApi } from '../api/lab'
+import { createMonitoringPointApi, exportMonitoringPointsApi, fetchMonitoringPointOrgOptionsApi, fetchMonitoringPointsApi, updateMonitoringPointApi } from '../api/lab'
 import TablePagination from '../components/common/TablePagination.vue'
 import TiandituPointSelector from '../components/TiandituPointSelector.vue'
 import {
@@ -216,7 +218,7 @@ const pointTypeOptions = sampleTypeOptions
 const pointTypeLabelMap = sampleTypeLabelMap
 const SUMMARY_PAGE_SIZE = 10000
 
-const query = reactive({ pageNum: 1, pageSize: DEFAULT_PAGE_SIZE, keyword: '', pointType: '', regionName: '', pointStatus: '' })
+const query = reactive({ pageNum: 1, pageSize: DEFAULT_PAGE_SIZE, keyword: '', pointType: '', orgId: '', pointStatus: '' })
 const records = ref([])
 const total = ref(0)
 const summaryRecords = ref([])
@@ -228,14 +230,14 @@ const statusUpdatingId = ref(null)
 const submitting = ref(false)
 const mapSelectorVisible = ref(false)
 const mapSelectorValue = reactive({ pointName: '', address: '', latitude: '', longitude: '' })
-const waterPlantOptions = ref([])
+const orgOptions = ref([])
 
 const defaultForm = () => ({
   pointName: '',
   address: '',
   longitude: '',
   latitude: '',
-  regionName: '',
+  orgId: '',
   pointType: factoryPointType,
   pointStatus: enabledPointStatus,
 })
@@ -301,7 +303,7 @@ function openEditDialog(row) {
     address: row.address || row.pointName || '',
     longitude: row.longitude || '',
     latitude: row.latitude || '',
-    regionName: row.regionName || '',
+    orgId: row.orgId ? String(row.orgId) : '',  // 使用字符串避免精度丢失
     pointType: row.pointType || factoryPointType,
     pointStatus: row.pointStatus || enabledPointStatus
   })
@@ -319,7 +321,7 @@ function resetQuery() {
   query.pageSize = DEFAULT_PAGE_SIZE
   query.keyword = ''
   query.pointType = ''
-  query.regionName = ''
+  query.orgId = ''
   query.pointStatus = ''
   activeStatKey.value = 'all'
   loadData()
@@ -348,7 +350,7 @@ function buildPayload(source) {
     address: source.address?.trim() || '',
     longitude: source.longitude?.trim() || '',
     latitude: source.latitude?.trim() || '',
-    regionName: source.regionName?.trim() || '',
+    orgId: source.orgId ? String(source.orgId).trim() : null,  // 使用字符串避免精度丢失
     pointType: source.pointType || factoryPointType,
     pointStatus: source.pointStatus || enabledPointStatus
   }
@@ -402,21 +404,14 @@ async function loadSummary() {
   summaryTotal.value = Number(result.total || 0)
 }
 
-function normalizeDictOptions(items) {
-  if (!Array.isArray(items)) {
-    return []
-  }
-  return items
-    .map((item) => ({
-      label: item.label || item.value || '',
-      value: item.value || item.label || ''
-    }))
-    .filter((item) => item.label && item.value)
-}
-
-async function loadWaterPlants() {
-  const result = await fetchDictItemsApi('water_plant')
-  waterPlantOptions.value = normalizeDictOptions(result)
+async function loadOrgOptions() {
+  const result = await fetchMonitoringPointOrgOptionsApi()
+  orgOptions.value = Array.isArray(result)
+    ? result.map((item) => ({
+        label: item.orgName,
+        value: String(item.id)  // 使用字符串避免精度丢失
+      }))
+    : []
 }
 
 async function handleExport() {
@@ -434,8 +429,8 @@ async function submit() {
     ElMessage.warning('请先填写点位名称')
     return
   }
-  if (!payload.regionName) {
-    ElMessage.warning('请选择所属水厂')
+  if (!payload.orgId) {
+    ElMessage.warning('请选择所属机构')
     return
   }
   if (!payload.pointType) {
@@ -488,7 +483,7 @@ async function togglePointStatus(row) {
 onMounted(() => {
   loadData()
   loadSummary()
-  loadWaterPlants()
+  loadOrgOptions()
 })
 </script>
 

@@ -17,6 +17,16 @@ public class CurrentUser implements Serializable {
     private String roleCode;
 
     /**
+     * 所属机构ID。
+     */
+    private Long orgId;
+
+    /**
+     * 所属机构名称。
+     */
+    private String orgName;
+
+    /**
      * 当前登录角色拥有的权限码。
      */
     private Set<String> permissionCodes;

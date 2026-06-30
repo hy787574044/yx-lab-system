@@ -2,6 +2,8 @@ package com.yx.lab.modules.sample.entity;
 
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.yx.lab.common.model.BaseEntity;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
@@ -28,9 +30,14 @@ public class MonitoringPoint extends BaseEntity {
     @TableField("latitude")
     private String latitude;
 
-    @Schema(description = "所属水厂")
-    @TableField("region_name")
-    private String regionName;
+    @Schema(description = "所属机构ID")
+    @TableField("org_id")
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long orgId;
+
+    @Schema(description = "所属机构名称（关联查询）")
+    @TableField(exist = false)
+    private String orgName;
 
     @Schema(description = "点位类型")
     @TableField("point_type")

@@ -413,6 +413,8 @@ public class AuthService {
         currentUser.setUsername(user.getUsername());
         currentUser.setRealName(user.getRealName());
         currentUser.setRoleCode(user.getRoleCode());
+        currentUser.setOrgId(user.getOrgId());
+        currentUser.setOrgName(user.getOrgName());
         currentUser.setPermissionCodes(permissionService.resolvePermissions(user.getRoleCode()));
         currentUser.setDataScope(permissionService.resolveDataScope(user.getRoleCode()));
         return currentUser;
