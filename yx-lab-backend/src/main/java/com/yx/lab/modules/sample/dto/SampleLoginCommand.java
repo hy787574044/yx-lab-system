@@ -13,7 +13,6 @@ public class SampleLoginCommand {
 
     private Long taskId;
 
-    @NotNull(message = "采样点位不能为空")
     private Long pointId;
 
     @NotBlank(message = "采样点位名称不能为空")

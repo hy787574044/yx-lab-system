@@ -3606,7 +3606,8 @@ async function submitSampleLogin() {
     ElMessage.warning('没有可登录的任务，请先确认采样计划是否已生成任务')
     return
   }
-  if (!loginForm.pointId || !loginForm.pointName || !loginForm.sampleType || !loginForm.sampleSourceMethod || !loginForm.detectionTypeId || !loginForm.detectionItems || !loginForm.samplingTime) {
+  const detectionItems = parseDetectionItemsText(loginForm.detectionItems || loginForm.detectionTypeName)
+  if (!loginForm.pointName || !loginForm.sampleType || !loginForm.sampleSourceMethod || !loginForm.detectionTypeId || !detectionItems || !loginForm.samplingTime || !loginForm.samplerName) {
     ElMessage.warning('请完整填写样品登录信息')
     return
   }
@@ -3623,7 +3624,7 @@ async function submitSampleLogin() {
   try {
     const sample = await loginSampleApi({
       ...loginForm,
-      detectionItems: parseDetectionItemsText(loginForm.detectionItems),
+      detectionItems,
       detectionTypeId: loginForm.detectionTypeId,
       detectionTypeName: loginForm.detectionTypeName,
       detectionConfigItems: loginDetectionConfigRows.value.map((item) => ({
