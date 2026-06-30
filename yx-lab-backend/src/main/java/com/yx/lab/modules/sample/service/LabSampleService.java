@@ -662,20 +662,30 @@ public class LabSampleService {
     }
 
     private Long resolveSamplerId(SampleLoginCommand command, SamplingTask task, CurrentUser currentUser) {
+        if (!isAdmin(currentUser)) {
+            return currentUser.getUserId();
+        }
+        Long submittedSamplerId = command.getSamplerId();
+        if (isSamplerAssigned(task, submittedSamplerId)) {
+            return submittedSamplerId;
+        }
         if (task != null && task.getSamplerId() != null) {
             return task.getSamplerId();
         }
-        return isAdmin(currentUser) ? command.getSamplerId() : currentUser.getUserId();
+        return submittedSamplerId;
     }
 
     private String resolveSamplerName(SampleLoginCommand command, SamplingTask task, CurrentUser currentUser) {
+        if (!isAdmin(currentUser)) {
+            return StrUtil.isNotBlank(currentUser.getRealName()) ? currentUser.getRealName() : currentUser.getUsername();
+        }
+        if (isSamplerAssigned(task, command.getSamplerId())) {
+            return command.getSamplerName();
+        }
         if (task != null && StrUtil.isNotBlank(task.getSamplerName())) {
             return task.getSamplerName();
         }
-        if (isAdmin(currentUser)) {
-            return command.getSamplerName();
-        }
-        return StrUtil.isNotBlank(currentUser.getRealName()) ? currentUser.getRealName() : command.getSamplerName();
+        return command.getSamplerName();
     }
 
     private boolean isSamplerAssigned(SamplingTask task, Long samplerId) {
