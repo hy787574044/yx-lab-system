@@ -16,33 +16,6 @@ export const labMenuGroups = [
     ]
   },
   {
-    id: 'sample',
-    title: '样品管理',
-    shortTitle: '样品',
-    iconKey: 'Tickets',
-    defaultPath: '/sample-login',
-    children: [
-      {
-        path: '/sample-login',
-        title: '样品登录',
-        shortTitle: '样品登录',
-        subtitle: '发起样品登录并承接后续检测流程。',
-        componentKey: 'SamplingView',
-        defaultTab: 'samples',
-        defaultStatKey: 'samples:logged'
-      },
-      {
-        path: '/sample-ledger',
-        title: '样品台账',
-        shortTitle: '样品台账',
-        subtitle: '展示全部样品数据，并支持状态流转查询。',
-        componentKey: 'SamplingView',
-        defaultTab: 'samples',
-        defaultStatKey: 'samples:all'
-      }
-    ]
-  },
-  {
     id: 'task',
     title: '任务管理',
     shortTitle: '任务',
@@ -195,6 +168,33 @@ export const labMenuGroups = [
         shortTitle: '报告台账',
         subtitle: '展示全部检测报告数据，支持溯源、预览与下载等操作。',
         componentKey: 'ReportView'
+      }
+    ]
+  },
+  {
+    id: 'sample',
+    title: '样品管理',
+    shortTitle: '样品',
+    iconKey: 'Tickets',
+    defaultPath: '/sample-login',
+    children: [
+      {
+        path: '/sample-login',
+        title: '样品登录',
+        shortTitle: '样品登录',
+        subtitle: '发起样品登录并承接后续检测流程。',
+        componentKey: 'SamplingView',
+        defaultTab: 'samples',
+        defaultStatKey: 'samples:logged'
+      },
+      {
+        path: '/sample-ledger',
+        title: '样品台账',
+        shortTitle: '样品台账',
+        subtitle: '展示全部样品数据，并支持状态流转查询。',
+        componentKey: 'SamplingView',
+        defaultTab: 'samples',
+        defaultStatKey: 'samples:all'
       }
     ]
   },
