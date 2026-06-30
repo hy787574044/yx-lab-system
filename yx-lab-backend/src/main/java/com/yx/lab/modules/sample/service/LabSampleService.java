@@ -199,6 +199,7 @@ public class LabSampleService {
         task.setTaskStatus(LabWorkflowConstants.SamplingTaskStatus.COMPLETED);
         task.setFinishedTime(DateUtil.toLocalDateTime(DateUtil.date()));
         samplingTaskMapper.updateById(task);
+        samplingPlanService.refreshPlanStatusAfterTaskChange(task.getPlanId());
         // 样品一旦登录完成，立即补齐后续待分配检测主流程与参数子流程。
         detectionPendingFlowService.createPendingFlowIfMissing(sample);
         enrichSampleDetectionConfigSnapshotForView(sample);
