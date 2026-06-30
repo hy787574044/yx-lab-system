@@ -149,7 +149,8 @@
       v-model="resultDialogVisible"
       class="detection-result-dialog"
       :title="resultDialogTitle"
-      width="760px"
+      width="980px"
+      top="3vh"
       destroy-on-close
       @closed="resetResultForm"
     >
@@ -191,7 +192,6 @@
               <el-input-number
                 v-else
                 v-model="resultForm.resultValue"
-                :precision="4"
                 :step="0.01"
                 controls-position="right"
                 class="result-value-input"
@@ -672,26 +672,32 @@ watch(() => route.fullPath, async () => {
 }
 
 .result-dialog {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 12px;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .result-dialog__summary {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  flex-wrap: nowrap;
+  gap: 6px;
+  overflow: hidden;
 }
 
 .result-meta-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
 }
 
 .result-meta-card {
   display: grid;
   gap: 4px;
-  padding: 12px 14px;
+  padding: 10px 12px;
   border: 1px solid var(--line-soft);
   border-radius: 12px;
   background: var(--bg-panel-soft);
@@ -705,14 +711,18 @@ watch(() => route.fullPath, async () => {
 .result-meta-card strong {
   color: var(--text-main);
   font-size: 14px;
-  line-height: 1.6;
+  line-height: 1.45;
   font-weight: 600;
 }
 
 .result-step-panel {
-  display: grid;
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 220px;
+  flex-direction: column;
   gap: 6px;
   margin-bottom: 12px;
+  overflow: hidden;
   padding: 14px 16px;
   border: 1px solid;
   border-radius: 12px;
@@ -728,14 +738,42 @@ watch(() => route.fullPath, async () => {
 }
 
 .result-step-panel strong {
+  min-height: 0;
   color: var(--text-main);
   font-size: 15px;
   line-height: 1.75;
   font-weight: 600;
+  overflow: hidden;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .result-dialog__form {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
   margin-top: 2px;
+}
+
+:deep(.detection-result-dialog) {
+  display: flex;
+  flex-direction: column;
+  height: min(840px, 94vh);
+  max-height: 94vh;
+  margin-bottom: 0;
+}
+
+:deep(.detection-result-dialog .el-dialog__body) {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+:deep(.detection-result-dialog .el-dialog__footer) {
+  flex: 0 0 auto;
 }
 
 .result-value-field {
@@ -779,8 +817,10 @@ watch(() => route.fullPath, async () => {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  flex: 0 1 auto;
+  min-width: 0;
   min-height: 32px;
-  padding: 0 12px;
+  padding: 0 10px;
   border-radius: 999px;
   border: 1px solid color-mix(in srgb, var(--brand) 16%, #ffffff 84%);
   background: color-mix(in srgb, var(--brand) 7%, #ffffff 93%);
@@ -791,9 +831,17 @@ watch(() => route.fullPath, async () => {
 .binding-editor__chip strong {
   color: var(--brand);
   font-size: 15px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 @media (max-width: 900px) {
+  .result-dialog__summary {
+    flex-wrap: wrap;
+  }
+
   .result-meta-grid {
     grid-template-columns: 1fr;
   }

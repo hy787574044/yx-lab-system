@@ -387,7 +387,6 @@
               <el-input-number
                 v-else
                 v-model="row.resultValue"
-                :precision="4"
                 :step="0.01"
                 controls-position="right"
                 style="width: 100%"

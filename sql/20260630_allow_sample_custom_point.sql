@@ -1,0 +1,2 @@
+ALTER TABLE lab_sample
+    MODIFY COLUMN point_id BIGINT NULL COMMENT '监测点位ID';

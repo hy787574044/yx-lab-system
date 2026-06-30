@@ -251,7 +251,7 @@ CREATE TABLE lab_sample (
     id BIGINT PRIMARY KEY,
     sample_no VARCHAR(64) NOT NULL,
     task_id BIGINT,
-    point_id BIGINT NOT NULL,
+    point_id BIGINT,
     point_name VARCHAR(128) NOT NULL,
     sample_type VARCHAR(32),
     sample_source_method VARCHAR(32) DEFAULT 'SAMPLING',
