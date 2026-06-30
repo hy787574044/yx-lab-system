@@ -557,107 +557,113 @@
       v-model="parameterBindingDialogVisible"
       :title="parameterBindingDialogTitle"
       width="920px"
+      top="4vh"
+      class="parameter-binding-dialog"
       destroy-on-close
       @closed="resetParameterBindingState"
     >
-      <div class="dialog-summary">
-        <div class="summary-chip">
-          <span>当前参数</span>
-          <strong>{{ currentParameterBinding?.parameterName || '-' }}</strong>
+      <div class="parameter-binding-dialog__content">
+        <div class="dialog-summary">
+          <div class="summary-chip">
+            <span>当前参数</span>
+            <strong>{{ currentParameterBinding?.parameterName || '-' }}</strong>
+          </div>
+          <button
+            type="button"
+            :class="['summary-chip', 'summary-chip--action', { 'is-active': parameterBindingFilter === 'selected' }]"
+            @click="switchParameterBindingFilter('selected')"
+          >
+            <span>已选方法</span>
+            <strong>{{ selectedParameterBindingMethodCount }}</strong>
+          </button>
+          <button
+            type="button"
+            :class="['summary-chip', 'summary-chip--action', { 'is-active': parameterBindingFilter === 'pending' }]"
+            @click="switchParameterBindingFilter('pending')"
+          >
+            <span>待绑定方法</span>
+            <strong>{{ pendingParameterBindingMethodCount }}</strong>
+          </button>
         </div>
-        <button
-          type="button"
-          :class="['summary-chip', 'summary-chip--action', { 'is-active': parameterBindingFilter === 'selected' }]"
-          @click="switchParameterBindingFilter('selected')"
-        >
-          <span>已选方法</span>
-          <strong>{{ selectedParameterBindingMethodCount }}</strong>
-        </button>
-        <button
-          type="button"
-          :class="['summary-chip', 'summary-chip--action', { 'is-active': parameterBindingFilter === 'pending' }]"
-          @click="switchParameterBindingFilter('pending')"
-        >
-          <span>待绑定方法</span>
-          <strong>{{ pendingParameterBindingMethodCount }}</strong>
-        </button>
-      </div>
 
-      <div class="toolbar-panel binding-dialog-toolbar">
-        <div class="toolbar-row">
-          <div class="toolbar-fields">
-            <label class="toolbar-field toolbar-field--medium">
-              <span>方法检索</span>
-              <el-input
-                v-model="parameterBindingKeyword"
-                clearable
-                placeholder="请输入方法名称、编码、标准编号或已绑定参数"
-              />
-            </label>
-          </div>
-          <div class="toolbar-actions">
-            <el-button
-              :type="parameterBindingFilter === 'all' ? 'primary' : 'default'"
-              @click="switchParameterBindingFilter('all')"
-            >
-              全部方法
-            </el-button>
-          </div>
-        </div>
-      </div>
-
-      <div class="method-option-grid">
-        <div
-          v-for="item in filteredParameterBindingMethodOptions"
-          :key="item.id"
-          :class="[
-            'method-option-card',
-            {
-              'is-disabled': isParameterBindingMethodDisabled(item),
-              'is-selected': isParameterBindingMethodSelected(item.id),
-              'is-locked': isParameterBindingCurrentBoundMethod(item)
-            }
-          ]"
-        >
-          <div class="method-option-head">
-            <el-checkbox
-              :model-value="isParameterBindingMethodSelected(item.id)"
-              :disabled="isParameterBindingMethodDisabled(item) || isParameterBindingCurrentBoundMethod(item)"
-              @change="(checked) => handleParameterBindingMethodToggle(item, checked)"
-            >
-              {{ item.methodName || '未命名方法' }}
-            </el-checkbox>
-            <span :class="['status-chip', item.enabled === 1 ? 'success' : 'warning']">
-              {{ item.enabled === 1 ? '启用' : '停用' }}
-            </span>
-          </div>
-          <div class="method-option-meta">
-            <span>编码：{{ item.methodCode || '-' }}</span>
-            <span>标准：{{ item.standardCode || '-' }}</span>
-          </div>
-          <div class="method-option-meta">
-            <span>检测步骤：{{ item.methodBasis || '-' }}</span>
-          </div>
-          <div class="method-option-footer">
-            <span
-              v-if="item.parameterId && item.parameterId !== currentParameterBinding?.id"
-              class="binding-tip binding-tip--locked"
-            >
-              已绑定到参数：{{ item.parameterName || item.parameterId }}
-            </span>
-            <span
-              v-else-if="item.parameterId === currentParameterBinding?.id"
-              class="binding-tip binding-tip--self"
-            >
-              当前已绑定
-            </span>
-            <span v-else class="binding-tip">当前未绑定，可直接选用</span>
+        <div class="toolbar-panel binding-dialog-toolbar">
+          <div class="toolbar-row">
+            <div class="toolbar-fields">
+              <label class="toolbar-field toolbar-field--medium">
+                <span>方法检索</span>
+                <el-input
+                  v-model="parameterBindingKeyword"
+                  clearable
+                  placeholder="请输入方法名称、编码、标准编号或已绑定参数"
+                />
+              </label>
+            </div>
+            <div class="toolbar-actions">
+              <el-button
+                :type="parameterBindingFilter === 'all' ? 'primary' : 'default'"
+                @click="switchParameterBindingFilter('all')"
+              >
+                全部方法
+              </el-button>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div v-if="!filteredParameterBindingMethodOptions.length" class="empty-block">
-        暂无符合条件的检测方法
+        <div class="parameter-binding-dialog__scroll">
+          <div v-if="filteredParameterBindingMethodOptions.length" class="method-option-grid">
+            <div
+              v-for="item in filteredParameterBindingMethodOptions"
+              :key="item.id"
+              :class="[
+                'method-option-card',
+                {
+                  'is-disabled': isParameterBindingMethodDisabled(item),
+                  'is-selected': isParameterBindingMethodSelected(item.id),
+                  'is-locked': isParameterBindingCurrentBoundMethod(item)
+                }
+              ]"
+            >
+              <div class="method-option-head">
+                <el-checkbox
+                  :model-value="isParameterBindingMethodSelected(item.id)"
+                  :disabled="isParameterBindingMethodDisabled(item) || isParameterBindingCurrentBoundMethod(item)"
+                  @change="(checked) => handleParameterBindingMethodToggle(item, checked)"
+                >
+                  {{ item.methodName || '未命名方法' }}
+                </el-checkbox>
+                <span :class="['status-chip', item.enabled === 1 ? 'success' : 'warning']">
+                  {{ item.enabled === 1 ? '启用' : '停用' }}
+                </span>
+              </div>
+              <div class="method-option-meta">
+                <span>编码：{{ item.methodCode || '-' }}</span>
+                <span>标准：{{ item.standardCode || '-' }}</span>
+              </div>
+              <div class="method-option-meta">
+                <span>检测步骤：{{ item.methodBasis || '-' }}</span>
+              </div>
+              <div class="method-option-footer">
+                <span
+                  v-if="item.parameterId && item.parameterId !== currentParameterBinding?.id"
+                  class="binding-tip binding-tip--locked"
+                >
+                  已绑定到参数：{{ item.parameterName || item.parameterId }}
+                </span>
+                <span
+                  v-else-if="item.parameterId === currentParameterBinding?.id"
+                  class="binding-tip binding-tip--self"
+                >
+                  当前已绑定
+                </span>
+                <span v-else class="binding-tip">当前未绑定，可直接选用</span>
+              </div>
+            </div>
+          </div>
+
+          <div v-else class="empty-block">
+            暂无符合条件的检测方法
+          </div>
+        </div>
       </div>
 
       <template #footer>
@@ -1905,6 +1911,41 @@ watch(() => route.fullPath, async () => {
   margin-bottom: 16px;
 }
 
+:deep(.parameter-binding-dialog) {
+  display: flex;
+  flex-direction: column;
+  height: min(760px, 88vh);
+  max-height: 88vh;
+  margin-bottom: 0;
+}
+
+:deep(.parameter-binding-dialog .el-dialog__body) {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  padding-bottom: 0;
+}
+
+:deep(.parameter-binding-dialog .el-dialog__footer) {
+  flex: 0 0 auto;
+}
+
+.parameter-binding-dialog__content {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  width: 100%;
+}
+
+.parameter-binding-dialog__scroll {
+  flex: 1;
+  min-height: 260px;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
 .method-option-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2296,6 +2337,12 @@ watch(() => route.fullPath, async () => {
 
   .method-option-grid {
     grid-template-columns: 1fr;
+  }
+
+  :deep(.parameter-binding-dialog) {
+    width: min(920px, calc(100vw - 24px));
+    height: 92vh;
+    max-height: 92vh;
   }
 
   .binding-workbench__methods-head,
