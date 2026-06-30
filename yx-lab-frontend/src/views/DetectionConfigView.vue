@@ -331,7 +331,7 @@
               <el-radio-button :label="0">停用</el-radio-button>
             </el-radio-group>
           </el-form-item>
-          <el-form-item class="form-span-2" label="可选检测方法">
+          <el-form-item v-if="parameterForm.id" class="form-span-2" label="可选检测方法">
             <div class="parameter-method-editor">
               <div class="parameter-method-editor__summary">
                 <span class="binding-editor__chip">
@@ -1431,11 +1431,13 @@ async function submitParameterForm() {
     unit: parameterForm.unit.trim(),
     exceedRule: parameterForm.exceedRule.trim(),
     referenceStandard: parameterForm.referenceStandard.trim(),
-    methodIds: Array.from(new Set(
-      parameterForm.methodIds
-        .map((item) => String(item || '').trim())
-        .filter(Boolean)
-    )),
+    methodIds: parameterForm.id
+      ? Array.from(new Set(
+        parameterForm.methodIds
+          .map((item) => String(item || '').trim())
+          .filter(Boolean)
+      ))
+      : [],
     enabled: parameterForm.enabled,
     remark: parameterForm.remark.trim()
   }
