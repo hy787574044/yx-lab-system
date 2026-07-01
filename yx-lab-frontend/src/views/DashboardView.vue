@@ -3446,8 +3446,8 @@ onUnmounted(() => {
 }
 
 .result-value-input.result-value-select {
-  width: 330px !important;
-  min-width: 330px !important;
+  width: 165px !important;
+  min-width: 165px !important;
 }
 
 .result-value-unit {

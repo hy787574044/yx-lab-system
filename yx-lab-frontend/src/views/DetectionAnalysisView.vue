@@ -847,8 +847,8 @@ watch(() => route.fullPath, async () => {
 }
 
 .result-value-input.result-value-select {
-  width: 330px !important;
-  min-width: 330px !important;
+  width: 165px !important;
+  min-width: 165px !important;
 }
 
 :deep(.result-field-header .cell),
