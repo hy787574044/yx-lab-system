@@ -385,6 +385,9 @@ public class SamplingTaskService {
             }
             if (plan != null) {
                 fillBlankTaskSampleContext(task, plan.getPointName(), plan.getSampleType());
+                if (StrUtil.isNotBlank(plan.getPlanName())) {
+                    task.setPlanName(plan.getPlanName());
+                }
             }
         }
     }

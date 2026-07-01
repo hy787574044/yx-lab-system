@@ -1124,7 +1124,7 @@ function getActionRowTitle(row) {
     return row?.planName || row?.pointName || '-'
   }
   if (activeAction.value === 'sampling' || activeAction.value === 'sampleLogin') {
-    return row?.taskNo || row?.sampleNo || '-'
+    return row?.planName || row?.pointName || '-'
   }
   if (activeAction.value === 'detectionSplit' || activeAction.value === 'detection' || activeAction.value === 'review') {
     return row?.sampleNo || row?.parameterName || '-'
@@ -1140,7 +1140,7 @@ function getActionRowMeta(row) {
     return `${row?.pointName || '-'} / ${row?.cycleType || '-'}`
   }
   if (activeAction.value === 'sampling' || activeAction.value === 'sampleLogin') {
-    return `${row?.pointName || '-'} / ${row?.samplerName || '-'}`
+    return `${row?.pointName || '-'}`
   }
   if (activeAction.value === 'detectionSplit' || activeAction.value === 'detection') {
     return `${row?.parameterName || '-'} / ${row?.methodName || '-'}`

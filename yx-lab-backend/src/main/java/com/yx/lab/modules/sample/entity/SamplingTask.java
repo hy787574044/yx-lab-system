@@ -137,4 +137,8 @@ public class SamplingTask extends BaseEntity {
     @Schema(description = "采样瓶数")
     @TableField("sample_bottle_count")
     private String sampleBottleCount;
+
+    @Schema(description = "计划名称（不从数据库映射，仅用于视图展示）")
+    @TableField(exist = false)
+    private String planName;
 }
