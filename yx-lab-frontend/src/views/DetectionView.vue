@@ -278,8 +278,10 @@
               <el-table-column prop="methodName" label="检测方法" min-width="130" show-overflow-tooltip>
                 <template #default="{ row }">{{ row.methodName || '-' }}</template>
               </el-table-column>
-              <el-table-column label="检测步骤" min-width="210" show-overflow-tooltip>
-                <template #default="{ row }">{{ getMethodBasis(row) }}</template>
+              <el-table-column label="检测步骤" min-width="240" class-name="cell-multiline">
+                <template #default="{ row }">
+                  <span class="method-basis-text">{{ getMethodBasis(row) }}</span>
+                </template>
               </el-table-column>
               <el-table-column label="检测人员" width="110">
                 <template #default="{ row }">{{ row.detectorName || '-' }}</template>
@@ -300,7 +302,7 @@
               </el-table-column>
               <el-table-column label="标准范围" min-width="120">
                 <template #default="{ row }">
-                  {{ formatStandardRange(row.standardMin, row.standardMax) }}
+                  {{ formatStandardRange(row.standardMin, row.standardMax, null, row.optionValues) }}
                 </template>
               </el-table-column>
               <el-table-column prop="unit" label="单位" width="72">
@@ -311,7 +313,7 @@
               </el-table-column>
               <el-table-column label="检测结果" width="100" header-cell-class-name="result-field-header">
                 <template #default="{ row }">
-                  {{ row.resultValue ?? '-' }}
+                  {{ getResultDisplayValue(row) }}
                 </template>
               </el-table-column>
               <el-table-column label="操作" width="100" fixed="right" header-cell-class-name="cell-center" class-name="cell-center">
@@ -376,7 +378,7 @@
           <el-table-column prop="methodName" label="检测方法" min-width="150" show-overflow-tooltip />
           <el-table-column label="标准范围" min-width="120">
             <template #default="{ row }">
-              {{ formatStandardRange(row.standardMin, row.standardMax, row.unit) }}
+              {{ formatStandardRange(row.standardMin, row.standardMax, row.unit, row.optionValues) }}
             </template>
           </el-table-column>
           <el-table-column prop="unit" label="单位" width="72">
@@ -385,9 +387,22 @@
           <el-table-column prop="referenceStandard" label="检测标准" min-width="130" show-overflow-tooltip>
             <template #default="{ row }">{{ row.referenceStandard || '-' }}</template>
           </el-table-column>
-          <el-table-column label="检测结果" width="100" header-cell-class-name="result-field-header">
+          <el-table-column label="检测结果" width="120" header-cell-class-name="result-field-header">
             <template #default="{ row }">
-              <span v-if="resultDialogReadonly">{{ row.resultValue ?? '-' }}</span>
+              <span v-if="resultDialogReadonly">{{ getResultDisplayValue(row) }}</span>
+              <el-select
+                v-else-if="row.optionValues"
+                v-model="row.resultValue"
+                style="width: 100%"
+                placeholder="请选择"
+              >
+                <el-option
+                  v-for="(label, index) in parseOptionValuesArray(row.optionValues)"
+                  :key="index"
+                  :label="label"
+                  :value="String(index)"
+                />
+              </el-select>
               <el-input-number
                 v-else
                 v-model="row.resultValue"
@@ -920,7 +935,21 @@ function syncRouteState() {
   query.pageNum = 1
 }
 
-function formatStandardRange(min, max, unit) {
+function parseOptionValuesArray(json) {
+  if (!json) return []
+  try {
+    const arr = JSON.parse(json)
+    return Array.isArray(arr) ? arr : []
+  } catch {
+    return []
+  }
+}
+
+function formatStandardRange(min, max, unit, optionValues) {
+  if (optionValues) {
+    const options = parseOptionValuesArray(optionValues)
+    if (options.length) return options.join(' / ')
+  }
   const suffix = unit ? ` ${unit}` : ''
   if (min != null && max != null) {
     return `${min} - ${max}${suffix}`
@@ -1226,6 +1255,9 @@ function isResultValueAbnormal(item) {
   if (!item || item.resultValue == null || item.resultValue === '') {
     return false
   }
+  if (item.optionValues) {
+    return false
+  }
   const value = Number(item.resultValue)
   if (!Number.isFinite(value)) {
     return false
@@ -1241,7 +1273,17 @@ function getResultRangeError(item) {
     return ''
   }
   const parameterName = item.parameterName || '当前检测参数'
-  return `检测结果存在异常，禁止录入：${parameterName}，标准范围 ${formatStandardRange(item.standardMin, item.standardMax, item.unit)}，检测结果 ${item.resultValue}`
+  return `检测结果超出标准范围：${parameterName}，标准范围 ${formatStandardRange(item.standardMin, item.standardMax, item.unit, item.optionValues)}，请检查结果值`
+}
+
+function getResultDisplayValue(item) {
+  if (!item || item.resultValue == null || item.resultValue === '') return '-'
+  if (item.optionValues) {
+    const options = parseOptionValuesArray(item.optionValues)
+    const index = Number(item.resultValue)
+    return options[index] ?? item.resultValue
+  }
+  return item.resultValue
 }
 
 function getResultValueStatusLabel(item) {
@@ -1308,6 +1350,7 @@ async function openResultDialog(row, item) {
     methodName: currentItem.methodName || '',
     standardMin: currentItem.standardMin,
     standardMax: currentItem.standardMax,
+    optionValues: currentItem.optionValues || '',
     referenceStandard: currentItem.referenceStandard || '',
     unit: currentItem.unit || '',
     resultValue: currentItem.resultValue == null ? null : Number(currentItem.resultValue)
@@ -1344,6 +1387,7 @@ async function openRecordResultDialog(row) {
     methodName: currentItem.methodName || '',
     standardMin: currentItem.standardMin,
     standardMax: currentItem.standardMax,
+    optionValues: currentItem.optionValues || '',
     referenceStandard: currentItem.referenceStandard || '',
     unit: currentItem.unit || '',
     resultValue: currentItem.resultValue == null ? null : Number(currentItem.resultValue)
@@ -1420,7 +1464,8 @@ async function submitDetectionResult() {
         standardMin: item.standardMin,
         standardMax: item.standardMax,
         resultValue: item.resultValue,
-        unit: item.unit
+        unit: item.unit,
+        optionValues: item.optionValues || ''
       }))
     })
     resultDialogVisible.value = false

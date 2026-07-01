@@ -28,5 +28,7 @@ public class DetectionParameterSaveCommand {
 
     private String remark;
 
+    private String optionValues;
+
     private List<Long> methodIds;
 }

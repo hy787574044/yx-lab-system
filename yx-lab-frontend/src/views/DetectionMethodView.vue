@@ -145,8 +145,20 @@
           <el-table-column prop="parameterName" label="已绑定参数" min-width="150">
             <template #default="{ row }">{{ row.parameterName || '未绑定' }}</template>
           </el-table-column>
-          <el-table-column prop="methodBasis" label="检测步骤" min-width="220" show-overflow-tooltip>
-            <template #default="{ row }">{{ row.methodBasis || '-' }}</template>
+          <el-table-column prop="methodBasis" label="检测步骤" min-width="220">
+            <template #default="{ row }">
+              <el-tooltip
+                effect="dark"
+                placement="top"
+                popper-class="method-basis-tooltip"
+                :disabled="!row.methodBasis"
+              >
+                <template #content>
+                  <span class="preserve-line-breaks">{{ row.methodBasis || '-' }}</span>
+                </template>
+                <span class="method-basis-ellipsis">{{ row.methodBasis || '-' }}</span>
+              </el-tooltip>
+            </template>
           </el-table-column>
           <el-table-column prop="applyScope" label="适用范围" min-width="180" show-overflow-tooltip>
             <template #default="{ row }">{{ row.applyScope || '-' }}</template>
@@ -230,8 +242,8 @@
             <el-input
               v-model="form.methodBasis"
               type="textarea"
-              :rows="3"
-              placeholder="请输入检测步骤、方法说明或执行标准"
+              :autosize="{ minRows: 4, maxRows: 10 }"
+              placeholder="请输入检测步骤、方法说明或执行标准，按 Enter 可手动换行"
             />
           </el-form-item>
           <el-form-item class="form-span-2" label="适用范围">
@@ -356,6 +368,7 @@ import { ElCheckbox } from 'element-plus/es/components/checkbox/index.mjs'
 import { ElRadioButton, ElRadioGroup } from 'element-plus/es/components/radio/index.mjs'
 import { ElOption, ElSelect } from 'element-plus/es/components/select/index.mjs'
 import { ElTable, ElTableColumn } from 'element-plus/es/components/table/index.mjs'
+import { ElTooltip } from 'element-plus/es/components/tooltip/index.mjs'
 import TablePagination from '../components/common/TablePagination.vue'
 import {
   createDetectionMethodApi,
@@ -881,6 +894,19 @@ onMounted(async () => {
   gap: 6px;
   min-height: 68px;
   padding: 4px 0;
+}
+
+.method-basis-ellipsis {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+:global(.method-basis-tooltip) {
+  max-width: 520px;
+  line-height: 1.7;
 }
 
 .binding-tree {

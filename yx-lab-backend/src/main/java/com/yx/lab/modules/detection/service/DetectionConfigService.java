@@ -695,6 +695,7 @@ public class DetectionConfigService {
         entity.setReferenceStandard(StrUtil.trim(command.getReferenceStandard()));
         entity.setEnabled(command.getEnabled());
         entity.setRemark(StrUtil.trim(command.getRemark()));
+        entity.setOptionValues(StrUtil.trim(command.getOptionValues()));
     }
 
     private void applyMethodCommand(DetectionMethod entity, DetectionMethodSaveCommand command) {
@@ -1443,6 +1444,7 @@ public class DetectionConfigService {
         vo.setEnabled(parameter.getEnabled());
         vo.setRemark(parameter.getRemark());
         vo.setUpdatedTime(parameter.getUpdatedTime());
+        vo.setOptionValues(parameter.getOptionValues());
 
         List<DetectionMethod> bindingMethods = methods == null ? Collections.emptyList() : methods;
         vo.setMethodIds(bindingMethods.stream()

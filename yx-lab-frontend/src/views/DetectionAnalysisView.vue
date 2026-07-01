@@ -83,14 +83,16 @@
             <el-table-column prop="methodName" label="检测方法" min-width="150" show-overflow-tooltip>
               <template #default="{ row }">{{ row.methodName || '-' }}</template>
             </el-table-column>
-            <el-table-column label="检测步骤" min-width="220" show-overflow-tooltip>
-              <template #default="{ row }">{{ row.methodBasis || '-' }}</template>
+            <el-table-column label="检测步骤" min-width="260" class-name="cell-multiline">
+              <template #default="{ row }">
+                <span class="method-basis-text">{{ row.methodBasis || '-' }}</span>
+              </template>
             </el-table-column>
             <el-table-column label="检测人员" min-width="120">
               <template #default="{ row }">{{ row.detectorName || '-' }}</template>
             </el-table-column>
             <el-table-column label="标准范围" min-width="120">
-              <template #default="{ row }">{{ formatStandardRange(row.standardMin, row.standardMax) }}</template>
+              <template #default="{ row }">{{ formatStandardRange(row.standardMin, row.standardMax, null, row.optionValues) }}</template>
             </el-table-column>
             <el-table-column prop="unit" label="单位" width="72">
               <template #default="{ row }">{{ row.unit || '-' }}</template>
@@ -100,7 +102,8 @@
             </el-table-column>
             <el-table-column label="检测结果" min-width="120" header-cell-class-name="result-field-header">
               <template #default="{ row }">
-                {{ row.resultValue ?? '-' }}
+                <span v-if="row.optionValues">{{ (parseOptionValuesArray(row.optionValues)[row.resultValue] || row.resultValue) ?? '-' }}</span>
+                <span v-else>{{ row.resultValue ?? '-' }}</span>
               </template>
             </el-table-column>
             <el-table-column label="判定结果" width="110" header-cell-class-name="cell-center" class-name="cell-center">
@@ -173,7 +176,7 @@
           </div>
           <div class="result-meta-card">
             <span>标准范围</span>
-            <strong>{{ formatStandardRange(resultForm.standardMin, resultForm.standardMax, resultForm.unit) }}</strong>
+            <strong>{{ formatStandardRange(resultForm.standardMin, resultForm.standardMax, resultForm.unit, resultForm.optionValues) }}</strong>
           </div>
           <div class="result-meta-card">
             <span>单位</span>
@@ -184,11 +187,11 @@
         <el-form label-position="top" class="result-dialog__form">
           <div class="result-step-panel">
             <span>检测步骤</span>
-            <strong>{{ resultForm.methodBasis || '-' }}</strong>
+            <strong class="preserve-line-breaks">{{ resultForm.methodBasis || '-' }}</strong>
           </div>
           <el-form-item label="检测结果" :required="!resultDialogReadonly" class="result-field-form-item">
             <div class="result-value-field">
-              <span v-if="resultDialogReadonly" class="result-fixed-value">{{ resultForm.resultValue ?? '-' }}</span>
+              <span v-if="resultDialogReadonly" class="result-fixed-value">{{ getResultDisplayValue(resultForm) }}</span>
               <template v-else>
                 <el-button
                   class="ocr-trigger-btn"
@@ -196,7 +199,21 @@
                 >
                   OCR识别
                 </el-button>
+                <el-select
+                  v-if="resultForm.optionValues"
+                  v-model="resultForm.resultValue"
+                  class="result-value-input result-value-select"
+                  placeholder="请选择"
+                >
+                  <el-option
+                    v-for="(label, index) in parseOptionValuesArray(resultForm.optionValues)"
+                    :key="index"
+                    :label="label"
+                    :value="String(index)"
+                  />
+                </el-select>
                 <el-input-number
+                  v-else
                   v-model="resultForm.resultValue"
                   :step="0.01"
                   controls-position="right"
@@ -318,7 +335,8 @@ const resultForm = reactive({
   resultValue: null,
   abnormalRemark: '',
   remark: '',
-  itemStatus: ''
+  itemStatus: '',
+  optionValues: ''
 })
 
 const mineOptions = [
@@ -417,7 +435,21 @@ function getItemStatusClass(status) {
   return getStatusClass('detectionStatus', status)
 }
 
-function formatStandardRange(min, max, unit) {
+function parseOptionValuesArray(json) {
+  if (!json) return []
+  try {
+    const arr = JSON.parse(json)
+    return Array.isArray(arr) ? arr : []
+  } catch {
+    return []
+  }
+}
+
+function formatStandardRange(min, max, unit, optionValues) {
+  if (optionValues) {
+    const options = parseOptionValuesArray(optionValues)
+    if (options.length) return options.join(' / ')
+  }
   const suffix = unit ? ` ${unit}` : ''
   if (min != null && max != null) {
     return `${min} - ${max}${suffix}`
@@ -435,6 +467,9 @@ function isResultValueAbnormal(item) {
   if (!item || item.resultValue == null || item.resultValue === '') {
     return false
   }
+  if (item.optionValues) {
+    return false
+  }
   const value = Number(item.resultValue)
   if (!Number.isFinite(value)) {
     return false
@@ -450,7 +485,17 @@ function getResultRangeError(item) {
     return ''
   }
   const parameterName = item.parameterName || '当前检测参数'
-  return `检测结果存在异常，禁止录入：${parameterName}，标准范围 ${formatStandardRange(item.standardMin, item.standardMax, item.unit)}，检测结果 ${item.resultValue}`
+  return `检测结果超出标准范围：${parameterName}，标准范围 ${formatStandardRange(item.standardMin, item.standardMax, item.unit, item.optionValues)}，请检查结果值`
+}
+
+function getResultDisplayValue(item) {
+  if (!item || item.resultValue == null || item.resultValue === '') return '-'
+  if (item.optionValues) {
+    const options = parseOptionValuesArray(item.optionValues)
+    const index = Number(item.resultValue)
+    return options[index] ?? item.resultValue
+  }
+  return item.resultValue
 }
 
 function getResultValueStatusLabel(item) {
@@ -504,6 +549,7 @@ function resetResultForm() {
   resultForm.abnormalRemark = ''
   resultForm.remark = ''
   resultForm.itemStatus = ''
+  resultForm.optionValues = ''
 }
 
 function openResultDialog(row) {
@@ -528,6 +574,7 @@ function openResultDialog(row) {
   resultForm.abnormalRemark = row.abnormalRemark || ''
   resultForm.remark = row.remark || ''
   resultForm.itemStatus = row.itemStatus || ''
+  resultForm.optionValues = row.optionValues || ''
   resultDialogVisible.value = true
 }
 
@@ -562,6 +609,7 @@ async function submitDetectionResult() {
         standardMin: resultForm.standardMin,
         standardMax: resultForm.standardMax,
         resultValue: resultForm.resultValue,
+    optionValues: resultForm.optionValues || '',
         unit: resultForm.unit
       }]
     })
@@ -796,6 +844,11 @@ watch(() => route.fullPath, async () => {
 .result-value-input {
   width: 220px;
   max-width: 100%;
+}
+
+.result-value-input.result-value-select {
+  width: 330px !important;
+  min-width: 330px !important;
 }
 
 :deep(.result-field-header .cell),

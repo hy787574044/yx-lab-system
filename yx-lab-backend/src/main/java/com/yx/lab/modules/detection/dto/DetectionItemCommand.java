@@ -23,4 +23,6 @@ public class DetectionItemCommand {
     private BigDecimal resultValue;
 
     private String unit;
+
+    private String optionValues;
 }

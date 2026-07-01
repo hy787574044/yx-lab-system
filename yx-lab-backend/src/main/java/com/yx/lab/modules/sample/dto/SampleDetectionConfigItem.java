@@ -58,4 +58,9 @@ public class SampleDetectionConfigItem {
      * 检测步骤。
      */
     private String methodBasis;
+
+    /**
+     * 文本选项值JSON。
+     */
+    private String optionValues;
 }

@@ -11,7 +11,9 @@ import com.yx.lab.modules.detection.dto.DetectionAssignCommand;
 import com.yx.lab.modules.detection.dto.DetectionItemAssignCommand;
 import com.yx.lab.modules.detection.entity.DetectionItem;
 import com.yx.lab.modules.detection.entity.DetectionRecord;
+import com.yx.lab.modules.detection.entity.DetectionParameter;
 import com.yx.lab.modules.detection.mapper.DetectionItemMapper;
+import com.yx.lab.modules.detection.mapper.DetectionParameterMapper;
 import com.yx.lab.modules.detection.mapper.DetectionRecordMapper;
 import com.yx.lab.modules.sample.dto.SampleDetectionConfigItem;
 import com.yx.lab.modules.sample.entity.LabSample;
@@ -51,6 +53,8 @@ public class DetectionPendingFlowService {
     private final DetectionRecordMapper detectionRecordMapper;
 
     private final DetectionItemMapper detectionItemMapper;
+
+    private final DetectionParameterMapper detectionParameterMapper;
 
     private final LabSampleMapper labSampleMapper;
 
@@ -138,6 +142,8 @@ public class DetectionPendingFlowService {
             detectionRecordMapper.insert(record);
 
             // 每一个套餐参数都展开成独立子流程，后续可单独分配检测员、录入结果和审查。
+            // 批量查询参数配置，用于补全快照中缺失的 optionValues
+            Map<Long, DetectionParameter> parameterMap = loadParameterMap(configItems);
             for (SampleDetectionConfigItem configItem : configItems) {
                 DetectionItem item = new DetectionItem();
                 item.setRecordId(record.getId());
@@ -149,6 +155,15 @@ public class DetectionPendingFlowService {
                 item.setReferenceStandard(configItem.getReferenceStandard());
                 item.setMethodId(configItem.getMethodId());
                 item.setMethodName(configItem.getMethodName());
+                // 快照中可能没有 optionValues，从参数配置实时补全
+                String optionValues = configItem.getOptionValues();
+                if (StrUtil.isBlank(optionValues) && configItem.getParameterId() != null) {
+                    DetectionParameter param = parameterMap.get(configItem.getParameterId());
+                    if (param != null) {
+                        optionValues = param.getOptionValues();
+                    }
+                }
+                item.setOptionValues(optionValues);
                 item.setDetectorId(sample.getSamplerId());
                 item.setDetectorName(resolveSamplerDetectorName(sample));
                 item.setItemStatus(sample.getSamplerId() == null
@@ -159,6 +174,22 @@ public class DetectionPendingFlowService {
             }
             return record;
         }
+    }
+
+    /**
+     * 批量加载参数配置，用于补全快照中缺失的 optionValues。
+     */
+    private Map<Long, DetectionParameter> loadParameterMap(List<SampleDetectionConfigItem> configItems) {
+        Set<Long> parameterIds = configItems.stream()
+                .map(SampleDetectionConfigItem::getParameterId)
+                .filter(id -> id != null)
+                .collect(Collectors.toSet());
+        if (parameterIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        List<DetectionParameter> parameters = detectionParameterMapper.selectList(
+                new LambdaQueryWrapper<DetectionParameter>().in(DetectionParameter::getId, parameterIds));
+        return parameters.stream().collect(Collectors.toMap(DetectionParameter::getId, p -> p));
     }
 
     /**

@@ -297,6 +297,7 @@ public class DetectionWorkflowService {
             pendingItem.setParameterName(parameter.getParameterName());
             pendingItem.setStandardMin(parameter.getStandardMin());
             pendingItem.setStandardMax(parameter.getStandardMax());
+            pendingItem.setOptionValues(parameter.getOptionValues());
             pendingItem.setUnit(parameter.getUnit());
             pendingItem.setResultValue(itemCommand.getResultValue());
             pendingItem.setExceedFlag(isExceeded(parameter, itemCommand.getResultValue()) ? 1 : 0);
@@ -493,6 +494,7 @@ public class DetectionWorkflowService {
             vo.setParameterName(item.getParameterName());
             vo.setStandardMin(item.getStandardMin());
             vo.setStandardMax(item.getStandardMax());
+            vo.setOptionValues(item.getOptionValues());
             vo.setResultValue(item.getResultValue());
             vo.setUnit(item.getUnit());
             vo.setReferenceStandard(item.getReferenceStandard());
@@ -600,6 +602,7 @@ public class DetectionWorkflowService {
             item.setParameterName(parameter.getParameterName());
             item.setStandardMin(parameter.getStandardMin());
             item.setStandardMax(parameter.getStandardMax());
+            item.setOptionValues(parameter.getOptionValues());
             item.setResultValue(itemCommand.getResultValue());
             item.setUnit(parameter.getUnit());
             item.setItemStatus(LabWorkflowConstants.DetectionStatus.SUBMITTED);
@@ -800,6 +803,15 @@ public class DetectionWorkflowService {
                 && !StrUtil.equals(item.getUnit(), StrUtil.blankToDefault(parameter.getUnit(), ""))) {
             throw new BusinessException("检测参数单位与配置不一致：" + parameter.getParameterName());
         }
+        // 文本选项模式：跳过标准上下限比对，改为比对选项值快照
+        if (StrUtil.isNotBlank(parameter.getOptionValues())) {
+            if (!StrUtil.equals(StrUtil.blankToDefault(item.getOptionValues(), ""),
+                    StrUtil.blankToDefault(parameter.getOptionValues(), ""))) {
+                throw new BusinessException("检测参数选项值与配置不一致：" + parameter.getParameterName());
+            }
+            validateResultWithinStandardRange(parameter, item.getResultValue());
+            return;
+        }
         if (item.getStandardMin() != null && compareNullableDecimal(item.getStandardMin(), parameter.getStandardMin()) != 0) {
             throw new BusinessException("检测参数标准下限与配置不一致：" + parameter.getParameterName());
         }
@@ -829,6 +841,10 @@ public class DetectionWorkflowService {
     private String formatStandardRange(DetectionParameter parameter) {
         if (parameter == null) {
             return "-";
+        }
+        if (StrUtil.isNotBlank(parameter.getOptionValues())) {
+            List<String> options = parseOptionValues(parameter.getOptionValues());
+            return options.isEmpty() ? "-" : String.join(" / ", options);
         }
         BigDecimal min = parameter.getStandardMin();
         BigDecimal max = parameter.getStandardMax();
@@ -1003,6 +1019,15 @@ public class DetectionWorkflowService {
         if (resultValue == null) {
             return false;
         }
+        // 文本选项模式：只需校验索引在有效范围内
+        if (StrUtil.isNotBlank(parameter.getOptionValues())) {
+            List<String> options = parseOptionValues(parameter.getOptionValues());
+            if (options.isEmpty()) {
+                return false;
+            }
+            int index = resultValue.intValue();
+            return index < 0 || index >= options.size();
+        }
         if (parameter.getStandardMin() != null && resultValue.compareTo(parameter.getStandardMin()) < 0) {
             return true;
         }
@@ -1015,5 +1040,16 @@ public class DetectionWorkflowService {
             throw new BusinessException("当前登录用户信息失效，请重新登录");
         }
         return currentUser;
+    }
+
+    private List<String> parseOptionValues(String optionValuesJson) {
+        if (StrUtil.isBlank(optionValuesJson)) {
+            return Collections.emptyList();
+        }
+        try {
+            return objectMapper.readValue(optionValuesJson, new TypeReference<List<String>>() {});
+        } catch (JsonProcessingException e) {
+            return Collections.emptyList();
+        }
     }
 }

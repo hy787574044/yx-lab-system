@@ -1007,6 +1007,29 @@ textarea {
   text-overflow: ellipsis;
 }
 
+.el-table td.cell-multiline .cell {
+  display: flex;
+  align-items: center;
+  min-height: 38px;
+  line-height: 1.6;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+.preserve-line-breaks,
+.method-basis-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.method-basis-text {
+  display: block;
+  width: 100%;
+  line-height: 1.6;
+}
+
 .el-table th.el-table__cell .cell {
   display: grid;
   align-items: center;

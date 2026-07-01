@@ -643,6 +643,23 @@ watch(() => route.path, () => {
   flex: 0 0 auto;
 }
 
+.ledger-table-card {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.ledger-table-card__body {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.ledger-table-card__body :deep(.el-table) {
+  height: 100%;
+}
+
 .preview-empty {
   padding: 48px 16px;
   text-align: center;

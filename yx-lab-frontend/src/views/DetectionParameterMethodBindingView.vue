@@ -87,7 +87,7 @@
           </el-table-column>
           <el-table-column label="标准范围" min-width="120">
             <template #default="{ row }">
-              {{ formatStandardRange(row.standardMin, row.standardMax) }}
+              {{ formatStandardRange(row.standardMin, row.standardMax, null, row.optionValues) }}
             </template>
           </el-table-column>
           <el-table-column prop="unit" label="单位" width="72">
@@ -212,8 +212,9 @@
             <span>编码：{{ item.methodCode || '-' }}</span>
             <span>标准：{{ item.standardCode || '-' }}</span>
           </div>
-          <div class="method-option-meta">
-            <span>检测步骤：{{ item.methodBasis || '-' }}</span>
+          <div class="method-option-meta method-option-meta--basis">
+            <span>检测步骤：</span>
+            <span class="method-basis-text">{{ item.methodBasis || '-' }}</span>
           </div>
           <div class="method-option-footer">
             <span v-if="item.parameterId && item.parameterId !== currentParameter?.id" class="binding-tip binding-tip--locked">
@@ -367,7 +368,21 @@ function toMethodNameList(value) {
     .filter((item) => item !== '')
 }
 
-function formatStandardRange(min, max, unit) {
+function parseOptionValuesArray(json) {
+  if (!json) return []
+  try {
+    const arr = JSON.parse(json)
+    return Array.isArray(arr) ? arr : []
+  } catch {
+    return []
+  }
+}
+
+function formatStandardRange(min, max, unit, optionValues) {
+  if (optionValues) {
+    const options = parseOptionValuesArray(optionValues)
+    if (options.length) return options.join(' / ')
+  }
   const suffix = unit ? ` ${unit}` : ''
   if (min != null && max != null) {
     return `${min} ~ ${max}${suffix}`
@@ -816,6 +831,12 @@ onMounted(async () => {
   color: var(--text-sub);
   font-size: 12px;
   line-height: 1.6;
+}
+
+.method-option-meta--basis {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  justify-content: stretch;
 }
 
 .binding-tip {

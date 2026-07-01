@@ -597,6 +597,7 @@ public class LabSampleService {
         item.setMethodName(method.getMethodName());
         item.setSampleVolume(method.getSampleVolume());
         item.setMethodBasis(method.getMethodBasis());
+        item.setOptionValues(parameter.getOptionValues());
         return item;
     }
 

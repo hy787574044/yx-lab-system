@@ -174,7 +174,7 @@
           <el-table-column prop="methodName" label="检测方法" min-width="130" show-overflow-tooltip />
           <el-table-column label="标准范围" min-width="120">
             <template #default="{ row }">
-              {{ formatStandardRange(row.standardMin, row.standardMax) }}
+              {{ formatStandardRange(row.standardMin, row.standardMax, null, row.optionValues) }}
             </template>
           </el-table-column>
           <el-table-column prop="unit" label="单位" width="72">
@@ -183,8 +183,11 @@
           <el-table-column prop="referenceStandard" label="检测标准" min-width="130" show-overflow-tooltip>
             <template #default="{ row }">{{ row.referenceStandard || '-' }}</template>
           </el-table-column>
-          <el-table-column prop="resultValue" label="检测值" min-width="110">
-            <template #default="{ row }">{{ row.resultValue ?? '-' }}</template>
+          <el-table-column label="检测值" min-width="110">
+            <template #default="{ row }">
+              <span v-if="row.optionValues">{{ (parseOptionValuesArray(row.optionValues)[row.resultValue] || row.resultValue) ?? '-' }}</span>
+              <span v-else>{{ row.resultValue ?? '-' }}</span>
+            </template>
           </el-table-column>
           <el-table-column label="检测判定" width="110" header-cell-class-name="cell-center" class-name="cell-center">
             <template #default="{ row }">
@@ -193,10 +196,10 @@
               </span>
             </template>
           </el-table-column>
-          <el-table-column label="子流程状态" width="110" header-cell-class-name="cell-center" class-name="cell-center">
+          <el-table-column label="审核状态" width="110" header-cell-class-name="cell-center" class-name="cell-center">
             <template #default="{ row }">
-              <span class="status-chip" :class="getItemStatusClass(row.itemStatus)">
-                {{ getItemStatusLabel(row.itemStatus) }}
+              <span class="review-state-chip" :class="getReviewDraftStatusClass(row)">
+                {{ getReviewDraftStatusLabel(row) }}
               </span>
             </template>
           </el-table-column>
@@ -207,7 +210,7 @@
                   :type="'primary'"
                   :plain="row.reviewResultDraft !== approvedReviewResult"
                   :class="['review-action-button', { 'is-active': row.reviewResultDraft === approvedReviewResult }]"
-                  @click="setItemReviewResult(row, approvedReviewResult)"
+                  @click="approveReviewItem(row)"
                 >
                   通过
                 </el-button>
@@ -215,7 +218,7 @@
                   :type="'danger'"
                   :plain="row.reviewResultDraft !== rejectedReviewResult"
                   :class="['review-action-button', 'review-action-button--danger', { 'is-active': row.reviewResultDraft === rejectedReviewResult }]"
-                  @click="setItemReviewResult(row, rejectedReviewResult)"
+                  @click="rejectReviewItem(row)"
                 >
                   驳回
                 </el-button>
@@ -225,15 +228,9 @@
               </span>
             </template>
           </el-table-column>
-          <el-table-column label="驳回原因" min-width="220">
+          <el-table-column label="驳回原因" min-width="220" class-name="review-reject-reason-cell">
             <template #default="{ row }">
-              <span v-if="!canReviewItem(row)">{{ row.rejectReasonDraft || '-' }}</span>
-              <el-input
-                v-else
-                v-model="row.rejectReasonDraft"
-                :disabled="row.reviewResultDraft !== rejectedReviewResult"
-                placeholder="子流程审核不通过时填写原因"
-              />
+              <span class="review-reject-reason">{{ row.reviewResultDraft === rejectedReviewResult ? (row.rejectReasonDraft || '-') : '-' }}</span>
             </template>
           </el-table-column>
           <el-table-column label="审核说明" min-width="220">
@@ -287,6 +284,7 @@ import { ElForm, ElFormItem } from 'element-plus/es/components/form/index.mjs'
 import { ElInput } from 'element-plus/es/components/input/index.mjs'
 import { ElLoadingDirective } from 'element-plus/es/components/loading/index.mjs'
 import { ElMessage } from 'element-plus/es/components/message/index.mjs'
+import { ElMessageBox } from 'element-plus/es/components/message-box/index.mjs'
 import { ElOption, ElSelect } from 'element-plus/es/components/select/index.mjs'
 import { ElTable, ElTableColumn } from 'element-plus/es/components/table/index.mjs'
 import {
@@ -614,7 +612,11 @@ function formatItemProgress(row) {
   return `${completed}/${total} 已完成检测`
 }
 
-function formatStandardRange(min, max, unit) {
+function formatStandardRange(min, max, unit, optionValues) {
+  if (optionValues) {
+    const options = parseOptionValuesArray(optionValues)
+    if (options.length) return options.join(' / ')
+  }
   const suffix = unit ? ` ${unit}` : ''
   if (min != null && max != null) {
     return `${min} - ${max}${suffix}`
@@ -626,6 +628,16 @@ function formatStandardRange(min, max, unit) {
     return `<= ${max}${suffix}`
   }
   return `未设置${suffix}`
+}
+
+function parseOptionValuesArray(json) {
+  if (!json) return []
+  try {
+    const arr = JSON.parse(json)
+    return Array.isArray(arr) ? arr : []
+  } catch {
+    return []
+  }
 }
 
 function getItemStatusLabel(status) {
@@ -693,16 +705,48 @@ function canReviewItem(item) {
   return !reviewDialogReadonly.value && item.itemStatus === reviewPendingDetectionStatus
 }
 
-function setItemReviewResult(item, reviewResult) {
+function approveReviewItem(item) {
   if (!canReviewItem(item)) {
     return
   }
-  item.reviewResultDraft = reviewResult
-  if (reviewResult === approvedReviewResult) {
-    item.rejectReasonDraft = ''
-  } else if (!item.rejectReasonDraft) {
-    item.rejectReasonDraft = '审核不通过，请重新化验并提交结果'
+  item.reviewResultDraft = approvedReviewResult
+  item.rejectReasonDraft = ''
+}
+
+async function promptRejectReason(message, defaultValue = '') {
+  try {
+    const result = await ElMessageBox.prompt(message, '填写驳回原因', {
+      confirmButtonText: '确认',
+      cancelButtonText: '取消',
+      inputType: 'textarea',
+      inputValue: defaultValue,
+      inputPlaceholder: '请输入驳回原因',
+      inputValidator: (value) => String(value || '').trim() ? true : '请填写驳回原因'
+    })
+    return String(result.value || '').trim()
+  } catch {
+    return ''
   }
+}
+
+async function rejectReviewItem(item) {
+  if (!canReviewItem(item)) {
+    return
+  }
+  const reason = await promptRejectReason(`请填写子流程“${item.parameterName || '检测项目'}”的驳回原因`, item.rejectReasonDraft)
+  if (!reason) {
+    return
+  }
+  item.reviewResultDraft = rejectedReviewResult
+  item.rejectReasonDraft = reason
+}
+
+function setItemReviewResult(item, reviewResult) {
+  if (reviewResult === approvedReviewResult) {
+    approveReviewItem(item)
+    return
+  }
+  rejectReviewItem(item)
 }
 
 function approveAllPendingItems() {
@@ -714,15 +758,40 @@ function approveAllPendingItems() {
   })
 }
 
-function rejectAllPendingItems() {
-  reviewDialog.items.forEach((item) => {
-    if (canReviewItem(item)) {
-      item.reviewResultDraft = rejectedReviewResult
-      if (!item.rejectReasonDraft) {
-        item.rejectReasonDraft = '审核不通过，请重新化验并提交结果'
-      }
-    }
+async function rejectAllPendingItems() {
+  const pendingItems = reviewDialog.items.filter((item) => canReviewItem(item))
+  if (!pendingItems.length) {
+    ElMessage.warning('当前没有可驳回的检测项目')
+    return
+  }
+  const reason = await promptRejectReason('请填写本次一键审核不通过的原因')
+  if (!reason) {
+    return
+  }
+  pendingItems.forEach((item) => {
+    item.reviewResultDraft = rejectedReviewResult
+    item.rejectReasonDraft = reason
   })
+}
+
+function getReviewDraftStatusLabel(item) {
+  if (item?.reviewResultDraft === approvedReviewResult) {
+    return '通过'
+  }
+  if (item?.reviewResultDraft === rejectedReviewResult) {
+    return '驳回'
+  }
+  return '待审核'
+}
+
+function getReviewDraftStatusClass(item) {
+  if (item?.reviewResultDraft === approvedReviewResult) {
+    return 'is-approved'
+  }
+  if (item?.reviewResultDraft === rejectedReviewResult) {
+    return 'is-rejected'
+  }
+  return 'is-pending'
 }
 
 function getFinalReviewText(item) {
@@ -789,13 +858,37 @@ async function submitReviewDecision() {
   }
   const undecidedItem = pendingItems.find((item) => !item.reviewResultDraft)
   if (undecidedItem) {
-    ElMessage.warning(`请先完成子流程“${undecidedItem.parameterName}”的审核判定`)
-    return
+    try {
+      await ElMessageBox.confirm(
+        '仍有检测项目未选择通过或驳回，是否将未选检测项目全部按通过提交？',
+        '确认提交',
+        {
+          confirmButtonText: '全部通过并提交',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }
+      )
+      pendingItems.forEach((item) => {
+        if (!item.reviewResultDraft) {
+          item.reviewResultDraft = approvedReviewResult
+          item.rejectReasonDraft = ''
+        }
+      })
+    } catch {
+      return
+    }
   }
   const rejectedItem = pendingItems.find((item) =>
     item.reviewResultDraft === rejectedReviewResult && !String(item.rejectReasonDraft || '').trim())
   if (rejectedItem) {
-    ElMessage.warning(`请填写子流程“${rejectedItem.parameterName}”的驳回原因`)
+    await rejectReviewItem(rejectedItem)
+    if (!String(rejectedItem.rejectReasonDraft || '').trim()) {
+      ElMessage.warning(`请填写子流程“${rejectedItem.parameterName}”的驳回原因`)
+      return
+    }
+  }
+  const remainingUndecidedItem = pendingItems.find((item) => !item.reviewResultDraft)
+  if (remainingUndecidedItem) {
     return
   }
 
@@ -1043,7 +1136,49 @@ watch(() => route.fullPath, async () => {
   margin-top: 4px;
 }
 
+.review-state-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 54px;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+}
 
+.review-state-chip.is-pending {
+  color: #64748b;
+  background: #f1f5f9;
+}
+
+.review-state-chip.is-approved {
+  color: #047857;
+  background: #d1fae5;
+}
+
+.review-state-chip.is-rejected {
+  color: #b91c1c;
+  background: #fee2e2;
+}
+
+.review-reject-reason {
+  display: flex;
+  align-items: center;
+  min-height: 24px;
+  color: var(--text-main);
+  font-size: 13px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.review-dialog__table :deep(.review-reject-reason-cell .cell) {
+  display: flex;
+  align-items: center;
+  min-height: 32px;
+}
 
 .review-action-button {
   position: relative;

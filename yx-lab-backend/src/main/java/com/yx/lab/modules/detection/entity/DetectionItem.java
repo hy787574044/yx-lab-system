@@ -76,4 +76,8 @@ public class DetectionItem extends BaseEntity {
     @Schema(description = "超标标记，1超标，0正常")
     @TableField("exceed_flag")
     private Integer exceedFlag;
+
+    @Schema(description = "文本选项值快照，不为空时检测结果为选项索引")
+    @TableField("option_values")
+    private String optionValues;
 }

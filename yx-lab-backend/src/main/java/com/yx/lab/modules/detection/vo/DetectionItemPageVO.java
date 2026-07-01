@@ -64,6 +64,8 @@ public class DetectionItemPageVO {
 
     private Integer exceedFlag;
 
+    private String optionValues;
+
     private String abnormalRemark;
 
     private String remark;

@@ -111,7 +111,7 @@
             </el-table-column>
             <el-table-column label="标准范围" min-width="120">
               <template #default="{ row }">
-                {{ formatStandardRange(row.standardMin, row.standardMax) }}
+                {{ formatStandardRange(row.standardMin, row.standardMax, null, row.optionValues) }}
               </template>
             </el-table-column>
             <el-table-column prop="unit" label="单位" width="72">
@@ -316,11 +316,27 @@
               placeholder="请输入参数单位，例如 NTU、mg/L"
             />
           </el-form-item>
-          <el-form-item label="标准下限">
-            <el-input v-model="parameterForm.standardMin" placeholder="可为空" />
+          <el-form-item class="form-span-2" label="范围类型">
+            <el-radio-group v-model="parameterForm.rangeType" @change="handleRangeTypeChange">
+              <el-radio-button value="numeric">标准限值</el-radio-button>
+              <el-radio-button value="text">文本选项</el-radio-button>
+            </el-radio-group>
           </el-form-item>
-          <el-form-item label="标准上限">
-            <el-input v-model="parameterForm.standardMax" placeholder="可为空" />
+          <template v-if="parameterForm.rangeType === 'numeric'">
+            <el-form-item label="标准下限" :required="true">
+              <el-input v-model="parameterForm.standardMin" placeholder="请输入标准下限" />
+            </el-form-item>
+            <el-form-item label="标准上限">
+              <el-input v-model="parameterForm.standardMax" placeholder="可为空" />
+            </el-form-item>
+          </template>
+          <el-form-item v-else class="form-span-2" label="文本选项" :required="true">
+            <el-input
+              v-model="parameterForm.optionValues"
+              type="textarea"
+              :rows="3"
+              placeholder="请按每行一个选项填写，例如：&#10;无异臭、异味&#10;有异臭、异味"
+            />
           </el-form-item>
           <el-form-item label="检测标准">
             <el-input v-model="parameterForm.referenceStandard" placeholder="请输入检测标准" />
@@ -370,8 +386,9 @@
                     <span>编码：{{ item.methodCode || '-' }}</span>
                     <span>标准：{{ item.standardCode || '-' }}</span>
                   </div>
-                  <div class="method-option-meta">
-                    <span>检测步骤：{{ item.methodBasis || '-' }}</span>
+                  <div class="method-option-meta method-option-meta--basis">
+                    <span>检测步骤：</span>
+                    <span class="method-basis-text">{{ item.methodBasis || '-' }}</span>
                   </div>
                   <div class="method-option-footer">
                     <span
@@ -639,8 +656,9 @@
                 <span>编码：{{ item.methodCode || '-' }}</span>
                 <span>标准：{{ item.standardCode || '-' }}</span>
               </div>
-              <div class="method-option-meta">
-                <span>检测步骤：{{ item.methodBasis || '-' }}</span>
+              <div class="method-option-meta method-option-meta--basis">
+                <span>检测步骤：</span>
+                <span class="method-basis-text">{{ item.methodBasis || '-' }}</span>
               </div>
               <div class="method-option-footer">
                 <span
@@ -767,7 +785,9 @@ const parameterForm = reactive({
   referenceStandard: '',
   methodIds: [],
   enabled: 1,
-  remark: ''
+  remark: '',
+  optionValues: '',
+  rangeType: 'numeric'
 })
 
 const parameterBindingForm = reactive({
@@ -1032,7 +1052,38 @@ function toNullableNumber(value) {
   return Number.isFinite(num) ? num : null
 }
 
-function formatStandardRange(min, max, unit) {
+function parseOptionValuesToText(optionValuesJson) {
+  if (!optionValuesJson) return ''
+  try {
+    const arr = JSON.parse(optionValuesJson)
+    return Array.isArray(arr) ? arr.join('\n') : ''
+  } catch {
+    return ''
+  }
+}
+
+function buildOptionValuesJson(text) {
+  const lines = String(text || '').split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line !== '')
+  return lines.length ? JSON.stringify(lines) : ''
+}
+
+function parseOptionValuesArray(optionValuesJson) {
+  if (!optionValuesJson) return []
+  try {
+    const arr = JSON.parse(optionValuesJson)
+    return Array.isArray(arr) ? arr : []
+  } catch {
+    return []
+  }
+}
+
+function formatStandardRange(min, max, unit, optionValues) {
+  if (optionValues) {
+    const options = parseOptionValuesArray(optionValues)
+    if (options.length) return options.join(' / ')
+  }
   const suffix = unit ? ` ${unit}` : ''
   if (min != null && max != null) {
     return `${min} ~ ${max}${suffix}`
@@ -1371,6 +1422,8 @@ function resetParameterForm() {
   parameterForm.methodIds = []
   parameterForm.enabled = 1
   parameterForm.remark = ''
+  parameterForm.optionValues = ''
+  parameterForm.rangeType = 'numeric'
 }
 
 function resetGroupForm() {
@@ -1403,6 +1456,8 @@ async function openParameterDialog(row) {
       .filter(Boolean)
     parameterForm.enabled = row.enabled ?? 1
     parameterForm.remark = row.remark || ''
+    parameterForm.optionValues = parseOptionValuesToText(row.optionValues)
+    parameterForm.rangeType = row.optionValues ? 'text' : 'numeric'
   }
   parameterDialogVisible.value = true
 }
@@ -1425,16 +1480,33 @@ async function openGroupDialog(row) {
   groupDialogVisible.value = true
 }
 
+function handleRangeTypeChange(type) {
+  if (type === 'text') {
+    parameterForm.standardMin = ''
+    parameterForm.standardMax = ''
+  } else {
+    parameterForm.optionValues = ''
+  }
+}
+
 async function submitParameterForm() {
   if (!parameterForm.parameterName.trim()) {
     ElMessage.warning('请填写检测参数名称')
     return
   }
+  if (parameterForm.rangeType === 'numeric' && !parameterForm.standardMin.trim()) {
+    ElMessage.warning('标准限值模式下，标准下限为必填')
+    return
+  }
+  if (parameterForm.rangeType === 'text' && !parameterForm.optionValues.trim()) {
+    ElMessage.warning('文本选项模式下，请至少填写一个选项')
+    return
+  }
 
   const payload = {
     parameterName: parameterForm.parameterName.trim(),
-    standardMin: toNullableNumber(parameterForm.standardMin),
-    standardMax: toNullableNumber(parameterForm.standardMax),
+    standardMin: parameterForm.rangeType === 'numeric' ? toNullableNumber(parameterForm.standardMin) : null,
+    standardMax: parameterForm.rangeType === 'numeric' ? toNullableNumber(parameterForm.standardMax) : null,
     unit: parameterForm.unit.trim(),
     exceedRule: parameterForm.exceedRule.trim(),
     referenceStandard: parameterForm.referenceStandard.trim(),
@@ -1446,7 +1518,8 @@ async function submitParameterForm() {
       ))
       : [],
     enabled: parameterForm.enabled,
-    remark: parameterForm.remark.trim()
+    remark: parameterForm.remark.trim(),
+    optionValues: parameterForm.rangeType === 'text' ? buildOptionValuesJson(parameterForm.optionValues) : ''
   }
 
   savingParameter.value = true
@@ -1990,6 +2063,12 @@ watch(() => route.fullPath, async () => {
   color: var(--text-light);
   font-size: 12px;
   line-height: 1.6;
+}
+
+.method-option-meta--basis {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 6px;
 }
 
 .method-option-footer {

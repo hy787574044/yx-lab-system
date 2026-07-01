@@ -33,4 +33,6 @@ public class DetectionParameterMethodBindingVO {
     private String methodNames;
 
     private Integer methodCount;
+
+    private String optionValues;
 }

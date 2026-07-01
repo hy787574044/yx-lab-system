@@ -887,6 +887,14 @@
                 <span class="login-config-panel__note">
                   {{ loginConfigPanelNote }}
                 </span>
+                <el-button
+                  v-if="!isLoginReadonly"
+                  type="primary"
+                  size="small"
+                  @click="openAddParamDialog"
+                >
+                  添加参数
+                </el-button>
               </div>
               <el-table
                 class="login-config-table"
@@ -902,7 +910,7 @@
                 </el-table-column>
                 <el-table-column label="标准范围" min-width="120">
                   <template #default="{ row }">
-                    {{ formatStandardRange(row.standardMin, row.standardMax) }}
+                    {{ formatStandardRange(row.standardMin, row.standardMax, null, row.optionValues) }}
                   </template>
                 </el-table-column>
                 <el-table-column prop="unit" label="单位" width="72">
@@ -913,11 +921,37 @@
                 </el-table-column>
                 <el-table-column label="检测方法" min-width="160">
                   <template #default="{ row }">
-                    <span>{{ row.methodName || '-' }}</span>
+                    <el-select
+                      v-if="!isLoginReadonly && row.methodOptions && row.methodOptions.length"
+                      v-model="row.methodId"
+                      size="small"
+                      style="width: 100%"
+                      @change="(val) => handleLoginMethodChange(row, val)"
+                    >
+                      <el-option
+                        v-for="opt in row.methodOptions"
+                        :key="opt.id"
+                        :label="opt.methodName"
+                        :value="opt.id"
+                      />
+                    </el-select>
+                    <span v-else>{{ row.methodName || '-' }}</span>
                   </template>
                 </el-table-column>
                 <el-table-column prop="sampleVolume" label="取样体积" min-width="90" show-overflow-tooltip>
                   <template #default="{ row }">{{ row.sampleVolume || '-' }}</template>
+                </el-table-column>
+                <el-table-column v-if="!isLoginReadonly" label="操作" width="72" fixed="right">
+                  <template #default="{ row, $index }">
+                    <el-button
+                      type="danger"
+                      link
+                      size="small"
+                      @click="removeLoginConfigRow($index)"
+                    >
+                      删除
+                    </el-button>
+                  </template>
                 </el-table-column>
               </el-table>
               <div v-if="!loginDetectionConfigRows.length" class="empty-block">
@@ -1006,6 +1040,42 @@
       <template #footer>
         <el-button @click="loginDialogVisible = false">{{ isLoginReadonly ? '关闭' : '取消' }}</el-button>
         <el-button v-if="!isLoginReadonly" v-permission="'sample:write'" type="primary" :loading="submitting" @click="submitSampleLogin">保存</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog
+      v-model="addParamDialogVisible"
+      title="添加检测参数"
+      width="520px"
+      :close-on-click-modal="false"
+      destroy-on-close
+    >
+      <div style="max-height:380px;overflow-y:auto;">
+        <div v-if="!addParamDialogList.length" style="padding:30px;text-align:center;color:#999;">
+          暂无可添加的检测参数
+        </div>
+        <label
+          v-for="item in addParamDialogList"
+          :key="item.id"
+          :style="{ display:'flex',alignItems:'center',padding:'8px 0',cursor:item._existing?'not-allowed':'pointer',opacity:item._existing?0.55:1,gap:'8px' }"
+        >
+          <input
+            type="checkbox"
+            :checked="!!addParamDialogChecked[item.id]"
+            :disabled="item._existing"
+            style="width:15px;height:15px;cursor:inherit;"
+            @change="addParamDialogChecked[item.id] = $event.target.checked"
+          />
+          <span>{{ item.parameterName }}</span>
+          <span v-if="item.unit" style="color:#999;font-size:12px;">({{ item.unit }})</span>
+          <el-tag v-if="item._existing" size="small" type="info">已添加</el-tag>
+        </label>
+      </div>
+      <template #footer>
+        <el-button @click="addParamDialogVisible = false">取消</el-button>
+        <el-button type="primary" :disabled="!addParamDialogNewCount" @click="confirmAddParamDialog">
+          确认 ({{ addParamDialogNewCount }})
+        </el-button>
       </template>
     </el-dialog>
 
@@ -1248,6 +1318,59 @@ const mapSelectorValue = reactive({ pointName: '', address: '', latitude: '', lo
 const taskLocationViewerVisible = ref(false)
 const taskLocationViewerValue = reactive({ pointName: '', address: '', latitude: '', longitude: '' })
 const taskDetailDialogVisible = ref(false)
+const addParamDialogVisible = ref(false)
+const addParamDialogList = ref([])
+const addParamDialogChecked = reactive({})
+
+const addParamDialogNewCount = computed(() => {
+  return addParamDialogList.value
+    .filter((item) => addParamDialogChecked[item.id] && !item._existing)
+    .length
+})
+
+function openAddParamDialog() {
+  const existingIds = new Set(loginDetectionConfigRows.value.map((row) => String(row.parameterId)))
+  // 清空旧的勾选
+  Object.keys(addParamDialogChecked).forEach((key) => delete addParamDialogChecked[key])
+  // 构建列表：已在套餐中的标记 _existing
+  addParamDialogList.value = (detectionParameterOptions.value || []).map((item) => {
+    const exists = existingIds.has(String(item.id))
+    if (exists) {
+      addParamDialogChecked[item.id] = true
+    }
+    return { ...item, _existing: exists }
+  })
+  addParamDialogVisible.value = true
+}
+
+function confirmAddParamDialog() {
+  const selected = addParamDialogList.value.filter(
+    (item) => addParamDialogChecked[item.id] && !item._existing
+  )
+  if (!selected.length) return
+
+  const rows = selected.map((parameter) => {
+    const parameterId = String(parameter.id)
+    const methodOptions = getDetectionConfigMethodOptionsByParameter(parameterId)
+    const currentMethod = methodOptions[0] || null
+    return {
+      parameterId,
+      parameterName: parameter.parameterName || '',
+      unit: parameter.unit || '',
+      standardMin: parameter.standardMin,
+      standardMax: parameter.standardMax,
+      optionValues: parameter.optionValues || '',
+      referenceStandard: parameter.referenceStandard || '',
+      methodId: currentMethod?.id || '',
+      methodName: currentMethod?.methodName || '',
+      sampleVolume: currentMethod?.sampleVolume || '',
+      methodOptions
+    }
+  })
+  loginForm.detectionConfigItems = [...loginForm.detectionConfigItems, ...rows]
+  addParamDialogVisible.value = false
+  ElMessage.success(`成功添加 ${rows.length} 个检测参数`)
+}
 const weatherOptions = ref([])
 const storageConditionOptions = ref([])
 const orgOptions = ref([])
@@ -2851,21 +2974,25 @@ async function loadDetectionProjects() {
   if (detectionProjectOptions.value.length && detectionParameterOptions.value.length && detectionMethodOptions.value.length) {
     return
   }
-  const [typeResult, parameterResult, methodResult] = await Promise.all([
-    fetchDetectionTypesApi({
-      pageNum: 1,
-      pageSize: 500,
-      enabled: 1
-    }),
-    fetchDetectionParametersApi({
-      pageNum: 1,
-      pageSize: 500
-    }),
-    fetchDetectionMethodOptionsApi()
-  ])
-  detectionProjectOptions.value = typeResult.records || []
-  detectionParameterOptions.value = parameterResult.records || []
-  detectionMethodOptions.value = Array.isArray(methodResult) ? methodResult : []
+  try {
+    const [typeResult, parameterResult, methodResult] = await Promise.all([
+      fetchDetectionTypesApi({
+        pageNum: 1,
+        pageSize: 500,
+        enabled: 1
+      }),
+      fetchDetectionParametersApi({
+        pageNum: 1,
+        pageSize: 500
+      }),
+      fetchDetectionMethodOptionsApi()
+    ])
+    detectionProjectOptions.value = typeResult.records || []
+    detectionParameterOptions.value = parameterResult.records || []
+    detectionMethodOptions.value = Array.isArray(methodResult) ? methodResult : []
+  } catch (error) {
+    console.error('加载检测配置选项失败:', error)
+  }
 }
 
 async function loadFlowOptions() {
@@ -2996,7 +3123,21 @@ function isDirectImageUrl(path) {
     || value.startsWith('api/storage/file?path=')
 }
 
-function formatStandardRange(min, max, unit) {
+function parseOptionValuesArray(json) {
+  if (!json) return []
+  try {
+    const arr = JSON.parse(json)
+    return Array.isArray(arr) ? arr : []
+  } catch {
+    return []
+  }
+}
+
+function formatStandardRange(min, max, unit, optionValues) {
+  if (optionValues) {
+    const options = parseOptionValuesArray(optionValues)
+    if (options.length) return options.join(' / ')
+  }
   const suffix = unit ? ` ${unit}` : ''
   if (min != null && max != null) {
     return `${min} ~ ${max}${suffix}`
@@ -3078,6 +3219,7 @@ function buildLoginDetectionConfigItems(detectionType) {
         unit: parameter.unit || '',
         standardMin: parameter.standardMin,
         standardMax: parameter.standardMax,
+        optionValues: parameter.optionValues || '',
         referenceStandard: parameter.referenceStandard || '',
         methodId: currentMethod?.id || '',
         methodName: currentMethod?.methodName || '',
@@ -3109,6 +3251,7 @@ function buildLoginConfigRowFromSnapshot(item) {
     unit: item?.unit || parameter?.unit || '',
     standardMin: item?.standardMin ?? parameter?.standardMin ?? null,
     standardMax: item?.standardMax ?? parameter?.standardMax ?? null,
+    optionValues: item?.optionValues || parameter?.optionValues || '',
     referenceStandard: item?.referenceStandard || parameter?.referenceStandard || '',
     methodId,
     methodName: item?.methodName || methodOptions.find((option) => option.id === methodId)?.methodName || '',
@@ -3125,6 +3268,10 @@ function parseSampleDetectionConfigSnapshot(snapshot) {
 
 const loginDetectionConfigRows = computed(() => loginForm.detectionConfigItems)
 
+const loginConfigParameterIds = computed(() =>
+  loginDetectionConfigRows.value.map((row) => String(row.parameterId))
+)
+
 function getDetectionConfigMethodOptionsByParameter(parameterId) {
   if (!parameterId) {
     return []
@@ -3136,6 +3283,18 @@ function getDetectionConfigMethodOptionsByParameter(parameterId) {
       methodName: item.methodName || `检测方法-${item.id}`,
       sampleVolume: item.sampleVolume || item.sample_volume || ''
     }))
+}
+
+function removeLoginConfigRow(index) {
+  loginForm.detectionConfigItems.splice(index, 1)
+}
+
+function handleLoginMethodChange(row, methodId) {
+  const method = row.methodOptions?.find((opt) => opt.id === methodId)
+  if (method) {
+    row.methodName = method.methodName
+    row.sampleVolume = method.sampleVolume || ''
+  }
 }
 
 async function startTask(row) {
@@ -3629,6 +3788,7 @@ async function submitSampleLogin() {
         unit: item.unit,
         standardMin: item.standardMin,
         standardMax: item.standardMax,
+        optionValues: item.optionValues || '',
         referenceStandard: item.referenceStandard,
         methodId: item.methodId,
         methodName: item.methodName,
@@ -3982,10 +4142,132 @@ watch(() => route.fullPath, async () => {
   align-items: center;
 }
 
+.login-config-panel__summary .el-button {
+  margin-left: auto;
+}
+
 .login-config-panel__note {
   color: var(--text-light);
   font-size: 12px;
   line-height: 1.6;
+}
+
+.add-param-quick-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  padding: 8px 0;
+}
+
+.add-param-quick-label {
+  font-size: 12px;
+  color: var(--text-light);
+  margin-right: 4px;
+}
+
+.add-param-popover-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.add-param-popover-row:hover {
+  background: var(--fill-color-light);
+}
+
+.add-param-popover-row.is-existing {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.add-param-popover-row input[type="checkbox"] {
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+  accent-color: var(--el-color-primary);
+  flex-shrink: 0;
+}
+
+.add-param-popover-row.is-existing input[type="checkbox"] {
+  cursor: not-allowed;
+}
+
+.add-param-unit {
+  color: var(--text-light);
+  font-size: 12px;
+}
+
+.add-parameter-dialog-content {
+  min-height: 200px;
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.add-parameter-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.add-parameter-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-lighter);
+  transition: background-color 0.2s;
+  cursor: pointer;
+}
+
+.add-parameter-item:last-child {
+  border-bottom: none;
+}
+
+.add-parameter-item:hover {
+  background-color: var(--fill-color-light);
+}
+
+.add-parameter-item.is-disabled {
+  opacity: 0.6;
+  background-color: var(--fill-color-lighter);
+  cursor: not-allowed;
+}
+
+.add-parameter-item :deep(.el-checkbox) {
+  margin-right: 0;
+}
+
+.add-parameter-checkbox {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--el-color-primary);
+  flex-shrink: 0;
+}
+
+.add-parameter-item.is-disabled .add-parameter-checkbox {
+  cursor: not-allowed;
+}
+
+.add-parameter-info {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.add-parameter-name {
+  font-size: 14px;
+  color: var(--text-regular);
+}
+
+.add-parameter-unit {
+  font-size: 12px;
+  color: var(--text-secondary);
 }
 
 .sample-source-field {

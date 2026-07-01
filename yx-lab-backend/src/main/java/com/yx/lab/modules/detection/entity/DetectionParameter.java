@@ -45,4 +45,8 @@ public class DetectionParameter extends BaseEntity {
     @Schema(description = "备注")
     @TableField("remark")
     private String remark;
+
+    @Schema(description = "文本选项值JSON数组，不为空时使用选项录入取代数值范围")
+    @TableField("option_values")
+    private String optionValues;
 }

@@ -39,7 +39,7 @@
           <div>
             <h3>{{ section.title }}</h3>
           </div>
-          <strong>{{ section.rows.length }}</strong>
+          <strong>{{ section.total ?? section.rows.length }}</strong>
         </div>
         <div v-if="section.rows.length" class="todo-detail-list">
           <div
@@ -189,6 +189,101 @@
     </el-dialog>
 
     <el-dialog
+      v-model="planCreateDialogVisible"
+      class="create-plan-dialog"
+      title="新增采样计划"
+      width="720px"
+      append-to-body
+      destroy-on-close
+      @closed="resetPlanCreateForm"
+    >
+      <el-form label-width="96px">
+        <div class="form-grid create-plan-grid">
+          <el-form-item label="计划名称" required>
+            <el-input v-model="planCreateForm.planName" placeholder="请输入采样计划名称" />
+          </el-form-item>
+          <el-form-item label="点位名称" required>
+            <el-input v-model="planCreateForm.pointName" placeholder="请输入采样点位名称" />
+          </el-form-item>
+          <el-form-item label="所属地址" required>
+            <el-input v-model="planCreateForm.address" placeholder="请输入点位地址" />
+          </el-form-item>
+          <el-form-item label="样品类型" required>
+            <el-select v-model="planCreateForm.sampleType" style="width: 100%" placeholder="请选择样品类型">
+              <el-option v-for="option in sampleTypeOptions" :key="option.value" :label="option.label" :value="option.value" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="经度" required>
+            <el-input v-model="planCreateForm.longitude" placeholder="请输入经度" />
+          </el-form-item>
+          <el-form-item label="纬度" required>
+            <el-input v-model="planCreateForm.latitude" placeholder="请输入纬度" />
+          </el-form-item>
+          <el-form-item label="采样人员" required>
+            <el-select
+              v-model="planCreateForm.samplerIds"
+              multiple
+              collapse-tags
+              collapse-tags-tooltip
+              clearable
+              filterable
+              style="width: 100%"
+              placeholder="请选择采样员，可多选"
+              :loading="samplerLoading"
+              @visible-change="handleSamplerDropdownVisible"
+              @change="handlePlanCreateSamplerChange"
+            >
+              <el-option
+                v-for="item in samplerOptions"
+                :key="item.id"
+                :label="getSamplerDisplayName(item)"
+                :value="getSamplerOptionId(item)"
+              />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="采样周期" required>
+            <el-select v-model="planCreateForm.cycleType" style="width: 100%">
+              <el-option v-for="option in cycleTypeOptions" :key="option.value" :label="option.label" :value="option.value" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="开始时间" required>
+            <el-date-picker
+              v-model="planCreateForm.startTime"
+              type="datetime"
+              format="YYYY-MM-DD HH:mm:ss"
+              value-format="YYYY-MM-DD HH:mm:ss"
+              style="width: 100%"
+            />
+          </el-form-item>
+          <el-form-item label="结束时间" required>
+            <el-date-picker
+              v-model="planCreateForm.endTime"
+              type="datetime"
+              format="YYYY-MM-DD HH:mm:ss"
+              value-format="YYYY-MM-DD HH:mm:ss"
+              style="width: 100%"
+            />
+          </el-form-item>
+          <el-form-item class="form-span-2" label="备注">
+            <el-input v-model="planCreateForm.remark" type="textarea" :rows="3" placeholder="可补充执行说明" />
+          </el-form-item>
+        </div>
+      </el-form>
+      <template #footer>
+        <el-button :disabled="planCreateSubmitting" @click="planCreateDialogVisible = false">取消</el-button>
+        <el-button
+          v-permission="'samplingPlan:write'"
+          type="primary"
+          :loading="planCreateSubmitting"
+          :disabled="planCreateSubmitting"
+          @click="submitPlanCreateForm"
+        >
+          保存
+        </el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog
       v-model="workbenchDialogVisible"
       class="workbench-action-dialog"
       :title="activeActionTitle"
@@ -202,8 +297,10 @@
           'workbench-dialog',
           {
             'workbench-dialog--sampling': activeAction === 'sampling',
+            'workbench-dialog--sampling-plan': activeAction === 'samplingPlan',
             'workbench-dialog--sample-login': activeAction === 'sampleLogin',
             'workbench-dialog--detection': activeAction === 'detection',
+            'workbench-dialog--detection-split': activeAction === 'detectionSplit',
             'workbench-dialog--report': activeAction === 'report',
             'workbench-dialog--report-half-month': activeAction === 'report' && previewData?.previewMode === 'HALF_MONTHLY_TERMINAL_TEMPLATE'
           }
@@ -212,7 +309,7 @@
       >
         <aside class="workbench-dialog__side">
           <div class="workbench-dialog__side-head">
-            <span>待处理列表</span>
+            <span>{{ activeActionSideTitle }}</span>
             <strong>{{ actionRows.length }}</strong>
           </div>
           <div v-if="actionRows.length" class="workbench-row-list">
@@ -231,7 +328,35 @@
         </aside>
 
         <main class="workbench-dialog__main">
-          <template v-if="activeAction === 'sampling'">
+          <template v-if="activeAction === 'samplingPlan'">
+            <div v-if="activeRow" class="workbench-detail">
+              <div class="workbench-detail__title">
+                <div>
+                  <span>采样计划</span>
+                  <strong>{{ activeRow.planName || activeRow.pointName || '-' }}</strong>
+                </div>
+                <span
+                  class="status-chip"
+                  :class="getStatusClass('planStatus', activeRow.planStatus)"
+                >
+                  {{ getEnumLabel(planStatusLabelMap, activeRow.planStatus) }}
+                </span>
+              </div>
+              <div class="workbench-detail__grid">
+                <div v-for="field in activeSamplingPlanDetailFields" :key="field.label">
+                  <span>{{ field.label }}</span>
+                  <strong>{{ field.value || '-' }}</strong>
+                </div>
+              </div>
+              <div class="workbench-detail__remark">
+                <span>备注</span>
+                <p>{{ activeRow.remark || '-' }}</p>
+              </div>
+            </div>
+            <div v-else class="empty-block">请选择左侧采样计划查看详情</div>
+          </template>
+
+          <template v-else-if="activeAction === 'sampling'">
             <el-form label-width="96px">
               <div class="form-grid sampling-entry-grid">
                 <el-form-item label="任务编号">
@@ -324,6 +449,10 @@
                 </el-form-item>
               </div>
             </el-form>
+            <div class="sample-login-config-header">
+              <span class="sample-login-config-title">检测参数明细</span>
+              <el-button type="primary" size="small" @click="openWorkbenchAddParamDialog">添加参数</el-button>
+            </div>
             <el-table
               v-if="loginForm.detectionConfigItems.length"
               class="compact-table sample-login-config-table"
@@ -334,11 +463,53 @@
             >
               <el-table-column prop="parameterName" label="检测参数" min-width="140" />
               <el-table-column label="标准范围" min-width="120">
-                <template #default="{ row }">{{ formatStandardRange(row.standardMin, row.standardMax, row.unit) }}</template>
+                <template #default="{ row }">{{ formatStandardRange(row.standardMin, row.standardMax, row.unit, row.optionValues) }}</template>
               </el-table-column>
               <el-table-column prop="methodName" label="检测方法" min-width="160" />
               <el-table-column prop="sampleVolume" label="取样体积" width="100" />
             </el-table>
+            <div v-else class="sample-login-config-empty">请选择检测套餐后确认检测参数与检测方法明细。</div>
+          </template>
+
+          <template v-else-if="activeAction === 'detectionSplit'">
+            <div v-if="activeRow" class="workbench-detail">
+              <div class="workbench-detail__title">
+                <div>
+                  <span>检测分样</span>
+                  <strong>{{ resultForm.sampleNo || '-' }}</strong>
+                </div>
+                <span
+                  class="status-chip"
+                  :class="getStatusClass('detectionStatus', resultForm.itemStatus)"
+                >
+                  {{ getEnumLabel(detectionStatusLabelMap, resultForm.itemStatus) }}
+                </span>
+              </div>
+              <div class="summary-chips">
+                <span>检测参数<strong>{{ resultForm.parameterName || '-' }}</strong></span>
+                <span>检测人员<strong>{{ resultForm.detectorName || '-' }}</strong></span>
+                <span>检测套餐<strong>{{ resultForm.detectionTypeName || '-' }}</strong></span>
+              </div>
+              <div class="workbench-detail__grid">
+                <div><span>计划名称</span><strong>{{ resultForm.planName || '-' }}</strong></div>
+                <div><span>点位名称</span><strong>{{ resultForm.pointName || '-' }}</strong></div>
+                <div><span>样品类型</span><strong>{{ getEnumLabel(sampleTypeLabelMap, resultForm.sampleType) || resultForm.sampleType || '-' }}</strong></div>
+                <div><span>检测方法</span><strong>{{ resultForm.methodName || '-' }}</strong></div>
+                <div><span>检测标准</span><strong>{{ resultForm.referenceStandard || '-' }}</strong></div>
+                <div><span>标准范围</span><strong>{{ formatStandardRange(resultForm.standardMin, resultForm.standardMax, resultForm.unit, resultForm.optionValues) }}</strong></div>
+                <div><span>单位</span><strong>{{ resultForm.unit || '-' }}</strong></div>
+                <div><span>检测记录</span><strong>{{ resultForm.recordId || '-' }}</strong></div>
+              </div>
+              <div class="workbench-detail__remark">
+                <span>检测步骤</span>
+                <p class="preserve-line-breaks">{{ resultForm.methodBasis || '-' }}</p>
+              </div>
+              <div class="workbench-detail__remark">
+                <span>备注</span>
+                <p>{{ resultForm.remark || '-' }}</p>
+              </div>
+            </div>
+            <div v-else class="empty-block">请选择左侧检测分样查看详情</div>
           </template>
 
           <template v-else-if="activeAction === 'detection'">
@@ -350,12 +521,12 @@
             <div class="meta-grid">
               <div><span>检测方法</span><strong>{{ resultForm.methodName || '-' }}</strong></div>
               <div><span>检测标准</span><strong>{{ resultForm.referenceStandard || '-' }}</strong></div>
-              <div><span>标准范围</span><strong>{{ formatStandardRange(resultForm.standardMin, resultForm.standardMax, resultForm.unit) }}</strong></div>
+              <div><span>标准范围</span><strong>{{ formatStandardRange(resultForm.standardMin, resultForm.standardMax, resultForm.unit, resultForm.optionValues) }}</strong></div>
               <div><span>单位</span><strong>{{ resultForm.unit || '-' }}</strong></div>
             </div>
             <div class="detection-step-row">
               <span>检测步骤</span>
-              <p>{{ resultForm.methodBasis || '-' }}</p>
+              <p class="preserve-line-breaks">{{ resultForm.methodBasis || '-' }}</p>
             </div>
             <el-form label-position="top">
               <el-form-item label="检测结果" required>
@@ -366,7 +537,21 @@
                   >
                     OCR识别
                   </el-button>
+                  <el-select
+                    v-if="resultForm.optionValues"
+                    v-model="resultForm.resultValue"
+                    class="result-value-input result-value-select"
+                    placeholder="请选择"
+                  >
+                    <el-option
+                      v-for="(label, index) in parseOptionValuesArray(resultForm.optionValues)"
+                      :key="index"
+                      :label="label"
+                      :value="String(index)"
+                    />
+                  </el-select>
                   <el-input
+                    v-else
                     v-model="resultForm.resultValue"
                     inputmode="decimal"
                     class="result-value-input"
@@ -392,25 +577,37 @@
             </div>
             <div class="review-toolbar">
               <el-button type="primary" @click="setAllReviewResult(approvedReviewResult)">一键通过</el-button>
-              <el-button type="danger" plain @click="setAllReviewResult(rejectedReviewResult)">一键驳回</el-button>
+              <el-button type="danger" plain @click="rejectAllReviewItems">一键驳回</el-button>
             </div>
             <el-table class="compact-table" :data="reviewForm.items" size="small" border max-height="430">
               <el-table-column prop="parameterName" label="检测参数" min-width="130" />
               <el-table-column prop="methodName" label="检测方法" min-width="150" />
               <el-table-column label="标准范围" min-width="130">
-                <template #default="{ row }">{{ formatStandardRange(row.standardMin, row.standardMax, row.unit) }}</template>
+                <template #default="{ row }">{{ formatStandardRange(row.standardMin, row.standardMax, row.unit, row.optionValues) }}</template>
               </el-table-column>
               <el-table-column prop="unit" label="单位" width="90" />
-              <el-table-column prop="resultValue" label="检测值" width="100" />
-              <el-table-column label="审核操作" min-width="180">
+              <el-table-column label="检测值" width="100">
                 <template #default="{ row }">
-                  <el-button size="small" :type="row.reviewResultDraft === approvedReviewResult ? 'primary' : 'default'" @click="row.reviewResultDraft = approvedReviewResult">通过</el-button>
-                  <el-button size="small" :type="row.reviewResultDraft === rejectedReviewResult ? 'danger' : 'default'" @click="row.reviewResultDraft = rejectedReviewResult">驳回</el-button>
+                  <span v-if="row.optionValues">{{ (parseOptionValuesArray(row.optionValues)[row.resultValue] || row.resultValue) ?? '-' }}</span>
+                  <span v-else>{{ row.resultValue }}</span>
                 </template>
               </el-table-column>
-              <el-table-column label="驳回原因" min-width="220">
+              <el-table-column label="审核状态" width="100">
                 <template #default="{ row }">
-                  <el-input v-model="row.rejectReasonDraft" :disabled="row.reviewResultDraft !== rejectedReviewResult" placeholder="驳回时填写原因" />
+                  <span class="review-state-chip" :class="getReviewDraftStatusClass(row)">
+                    {{ getReviewDraftStatusLabel(row) }}
+                  </span>
+                </template>
+              </el-table-column>
+              <el-table-column label="审核操作" min-width="180">
+                <template #default="{ row }">
+                  <el-button size="small" :type="row.reviewResultDraft === approvedReviewResult ? 'primary' : 'default'" @click="approveReviewItem(row)">通过</el-button>
+                  <el-button size="small" :type="row.reviewResultDraft === rejectedReviewResult ? 'danger' : 'default'" @click="rejectReviewItem(row)">驳回</el-button>
+                </template>
+              </el-table-column>
+              <el-table-column label="驳回原因" min-width="220" class-name="review-reject-reason-cell">
+                <template #default="{ row }">
+                  <span class="review-reject-reason">{{ row.reviewResultDraft === rejectedReviewResult ? (row.rejectReasonDraft || '-') : '-' }}</span>
                 </template>
               </el-table-column>
             </el-table>
@@ -427,6 +624,7 @@
               <div class="workbench-report-preview__scale">
                 <component
                   :is="previewComponent"
+                  ref="workbenchReportPrintRef"
                   :preview-data="previewData"
                 />
               </div>
@@ -438,11 +636,57 @@
       </div>
 
       <template #footer>
-        <el-button v-if="activeAction === 'sampling'" type="primary" @click="openWorkbenchAction('sampleLogin', activeRow)">样品登录</el-button>
-        <el-button @click="workbenchDialogVisible = false">关闭</el-button>
-        <el-button v-if="activeAction === 'sampleLogin'" type="primary" :loading="submitting" @click="submitSampleLogin">保存</el-button>
-        <el-button v-if="activeAction === 'detection'" type="primary" :loading="submitting" @click="submitDetectionResult">提交</el-button>
-        <el-button v-if="activeAction === 'review'" type="primary" :loading="submitting" @click="submitReviewDecision">提交</el-button>
+        <div class="workbench-dialog__footer">
+          <div class="workbench-dialog__footer-left">
+            <el-button v-if="activeAction === 'samplingPlan'" v-permission="'samplingPlan:write'" type="primary" plain @click="openPlanCreateDialog">新增计划</el-button>
+          </div>
+          <div class="workbench-dialog__footer-right">
+            <el-button v-if="activeAction === 'sampling'" type="primary" @click="openWorkbenchAction('sampleLogin', activeRow)">样品登录</el-button>
+            <el-button v-if="activeAction === 'report'" type="primary" plain :disabled="!previewData || !previewComponent" @click="printWorkbenchReport">打印</el-button>
+            <el-button @click="workbenchDialogVisible = false">关闭</el-button>
+            <el-button v-if="activeAction === 'sampleLogin'" type="primary" :loading="submitting" @click="submitSampleLogin">登录</el-button>
+            <el-button v-if="activeAction === 'detection'" type="primary" :loading="submitting" @click="submitDetectionResult">提交</el-button>
+            <el-button v-if="activeAction === 'review'" type="primary" :loading="submitting" @click="submitReviewDecision">提交</el-button>
+          </div>
+        </div>
+      </template>
+    </el-dialog>
+
+    <!-- 添加检测参数对话框 -->
+    <el-dialog
+      v-model="workbenchAddParamDialogVisible"
+      title="添加检测参数"
+      width="600px"
+      append-to-body
+      destroy-on-close
+      @open="handleWorkbenchAddParamDialogOpen"
+    >
+      <div v-loading="workbenchAddParamLoading" class="add-parameter-dialog-content">
+        <div v-if="workbenchAddParamOptions.length" class="add-parameter-list">
+          <div
+            v-for="item in workbenchAddParamOptions"
+            :key="item.id"
+            :class="['add-parameter-item', { 'is-disabled': isWorkbenchParamInCurrentList(item.id) }]"
+          >
+            <el-checkbox
+              :model-value="workbenchAddParamSelectedIds.includes(String(item.id))"
+              :disabled="isWorkbenchParamInCurrentList(item.id)"
+              @change="(val) => handleWorkbenchParamCheckChange(String(item.id), val)"
+            />
+            <div class="add-parameter-info">
+              <span class="add-parameter-name">{{ item.parameterName }}</span>
+              <span v-if="item.unit" class="add-parameter-unit">({{ item.unit }})</span>
+            </div>
+            <el-tag v-if="isWorkbenchParamInCurrentList(item.id)" size="small" type="info">已在列表中</el-tag>
+          </div>
+        </div>
+        <el-empty v-else description="暂无可添加的检测参数" />
+      </div>
+      <template #footer>
+        <el-button @click="workbenchAddParamDialogVisible = false">取消</el-button>
+        <el-button type="primary" :disabled="!workbenchNewSelectedParamCount" @click="confirmWorkbenchAddParamDialog">
+          确认 ({{ workbenchNewSelectedParamCount }})
+        </el-button>
       </template>
     </el-dialog>
   </div>
@@ -451,15 +695,20 @@
 <script setup>
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { ElButton } from 'element-plus/es/components/button/index.mjs'
+import { ElCheckbox } from 'element-plus/es/components/checkbox/index.mjs'
 import { ElDatePicker } from 'element-plus/es/components/date-picker/index.mjs'
 import { ElDialog } from 'element-plus/es/components/dialog/index.mjs'
+import { ElEmpty } from 'element-plus/es/components/empty/index.mjs'
 import { ElForm, ElFormItem } from 'element-plus/es/components/form/index.mjs'
 import { ElInput } from 'element-plus/es/components/input/index.mjs'
 import { ElMessage } from 'element-plus/es/components/message/index.mjs'
+import { ElMessageBox } from 'element-plus/es/components/message-box/index.mjs'
 import { ElOption, ElSelect } from 'element-plus/es/components/select/index.mjs'
 import { ElTable, ElTableColumn } from 'element-plus/es/components/table/index.mjs'
+import { ElTag } from 'element-plus/es/components/tag/index.mjs'
 import { ElLoadingDirective } from 'element-plus/es/components/loading/index.mjs'
 import {
+  createSamplingPlanApi,
   dispatchSamplingPlanApi,
   fetchDetectionDetailApi,
   fetchDetectionItemsApi,
@@ -490,7 +739,9 @@ import {
   activePlanStatus,
   actionablePlanStatuses,
   cycleTypeLabelMap,
+  cycleTypeOptions,
   detectionStatusLabelMap,
+  dailyCycleType,
   getEnumLabel,
   getStatusClass,
   planStatusLabelMap,
@@ -498,10 +749,12 @@ import {
   rejectedReviewResult,
   reviewPendingDetectionStatus,
   sampleRegisterStatusLabelMap,
+  sampleTypeOptions,
   sampleSourceMethodOptions,
   sampleTypeLabelMap,
   samplingTypeLabelMap,
   samplingSampleSourceMethod,
+  routineSamplingType,
   taskStatusLabelMap,
   unregisteredSampleRegisterStatus,
   waitDetectDetectionStatus
@@ -520,8 +773,10 @@ const actionLoading = ref(false)
 const submitting = ref(false)
 const dispatchSubmitting = ref(false)
 const dispatchingPlanId = ref(null)
+const planCreateSubmitting = ref(false)
 const currentUser = ref(getUser() || {})
 const dispatchDialogVisible = ref(false)
+const planCreateDialogVisible = ref(false)
 const dashboard = ref({})
 const activeAction = ref('')
 const workbenchDialogVisible = ref(false)
@@ -537,8 +792,13 @@ const detectionTypes = ref([])
 const detectionParameters = ref([])
 const detectionMethods = ref([])
 const reviewFlowOptions = ref([])
+const workbenchAddParamDialogVisible = ref(false)
+const workbenchAddParamLoading = ref(false)
+const workbenchAddParamOptions = ref([])
+const workbenchAddParamSelectedIds = ref([])
 const previewData = ref(null)
 const previewError = ref('')
+const workbenchReportPrintRef = ref(null)
 const previewRows = reactive({
   samplingPlan: [],
   sampling: [],
@@ -546,6 +806,14 @@ const previewRows = reactive({
   detection: [],
   review: [],
   report: []
+})
+const previewTotals = reactive({
+  samplingPlan: 0,
+  sampling: 0,
+  sampleLogin: 0,
+  detection: 0,
+  review: 0,
+  report: 0
 })
 
 const samplingTask = ref(null)
@@ -557,6 +825,23 @@ const dispatchForm = reactive({
   samplerIds: [],
   samplerId: null,
   samplerName: ''
+})
+
+const planCreateForm = reactive({
+  planName: '',
+  pointName: '',
+  address: '',
+  latitude: '',
+  longitude: '',
+  startTime: '',
+  endTime: '',
+  samplerIds: [],
+  samplerId: null,
+  samplerName: '',
+  samplingType: routineSamplingType,
+  sampleType: '',
+  cycleType: dailyCycleType,
+  remark: ''
 })
 
 const loginForm = reactive({
@@ -585,6 +870,9 @@ const resultForm = reactive({
   recordId: null,
   sampleId: null,
   sampleNo: '',
+  planName: '',
+  pointName: '',
+  sampleType: '',
   detectionTypeId: null,
   detectionTypeName: '',
   parameterId: null,
@@ -599,7 +887,8 @@ const resultForm = reactive({
   resultValue: null,
   abnormalRemark: '',
   remark: '',
-  itemStatus: ''
+  itemStatus: '',
+  optionValues: ''
 })
 
 const reviewForm = reactive({
@@ -617,32 +906,38 @@ const workbenchSections = computed(() => {
     {
       key: 'samplingPlan',
       title: '采样计划',
-      rows: previewRows.samplingPlan
+      rows: previewRows.samplingPlan,
+      total: previewTotals.samplingPlan
     },
     {
       key: 'sampling',
       title: '采样任务',
-      rows: previewRows.sampling
+      rows: previewRows.sampling,
+      total: previewTotals.sampling
     },
     {
       key: 'sampleLogin',
       title: '样品登录',
-      rows: previewRows.sampleLogin
+      rows: previewRows.sampleLogin,
+      total: previewTotals.sampleLogin
     },
     {
       key: 'detection',
       title: '检测录入',
-      rows: previewRows.detection
+      rows: previewRows.detection,
+      total: previewTotals.detection
     },
     {
       key: 'review',
       title: '结果审核',
-      rows: previewRows.review
+      rows: previewRows.review,
+      total: previewTotals.review
     },
     {
       key: 'report',
       title: '报告处理',
-      rows: previewRows.report
+      rows: previewRows.report,
+      total: previewTotals.report
     }
   ]
   if (isStaffRole(currentUser.value)) {
@@ -686,6 +981,15 @@ const activeActionTitle = computed(() => ({
   review: '结果审核',
   report: '报告处理'
 }[activeAction.value] || '快捷处理'))
+const activeActionSideTitle = computed(() => {
+  if (activeAction.value === 'samplingPlan') {
+    return '计划列表'
+  }
+  if (activeAction.value === 'report') {
+    return '报告列表'
+  }
+  return '待处理列表'
+})
 const loginDetectionTypeOptions = computed(() => {
   const sampleType = String(loginForm.sampleType || '').trim()
   if (!sampleType) {
@@ -697,6 +1001,11 @@ const pendingReviewItemCount = computed(() => reviewForm.items.filter((item) => 
 const previewComponent = computed(() => resolveSummaryPreviewComponent(previewData.value?.previewMode))
 const samplingPlanDetailFields = computed(() => {
   const plan = selectedSamplingPlan.value || {}
+  return buildSamplingPlanDetailFields(plan)
+})
+const activeSamplingPlanDetailFields = computed(() => buildSamplingPlanDetailFields(activeRow.value || {}))
+
+function buildSamplingPlanDetailFields(plan) {
   return [
     { label: '点位名称', value: plan.pointName },
     { label: '所属地址', value: plan.address },
@@ -709,7 +1018,7 @@ const samplingPlanDetailFields = computed(() => {
     { label: '坐标', value: formatPlanCoordinate(plan) },
     { label: '采样方式', value: getEnumLabel(samplingTypeLabelMap, plan.samplingType) }
   ]
-})
+}
 
 function toSafeNumber(value) {
   const num = typeof value === 'number' ? value : Number.parseFloat(String(value ?? '').replace(/,/g, '').trim())
@@ -866,11 +1175,35 @@ function resetDispatchForm() {
   dispatchForm.samplerName = ''
 }
 
+function resetPlanCreateForm() {
+  planCreateForm.planName = ''
+  planCreateForm.pointName = ''
+  planCreateForm.address = ''
+  planCreateForm.latitude = ''
+  planCreateForm.longitude = ''
+  planCreateForm.startTime = ''
+  planCreateForm.endTime = ''
+  planCreateForm.samplerIds = []
+  planCreateForm.samplerId = null
+  planCreateForm.samplerName = ''
+  planCreateForm.samplingType = routineSamplingType
+  planCreateForm.sampleType = ''
+  planCreateForm.cycleType = dailyCycleType
+  planCreateForm.remark = ''
+}
+
 function handleDispatchSamplerChange(userIds) {
   const ids = normalizeSamplerIdList(userIds)
   dispatchForm.samplerIds = ids
   dispatchForm.samplerId = ids[0] || null
   dispatchForm.samplerName = resolveSamplerNames(ids)
+}
+
+function handlePlanCreateSamplerChange(userIds) {
+  const ids = normalizeSamplerIdList(userIds)
+  planCreateForm.samplerIds = ids
+  planCreateForm.samplerId = ids[0] || null
+  planCreateForm.samplerName = resolveSamplerNames(ids)
 }
 
 async function loadSamplers(force = false) {
@@ -899,7 +1232,10 @@ function handleSamplerDropdownVisible(visible) {
 }
 
 function nowDateTimeText() {
-  const date = new Date()
+  return formatDateTimeText(new Date())
+}
+
+function formatDateTimeText(date) {
   const pad = (value) => String(value).padStart(2, '0')
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
 }
@@ -924,6 +1260,12 @@ async function loadWorkbenchPreviewRows() {
   previewRows.detection = detectionResult.records || []
   previewRows.review = reviewResult.records || []
   previewRows.report = summaryReportRows
+  previewTotals.samplingPlan = Number(planResult.total) || previewRows.samplingPlan.length
+  previewTotals.sampling = Number(samplingResult.total) || previewRows.sampling.length
+  previewTotals.sampleLogin = Number(loginResult.total) || previewRows.sampleLogin.length
+  previewTotals.detection = Number(detectionResult.total) || previewRows.detection.length
+  previewTotals.review = Number(reviewResult.total) || previewRows.review.length
+  previewTotals.report = summaryReportRows.length
 }
 
 function getWorkbenchSummaryTypes() {
@@ -949,14 +1291,26 @@ async function loadWorkbenchSummaryReportRows(pageSize) {
 }
 
 function compareSummaryReportRows(left, right) {
-  const rightTime = Date.parse(right?.periodStart || right?.latestSamplingTime || '')
-  const leftTime = Date.parse(left?.periodStart || left?.latestSamplingTime || '')
-  const safeRightTime = Number.isFinite(rightTime) ? rightTime : 0
-  const safeLeftTime = Number.isFinite(leftTime) ? leftTime : 0
+  const safeRightTime = getSummaryReportLatestTime(right)
+  const safeLeftTime = getSummaryReportLatestTime(left)
   if (safeRightTime !== safeLeftTime) {
     return safeRightTime - safeLeftTime
   }
   return String(left?.reportName || '').localeCompare(String(right?.reportName || ''))
+}
+
+function getSummaryReportLatestTime(row) {
+  const rawTime = row?.updatedTime
+    || row?.generatedTime
+    || row?.createdTime
+    || row?.createTime
+    || row?.reportTime
+    || row?.periodEnd
+    || row?.periodStart
+    || row?.latestSamplingTime
+    || ''
+  const timestamp = Date.parse(rawTime)
+  return Number.isFinite(timestamp) ? timestamp : 0
 }
 
 async function loadDictOptions() {
@@ -1013,6 +1367,65 @@ async function dispatchSamplingPlanFromWorkbench(row) {
   dispatchDialogVisible.value = true
 }
 
+async function openPlanCreateDialog() {
+  await loadSamplers()
+  resetPlanCreateForm()
+  const startTime = nowDateTimeText()
+  const endDate = new Date()
+  endDate.setHours(endDate.getHours() + 24)
+  planCreateForm.planName = '采样计划'
+  planCreateForm.startTime = startTime
+  planCreateForm.endTime = formatDateTimeText(endDate)
+  planCreateDialogVisible.value = true
+}
+
+function buildPlanCreatePayload() {
+  return {
+    planName: String(planCreateForm.planName || '').trim(),
+    pointId: null,
+    pointName: String(planCreateForm.pointName || '').trim(),
+    address: String(planCreateForm.address || '').trim(),
+    latitude: String(planCreateForm.latitude || '').trim(),
+    longitude: String(planCreateForm.longitude || '').trim(),
+    startTime: planCreateForm.startTime || '',
+    endTime: planCreateForm.endTime || '',
+    samplerIds: normalizeSamplerIdList(planCreateForm.samplerIds),
+    samplerId: planCreateForm.samplerId,
+    samplerName: String(planCreateForm.samplerName || '').trim(),
+    samplingType: planCreateForm.samplingType || routineSamplingType,
+    sampleType: planCreateForm.sampleType || '',
+    cycleType: planCreateForm.cycleType || dailyCycleType,
+    remark: String(planCreateForm.remark || '').trim()
+  }
+}
+
+async function submitPlanCreateForm() {
+  if (planCreateSubmitting.value) {
+    return
+  }
+  const payload = buildPlanCreatePayload()
+  if (!payload.planName || !payload.pointName || !payload.address || !payload.longitude || !payload.latitude || !payload.startTime || !payload.endTime || !payload.sampleType || !payload.cycleType || !payload.samplerIds.length) {
+    ElMessage.warning('请完整填写采样计划信息')
+    return
+  }
+  if (new Date(payload.endTime).getTime() < new Date(payload.startTime).getTime()) {
+    ElMessage.warning('结束时间不能早于开始时间')
+    return
+  }
+  planCreateSubmitting.value = true
+  try {
+    await createSamplingPlanApi(payload)
+    ElMessage.success('采样计划已创建')
+    planCreateDialogVisible.value = false
+    await Promise.all([loadWorkbenchPreviewRows(), loadActionRows('samplingPlan')])
+    if (activeAction.value === 'samplingPlan' && actionRows.value.length) {
+      await selectActionRow(actionRows.value[0])
+    }
+  } finally {
+    planCreateSubmitting.value = false
+  }
+}
+
 async function submitDispatchForm() {
   if (dispatchSubmitting.value) {
     return
@@ -1065,13 +1478,14 @@ async function openWorkbenchAction(key, preferredRow = null) {
 async function loadActionRows(key) {
   previewData.value = null
   previewError.value = ''
+  const actionPageSize = 200
   if (key === 'samplingPlan') {
-    const result = await fetchSamplingPlansApi({ pageNum: 1, pageSize: 30, planStatus: 'ACTIVE' })
+    const result = await fetchSamplingPlansApi({ pageNum: 1, pageSize: actionPageSize, planStatus: 'ACTIVE' })
     actionRows.value = result.records || []
     return
   }
   if (key === 'sampling') {
-    const result = await fetchSamplingTasksApi({ pageNum: 1, pageSize: 30, taskStatus: 'PENDING' })
+    const result = await fetchSamplingTasksApi({ pageNum: 1, pageSize: actionPageSize, taskStatus: 'PENDING' })
     actionRows.value = result.records || []
     return
   }
@@ -1079,24 +1493,24 @@ async function loadActionRows(key) {
     await Promise.all([loadDetectionConfigOptions(), loadFlowOptions()])
     const result = await fetchSamplingTasksApi({
       pageNum: 1,
-      pageSize: 30,
+      pageSize: actionPageSize,
       sampleRegisterStatus: 'UNREGISTERED'
     })
     actionRows.value = result.records || []
     return
   }
   if (key === 'detectionSplit' || key === 'detection') {
-    const result = await fetchDetectionItemsApi({ pageNum: 1, pageSize: 30, itemStatus: waitDetectDetectionStatus })
+    const result = await fetchDetectionItemsApi({ pageNum: 1, pageSize: actionPageSize, itemStatus: waitDetectDetectionStatus })
     actionRows.value = result.records || []
     return
   }
   if (key === 'review') {
-    const result = await fetchDetectionsApi({ pageNum: 1, pageSize: 30, detectionStatus: reviewPendingDetectionStatus })
+    const result = await fetchDetectionsApi({ pageNum: 1, pageSize: actionPageSize, detectionStatus: reviewPendingDetectionStatus })
     actionRows.value = result.records || []
     return
   }
   if (key === 'report') {
-    actionRows.value = await loadWorkbenchSummaryReportRows(30)
+    actionRows.value = await loadWorkbenchSummaryReportRows(actionPageSize)
   }
 }
 
@@ -1418,6 +1832,90 @@ function handleReviewFlowChange(flowId) {
   loginForm.reviewFlowName = flow?.flowName || ''
 }
 
+// 工作台添加参数相关函数
+function isWorkbenchParamInCurrentList(parameterId) {
+  const currentIds = loginForm.detectionConfigItems.map((row) => String(row.parameterId))
+  return currentIds.includes(String(parameterId))
+}
+
+const workbenchNewSelectedParamCount = computed(() => {
+  const currentIds = loginForm.detectionConfigItems.map((row) => String(row.parameterId))
+  return workbenchAddParamSelectedIds.value.filter((id) => !currentIds.includes(id)).length
+})
+
+function openWorkbenchAddParamDialog() {
+  workbenchAddParamSelectedIds.value = []
+  workbenchAddParamDialogVisible.value = true
+}
+
+async function handleWorkbenchAddParamDialogOpen() {
+  workbenchAddParamLoading.value = true
+  workbenchAddParamSelectedIds.value = []
+  try {
+    if (!detectionParameters.value.length) {
+      const result = await fetchDetectionParametersApi({ pageNum: 1, pageSize: 1000 })
+      detectionParameters.value = result.records || []
+    }
+    workbenchAddParamOptions.value = detectionParameters.value
+  } catch (error) {
+    console.error('加载检测参数失败:', error)
+    ElMessage.error('加载检测参数失败')
+    workbenchAddParamOptions.value = []
+  } finally {
+    workbenchAddParamLoading.value = false
+  }
+}
+
+function handleWorkbenchParamCheckChange(parameterId, checked) {
+  const id = String(parameterId)
+  if (checked) {
+    if (!workbenchAddParamSelectedIds.value.includes(id)) {
+      workbenchAddParamSelectedIds.value = [...workbenchAddParamSelectedIds.value, id]
+    }
+  } else {
+    workbenchAddParamSelectedIds.value = workbenchAddParamSelectedIds.value.filter((item) => item !== id)
+  }
+}
+
+function confirmWorkbenchAddParamDialog() {
+  const currentIds = loginForm.detectionConfigItems.map((row) => String(row.parameterId))
+  const selectedIds = workbenchAddParamSelectedIds.value.filter((id) => !currentIds.includes(id))
+  if (!selectedIds.length) {
+    ElMessage.warning('请选择要添加的参数')
+    return
+  }
+  const newRows = selectedIds
+    .map((parameterId) => {
+      const parameter = workbenchAddParamOptions.value.find((item) => String(item.id) === parameterId)
+      if (!parameter) return null
+      const methodOptions = detectionMethods.value
+        .filter((item) => String(item.parameterId) === String(parameterId) && item.enabled === 1)
+        .map((item) => ({
+          id: String(item.id),
+          methodName: item.methodName || `检测方法-${item.id}`,
+          sampleVolume: item.sampleVolume || item.sample_volume || ''
+        }))
+      const currentMethod = methodOptions[0] || null
+      return {
+        parameterId: String(parameter.id),
+        parameterName: parameter.parameterName || '',
+        unit: parameter.unit || '',
+        standardMin: parameter.standardMin,
+        standardMax: parameter.standardMax,
+        optionValues: parameter.optionValues || '',
+        referenceStandard: parameter.referenceStandard || '',
+        methodId: currentMethod?.id || '',
+        methodName: currentMethod?.methodName || '',
+        sampleVolume: currentMethod?.sampleVolume || '',
+        methodOptions
+      }
+    })
+    .filter(Boolean)
+  loginForm.detectionConfigItems = [...loginForm.detectionConfigItems, ...newRows]
+  workbenchAddParamDialogVisible.value = false
+  ElMessage.success(`成功添加 ${newRows.length} 个检测参数`)
+}
+
 function formatDetectionTypeLabel(item) {
   const sampleTypeLabel = item?.sampleType ? getEnumLabel(sampleTypeLabelMap, item.sampleType) : '未绑定样品类型'
   return `${item?.typeName || '-'} / ${sampleTypeLabel}`
@@ -1442,6 +1940,21 @@ function parseBindingJson(value) {
   } catch {
     return []
   }
+}
+
+function parseDetectionConfigRows(snapshot) {
+  return parseBindingJson(snapshot).map((item) => ({
+    parameterId: item.parameterId,
+    parameterName: item.parameterName || '',
+    standardMin: item.standardMin,
+    standardMax: item.standardMax,
+    unit: item.unit || '',
+    optionValues: item.optionValues || '',
+    referenceStandard: item.referenceStandard || '',
+    methodId: item.methodId,
+    methodName: item.methodName || '',
+    sampleVolume: item.sampleVolume || ''
+  }))
 }
 
 function buildLoginDetectionConfigItems(type) {
@@ -1525,6 +2038,9 @@ function openResultForm(row) {
   resultForm.recordId = row.recordId
   resultForm.sampleId = row.sampleId
   resultForm.sampleNo = row.sampleNo || ''
+  resultForm.planName = row.planName || ''
+  resultForm.pointName = row.pointName || row.monitoringPointName || ''
+  resultForm.sampleType = row.sampleType || ''
   resultForm.detectionTypeId = row.detectionTypeId
   resultForm.detectionTypeName = row.detectionTypeName || ''
   resultForm.parameterId = row.parameterId
@@ -1540,9 +2056,26 @@ function openResultForm(row) {
   resultForm.abnormalRemark = row.abnormalRemark || ''
   resultForm.remark = row.remark || ''
   resultForm.itemStatus = row.itemStatus || ''
+  // 优先从参数配置中获取 optionValues，确保文本选项能正确显示
+  const parameter = detectionParameters.value.find((p) => String(p.id) === String(row.parameterId))
+  resultForm.optionValues = parameter?.optionValues || row.optionValues || ''
 }
 
-function formatStandardRange(min, max, unit) {
+function parseOptionValuesArray(json) {
+  if (!json) return []
+  try {
+    const arr = JSON.parse(json)
+    return Array.isArray(arr) ? arr : []
+  } catch {
+    return []
+  }
+}
+
+function formatStandardRange(min, max, unit, optionValues) {
+  if (optionValues) {
+    const options = parseOptionValuesArray(optionValues)
+    if (options.length) return options.join(' / ')
+  }
   const suffix = unit ? ` ${unit}` : ''
   if (min != null && max != null) {
     return `${min} ~ ${max}${suffix}`
@@ -1558,6 +2091,9 @@ function formatStandardRange(min, max, unit) {
 
 function isResultValueAbnormal(item) {
   if (!item || item.resultValue == null || item.resultValue === '') {
+    return false
+  }
+  if (item.optionValues) {
     return false
   }
   const value = Number(item.resultValue)
@@ -1597,7 +2133,7 @@ async function submitDetectionResult() {
     return
   }
   if (isResultValueAbnormal(resultForm)) {
-    ElMessage.warning(`检测结果存在异常，禁止录入：${formatStandardRange(resultForm.standardMin, resultForm.standardMax, resultForm.unit)}`)
+    ElMessage.warning(`检测结果超出标准范围：${formatStandardRange(resultForm.standardMin, resultForm.standardMax, resultForm.unit, resultForm.optionValues)}，请检查结果值`)
     return
   }
   submitting.value = true
@@ -1616,7 +2152,8 @@ async function submitDetectionResult() {
         standardMin: resultForm.standardMin,
         standardMax: resultForm.standardMax,
         resultValue: Number(resultForm.resultValue),
-        unit: resultForm.unit
+        unit: resultForm.unit,
+        optionValues: resultForm.optionValues || ''
       }]
     })
     ElMessage.success('检测结果已提交')
@@ -1652,10 +2189,76 @@ function setAllReviewResult(result) {
   reviewForm.items.forEach((item) => {
     if (item.itemStatus === reviewPendingDetectionStatus) {
       item.reviewResultDraft = result
-      if (result === rejectedReviewResult && !item.rejectReasonDraft) {
-        item.rejectReasonDraft = '审核不通过，请重新检测并提交结果'
+      if (result === approvedReviewResult) {
+        item.rejectReasonDraft = ''
       }
     }
+  })
+}
+
+function approveReviewItem(item) {
+  item.reviewResultDraft = approvedReviewResult
+  item.rejectReasonDraft = ''
+}
+
+function getReviewDraftStatusLabel(item) {
+  if (item?.reviewResultDraft === approvedReviewResult) {
+    return '通过'
+  }
+  if (item?.reviewResultDraft === rejectedReviewResult) {
+    return '驳回'
+  }
+  return '待审核'
+}
+
+function getReviewDraftStatusClass(item) {
+  if (item?.reviewResultDraft === approvedReviewResult) {
+    return 'is-approved'
+  }
+  if (item?.reviewResultDraft === rejectedReviewResult) {
+    return 'is-rejected'
+  }
+  return 'is-pending'
+}
+
+async function promptRejectReason(message, defaultValue = '') {
+  try {
+    const result = await ElMessageBox.prompt(message, '填写驳回原因', {
+      confirmButtonText: '确认',
+      cancelButtonText: '取消',
+      inputType: 'textarea',
+      inputValue: defaultValue,
+      inputPlaceholder: '请输入驳回原因',
+      inputValidator: (value) => String(value || '').trim() ? true : '请填写驳回原因'
+    })
+    return String(result.value || '').trim()
+  } catch {
+    return ''
+  }
+}
+
+async function rejectReviewItem(item) {
+  const reason = await promptRejectReason(`请填写 ${item.parameterName || '检测项目'} 的驳回原因`, item.rejectReasonDraft)
+  if (!reason) {
+    return
+  }
+  item.reviewResultDraft = rejectedReviewResult
+  item.rejectReasonDraft = reason
+}
+
+async function rejectAllReviewItems() {
+  const pendingItems = reviewForm.items.filter((item) => item.itemStatus === reviewPendingDetectionStatus)
+  if (!pendingItems.length) {
+    ElMessage.warning('当前没有可驳回的检测项目')
+    return
+  }
+  const reason = await promptRejectReason('请填写本次一键驳回的原因')
+  if (!reason) {
+    return
+  }
+  pendingItems.forEach((item) => {
+    item.reviewResultDraft = rejectedReviewResult
+    item.rejectReasonDraft = reason
   })
 }
 
@@ -1667,12 +2270,36 @@ async function submitReviewDecision() {
   }
   const undecidedItem = pendingItems.find((item) => !item.reviewResultDraft)
   if (undecidedItem) {
-    ElMessage.warning(`请先选择 ${undecidedItem.parameterName || '检测参数'} 的审核结果`)
-    return
+    try {
+      await ElMessageBox.confirm(
+        '仍有检测项目未选择通过或驳回，是否将未选检测项目全部按通过提交？',
+        '确认提交',
+        {
+          confirmButtonText: '全部通过并提交',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }
+      )
+      pendingItems.forEach((item) => {
+        if (!item.reviewResultDraft) {
+          item.reviewResultDraft = approvedReviewResult
+          item.rejectReasonDraft = ''
+        }
+      })
+    } catch {
+      return
+    }
   }
-  const missingRejectReason = pendingItems.find((item) => item.reviewResultDraft === rejectedReviewResult && !item.rejectReasonDraft)
+  const missingRejectReason = pendingItems.find((item) => item.reviewResultDraft === rejectedReviewResult && !String(item.rejectReasonDraft || '').trim())
   if (missingRejectReason) {
-    ElMessage.warning(`请填写 ${missingRejectReason.parameterName || '检测参数'} 的驳回原因`)
+    await rejectReviewItem(missingRejectReason)
+    if (!String(missingRejectReason.rejectReasonDraft || '').trim()) {
+      ElMessage.warning(`请填写 ${missingRejectReason.parameterName || '检测参数'} 的驳回原因`)
+      return
+    }
+  }
+  const remainingUndecidedItem = pendingItems.find((item) => !item.reviewResultDraft)
+  if (remainingUndecidedItem) {
     return
   }
   submitting.value = true
@@ -1685,7 +2312,7 @@ async function submitReviewDecision() {
       items: pendingItems.map((item) => ({
         itemId: item.id,
         reviewResult: item.reviewResultDraft,
-        rejectReason: item.rejectReasonDraft,
+        rejectReason: item.reviewResultDraft === rejectedReviewResult ? item.rejectReasonDraft : '',
         reviewRemark: item.reviewRemarkDraft
       }))
     })
@@ -1699,11 +2326,28 @@ async function submitReviewDecision() {
 async function openReportPreview(row) {
   previewData.value = null
   previewError.value = ''
+  workbenchReportPrintRef.value = null
   try {
     previewData.value = await previewSummaryReportApi(buildSummaryPreviewParams(row))
   } catch (error) {
     previewError.value = error?.message || '报告预览失败'
   }
+}
+
+async function printWorkbenchReport() {
+  if (!previewData.value || !previewComponent.value) {
+    ElMessage.warning('请先选择可预览的报告')
+    return
+  }
+  if (workbenchReportPrintRef.value?.printDocument) {
+    await workbenchReportPrintRef.value.printDocument()
+    return
+  }
+  document.body.classList.add('workbench-report-printing')
+  window.print()
+  setTimeout(() => {
+    document.body.classList.remove('workbench-report-printing')
+  }, 300)
 }
 
 function buildSummaryPreviewParams(row) {
@@ -2226,6 +2870,25 @@ onUnmounted(() => {
   max-width: calc(100vw - 32px);
 }
 
+.workbench-dialog__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+}
+
+.workbench-dialog__footer-left,
+.workbench-dialog__footer-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.workbench-dialog__footer-right {
+  justify-content: flex-end;
+}
+
 .workbench-dialog {
   display: grid;
   grid-template-columns: 280px minmax(0, 1fr);
@@ -2246,6 +2909,14 @@ onUnmounted(() => {
   min-height: 0;
 }
 
+.workbench-dialog--detection-split {
+  grid-template-columns: 320px minmax(0, 1fr);
+  width: 100%;
+  height: min(560px, calc(100vh - 170px));
+  min-height: 420px;
+  overflow: hidden;
+}
+
 .workbench-dialog--sample-login {
   grid-template-columns: 320px minmax(0, 1fr);
   width: 100%;
@@ -2257,6 +2928,13 @@ onUnmounted(() => {
   grid-template-columns: 320px minmax(0, 1fr);
   width: 100%;
   height: 650px;
+  min-height: 0;
+}
+
+.workbench-dialog--sampling-plan {
+  grid-template-columns: 320px minmax(0, 1fr);
+  width: 100%;
+  height: 560px;
   min-height: 0;
 }
 
@@ -2307,6 +2985,11 @@ onUnmounted(() => {
   padding-right: 4px;
 }
 
+.workbench-dialog--detection-split .workbench-row-list {
+  max-height: none;
+  padding-right: 4px;
+}
+
 .workbench-dialog--sample-login .workbench-row-list {
   max-height: 492px;
   padding-right: 4px;
@@ -2317,7 +3000,17 @@ onUnmounted(() => {
   padding-right: 4px;
 }
 
+.workbench-dialog--sampling-plan .workbench-row-list {
+  max-height: 492px;
+  padding-right: 4px;
+}
+
 .workbench-dialog--detection .workbench-row-card {
+  min-height: 68px;
+  padding: 10px 12px;
+}
+
+.workbench-dialog--detection-split .workbench-row-card {
   min-height: 68px;
   padding: 10px 12px;
 }
@@ -2328,6 +3021,11 @@ onUnmounted(() => {
 }
 
 .workbench-dialog--report .workbench-row-card {
+  min-height: 68px;
+  padding: 10px 12px;
+}
+
+.workbench-dialog--sampling-plan .workbench-row-card {
   min-height: 68px;
   padding: 10px 12px;
 }
@@ -2378,10 +3076,100 @@ onUnmounted(() => {
   padding-right: 0;
 }
 
+.workbench-dialog--detection-split .workbench-dialog__main {
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
 .workbench-dialog--report .workbench-dialog__main {
   min-height: 0;
   overflow: hidden;
   padding-right: 0;
+}
+
+.workbench-dialog--sampling-plan .workbench-dialog__main {
+  min-height: 0;
+}
+
+.workbench-detail {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+
+.workbench-detail__title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid #edf2f7;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.workbench-detail__title > div {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.workbench-detail__title span,
+.workbench-detail__section-head span,
+.workbench-detail__grid span,
+.workbench-detail__remark span {
+  color: var(--text-sub);
+  font-size: 12px;
+}
+
+.workbench-detail__title strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-main);
+  font-size: 18px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workbench-detail__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.workbench-detail__grid > div,
+.workbench-detail__section,
+.workbench-detail__remark {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid #edf2f7;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.workbench-detail__section {
+  gap: 10px;
+}
+
+.workbench-detail__section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.workbench-detail__section-head strong,
+.workbench-detail__grid strong,
+.workbench-detail__remark p {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  margin: 0;
+  color: var(--text-main);
+  font-size: 14px;
+  font-weight: 700;
 }
 
 .workbench-report-preview {
@@ -2415,6 +3203,32 @@ onUnmounted(() => {
 .workbench-dialog--report-half-month .workbench-report-preview__scale {
   min-width: 1180px;
   zoom: 0.78;
+}
+
+@media print {
+  body.workbench-report-printing * {
+    visibility: hidden !important;
+  }
+
+  body.workbench-report-printing .workbench-report-preview,
+  body.workbench-report-printing .workbench-report-preview * {
+    visibility: visible !important;
+  }
+
+  body.workbench-report-printing .workbench-report-preview {
+    position: absolute !important;
+    inset: 0 auto auto 0 !important;
+    width: auto !important;
+    height: auto !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+  }
+
+  body.workbench-report-printing .workbench-report-preview__scale {
+    min-width: 0 !important;
+    zoom: 1 !important;
+  }
 }
 
 .workbench-dialog--sampling :deep(.el-form) {
@@ -2504,6 +3318,10 @@ onUnmounted(() => {
 
 .sample-login-grid {
   gap: 2px 14px;
+}
+
+.create-plan-grid {
+  gap: 8px 14px;
 }
 
 .workbench-dialog--sample-login :deep(.el-form-item) {
@@ -2624,6 +3442,12 @@ onUnmounted(() => {
 
 .result-value-input {
   width: 220px;
+  max-width: 100%;
+}
+
+.result-value-input.result-value-select {
+  width: 330px !important;
+  min-width: 330px !important;
 }
 
 .result-value-unit {
@@ -2638,6 +3462,50 @@ onUnmounted(() => {
   display: flex;
   gap: 10px;
   margin-bottom: 12px;
+}
+
+.review-state-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 54px;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.review-state-chip.is-pending {
+  color: #64748b;
+  background: #f1f5f9;
+}
+
+.review-state-chip.is-approved {
+  color: #047857;
+  background: #d1fae5;
+}
+
+.review-state-chip.is-rejected {
+  color: #b91c1c;
+  background: #fee2e2;
+}
+
+.review-reject-reason {
+  display: flex;
+  align-items: center;
+  min-height: 24px;
+  color: var(--text-main);
+  font-size: 13px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.compact-table :deep(.review-reject-reason-cell .cell) {
+  display: flex;
+  align-items: center;
+  min-height: 32px;
 }
 
 .review-remark-form {
@@ -2689,5 +3557,84 @@ onUnmounted(() => {
   .todo-detail-card {
     height: 132px;
   }
+}
+
+.sample-login-config-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.sample-login-config-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-regular);
+}
+
+.sample-login-config-empty {
+  padding: 16px;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 13px;
+  background-color: var(--fill-color-lighter);
+  border-radius: 4px;
+}
+
+.add-parameter-dialog-content {
+  min-height: 200px;
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.add-parameter-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.add-parameter-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-lighter);
+  transition: background-color 0.2s;
+  cursor: pointer;
+}
+
+.add-parameter-item:last-child {
+  border-bottom: none;
+}
+
+.add-parameter-item:hover {
+  background-color: var(--fill-color-light);
+}
+
+.add-parameter-item.is-disabled {
+  opacity: 0.6;
+  background-color: var(--fill-color-lighter);
+  cursor: not-allowed;
+}
+
+.add-parameter-item :deep(.el-checkbox) {
+  margin-right: 0;
+}
+
+.add-parameter-info {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.add-parameter-name {
+  font-size: 14px;
+  color: var(--text-regular);
+}
+
+.add-parameter-unit {
+  font-size: 12px;
+  color: var(--text-secondary);
 }
 </style>
