@@ -177,7 +177,6 @@
             </template>
           </el-table-column>
           <el-table-column prop="samplingTime" label="计划采样时间" width="170" />
-          <el-table-column prop="startedTime" label="采样开始时间" width="170" />
           <el-table-column prop="finishedTime" label="采样时间" width="170" />
           <el-table-column prop="weather" label="天气" width="110" />
           <el-table-column prop="temperature" label="温度" width="110" />
