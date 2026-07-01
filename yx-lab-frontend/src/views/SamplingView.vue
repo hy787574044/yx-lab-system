@@ -2474,8 +2474,7 @@ function handlePlanDateChange(prefix, value) {
   if (prefix === 'start') {
     // 已有点位名称，自动更新计划名称
     if (planForm.pointName && planForm.startTime) {
-      const startTime = dayjs(planForm.startTime)
-      planForm.planName = `${planForm.pointName}-${startTime.format('MMDD')}-${startTime.format('HH')}`
+      planForm.planName = planForm.pointName
     }
     // 自动设置截止时间为24小时后
     if (planForm.startTime) {
@@ -2492,8 +2491,7 @@ function handlePlanHourChange(prefix, value) {
   if (prefix === 'start') {
     // 已有点位名称，自动更新计划名称
     if (planForm.pointName && planForm.startTime) {
-      const startTime = dayjs(planForm.startTime)
-      planForm.planName = `${planForm.pointName}-${startTime.format('MMDD')}-${startTime.format('HH')}`
+      planForm.planName = planForm.pointName
     }
     // 自动设置截止时间为24小时后
     if (planForm.startTime) {
@@ -2574,7 +2572,7 @@ function resetPlanForm() {
 
 async function openPlanDialog() {
   resetPlanForm()
-  planForm.planName = `采样计划-${dayjs().format('MMDD-HHmm')}`
+  planForm.planName = `采样计划`
   planForm.startTime = dayjs().format('YYYY-MM-DD HH:mm:ss')
   planForm.endTime = dayjs().add(24, 'hour').format('YYYY-MM-DD HH:mm:ss')
   monitoringPointOptions.value = []
@@ -2603,7 +2601,9 @@ async function openPlanEditDialog(row) {
   planForm.remark = row.remark || ''
   if (planForm.pointSource === 'EXISTING' && planForm.pointId) {
     await loadMonitoringPointForEdit(row)
+    const savedPlanName = planForm.planName
     handlePlanPointChange(planForm.pointId)
+    planForm.planName = savedPlanName || planForm.planName
     // 根据机构加载人员
     if (planForm.orgId) {
       await loadSamplersByOrg(planForm.orgId)
@@ -2655,8 +2655,7 @@ async function handlePlanOrgChange(orgId) {
 function handlePlanPointNameChange(pointName) {
   // 点位名称变化时，自动更新计划名称
   if (pointName && planForm.startTime) {
-    const startTime = dayjs(planForm.startTime)
-    planForm.planName = `${pointName}-${startTime.format('MMDD')}-${startTime.format('HH')}`
+    planForm.planName = pointName
   }
 }
 
@@ -2671,10 +2670,9 @@ function handlePlanPointChange(pointId) {
   if (point?.orgId) {
     planForm.orgId = String(point.orgId)
   }
-  // 自动生成计划名称：点位名称-月日-小时
+  // 自动生成计划名称：点位名称
   if (point?.pointName && planForm.startTime) {
-    const startTime = dayjs(planForm.startTime)
-    planForm.planName = `${point.pointName}-${startTime.format('MMDD')}-${startTime.format('HH')}`
+    planForm.planName = point.pointName
   }
 }
 
@@ -3246,10 +3244,9 @@ function confirmPlanMapSelection() {
   planForm.longitude = mapSelectorValue.longitude
   if (planForm.pointSource === 'CUSTOM') {
     planForm.pointName = mapSelectorValue.pointName || mapSelectorValue.address || planForm.pointName
-    // 自动生成计划名称：点位名称-月日-小时
+    // 自动生成计划名称：点位名称
     if (planForm.pointName && planForm.startTime) {
-      const startTime = dayjs(planForm.startTime)
-      planForm.planName = `${planForm.pointName}-${startTime.format('MMDD')}-${startTime.format('HH')}`
+      planForm.planName = planForm.pointName
     }
   }
   planMapSelectorVisible.value = false

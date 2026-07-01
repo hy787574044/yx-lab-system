@@ -1124,7 +1124,7 @@ function getActionRowTitle(row) {
     return row?.planName || row?.pointName || '-'
   }
   if (activeAction.value === 'sampling' || activeAction.value === 'sampleLogin') {
-    return row?.planName || row?.pointName || '-'
+    return formatPlanNameWithDate(row)
   }
   if (activeAction.value === 'detectionSplit' || activeAction.value === 'detection' || activeAction.value === 'review') {
     return row?.sampleNo || row?.parameterName || '-'
@@ -1159,10 +1159,10 @@ function getPreviewRowTitle(key, row) {
     return row?.planName || row?.pointName || '-'
   }
   if (key === 'sampleLogin') {
-    return row?.sampleNo || row?.taskNo || '未生成编号'
+    return formatPlanNameWithDate(row)
   }
   if (key === 'sampling') {
-    return buildSampleContextTitle(row, row?.taskNo || '未生成编号')
+    return formatPlanNameWithDate(row)
   }
   if (key === 'detection') {
     return buildSampleContextTitle(row, row?.parameterName)
@@ -1196,6 +1196,23 @@ function formatDate(dateStr) {
   const month = String(date.getMonth() + 1).padStart(2, '0')
   const day = String(date.getDate()).padStart(2, '0')
   return `${year}-${month}-${day}`
+}
+
+function formatSamplingTimeShort(dateStr) {
+  if (!dateStr) return ''
+  const date = new Date(dateStr)
+  if (isNaN(date.getTime())) return ''
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const hour = String(date.getHours()).padStart(2, '0')
+  const minute = String(date.getMinutes()).padStart(2, '0')
+  return `${month}-${day} ${hour}:${minute}`
+}
+
+function formatPlanNameWithDate(row) {
+  const planName = row?.planName || row?.pointName || '-'
+  const dateLabel = formatSamplingTimeShort(row?.samplingTime)
+  return dateLabel ? `${planName}  ${dateLabel}` : planName
 }
 
 function getPreviewRowMeta(key, row) {
