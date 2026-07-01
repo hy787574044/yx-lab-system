@@ -896,19 +896,6 @@ onMounted(async () => {
   padding: 4px 0;
 }
 
-.method-basis-ellipsis {
-  display: block;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-:global(.method-basis-tooltip) {
-  max-width: 520px;
-  line-height: 1.7;
-}
-
 .binding-tree {
   display: grid;
   gap: 8px;

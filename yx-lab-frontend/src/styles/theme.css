@@ -1030,6 +1030,19 @@ textarea {
   line-height: 1.6;
 }
 
+.method-basis-ellipsis {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.method-basis-tooltip {
+  max-width: 520px;
+  line-height: 1.7;
+}
+
 .el-table th.el-table__cell .cell {
   display: grid;
   align-items: center;

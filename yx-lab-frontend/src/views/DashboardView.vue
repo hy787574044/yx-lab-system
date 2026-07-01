@@ -301,6 +301,7 @@
             'workbench-dialog--sample-login': activeAction === 'sampleLogin',
             'workbench-dialog--detection': activeAction === 'detection',
             'workbench-dialog--detection-split': activeAction === 'detectionSplit',
+            'workbench-dialog--review': activeAction === 'review',
             'workbench-dialog--report': activeAction === 'report',
             'workbench-dialog--report-half-month': activeAction === 'report' && previewData?.previewMode === 'HALF_MONTHLY_TERMINAL_TEMPLATE'
           }
@@ -642,6 +643,15 @@
           </div>
           <div class="workbench-dialog__footer-right">
             <el-button v-if="activeAction === 'sampling'" type="primary" @click="openWorkbenchAction('sampleLogin', activeRow)">样品登录</el-button>
+            <el-button
+              v-if="activeAction === 'detectionSplit'"
+              v-permission="'detection:assign'"
+              type="primary"
+              :disabled="!activeRow || !resultForm.recordId || !resultForm.id"
+              @click="openDetectorAssignDialog"
+            >
+              分配检测人员
+            </el-button>
             <el-button v-if="activeAction === 'report'" type="primary" plain :disabled="!previewData || !previewComponent" @click="printWorkbenchReport">打印</el-button>
             <el-button @click="workbenchDialogVisible = false">关闭</el-button>
             <el-button v-if="activeAction === 'sampleLogin'" type="primary" :loading="submitting" @click="submitSampleLogin">登录</el-button>
@@ -649,6 +659,53 @@
             <el-button v-if="activeAction === 'review'" type="primary" :loading="submitting" @click="submitReviewDecision">提交</el-button>
           </div>
         </div>
+      </template>
+    </el-dialog>
+
+    <el-dialog
+      v-model="detectorAssignDialogVisible"
+      class="detector-assign-dialog"
+      title="分配检测人员"
+      width="520px"
+      append-to-body
+      destroy-on-close
+      @closed="resetDetectorAssignDialog"
+    >
+      <div class="detector-assign-form">
+        <div class="detector-assign-form__summary">
+          <span>样品编号<strong>{{ resultForm.sampleNo || '-' }}</strong></span>
+          <span>检测参数<strong>{{ resultForm.parameterName || '-' }}</strong></span>
+          <span>当前人员<strong>{{ resultForm.detectorName || '待分配' }}</strong></span>
+        </div>
+        <el-form label-width="96px">
+          <el-form-item label="检测人员" required>
+            <el-select
+              v-model="detectorAssignForm.detectorId"
+              filterable
+              clearable
+              style="width: 100%"
+              placeholder="请选择检测人员"
+            >
+              <el-option
+                v-for="item in detectorOptions"
+                :key="item.id"
+                :label="getDetectorOptionLabel(item)"
+                :value="item.id"
+              />
+            </el-select>
+          </el-form-item>
+        </el-form>
+      </div>
+      <template #footer>
+        <el-button :disabled="detectorAssignSubmitting" @click="detectorAssignDialogVisible = false">取消</el-button>
+        <el-button
+          type="primary"
+          :loading="detectorAssignSubmitting"
+          :disabled="detectorAssignSubmitting"
+          @click="submitDetectorAssignment"
+        >
+          保存
+        </el-button>
       </template>
     </el-dialog>
 
@@ -708,9 +765,11 @@ import { ElTable, ElTableColumn } from 'element-plus/es/components/table/index.m
 import { ElTag } from 'element-plus/es/components/tag/index.mjs'
 import { ElLoadingDirective } from 'element-plus/es/components/loading/index.mjs'
 import {
+  assignDetectionDetectorsApi,
   createSamplingPlanApi,
   dispatchSamplingPlanApi,
   fetchDetectionDetailApi,
+  fetchDetectionDetectorsApi,
   fetchDetectionItemsApi,
   fetchDetectionMethodOptionsApi,
   fetchDetectionParametersApi,
@@ -757,6 +816,7 @@ import {
   routineSamplingType,
   taskStatusLabelMap,
   unregisteredSampleRegisterStatus,
+  waitAssignDetectionStatus,
   waitDetectDetectionStatus
 } from '../utils/labEnums'
 import { getUser } from '../utils/auth'
@@ -791,11 +851,15 @@ const storageConditionOptions = ref([])
 const detectionTypes = ref([])
 const detectionParameters = ref([])
 const detectionMethods = ref([])
+const detectorOptions = ref([])
+const detectorOptionsLoaded = ref(false)
 const reviewFlowOptions = ref([])
 const workbenchAddParamDialogVisible = ref(false)
 const workbenchAddParamLoading = ref(false)
 const workbenchAddParamOptions = ref([])
 const workbenchAddParamSelectedIds = ref([])
+const detectorAssignDialogVisible = ref(false)
+const detectorAssignSubmitting = ref(false)
 const previewData = ref(null)
 const previewError = ref('')
 const workbenchReportPrintRef = ref(null)
@@ -884,11 +948,16 @@ const resultForm = reactive({
   unit: '',
   referenceStandard: '',
   detectorName: '',
+  detectorId: null,
   resultValue: null,
   abnormalRemark: '',
   remark: '',
   itemStatus: '',
   optionValues: ''
+})
+
+const detectorAssignForm = reactive({
+  detectorId: null
 })
 
 const reviewForm = reactive({
@@ -1499,7 +1568,18 @@ async function loadActionRows(key) {
     actionRows.value = result.records || []
     return
   }
-  if (key === 'detectionSplit' || key === 'detection') {
+  if (key === 'detectionSplit') {
+    const [waitAssignResult, waitDetectResult] = await Promise.all([
+      fetchDetectionItemsApi({ pageNum: 1, pageSize: actionPageSize, itemStatus: waitAssignDetectionStatus }),
+      fetchDetectionItemsApi({ pageNum: 1, pageSize: actionPageSize, itemStatus: waitDetectDetectionStatus })
+    ])
+    actionRows.value = mergeActionRows([
+      ...(waitAssignResult.records || []),
+      ...(waitDetectResult.records || [])
+    ])
+    return
+  }
+  if (key === 'detection') {
     const result = await fetchDetectionItemsApi({ pageNum: 1, pageSize: actionPageSize, itemStatus: waitDetectDetectionStatus })
     actionRows.value = result.records || []
     return
@@ -1535,6 +1615,17 @@ function getActionRowKey(row) {
   return row?.id || row?.reportKey || row?.taskId || row?.recordId || row?.sampleNo || JSON.stringify(row)
 }
 
+function mergeActionRows(rows) {
+  const rowMap = new Map()
+  ;(rows || []).forEach((row) => {
+    const key = getActionRowKey(row)
+    if (!rowMap.has(key)) {
+      rowMap.set(key, row)
+    }
+  })
+  return Array.from(rowMap.values())
+}
+
 function isActionRowActive(row) {
   return String(getActionRowKey(row)) === String(getActionRowKey(activeRow.value))
 }
@@ -1547,7 +1638,7 @@ function getActionRowTitle(row) {
     return formatPlanNameWithDate(row)
   }
   if (activeAction.value === 'detectionSplit' || activeAction.value === 'detection' || activeAction.value === 'review') {
-    return row?.sampleNo || row?.parameterName || '-'
+    return formatPlanNameWithDate(row)
   }
   if (activeAction.value === 'report') {
     return row?.reportName || row?.sampleNo || '-'
@@ -1597,7 +1688,7 @@ function getPreviewRowTitle(key, row) {
 }
 
 function buildSampleContextTitle(row, suffix = '') {
-  const planName = firstNonBlank(row?.planName, row?.pointName, row?.monitoringPointName)
+  const planName = firstNonBlank(row?.planName, row?.pointName, row?.monitoringPointName, row?.sampleNo, row?.parameterName) || '-'
   const sampleType = firstNonBlank(row?.sampleTypeLabel, getEnumLabel(sampleTypeLabelMap, row?.sampleType), row?.sampleType)
   return `计划名称：${planName || '未填'}      样品类型：${sampleType || '未填'}`
 }
@@ -1630,8 +1721,14 @@ function formatSamplingTimeShort(dateStr) {
 }
 
 function formatPlanNameWithDate(row) {
-  const planName = row?.planName || row?.pointName || '-'
-  const dateLabel = formatSamplingTimeShort(row?.samplingTime)
+  const planName = firstNonBlank(row?.planName, row?.pointName, row?.monitoringPointName)
+  const dateLabel = formatSamplingTimeShort(firstNonBlank(
+    row?.samplingTime,
+    row?.detectionTime,
+    row?.startTime,
+    row?.updatedTime,
+    row?.createdTime
+  ))
   return dateLabel ? `${planName}  ${dateLabel}` : planName
 }
 
@@ -2051,6 +2148,7 @@ function openResultForm(row) {
   resultForm.standardMax = row.standardMax
   resultForm.unit = row.unit || ''
   resultForm.referenceStandard = row.referenceStandard || ''
+  resultForm.detectorId = row.detectorId ?? null
   resultForm.detectorName = row.detectorName || ''
   resultForm.resultValue = row.resultValue == null ? null : String(row.resultValue)
   resultForm.abnormalRemark = row.abnormalRemark || ''
@@ -2059,6 +2157,64 @@ function openResultForm(row) {
   // 优先从参数配置中获取 optionValues，确保文本选项能正确显示
   const parameter = detectionParameters.value.find((p) => String(p.id) === String(row.parameterId))
   resultForm.optionValues = parameter?.optionValues || row.optionValues || ''
+}
+
+function getDetectorOptionLabel(option) {
+  if (!option) {
+    return '-'
+  }
+  return option.displayName || option.realName || option.username || option.nickname || '-'
+}
+
+async function loadDetectorOptions(force = false) {
+  if (!force && detectorOptionsLoaded.value) {
+    return
+  }
+  const result = await fetchDetectionDetectorsApi()
+  detectorOptions.value = (result || []).map((item) => ({
+    ...item,
+    id: item.userId ?? item.id
+  }))
+  detectorOptionsLoaded.value = true
+}
+
+async function openDetectorAssignDialog() {
+  if (!resultForm.recordId || !resultForm.id) {
+    ElMessage.warning('请选择需要分配的检测分样')
+    return
+  }
+  await loadDetectorOptions()
+  detectorAssignForm.detectorId = resultForm.detectorId ?? null
+  detectorAssignDialogVisible.value = true
+}
+
+function resetDetectorAssignDialog() {
+  detectorAssignForm.detectorId = null
+}
+
+async function submitDetectorAssignment() {
+  if (!resultForm.recordId || !resultForm.id) {
+    ElMessage.warning('当前检测分样缺少必要信息')
+    return
+  }
+  if (detectorAssignForm.detectorId == null || detectorAssignForm.detectorId === '') {
+    ElMessage.warning('请选择检测人员')
+    return
+  }
+  detectorAssignSubmitting.value = true
+  try {
+    await assignDetectionDetectorsApi(resultForm.recordId, {
+      items: [{
+        itemId: resultForm.id,
+        detectorId: detectorAssignForm.detectorId
+      }]
+    })
+    ElMessage.success('检测人员分配已保存')
+    detectorAssignDialogVisible.value = false
+    await reloadActiveAction()
+  } finally {
+    detectorAssignSubmitting.value = false
+  }
 }
 
 function parseOptionValuesArray(json) {
@@ -2402,6 +2558,8 @@ function resetWorkbenchDialog() {
   activeAction.value = ''
   actionRows.value = []
   activeRow.value = null
+  detectorAssignDialogVisible.value = false
+  resetDetectorAssignDialog()
   previewData.value = null
   previewError.value = ''
 }
@@ -2889,6 +3047,53 @@ onUnmounted(() => {
   justify-content: flex-end;
 }
 
+.detector-assign-form {
+  display: grid;
+  gap: 16px;
+}
+
+:deep(.detector-assign-dialog.el-dialog),
+:global(.detector-assign-dialog.el-dialog) {
+  min-height: 0;
+}
+
+:deep(.detector-assign-dialog .el-dialog__body),
+:global(.detector-assign-dialog .el-dialog__body) {
+  padding-bottom: 10px;
+}
+
+:deep(.detector-assign-dialog .el-dialog__footer),
+:global(.detector-assign-dialog .el-dialog__footer) {
+  padding-top: 12px;
+}
+
+.detector-assign-form__summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.detector-assign-form__summary span {
+  display: grid;
+  gap: 4px;
+  min-height: 58px;
+  padding: 10px 12px;
+  border: 1px solid rgba(214, 225, 241, 0.9);
+  border-radius: 10px;
+  background: #f8fbff;
+  color: var(--text-sub);
+  font-size: 12px;
+}
+
+.detector-assign-form__summary strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-main);
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .workbench-dialog {
   display: grid;
   grid-template-columns: 280px minmax(0, 1fr);
@@ -3005,13 +3210,10 @@ onUnmounted(() => {
   padding-right: 4px;
 }
 
-.workbench-dialog--detection .workbench-row-card {
-  min-height: 68px;
-  padding: 10px 12px;
-}
-
-.workbench-dialog--detection-split .workbench-row-card {
-  min-height: 68px;
+.workbench-dialog--detection .workbench-row-card,
+.workbench-dialog--detection-split .workbench-row-card,
+.workbench-dialog--review .workbench-row-card {
+  min-height: 78px;
   padding: 10px 12px;
 }
 
@@ -3046,8 +3248,19 @@ onUnmounted(() => {
 }
 
 .workbench-row-card strong {
+  min-width: 0;
   color: var(--text-main);
   font-size: 14px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.workbench-dialog--detection .workbench-row-card strong,
+.workbench-dialog--detection-split .workbench-row-card strong,
+.workbench-dialog--review .workbench-row-card strong {
+  display: block;
+  min-height: 40px;
 }
 
 .workbench-row-card span {

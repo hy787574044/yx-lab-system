@@ -83,9 +83,19 @@
             <el-table-column prop="methodName" label="检测方法" min-width="150" show-overflow-tooltip>
               <template #default="{ row }">{{ row.methodName || '-' }}</template>
             </el-table-column>
-            <el-table-column label="检测步骤" min-width="260" class-name="cell-multiline">
+            <el-table-column label="检测步骤" min-width="220">
               <template #default="{ row }">
-                <span class="method-basis-text">{{ row.methodBasis || '-' }}</span>
+                <el-tooltip
+                  effect="dark"
+                  placement="top"
+                  popper-class="method-basis-tooltip"
+                  :disabled="!row.methodBasis"
+                >
+                  <template #content>
+                    <span class="preserve-line-breaks">{{ row.methodBasis || '-' }}</span>
+                  </template>
+                  <span class="method-basis-ellipsis">{{ row.methodBasis || '-' }}</span>
+                </el-tooltip>
               </template>
             </el-table-column>
             <el-table-column label="检测人员" min-width="120">
@@ -270,6 +280,7 @@ import { ElInputNumber } from 'element-plus/es/components/input-number/index.mjs
 import { ElMessage } from 'element-plus/es/components/message/index.mjs'
 import { ElOption, ElSelect } from 'element-plus/es/components/select/index.mjs'
 import { ElTable, ElTableColumn } from 'element-plus/es/components/table/index.mjs'
+import { ElTooltip } from 'element-plus/es/components/tooltip/index.mjs'
 import TablePagination from '../components/common/TablePagination.vue'
 import {
   exportDetectionItemsApi,
