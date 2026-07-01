@@ -361,6 +361,10 @@
           {{ resultDialogNote }}
         </div>
 
+        <div v-if="!resultDialogReadonly" class="result-dialog__toolbar">
+          <el-button class="ocr-trigger-btn" @click="handleOcrTrigger">OCR识别</el-button>
+        </div>
+
         <el-table
           class="list-table result-dialog__table"
           :data="resultForm.items"
@@ -1379,6 +1383,10 @@ async function saveAssignments(row) {
     loadData()
   ])
   subflowDialogVisible.value = false
+}
+
+function handleOcrTrigger() {
+  ElMessage.info('未检测到可适配的OCR设备')
 }
 
 async function submitDetectionResult() {

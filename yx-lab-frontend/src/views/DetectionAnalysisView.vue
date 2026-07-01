@@ -189,13 +189,20 @@
           <el-form-item label="检测结果" :required="!resultDialogReadonly" class="result-field-form-item">
             <div class="result-value-field">
               <span v-if="resultDialogReadonly" class="result-fixed-value">{{ resultForm.resultValue ?? '-' }}</span>
-              <el-input-number
-                v-else
-                v-model="resultForm.resultValue"
-                :step="0.01"
-                controls-position="right"
-                class="result-value-input"
-              />
+              <template v-else>
+                <el-button
+                  class="ocr-trigger-btn"
+                  @click="handleOcrTrigger"
+                >
+                  OCR识别
+                </el-button>
+                <el-input-number
+                  v-model="resultForm.resultValue"
+                  :step="0.01"
+                  controls-position="right"
+                  class="result-value-input"
+                />
+              </template>
               <span v-if="resultUnitVisible" class="result-value-unit">{{ resultForm.unit }}</span>
             </div>
           </el-form-item>
@@ -470,6 +477,10 @@ function isResultEditable(row) {
 
 function getResultActionLabel(row) {
   return isResultEditable(row) ? '录入结果' : '查看结果'
+}
+
+function handleOcrTrigger() {
+  ElMessage.info('未检测到可适配的OCR设备')
 }
 
 function resetResultForm() {

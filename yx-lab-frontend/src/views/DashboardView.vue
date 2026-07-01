@@ -360,6 +360,12 @@
             <el-form label-position="top">
               <el-form-item label="检测结果" required>
                 <div class="result-value-field">
+                  <el-button
+                    class="ocr-trigger-btn"
+                    @click="handleOcrTrigger"
+                  >
+                    OCR识别
+                  </el-button>
                   <el-input
                     v-model="resultForm.resultValue"
                     inputmode="decimal"
@@ -1562,6 +1568,10 @@ function isResultValueAbnormal(item) {
     return true
   }
   return item.standardMax != null && value > Number(item.standardMax)
+}
+
+function handleOcrTrigger() {
+  ElMessage.info('未检测到可适配的OCR设备')
 }
 
 function handleDetectionResultInput(value) {
