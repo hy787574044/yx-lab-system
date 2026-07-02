@@ -1,5 +1,8 @@
 package com.yx.lab.modules.system.entity;
 
+
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.annotation.JsonFormat;
@@ -23,6 +26,7 @@ public class LabLoginLog extends BaseEntity {
      */
     @Schema(description = "用户ID")
     @TableField("user_id")
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long userId;
 
     /**

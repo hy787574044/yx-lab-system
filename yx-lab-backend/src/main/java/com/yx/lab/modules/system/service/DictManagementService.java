@@ -164,7 +164,7 @@ public class DictManagementService {
     }
 
     private void validateDictCodeUnique(String dictCode, Long excludeId) {
-        Number count = labDictMapper.selectCount(new LambdaQueryWrapper<LabDict>()
+        Long count = labDictMapper.selectCount(new LambdaQueryWrapper<LabDict>()
                 .eq(LabDict::getDictCode, dictCode)
                 .ne(excludeId != null, LabDict::getId, excludeId));
         if (count != null && count.longValue() > 0L) {

@@ -81,6 +81,7 @@ public class LabSampleService {
                         .eq(StrUtil.isNotBlank(query.getSampleStatus()), LabSample::getSampleStatus, query.getSampleStatus())
                         .eq(StrUtil.isNotBlank(query.getSampleType()), LabSample::getSampleType, query.getSampleType())
                         .eq(StrUtil.isNotBlank(query.getSampleSourceMethod()), LabSample::getSampleSourceMethod, query.getSampleSourceMethod())
+                        .eq(query.getOrgId() != null, LabSample::getOrgId, query.getOrgId())
                         .eq(resolveScopedSamplerId() != null, LabSample::getSamplerId, resolveScopedSamplerId())
                         .eq(dataScopeHelper.onlySelfScope(), LabSample::getCreatedBy, dataScopeHelper.currentUserId())
                         .orderByDesc(LabSample::getCreatedTime));
@@ -114,7 +115,7 @@ public class LabSampleService {
     }
 
     private Long countSamplesByStatus(String sampleStatus) {
-        Number count = labSampleMapper.selectCount(new LambdaQueryWrapper<LabSample>()
+        Long count = labSampleMapper.selectCount(new LambdaQueryWrapper<LabSample>()
                 .eq(StrUtil.isNotBlank(sampleStatus), LabSample::getSampleStatus, sampleStatus)
                 .eq(resolveScopedSamplerId() != null, LabSample::getSamplerId, resolveScopedSamplerId())
                 .eq(dataScopeHelper.onlySelfScope(), LabSample::getCreatedBy, dataScopeHelper.currentUserId()));
@@ -168,6 +169,7 @@ public class LabSampleService {
         LabSample sample = new LabSample();
         sample.setSampleNo(StrUtil.trim(task.getSampleNo()));
         sample.setTaskId(task.getId());
+        sample.setOrgId(task.getOrgId());
         sample.setPointId(command.getPointId() != null ? command.getPointId() : task.getPointId());
         sample.setPointName(StrUtil.isNotBlank(command.getPointName()) ? command.getPointName() : task.getPointName());
         sample.setSampleType(StrUtil.isNotBlank(command.getSampleType()) ? command.getSampleType() : task.getSampleType());
@@ -364,7 +366,7 @@ public class LabSampleService {
         if (StrUtil.isBlank(task.getSampleNo())) {
             throw new BusinessException("采样任务尚未生成样品编号，请重新生成任务后再登录。");
         }
-        Number existingCount = labSampleMapper.selectCount(new LambdaQueryWrapper<LabSample>()
+        Long existingCount = labSampleMapper.selectCount(new LambdaQueryWrapper<LabSample>()
                 .eq(LabSample::getTaskId, task.getId()));
         if (existingCount != null && existingCount.longValue() > 0) {
             throw new BusinessException("该采样任务已完成样品登录，不能重复登录。");

@@ -1,5 +1,8 @@
 package com.yx.lab.modules.detection.entity;
 
+
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.yx.lab.common.model.BaseEntity;
@@ -14,6 +17,7 @@ public class DetectionMethodInstrumentModelBinding extends BaseEntity {
 
     @Schema(description = "检测方法ID")
     @TableField("method_id")
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long methodId;
 
     @Schema(description = "检测方法名称")

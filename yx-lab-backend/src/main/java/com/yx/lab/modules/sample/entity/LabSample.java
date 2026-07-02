@@ -1,5 +1,8 @@
 package com.yx.lab.modules.sample.entity;
 
+
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.annotation.JsonFormat;
@@ -24,10 +27,17 @@ public class LabSample extends BaseEntity {
 
     @Schema(description = "采样任务ID")
     @TableField("task_id")
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long taskId;
+
+    @Schema(description = "所属机构ID")
+    @TableField("org_id")
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long orgId;
 
     @Schema(description = "监测点位ID")
     @TableField("point_id")
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long pointId;
 
     @Schema(description = "监测点位名称")
@@ -49,6 +59,7 @@ public class LabSample extends BaseEntity {
 
     @Schema(description = "检测套餐ID")
     @TableField("detection_type_id")
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long detectionTypeId;
 
     @Schema(description = "检测套餐名称")
@@ -61,6 +72,7 @@ public class LabSample extends BaseEntity {
 
     @Schema(description = "审核流程ID")
     @TableField("review_flow_id")
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long reviewFlowId;
 
     @Schema(description = "审核流程名称")
@@ -76,6 +88,7 @@ public class LabSample extends BaseEntity {
 
     @Schema(description = "采样员ID")
     @TableField("sampler_id")
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long samplerId;
 
     @Schema(description = "采样员名称")

@@ -17,6 +17,8 @@ public class SummaryReportPreviewQuery {
 
     private String pointName;
 
+    private Long orgId;
+
     @DateTimeFormat(pattern = "yyyy-MM-dd")
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate periodStart;

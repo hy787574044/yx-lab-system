@@ -14,5 +14,7 @@ public class DetectionRecordQuery extends PageQuery {
 
     private Boolean mine;
 
+    private Long orgId;
+
     private String scope;
 }

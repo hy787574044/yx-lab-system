@@ -41,7 +41,8 @@ public class StatisticsQueryService {
      * @return 样品总数
      */
     public long sampleTotal() {
-        return labSampleMapper.selectCount(new LambdaQueryWrapper<LabSample>());
+        Long count = labSampleMapper.selectCount(new LambdaQueryWrapper<LabSample>());
+        return toLong(count);
     }
 
     /**
@@ -50,8 +51,9 @@ public class StatisticsQueryService {
      * @return 正常结果数量
      */
     public long normalTotal() {
-        return detectionRecordMapper.selectCount(new LambdaQueryWrapper<DetectionRecord>()
+        Long count = detectionRecordMapper.selectCount(new LambdaQueryWrapper<DetectionRecord>()
                 .eq(DetectionRecord::getDetectionResult, LabWorkflowConstants.DetectionResult.NORMAL));
+        return toLong(count);
     }
 
     /**
@@ -60,8 +62,9 @@ public class StatisticsQueryService {
      * @return 异常结果数量
      */
     public long abnormalTotal() {
-        return detectionRecordMapper.selectCount(new LambdaQueryWrapper<DetectionRecord>()
+        Long count = detectionRecordMapper.selectCount(new LambdaQueryWrapper<DetectionRecord>()
                 .eq(DetectionRecord::getDetectionResult, LabWorkflowConstants.DetectionResult.ABNORMAL));
+        return toLong(count);
     }
 
     /**
@@ -70,7 +73,8 @@ public class StatisticsQueryService {
      * @return 审查记录总数
      */
     public long reviewTotal() {
-        return reviewRecordMapper.selectCount(new LambdaQueryWrapper<ReviewRecord>());
+        Long count = reviewRecordMapper.selectCount(new LambdaQueryWrapper<ReviewRecord>());
+        return toLong(count);
     }
 
     /**
@@ -79,8 +83,9 @@ public class StatisticsQueryService {
      * @return 审查通过数量
      */
     public long approvedReviewTotal() {
-        return reviewRecordMapper.selectCount(new LambdaQueryWrapper<ReviewRecord>()
+        Long count = reviewRecordMapper.selectCount(new LambdaQueryWrapper<ReviewRecord>()
                 .eq(ReviewRecord::getReviewResult, LabWorkflowConstants.ReviewResult.APPROVED));
+        return toLong(count);
     }
 
     /**
@@ -89,28 +94,33 @@ public class StatisticsQueryService {
      * @return 审查驳回数量
      */
     public long rejectedReviewTotal() {
-        return reviewRecordMapper.selectCount(new LambdaQueryWrapper<ReviewRecord>()
+        Long count = reviewRecordMapper.selectCount(new LambdaQueryWrapper<ReviewRecord>()
                 .eq(ReviewRecord::getReviewResult, LabWorkflowConstants.ReviewResult.REJECTED));
+        return toLong(count);
     }
 
     public long sampleTotalFrom(LocalDateTime startTime) {
-        return labSampleMapper.selectCount(new LambdaQueryWrapper<LabSample>()
+        Long count = labSampleMapper.selectCount(new LambdaQueryWrapper<LabSample>()
                 .ge(startTime != null, LabSample::getCreatedTime, startTime));
+        return toLong(count);
     }
 
     public long detectionTotalFrom(LocalDateTime startTime) {
-        return detectionRecordMapper.selectCount(new LambdaQueryWrapper<DetectionRecord>()
+        Long count = detectionRecordMapper.selectCount(new LambdaQueryWrapper<DetectionRecord>()
                 .ge(startTime != null, DetectionRecord::getCreatedTime, startTime));
+        return toLong(count);
     }
 
     public long reviewTotalFrom(LocalDateTime startTime) {
-        return reviewRecordMapper.selectCount(new LambdaQueryWrapper<ReviewRecord>()
+        Long count = reviewRecordMapper.selectCount(new LambdaQueryWrapper<ReviewRecord>()
                 .ge(startTime != null, ReviewRecord::getCreatedTime, startTime));
+        return toLong(count);
     }
 
     public long reportTotalFrom(LocalDateTime startTime) {
-        return labReportMapper.selectCount(new LambdaQueryWrapper<LabReport>()
+        Long count = labReportMapper.selectCount(new LambdaQueryWrapper<LabReport>()
                 .ge(startTime != null, LabReport::getCreatedTime, startTime));
+        return toLong(count);
     }
 
     public List<StatisticsDimensionItemVO> sampleTypeDistribution() {
@@ -177,22 +187,30 @@ public class StatisticsQueryService {
     }
 
     private long sampleTypeTotal(String sampleType) {
-        return labSampleMapper.selectCount(new LambdaQueryWrapper<LabSample>()
+        Long count = labSampleMapper.selectCount(new LambdaQueryWrapper<LabSample>()
                 .eq(LabSample::getSampleType, sampleType));
+        return toLong(count);
     }
 
     private long sampleStatusTotal(String sampleStatus) {
-        return labSampleMapper.selectCount(new LambdaQueryWrapper<LabSample>()
+        Long count = labSampleMapper.selectCount(new LambdaQueryWrapper<LabSample>()
                 .eq(LabSample::getSampleStatus, sampleStatus));
+        return toLong(count);
     }
 
     private long detectionStatusTotal(String detectionStatus) {
-        return detectionRecordMapper.selectCount(new LambdaQueryWrapper<DetectionRecord>()
+        Long count = detectionRecordMapper.selectCount(new LambdaQueryWrapper<DetectionRecord>()
                 .eq(DetectionRecord::getDetectionStatus, detectionStatus));
+        return toLong(count);
     }
 
     private long reportStatusTotal(String reportStatus) {
-        return labReportMapper.selectCount(new LambdaQueryWrapper<LabReport>()
+        Long count = labReportMapper.selectCount(new LambdaQueryWrapper<LabReport>()
                 .eq(LabReport::getReportStatus, reportStatus));
+        return toLong(count);
+    }
+
+    private long toLong(Long count) {
+        return count == null ? 0L : count.longValue();
     }
 }

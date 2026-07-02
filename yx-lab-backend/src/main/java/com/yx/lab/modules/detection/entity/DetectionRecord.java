@@ -1,5 +1,8 @@
 package com.yx.lab.modules.detection.entity;
 
+
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.fasterxml.jackson.annotation.JsonFormat;
@@ -20,11 +23,17 @@ public class DetectionRecord extends BaseEntity {
 
     @Schema(description = "样品ID")
     @TableField("sample_id")
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long sampleId;
 
     @Schema(description = "样品编号")
     @TableField("sample_no")
     private String sampleNo;
+
+    @Schema(description = "所属机构ID")
+    @TableField("org_id")
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long orgId;
 
     @Schema(description = "监测点位名称")
     @TableField(exist = false)
@@ -40,6 +49,7 @@ public class DetectionRecord extends BaseEntity {
 
     @Schema(description = "检测套餐ID")
     @TableField("detection_type_id")
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long detectionTypeId;
 
     @Schema(description = "检测套餐名称")
@@ -53,6 +63,7 @@ public class DetectionRecord extends BaseEntity {
 
     @Schema(description = "检测员ID")
     @TableField("detector_id")
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long detectorId;
 
     @Schema(description = "检测员名称")

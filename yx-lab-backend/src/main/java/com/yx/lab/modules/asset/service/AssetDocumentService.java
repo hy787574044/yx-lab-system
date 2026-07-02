@@ -204,7 +204,7 @@ public class AssetDocumentService {
         if (isAdmin(currentUser) || Objects.equals(document.getCreatedBy(), currentUser.getUserId())) {
             return document;
         }
-        Number count = documentShareMapper.selectCount(new LambdaQueryWrapper<LabDocumentShare>()
+        Long count = documentShareMapper.selectCount(new LambdaQueryWrapper<LabDocumentShare>()
                 .eq(LabDocumentShare::getDocumentId, id)
                 .eq(LabDocumentShare::getUserId, currentUser.getUserId()));
         if (count == null || count.longValue() == 0L) {

@@ -231,7 +231,7 @@ public class DetectionWorkflowService {
         }
 
         Map<Long, DetectionItemCommand> itemMap = validateSubmittedItems(command.getItems(), configuredParameters);
-        Number pendingCount = detectionRecordMapper.selectCount(new LambdaQueryWrapper<DetectionRecord>()
+        Long pendingCount = detectionRecordMapper.selectCount(new LambdaQueryWrapper<DetectionRecord>()
                 .eq(DetectionRecord::getSampleId, sample.getId())
                 .eq(DetectionRecord::getDetectionStatus, LabWorkflowConstants.DetectionStatus.SUBMITTED));
         if (pendingCount != null && pendingCount.longValue() > 0) {
@@ -326,6 +326,7 @@ public class DetectionWorkflowService {
         String status = query == null ? null : query.getDetectionStatus();
         String scope = query == null ? null : query.getScope();
         Boolean mine = query == null ? null : query.getMine();
+        Long orgId = query == null ? null : query.getOrgId();
         Long scopedDetectorId = resolveScopedDetectorId(currentUser, mine);
         LambdaQueryWrapper<DetectionRecord> wrapper = new LambdaQueryWrapper<DetectionRecord>()
                 .and(StrUtil.isNotBlank(keyword), condition -> condition
@@ -335,6 +336,7 @@ public class DetectionWorkflowService {
                 .eq(scopedDetectorId != null,
                         DetectionRecord::getDetectorId,
                         scopedDetectorId);
+        wrapper.eq(orgId != null, DetectionRecord::getOrgId, orgId);
         if (!ignoreStatusFilter) {
             if (StrUtil.isNotBlank(status)) {
                 wrapper.eq(DetectionRecord::getDetectionStatus, status);
@@ -384,16 +386,16 @@ public class DetectionWorkflowService {
         if (StrUtil.isNotBlank(scope)) {
             applyRecordScope(wrapper, scope);
         }
-        Number count = detectionRecordMapper.selectCount(wrapper);
+        Long count = detectionRecordMapper.selectCount(wrapper);
         return count == null ? 0L : count.longValue();
     }
 
     private long countItems(DetectionItemQuery query, String status) {
-        LambdaQueryWrapper<DetectionItem> wrapper = buildItemQueryWrapper(query, true, false);
+        LambdaQueryWrapper<DetectionItem> wrapper = buildItemQueryWrapper(query, StrUtil.isNotBlank(status), false);
         if (StrUtil.isNotBlank(status)) {
             wrapper.eq(DetectionItem::getItemStatus, status);
         }
-        Number count = detectionItemMapper.selectCount(wrapper);
+        Long count = detectionItemMapper.selectCount(wrapper);
         return count == null ? 0L : count.longValue();
     }
 
@@ -408,6 +410,7 @@ public class DetectionWorkflowService {
         String keyword = query == null ? null : StrUtil.trim(query.getKeyword());
         String itemStatus = query == null ? null : query.getItemStatus();
         Boolean mine = query == null ? null : query.getMine();
+        Long orgId = query == null ? null : query.getOrgId();
         List<Long> matchedRecordIds = findMatchedRecordIds(keyword);
         Long scopedDetectorId = resolveScopedDetectorId(currentUser, mine);
         LambdaQueryWrapper<DetectionItem> wrapper = new LambdaQueryWrapper<DetectionItem>()
@@ -417,6 +420,10 @@ public class DetectionWorkflowService {
                 .eq(scopedDetectorId != null,
                         DetectionItem::getDetectorId,
                         scopedDetectorId);
+        wrapper.eq(orgId != null, DetectionItem::getOrgId, orgId);
+        if (!ignoreStatusFilter && StrUtil.isBlank(itemStatus)) {
+            wrapper.ne(DetectionItem::getItemStatus, LabWorkflowConstants.DetectionStatus.WAIT_ASSIGN);
+        }
         if (withOrder) {
             wrapper.orderByDesc(DetectionItem::getUpdatedTime)
                     .orderByDesc(DetectionItem::getCreatedTime);
@@ -480,6 +487,7 @@ public class DetectionWorkflowService {
             DetectionItemPageVO vo = new DetectionItemPageVO();
             vo.setId(item.getId());
             vo.setRecordId(item.getRecordId());
+            vo.setOrgId(item.getOrgId());
             vo.setSampleId(record == null ? null : record.getSampleId());
             vo.setSampleNo(record == null ? null : record.getSampleNo());
             vo.setPointName(sample == null ? null : sample.getPointName());
@@ -583,6 +591,7 @@ public class DetectionWorkflowService {
         DetectionRecord record = new DetectionRecord();
         record.setSampleId(sample.getId());
         record.setSampleNo(sample.getSampleNo());
+        record.setOrgId(sample.getOrgId());
         record.setDetectionTypeId(detectionType.getId());
         record.setDetectionTypeName(detectionType.getTypeName());
         record.setDetectionTime(LocalDateTime.now());
@@ -598,6 +607,7 @@ public class DetectionWorkflowService {
             DetectionItemCommand itemCommand = itemMap.get(parameter.getId());
             DetectionItem item = new DetectionItem();
             item.setRecordId(record.getId());
+            item.setOrgId(sample.getOrgId());
             item.setParameterId(parameter.getId());
             item.setParameterName(parameter.getParameterName());
             item.setStandardMin(parameter.getStandardMin());

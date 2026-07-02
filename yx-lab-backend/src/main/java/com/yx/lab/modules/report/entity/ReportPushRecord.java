@@ -1,5 +1,8 @@
 package com.yx.lab.modules.report.entity;
 
+
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.annotation.JsonFormat;
@@ -20,18 +23,26 @@ public class ReportPushRecord extends BaseEntity {
 
     @Schema(description = "报告ID")
     @TableField("report_id")
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long reportId;
 
     @Schema(description = "样品ID")
     @TableField("sample_id")
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long sampleId;
 
     @Schema(description = "样品编号")
     @TableField("sample_no")
     private String sampleNo;
 
+    @Schema(description = "所属机构ID")
+    @TableField("org_id")
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long orgId;
+
     @Schema(description = "接收人用户ID")
     @TableField("recipient_user_id")
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long recipientUserId;
 
     @Schema(description = "接收人名称")

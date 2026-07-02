@@ -2829,6 +2829,7 @@ async function loadMonitoringPointForEdit(row) {
 function buildPlanPayload() {
   return {
     planName: planForm.planName?.trim() || '',
+    orgId: planForm.orgId || null,
     pointId: planForm.pointSource === 'EXISTING' ? planForm.pointId : null,
     pointName: planForm.pointName?.trim() || '',
     address: planForm.address?.trim() || '',
@@ -2852,7 +2853,7 @@ async function createPlan() {
 
 async function submitPlanForm() {
   const payload = buildPlanPayload()
-  if (!payload.planName || !payload.pointName || !payload.startTime || !payload.sampleType || !payload.cycleType) {
+  if (!payload.planName || !payload.orgId || !payload.pointName || !payload.startTime || !payload.sampleType || !payload.cycleType) {
     ElMessage.warning('请完整填写采样计划信息')
     return
   }
@@ -2861,10 +2862,6 @@ async function submitPlanForm() {
     return
   }
   if (planForm.pointSource === 'EXISTING') {
-    if (!planForm.orgId) {
-      ElMessage.warning('请选择所属机构')
-      return
-    }
     if (!payload.pointId) {
       ElMessage.warning('请选择监测点位')
       return

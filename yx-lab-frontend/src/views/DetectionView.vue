@@ -1121,9 +1121,16 @@ function getRecordRemark(row) {
 
 function ensureAssignmentState(recordId, items) {
   assignmentMap[recordId] = items.reduce((result, item) => {
-    result[item.id] = item.detectorId ?? null
+    result[item.id] = toStableId(item.detectorId) || null
     return result
   }, {})
+}
+
+function toStableId(value) {
+  if (value === null || value === undefined || value === '' || value === 'null' || value === 'undefined') {
+    return ''
+  }
+  return String(value).trim()
 }
 
 function getAssignedDetectorId(recordId, itemId) {
@@ -1134,7 +1141,7 @@ function updateAssignedDetectorId(recordId, itemId, value) {
   if (!assignmentMap[recordId]) {
     assignmentMap[recordId] = {}
   }
-  assignmentMap[recordId][itemId] = value ?? null
+  assignmentMap[recordId][itemId] = toStableId(value) || null
 }
 
 function getDetectorOptionLabel(option) {
@@ -1182,7 +1189,8 @@ async function loadDetectorOptions(force = false) {
   const result = await fetchDetectionDetectorsApi()
   detectorOptions.value = (result || []).map((item) => ({
     ...item,
-    id: item.userId ?? item.id
+    id: toStableId(item.userId ?? item.id),
+    userId: toStableId(item.userId ?? item.id)
   }))
   detectorOptionsLoaded.value = true
 }

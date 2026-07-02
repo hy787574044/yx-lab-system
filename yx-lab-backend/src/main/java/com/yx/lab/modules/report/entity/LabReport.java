@@ -1,5 +1,8 @@
 package com.yx.lab.modules.report.entity;
 
+
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.annotation.JsonFormat;
@@ -37,11 +40,17 @@ public class LabReport extends BaseEntity {
 
     @Schema(description = "样品ID")
     @TableField("sample_id")
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long sampleId;
 
     @Schema(description = "样品编号")
     @TableField("sample_no")
     private String sampleNo;
+
+    @Schema(description = "所属机构ID")
+    @TableField("org_id")
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long orgId;
 
     @Schema(description = "监测点位名称")
     @TableField(exist = false)
@@ -57,6 +66,7 @@ public class LabReport extends BaseEntity {
 
     @Schema(description = "检测主流程ID")
     @TableField("detection_record_id")
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long detectionRecordId;
 
     @Schema(description = "报告状态")
@@ -70,6 +80,7 @@ public class LabReport extends BaseEntity {
 
     @Schema(description = "发布人ID")
     @TableField("published_by")
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long publishedBy;
 
     @Schema(description = "发布人名称")

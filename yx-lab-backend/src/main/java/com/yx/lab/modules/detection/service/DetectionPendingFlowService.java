@@ -9,15 +9,19 @@ import com.yx.lab.common.constant.LabWorkflowConstants;
 import com.yx.lab.common.exception.BusinessException;
 import com.yx.lab.modules.detection.dto.DetectionAssignCommand;
 import com.yx.lab.modules.detection.dto.DetectionItemAssignCommand;
+import com.yx.lab.modules.detection.entity.DetectionAssignmentMemory;
 import com.yx.lab.modules.detection.entity.DetectionItem;
 import com.yx.lab.modules.detection.entity.DetectionRecord;
 import com.yx.lab.modules.detection.entity.DetectionParameter;
+import com.yx.lab.modules.detection.mapper.DetectionAssignmentMemoryMapper;
 import com.yx.lab.modules.detection.mapper.DetectionItemMapper;
 import com.yx.lab.modules.detection.mapper.DetectionParameterMapper;
 import com.yx.lab.modules.detection.mapper.DetectionRecordMapper;
 import com.yx.lab.modules.sample.dto.SampleDetectionConfigItem;
 import com.yx.lab.modules.sample.entity.LabSample;
+import com.yx.lab.modules.sample.entity.MonitoringPoint;
 import com.yx.lab.modules.sample.mapper.LabSampleMapper;
+import com.yx.lab.modules.sample.mapper.MonitoringPointMapper;
 import com.yx.lab.modules.system.entity.LabUser;
 import com.yx.lab.modules.system.mapper.LabUserMapper;
 import lombok.RequiredArgsConstructor;
@@ -54,9 +58,13 @@ public class DetectionPendingFlowService {
 
     private final DetectionItemMapper detectionItemMapper;
 
+    private final DetectionAssignmentMemoryMapper detectionAssignmentMemoryMapper;
+
     private final DetectionParameterMapper detectionParameterMapper;
 
     private final LabSampleMapper labSampleMapper;
+
+    private final MonitoringPointMapper monitoringPointMapper;
 
     private final LabUserMapper labUserMapper;
 
@@ -90,11 +98,11 @@ public class DetectionPendingFlowService {
                 createPendingFlowIfMissing(sample);
             } else if (activeRecords.size() > 1) {
                 DetectionRecord keeper = collapseDuplicateActiveRecords(sample.getId());
-                assignSamplerAsDetectorIfPossible(keeper, sample);
+                prefillDetectorIfMissing(keeper, sample);
                 promoteEnteredRecordIfReady(keeper, sample);
             } else {
                 DetectionRecord record = activeRecords.get(0);
-                assignSamplerAsDetectorIfPossible(record, sample);
+                prefillDetectorIfMissing(record, sample);
                 promoteEnteredRecordIfReady(record, sample);
             }
         }
@@ -116,7 +124,7 @@ public class DetectionPendingFlowService {
             // 同一样品始终只保留一条活跃检测主流程，避免重复登录或重复补偿造成脏数据。
             DetectionRecord existing = collapseDuplicateActiveRecords(sample.getId());
             if (existing != null) {
-                assignSamplerAsDetectorIfPossible(existing, sample);
+                prefillDetectorIfMissing(existing, sample);
                 promoteEnteredRecordIfReady(existing, sample);
                 return existing;
             }
@@ -126,27 +134,37 @@ public class DetectionPendingFlowService {
             if (configItems.isEmpty()) {
                 return null;
             }
+            Long orgId = resolveSampleOrgId(sample);
+            Map<Long, DetectionAssignmentMemory> memoryMap = loadAssignmentMemoryMap(orgId, configItems);
+            Map<Long, LabUser> memoryDetectorMap = loadMemoryDetectorMap(memoryMap);
+            LabUser fallbackDetector = findFirstEnabledStaff(orgId);
             DetectionRecord record = new DetectionRecord();
             record.setSampleId(sample.getId());
             record.setSampleNo(sample.getSampleNo());
+            record.setOrgId(orgId);
             record.setDetectionTypeId(sample.getDetectionTypeId());
             record.setDetectionTypeName(resolveDetectionTypeName(sample));
             record.setDetectionTime(sample.getSamplingTime() != null ? sample.getSamplingTime() : LocalDateTime.now());
-            record.setDetectorId(sample.getSamplerId());
-            record.setDetectorName(resolveSamplerDetectorName(sample));
+            record.setDetectorId(null);
+            record.setDetectorName(null);
             record.setDetectionResult(null);
-            record.setAbnormalRemark(sample.getSamplerId() == null ? "待分配检测员" : "已默认分配采样员检测");
-            record.setDetectionStatus(sample.getSamplerId() == null
-                    ? LabWorkflowConstants.DetectionStatus.WAIT_ASSIGN
-                    : LabWorkflowConstants.DetectionStatus.WAIT_DETECT);
+            record.setAbnormalRemark("待确认分配检测人员");
+            record.setDetectionStatus(LabWorkflowConstants.DetectionStatus.WAIT_ASSIGN);
             detectionRecordMapper.insert(record);
 
             // 每一个套餐参数都展开成独立子流程，后续可单独分配检测员、录入结果和审查。
             // 批量查询参数配置，用于补全快照中缺失的 optionValues
             Map<Long, DetectionParameter> parameterMap = loadParameterMap(configItems);
             for (SampleDetectionConfigItem configItem : configItems) {
+                LabUser initialDetector = resolveInitialDetector(
+                        orgId,
+                        configItem.getParameterId(),
+                        memoryMap,
+                        memoryDetectorMap,
+                        fallbackDetector);
                 DetectionItem item = new DetectionItem();
                 item.setRecordId(record.getId());
+                item.setOrgId(orgId);
                 item.setParameterId(configItem.getParameterId());
                 item.setParameterName(configItem.getParameterName());
                 item.setStandardMin(configItem.getStandardMin());
@@ -164,11 +182,9 @@ public class DetectionPendingFlowService {
                     }
                 }
                 item.setOptionValues(optionValues);
-                item.setDetectorId(sample.getSamplerId());
-                item.setDetectorName(resolveSamplerDetectorName(sample));
-                item.setItemStatus(sample.getSamplerId() == null
-                        ? LabWorkflowConstants.DetectionStatus.WAIT_ASSIGN
-                        : LabWorkflowConstants.DetectionStatus.WAIT_DETECT);
+                item.setDetectorId(initialDetector == null ? null : initialDetector.getId());
+                item.setDetectorName(resolveDetectorName(initialDetector));
+                item.setItemStatus(LabWorkflowConstants.DetectionStatus.WAIT_ASSIGN);
                 item.setExceedFlag(0);
                 detectionItemMapper.insert(item);
             }
@@ -190,6 +206,101 @@ public class DetectionPendingFlowService {
         List<DetectionParameter> parameters = detectionParameterMapper.selectList(
                 new LambdaQueryWrapper<DetectionParameter>().in(DetectionParameter::getId, parameterIds));
         return parameters.stream().collect(Collectors.toMap(DetectionParameter::getId, p -> p));
+    }
+
+    private Long resolveSampleOrgId(LabSample sample) {
+        if (sample == null) {
+            return null;
+        }
+        if (sample.getOrgId() != null) {
+            return sample.getOrgId();
+        }
+        if (sample.getPointId() != null) {
+            MonitoringPoint point = monitoringPointMapper.selectById(sample.getPointId());
+            if (point != null && point.getOrgId() != null) {
+                return point.getOrgId();
+            }
+        }
+        if (sample.getSamplerId() != null) {
+            LabUser sampler = labUserMapper.selectById(sample.getSamplerId());
+            if (sampler != null) {
+                return sampler.getOrgId();
+            }
+        }
+        return null;
+    }
+
+    private Map<Long, DetectionAssignmentMemory> loadAssignmentMemoryMap(Long orgId, List<SampleDetectionConfigItem> configItems) {
+        if (orgId == null || configItems == null || configItems.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        List<Long> parameterIds = configItems.stream()
+                .map(SampleDetectionConfigItem::getParameterId)
+                .filter(id -> id != null)
+                .distinct()
+                .collect(Collectors.toList());
+        if (parameterIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        return detectionAssignmentMemoryMapper.selectList(new LambdaQueryWrapper<DetectionAssignmentMemory>()
+                        .eq(DetectionAssignmentMemory::getOrgId, orgId)
+                        .in(DetectionAssignmentMemory::getParameterId, parameterIds))
+                .stream()
+                .collect(Collectors.toMap(DetectionAssignmentMemory::getParameterId, item -> item, (left, right) -> left));
+    }
+
+    private Map<Long, LabUser> loadMemoryDetectorMap(Map<Long, DetectionAssignmentMemory> memoryMap) {
+        if (memoryMap == null || memoryMap.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        List<Long> detectorIds = memoryMap.values().stream()
+                .map(DetectionAssignmentMemory::getDetectorId)
+                .filter(id -> id != null)
+                .distinct()
+                .collect(Collectors.toList());
+        if (detectorIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        return labUserMapper.selectList(new LambdaQueryWrapper<LabUser>()
+                        .in(LabUser::getId, detectorIds)
+                        .eq(LabUser::getStatus, 1)
+                        .eq(LabUser::getRoleCode, STAFF_ROLE_CODE))
+                .stream()
+                .collect(Collectors.toMap(LabUser::getId, user -> user, (left, right) -> left));
+    }
+
+    private LabUser findFirstEnabledStaff(Long orgId) {
+        if (orgId == null) {
+            return null;
+        }
+        return labUserMapper.selectOne(new LambdaQueryWrapper<LabUser>()
+                .eq(LabUser::getOrgId, orgId)
+                .eq(LabUser::getStatus, 1)
+                .eq(LabUser::getRoleCode, STAFF_ROLE_CODE)
+                .orderByAsc(LabUser::getId)
+                .last("limit 1"));
+    }
+
+    private LabUser resolveInitialDetector(Long orgId,
+                                           Long parameterId,
+                                           Map<Long, DetectionAssignmentMemory> memoryMap,
+                                           Map<Long, LabUser> memoryDetectorMap,
+                                           LabUser fallbackDetector) {
+        DetectionAssignmentMemory memory = memoryMap == null ? null : memoryMap.get(parameterId);
+        if (memory != null && memory.getDetectorId() != null) {
+            LabUser detector = memoryDetectorMap == null ? null : memoryDetectorMap.get(memory.getDetectorId());
+            if (isUsableOrgStaff(detector, orgId)) {
+                return detector;
+            }
+        }
+        return isUsableOrgStaff(fallbackDetector, orgId) ? fallbackDetector : null;
+    }
+
+    private boolean isUsableOrgStaff(LabUser user, Long orgId) {
+        if (user == null || !Integer.valueOf(1).equals(user.getStatus()) || !STAFF_ROLE_CODE.equalsIgnoreCase(user.getRoleCode())) {
+            return false;
+        }
+        return orgId == null || orgId.equals(user.getOrgId());
     }
 
     /**
@@ -276,6 +387,8 @@ public class DetectionPendingFlowService {
             throw new BusinessException("当前检测主流程缺少参数子流程，无法进行派发");
         }
 
+        LabSample sample = record.getSampleId() == null ? null : labSampleMapper.selectById(record.getSampleId());
+        Long orgId = resolveSampleOrgId(sample);
         Map<Long, DetectionItem> itemMap = items.stream()
                 .collect(Collectors.toMap(DetectionItem::getId, item -> item));
         List<Long> detectorIds = command.getItems().stream()
@@ -305,9 +418,13 @@ public class DetectionPendingFlowService {
                 if (detector == null) {
                     throw new BusinessException("检测员不存在或已停用：" + itemCommand.getDetectorId());
                 }
+                if (orgId != null && !orgId.equals(detector.getOrgId())) {
+                    throw new BusinessException("检测人员不属于当前样品所属机构，不能分配");
+                }
                 item.setDetectorId(detector.getId());
                 item.setDetectorName(resolveDetectorName(detector));
                 item.setItemStatus(LabWorkflowConstants.DetectionStatus.WAIT_DETECT);
+                rememberAssignment(orgId, item, detector);
             }
             detectionItemMapper.updateById(item);
         }
@@ -364,7 +481,8 @@ public class DetectionPendingFlowService {
             return;
         }
         boolean allAssigned = !effectiveItems.isEmpty() && effectiveItems.stream()
-                .allMatch(item -> item.getDetectorId() != null
+                .allMatch(item -> (item.getDetectorId() != null
+                        && !LabWorkflowConstants.DetectionStatus.WAIT_ASSIGN.equals(item.getItemStatus()))
                         || LabWorkflowConstants.DetectionStatus.ENTERED.equals(item.getItemStatus())
                         || LabWorkflowConstants.DetectionStatus.SUBMITTED.equals(item.getItemStatus())
                         || LabWorkflowConstants.DetectionStatus.APPROVED.equals(item.getItemStatus()));
@@ -406,6 +524,30 @@ public class DetectionPendingFlowService {
                 .collect(Collectors.toMap(LabUser::getId, user -> user));
     }
 
+    private void rememberAssignment(Long orgId, DetectionItem item, LabUser detector) {
+        if (orgId == null || item == null || item.getParameterId() == null || detector == null || detector.getId() == null) {
+            return;
+        }
+        DetectionAssignmentMemory memory = detectionAssignmentMemoryMapper.selectOne(new LambdaQueryWrapper<DetectionAssignmentMemory>()
+                .eq(DetectionAssignmentMemory::getOrgId, orgId)
+                .eq(DetectionAssignmentMemory::getParameterId, item.getParameterId())
+                .last("limit 1"));
+        if (memory == null) {
+            memory = new DetectionAssignmentMemory();
+            memory.setOrgId(orgId);
+            memory.setParameterId(item.getParameterId());
+            memory.setParameterName(item.getParameterName());
+            memory.setDetectorId(detector.getId());
+            memory.setDetectorName(resolveDetectorName(detector));
+            detectionAssignmentMemoryMapper.insert(memory);
+            return;
+        }
+        memory.setParameterName(item.getParameterName());
+        memory.setDetectorId(detector.getId());
+        memory.setDetectorName(resolveDetectorName(detector));
+        detectionAssignmentMemoryMapper.updateById(memory);
+    }
+
     private List<SampleDetectionConfigItem> parseSampleConfigItems(String snapshotText) {
         if (StrUtil.isBlank(snapshotText)) {
             return new ArrayList<>();
@@ -437,42 +579,50 @@ public class DetectionPendingFlowService {
         return StrUtil.trim(sample.getDetectionItems());
     }
 
-    private void assignSamplerAsDetectorIfPossible(DetectionRecord record, LabSample sample) {
-        if (record == null || record.getId() == null || sample == null || sample.getSamplerId() == null) {
+    private void prefillDetectorIfMissing(DetectionRecord record, LabSample sample) {
+        if (record == null || record.getId() == null || sample == null) {
             return;
         }
         List<DetectionItem> items = detectionItemMapper.selectList(new LambdaQueryWrapper<DetectionItem>()
                 .eq(DetectionItem::getRecordId, record.getId())
                 .orderByAsc(DetectionItem::getCreatedTime));
+        Long orgId = resolveSampleOrgId(sample);
+        if (orgId == null) {
+            return;
+        }
+        List<SampleDetectionConfigItem> configItems = items.stream().map(item -> {
+            SampleDetectionConfigItem configItem = new SampleDetectionConfigItem();
+            configItem.setParameterId(item.getParameterId());
+            configItem.setParameterName(item.getParameterName());
+            return configItem;
+        }).collect(Collectors.toList());
+        Map<Long, DetectionAssignmentMemory> memoryMap = loadAssignmentMemoryMap(orgId, configItems);
+        Map<Long, LabUser> memoryDetectorMap = loadMemoryDetectorMap(memoryMap);
+        LabUser fallbackDetector = findFirstEnabledStaff(orgId);
         boolean changed = false;
-        String detectorName = resolveSamplerDetectorName(sample);
         for (DetectionItem item : items) {
             if (item.getDetectorId() != null
                     || !LabWorkflowConstants.DetectionStatus.WAIT_ASSIGN.equals(item.getItemStatus())) {
                 continue;
             }
-            item.setDetectorId(sample.getSamplerId());
-            item.setDetectorName(detectorName);
-            item.setItemStatus(LabWorkflowConstants.DetectionStatus.WAIT_DETECT);
+            LabUser initialDetector = resolveInitialDetector(
+                    orgId,
+                    item.getParameterId(),
+                    memoryMap,
+                    memoryDetectorMap,
+                    fallbackDetector);
+            if (initialDetector == null) {
+                continue;
+            }
+            item.setDetectorId(initialDetector.getId());
+            item.setDetectorName(resolveDetectorName(initialDetector));
             detectionItemMapper.updateById(item);
             changed = true;
         }
-        if (changed || record.getDetectorId() == null
-                || LabWorkflowConstants.DetectionStatus.WAIT_ASSIGN.equals(record.getDetectionStatus())) {
-            List<DetectionItem> latestItems = changed
-                    ? detectionItemMapper.selectList(new LambdaQueryWrapper<DetectionItem>()
-                    .eq(DetectionItem::getRecordId, record.getId())
-                    .orderByAsc(DetectionItem::getCreatedTime))
-                    : items;
-            refreshRecordAssignmentState(record, latestItems);
+        if (changed) {
+            record.setDetectionStatus(LabWorkflowConstants.DetectionStatus.WAIT_ASSIGN);
+            detectionRecordMapper.updateById(record);
         }
-    }
-
-    private String resolveSamplerDetectorName(LabSample sample) {
-        if (sample == null) {
-            return null;
-        }
-        return StrUtil.blankToDefault(StrUtil.trim(sample.getSamplerName()), "采样员");
     }
 
     private void promoteEnteredRecordIfReady(DetectionRecord record, LabSample sample) {

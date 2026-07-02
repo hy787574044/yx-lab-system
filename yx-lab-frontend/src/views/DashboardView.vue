@@ -202,6 +202,18 @@
           <el-form-item label="计划名称" required>
             <el-input v-model="planCreateForm.planName" placeholder="请输入采样计划名称" />
           </el-form-item>
+          <el-form-item label="所属机构" required>
+            <el-select
+              v-model="planCreateForm.orgId"
+              clearable
+              filterable
+              style="width: 100%"
+              placeholder="请选择所属机构"
+              @change="handlePlanCreateOrgChange"
+            >
+              <el-option v-for="option in planOrgOptions" :key="option.value" :label="option.label" :value="option.value" />
+            </el-select>
+          </el-form-item>
           <el-form-item label="点位名称" required>
             <el-input v-model="planCreateForm.pointName" placeholder="请输入采样点位名称" />
           </el-form-item>
@@ -311,21 +323,43 @@
         <aside class="workbench-dialog__side">
           <div class="workbench-dialog__side-head">
             <span>{{ activeActionSideTitle }}</span>
-            <strong>{{ actionRows.length }}</strong>
+            <strong>{{ actionSideCountLabel }}</strong>
           </div>
-          <div v-if="actionRows.length" class="workbench-row-list">
+          <div v-if="activeAction === 'detectionSplit'" class="workbench-dialog__side-filter">
+            <el-input
+              v-model="detectionSplitPlanKeyword"
+              clearable
+              placeholder="请输入计划名称"
+            />
+          </div>
+          <div v-if="filteredActionRows.length" class="workbench-row-list">
             <button
-              v-for="row in actionRows"
+              v-for="row in filteredActionRows"
               :key="getActionRowKey(row)"
               type="button"
-              :class="['workbench-row-card', { 'is-active': isActionRowActive(row) }]"
+              :class="[
+                'workbench-row-card',
+                {
+                  'is-active': isActionRowActive(row),
+                  'is-selected': activeAction === 'detectionSplit' && isDetectionSplitRowSelected(row)
+                }
+              ]"
               @click="selectActionRow(row)"
             >
-              <strong>{{ getActionRowTitle(row) }}</strong>
-              <span>{{ getActionRowMeta(row) }}</span>
+              <el-checkbox
+                v-if="activeAction === 'detectionSplit'"
+                class="workbench-row-card__check"
+                :model-value="isDetectionSplitRowSelected(row)"
+                @click.stop
+                @change="(checked) => toggleDetectionSplitRow(row, checked)"
+              />
+              <div class="workbench-row-card__content">
+                <strong>{{ getActionRowTitle(row) }}</strong>
+                <span>{{ getActionRowMeta(row) }}</span>
+              </div>
             </button>
           </div>
-          <div v-else class="empty-block">当前没有可处理数据</div>
+          <div v-else class="empty-block">{{ actionRows.length ? '没有匹配的计划' : '当前没有可处理数据' }}</div>
         </aside>
 
         <main class="workbench-dialog__main">
@@ -647,10 +681,10 @@
               v-if="activeAction === 'detectionSplit'"
               v-permission="'detection:assign'"
               type="primary"
-              :disabled="!activeRow || !resultForm.recordId || !resultForm.id"
+              :disabled="!detectorAssignmentTargetRows.length"
               @click="openDetectorAssignDialog"
             >
-              分配检测人员
+              {{ selectedDetectionSplitRows.length ? `分配检测人员 (${selectedDetectionSplitRows.length})` : '分配检测人员' }}
             </el-button>
             <el-button v-if="activeAction === 'report'" type="primary" plain :disabled="!previewData || !previewComponent" @click="printWorkbenchReport">打印</el-button>
             <el-button @click="workbenchDialogVisible = false">关闭</el-button>
@@ -666,23 +700,37 @@
       v-model="detectorAssignDialogVisible"
       class="detector-assign-dialog"
       title="分配检测人员"
-      width="520px"
+      width="680px"
+      align-center
       append-to-body
       destroy-on-close
       @closed="resetDetectorAssignDialog"
     >
       <div class="detector-assign-form">
         <div class="detector-assign-form__summary">
-          <span>样品编号<strong>{{ resultForm.sampleNo || '-' }}</strong></span>
-          <span>检测参数<strong>{{ resultForm.parameterName || '-' }}</strong></span>
-          <span>当前人员<strong>{{ resultForm.detectorName || '待分配' }}</strong></span>
+          <span>分配数量<strong>{{ detectorAssignmentTargetRows.length }}</strong></span>
+          <span>当前点位<strong>{{ getDetectorAssignSummaryTitle() }}</strong></span>
+          <span>当前人员<strong>{{ getDetectorAssignSummaryDetector() }}</strong></span>
         </div>
-        <el-form label-width="96px">
+        <el-form class="detector-assign-form__selector" label-width="96px">
+          <el-form-item label="所属机构">
+            <el-select
+              v-model="detectorAssignForm.orgId"
+              filterable
+              clearable
+              style="width: 100%"
+              placeholder="请选择所属机构"
+              @change="handleDetectorAssignOrgChange"
+            >
+              <el-option v-for="option in planOrgOptions" :key="option.value" :label="option.label" :value="option.value" />
+            </el-select>
+          </el-form-item>
           <el-form-item label="检测人员" required>
             <el-select
               v-model="detectorAssignForm.detectorId"
               filterable
               clearable
+              :loading="detectorOptionsLoading"
               style="width: 100%"
               placeholder="请选择检测人员"
             >
@@ -769,7 +817,6 @@ import {
   createSamplingPlanApi,
   dispatchSamplingPlanApi,
   fetchDetectionDetailApi,
-  fetchDetectionDetectorsApi,
   fetchDetectionItemsApi,
   fetchDetectionMethodOptionsApi,
   fetchDetectionParametersApi,
@@ -777,6 +824,7 @@ import {
   fetchDetectionTypesApi,
   fetchDictItemsApi,
   fetchFlowConfigOptionsApi,
+  fetchMonitoringPointOrgOptionsApi,
   fetchSamplingPlansApi,
   fetchSamplingTaskDetailApi,
   fetchSamplingTasksApi,
@@ -843,8 +891,12 @@ const workbenchDialogVisible = ref(false)
 const samplingPlanDetailVisible = ref(false)
 const actionRows = ref([])
 const activeRow = ref(null)
+const detectionSplitPlanKeyword = ref('')
+const selectedDetectionSplitRowKeys = ref([])
 const selectedSamplingPlan = ref(null)
+const planOrgOptions = ref([])
 const samplerOptions = ref([])
+const samplerOptionsOrgId = ref('')
 const samplerLoading = ref(false)
 const weatherOptions = ref([])
 const storageConditionOptions = ref([])
@@ -853,6 +905,8 @@ const detectionParameters = ref([])
 const detectionMethods = ref([])
 const detectorOptions = ref([])
 const detectorOptionsLoaded = ref(false)
+const detectorOptionsOrgId = ref('')
+const detectorOptionsLoading = ref(false)
 const reviewFlowOptions = ref([])
 const workbenchAddParamDialogVisible = ref(false)
 const workbenchAddParamLoading = ref(false)
@@ -893,6 +947,7 @@ const dispatchForm = reactive({
 
 const planCreateForm = reactive({
   planName: '',
+  orgId: '',
   pointName: '',
   address: '',
   latitude: '',
@@ -957,7 +1012,41 @@ const resultForm = reactive({
 })
 
 const detectorAssignForm = reactive({
+  orgId: '',
   detectorId: null
+})
+
+const filteredActionRows = computed(() => {
+  if (activeAction.value !== 'detectionSplit') {
+    return actionRows.value
+  }
+  const keyword = detectionSplitPlanKeyword.value.trim().toLowerCase()
+  if (!keyword) {
+    return actionRows.value
+  }
+  return actionRows.value.filter((row) => getDetectionSplitPlanSearchText(row).includes(keyword))
+})
+
+const actionSideCountLabel = computed(() => {
+  if (activeAction.value === 'detectionSplit' && detectionSplitPlanKeyword.value.trim()) {
+    return `${filteredActionRows.value.length}/${actionRows.value.length}`
+  }
+  return actionRows.value.length
+})
+
+const selectedDetectionSplitRows = computed(() => {
+  const selectedKeys = new Set(selectedDetectionSplitRowKeys.value.map((key) => String(key)))
+  return actionRows.value.filter((row) => selectedKeys.has(String(getActionRowKey(row))))
+})
+
+const detectorAssignmentTargetRows = computed(() => {
+  if (activeAction.value !== 'detectionSplit') {
+    return []
+  }
+  if (selectedDetectionSplitRows.value.length) {
+    return selectedDetectionSplitRows.value
+  }
+  return activeRow.value ? [activeRow.value] : []
 })
 
 const reviewForm = reactive({
@@ -1101,11 +1190,26 @@ function normalizeDictOptions(items) {
   })).filter((item) => item.value)
 }
 
+function normalizeOrgOption(item) {
+  const value = item?.value ?? item?.id ?? item?.orgId
+  return {
+    label: item?.label || item?.orgName || item?.name || String(value || ''),
+    value: value == null ? '' : String(value)
+  }
+}
+
 function formatPlanCoordinate(plan) {
   if (!plan?.longitude && !plan?.latitude) {
     return ''
   }
   return `${plan.longitude || '-'}, ${plan.latitude || '-'}`
+}
+
+function toStableId(value) {
+  if (value === null || value === undefined || value === '' || value === 'null' || value === 'undefined') {
+    return ''
+  }
+  return String(value).trim()
 }
 
 function normalizeSamplerIdList(value) {
@@ -1115,14 +1219,13 @@ function normalizeSamplerIdList(value) {
       .split(',')
       .map((item) => item.trim())
   return rawItems
-    .map((item) => Number(item))
-    .filter((item) => Number.isFinite(item) && item > 0)
+    .map(toStableId)
+    .filter((item) => item && item !== '0')
     .filter((item, index, source) => source.indexOf(item) === index)
 }
 
 function getSamplerOptionId(item) {
-  const id = Number(item?.id ?? item?.userId ?? item?.user_id)
-  return Number.isFinite(id) && id > 0 ? id : item?.id
+  return toStableId(item?.id ?? item?.userId ?? item?.user_id)
 }
 
 function getSamplerDisplayName(item) {
@@ -1161,9 +1264,9 @@ function dedupeSamplerOptions(options) {
   const nameSet = new Set()
   const result = []
   ;(options || []).forEach((item) => {
-    const id = Number(getSamplerOptionId(item))
+    const id = getSamplerOptionId(item)
     const name = getSamplerDisplayName(item)
-    const idKey = Number.isFinite(id) && id > 0 ? String(id) : ''
+    const idKey = id ? String(id) : ''
     const nameKey = name || ''
     if ((idKey && idSet.has(idKey)) || (nameKey && nameSet.has(nameKey))) {
       return
@@ -1185,10 +1288,10 @@ function ensureSelectedSamplerOptions(ids, samplerNameText) {
     return
   }
   const names = splitSamplerNames(samplerNameText)
-  const existingIds = new Set(samplerOptions.value.map((item) => Number(getSamplerOptionId(item))))
+  const existingIds = new Set(samplerOptions.value.map((item) => String(getSamplerOptionId(item))))
   const existingNames = new Set(samplerOptions.value.map((item) => getSamplerDisplayName(item)).filter(Boolean))
   const additions = selectedIds
-    .filter((id, index) => !existingIds.has(id) && !existingNames.has(names[index]))
+    .filter((id, index) => !existingIds.has(String(id)) && !existingNames.has(names[index]))
     .map((id, index) => ({
       id,
       realName: names[index] || `采样员${id}`,
@@ -1203,7 +1306,7 @@ function ensureSelectedSamplerOptions(ids, samplerNameText) {
 function resolveSamplerNames(ids) {
   const selectedIds = normalizeSamplerIdList(ids)
   return selectedIds
-    .map((id) => samplerOptions.value.find((item) => Number(getSamplerOptionId(item)) === id))
+    .map((id) => samplerOptions.value.find((item) => String(getSamplerOptionId(item)) === String(id)))
     .filter(Boolean)
     .map((item) => getSamplerDisplayName(item))
     .filter(Boolean)
@@ -1222,16 +1325,16 @@ function resolveRowSamplerOptionIds(row) {
   const names = splitSamplerNames(row?.samplerName || row?.sampler_name)
   const ids = getRowSamplerIds(row)
   const resolved = ids.map((id, index) => {
-    const idMatched = samplerOptions.value.find((item) => Number(getSamplerOptionId(item)) === id)
+    const idMatched = samplerOptions.value.find((item) => String(getSamplerOptionId(item)) === String(id))
     if (idMatched) {
-      return Number(getSamplerOptionId(idMatched))
+      return getSamplerOptionId(idMatched)
     }
     const name = names[index]
     if (!name) {
       return id
     }
     const nameMatched = samplerOptions.value.find((item) => getSamplerDisplayName(item) === name)
-    return nameMatched ? Number(getSamplerOptionId(nameMatched)) : id
+    return nameMatched ? getSamplerOptionId(nameMatched) : id
   })
   return normalizeSamplerIdList(resolved)
 }
@@ -1246,6 +1349,7 @@ function resetDispatchForm() {
 
 function resetPlanCreateForm() {
   planCreateForm.planName = ''
+  planCreateForm.orgId = ''
   planCreateForm.pointName = ''
   planCreateForm.address = ''
   planCreateForm.latitude = ''
@@ -1275,20 +1379,36 @@ function handlePlanCreateSamplerChange(userIds) {
   planCreateForm.samplerName = resolveSamplerNames(ids)
 }
 
-async function loadSamplers(force = false) {
-  if (!force && samplerOptions.value.length) {
+async function loadPlanOrgOptions() {
+  if (planOrgOptions.value.length) {
+    return
+  }
+  const result = await fetchMonitoringPointOrgOptionsApi()
+  planOrgOptions.value = Array.isArray(result)
+    ? result.map(normalizeOrgOption).filter((item) => item.value)
+    : []
+}
+
+async function loadSamplers(force = false, orgId = '') {
+  const normalizedOrgId = orgId == null ? '' : String(orgId)
+  if (!force && samplerOptions.value.length && samplerOptionsOrgId.value === normalizedOrgId) {
     return
   }
   samplerLoading.value = true
   try {
-    const result = await fetchSystemUsersApi({
+    const params = {
       pageNum: 1,
       pageSize: 500,
       roleCode: 'STAFF',
       status: 1
-    })
+    }
+    if (normalizedOrgId) {
+      params.orgId = normalizedOrgId
+    }
+    const result = await fetchSystemUsersApi(params)
     const records = Array.isArray(result.records) ? result.records : []
     samplerOptions.value = dedupeSamplerOptions(records.map(normalizeSamplerOption).filter((item) => item.id))
+    samplerOptionsOrgId.value = normalizedOrgId
   } finally {
     samplerLoading.value = false
   }
@@ -1296,7 +1416,18 @@ async function loadSamplers(force = false) {
 
 function handleSamplerDropdownVisible(visible) {
   if (visible) {
-    loadSamplers(true)
+    loadSamplers(true, planCreateDialogVisible.value ? planCreateForm.orgId : '')
+  }
+}
+
+async function handlePlanCreateOrgChange(orgId) {
+  planCreateForm.samplerIds = []
+  planCreateForm.samplerId = null
+  planCreateForm.samplerName = ''
+  samplerOptions.value = []
+  samplerOptionsOrgId.value = ''
+  if (orgId) {
+    await loadSamplers(true, orgId)
   }
 }
 
@@ -1437,7 +1568,7 @@ async function dispatchSamplingPlanFromWorkbench(row) {
 }
 
 async function openPlanCreateDialog() {
-  await loadSamplers()
+  await loadPlanOrgOptions()
   resetPlanCreateForm()
   const startTime = nowDateTimeText()
   const endDate = new Date()
@@ -1451,6 +1582,7 @@ async function openPlanCreateDialog() {
 function buildPlanCreatePayload() {
   return {
     planName: String(planCreateForm.planName || '').trim(),
+    orgId: planCreateForm.orgId || null,
     pointId: null,
     pointName: String(planCreateForm.pointName || '').trim(),
     address: String(planCreateForm.address || '').trim(),
@@ -1473,7 +1605,7 @@ async function submitPlanCreateForm() {
     return
   }
   const payload = buildPlanCreatePayload()
-  if (!payload.planName || !payload.pointName || !payload.address || !payload.longitude || !payload.latitude || !payload.startTime || !payload.endTime || !payload.sampleType || !payload.cycleType || !payload.samplerIds.length) {
+  if (!payload.planName || !payload.orgId || !payload.pointName || !payload.address || !payload.longitude || !payload.latitude || !payload.startTime || !payload.endTime || !payload.sampleType || !payload.cycleType || !payload.samplerIds.length) {
     ElMessage.warning('请完整填写采样计划信息')
     return
   }
@@ -1525,6 +1657,9 @@ async function submitDispatchForm() {
 
 async function openWorkbenchAction(key, preferredRow = null) {
   activeAction.value = key
+  if (key === 'detectionSplit') {
+    detectionSplitPlanKeyword.value = ''
+  }
   workbenchDialogVisible.value = true
   actionLoading.value = true
   try {
@@ -1547,6 +1682,10 @@ async function openWorkbenchAction(key, preferredRow = null) {
 async function loadActionRows(key) {
   previewData.value = null
   previewError.value = ''
+  if (key !== 'detectionSplit') {
+    selectedDetectionSplitRowKeys.value = []
+    detectionSplitPlanKeyword.value = ''
+  }
   const actionPageSize = 200
   if (key === 'samplingPlan') {
     const result = await fetchSamplingPlansApi({ pageNum: 1, pageSize: actionPageSize, planStatus: 'ACTIVE' })
@@ -1630,6 +1769,22 @@ function isActionRowActive(row) {
   return String(getActionRowKey(row)) === String(getActionRowKey(activeRow.value))
 }
 
+function isDetectionSplitRowSelected(row) {
+  const rowKey = String(getActionRowKey(row))
+  return selectedDetectionSplitRowKeys.value.some((key) => String(key) === rowKey)
+}
+
+function toggleDetectionSplitRow(row, checked) {
+  const rowKey = String(getActionRowKey(row))
+  if (checked) {
+    if (!isDetectionSplitRowSelected(row)) {
+      selectedDetectionSplitRowKeys.value = [...selectedDetectionSplitRowKeys.value, rowKey]
+    }
+    return
+  }
+  selectedDetectionSplitRowKeys.value = selectedDetectionSplitRowKeys.value.filter((key) => String(key) !== rowKey)
+}
+
 function getActionRowTitle(row) {
   if (activeAction.value === 'samplingPlan') {
     return row?.planName || row?.pointName || '-'
@@ -1663,6 +1818,19 @@ function getActionRowMeta(row) {
     return `${row?.summaryTypeLabel || row?.summaryType || '-'} / ${row?.periodLabel || '-'}`
   }
   return ''
+}
+
+function getDetectionSplitPlanSearchText(row) {
+  return [
+    row?.planName,
+    row?.pointName,
+    row?.monitoringPointName,
+    row?.address,
+    getActionRowTitle(row)
+  ]
+    .map((value) => String(value ?? '').trim().toLowerCase())
+    .filter(Boolean)
+    .join(' ')
 }
 
 function getPreviewRowTitle(key, row) {
@@ -2148,7 +2316,7 @@ function openResultForm(row) {
   resultForm.standardMax = row.standardMax
   resultForm.unit = row.unit || ''
   resultForm.referenceStandard = row.referenceStandard || ''
-  resultForm.detectorId = row.detectorId ?? null
+  resultForm.detectorId = toStableId(row.detectorId) || null
   resultForm.detectorName = row.detectorName || ''
   resultForm.resultValue = row.resultValue == null ? null : String(row.resultValue)
   resultForm.abnormalRemark = row.abnormalRemark || ''
@@ -2166,50 +2334,197 @@ function getDetectorOptionLabel(option) {
   return option.displayName || option.realName || option.username || option.nickname || '-'
 }
 
-async function loadDetectorOptions(force = false) {
-  if (!force && detectorOptionsLoaded.value) {
+function normalizeDetectorOption(item) {
+  const id = toStableId(item?.userId ?? item?.id ?? item?.user_id)
+  const username = item?.username || ''
+  const realName = item?.realName || item?.real_name || item?.name || ''
+  const displayName = item?.displayName || item?.label || realName || username || id
+  return {
+    ...item,
+    id,
+    userId: id,
+    username,
+    realName,
+    displayName
+  }
+}
+
+async function loadDetectorOptions(force = false, orgId = '') {
+  const normalizedOrgId = toStableId(orgId)
+  if (!force && detectorOptionsLoaded.value && detectorOptionsOrgId.value === normalizedOrgId) {
     return
   }
-  const result = await fetchDetectionDetectorsApi()
-  detectorOptions.value = (result || []).map((item) => ({
-    ...item,
-    id: item.userId ?? item.id
-  }))
-  detectorOptionsLoaded.value = true
+  detectorOptionsLoading.value = true
+  try {
+    const params = {
+      pageNum: 1,
+      pageSize: 500,
+      roleCode: 'STAFF',
+      status: 1
+    }
+    if (normalizedOrgId) {
+      params.orgId = normalizedOrgId
+    }
+    const result = await fetchSystemUsersApi(params)
+    const records = Array.isArray(result.records) ? result.records : []
+    detectorOptions.value = records.map(normalizeDetectorOption).filter((item) => item.id)
+    detectorOptionsOrgId.value = normalizedOrgId
+    detectorOptionsLoaded.value = true
+  } finally {
+    detectorOptionsLoading.value = false
+  }
+}
+
+function ensureSelectedDetectorOptions(rows) {
+  const existingIds = new Set(detectorOptions.value.map((item) => String(item.id)))
+  const additions = []
+  ;(rows || []).forEach((row) => {
+    const detectorId = toStableId(row?.detectorId)
+    if (!detectorId || existingIds.has(detectorId)) {
+      return
+    }
+    const detectorName = firstNonBlank(row?.detectorName, `检测人员${detectorId}`)
+    additions.push({
+      id: detectorId,
+      userId: detectorId,
+      realName: detectorName,
+      displayName: detectorName,
+      username: detectorId
+    })
+    existingIds.add(detectorId)
+  })
+  if (additions.length) {
+    detectorOptions.value = [...detectorOptions.value, ...additions]
+  }
+}
+
+function getCommonDetectorId(rows) {
+  const detectorIds = (rows || [])
+    .map((row) => toStableId(row?.detectorId))
+    .filter(Boolean)
+  if (!detectorIds.length || detectorIds.length !== (rows || []).length) {
+    return null
+  }
+  const firstDetectorId = detectorIds[0]
+  return detectorIds.every((id) => id === firstDetectorId) ? firstDetectorId : null
+}
+
+function getCommonOrgId(rows) {
+  const orgIds = (rows || [])
+    .map((row) => toStableId(row?.orgId ?? row?.org_id))
+    .filter(Boolean)
+  if (!orgIds.length || orgIds.length !== (rows || []).length) {
+    return ''
+  }
+  const firstOrgId = orgIds[0]
+  return orgIds.every((id) => id === firstOrgId) ? firstOrgId : ''
+}
+
+function hasMixedDetectorOrgRows(rows) {
+  const orgIds = Array.from(new Set((rows || [])
+    .map((row) => toStableId(row?.orgId ?? row?.org_id))
+    .filter(Boolean)))
+  return orgIds.length > 1
 }
 
 async function openDetectorAssignDialog() {
-  if (!resultForm.recordId || !resultForm.id) {
+  if (!detectorAssignmentTargetRows.value.length) {
     ElMessage.warning('请选择需要分配的检测分样')
     return
   }
-  await loadDetectorOptions()
-  detectorAssignForm.detectorId = resultForm.detectorId ?? null
+  if (hasMixedDetectorOrgRows(detectorAssignmentTargetRows.value)) {
+    ElMessage.warning('请选择同一所属机构下的检测分样后再统一分配')
+    return
+  }
+  await loadPlanOrgOptions()
+  detectorAssignForm.orgId = getCommonOrgId(detectorAssignmentTargetRows.value)
+  await loadDetectorOptions(true, detectorAssignForm.orgId)
+  ensureSelectedDetectorOptions(detectorAssignmentTargetRows.value)
+  detectorAssignForm.detectorId = getCommonDetectorId(detectorAssignmentTargetRows.value)
   detectorAssignDialogVisible.value = true
 }
 
 function resetDetectorAssignDialog() {
+  detectorAssignForm.orgId = ''
   detectorAssignForm.detectorId = null
 }
 
+async function handleDetectorAssignOrgChange(orgId) {
+  detectorAssignForm.detectorId = null
+  await loadDetectorOptions(true, orgId)
+}
+
+function getDetectorAssignSummaryTitle() {
+  const rows = detectorAssignmentTargetRows.value
+  if (!rows.length) {
+    return '-'
+  }
+  if (rows.length === 1) {
+    return getActionRowTitle(rows[0])
+  }
+  const pointNames = Array.from(new Set(rows.map((row) => firstNonBlank(row?.planName, row?.pointName, row?.monitoringPointName)).filter(Boolean)))
+  return pointNames.length === 1 ? pointNames[0] : `多个点位（${rows.length}项）`
+}
+
+function getDetectorAssignSummaryDetector() {
+  const rows = detectorAssignmentTargetRows.value
+  if (!rows.length) {
+    return '-'
+  }
+  if (rows.length === 1) {
+    return rows[0]?.detectorName || '待分配'
+  }
+  const detectorNames = Array.from(new Set(rows.map((row) => firstNonBlank(row?.detectorName)).filter(Boolean)))
+  if (!detectorNames.length) {
+    return '待分配'
+  }
+  return detectorNames.length === 1 ? detectorNames[0] : '多个人员'
+}
+
 async function submitDetectorAssignment() {
-  if (!resultForm.recordId || !resultForm.id) {
-    ElMessage.warning('当前检测分样缺少必要信息')
+  const rows = detectorAssignmentTargetRows.value
+  if (!rows.length) {
+    ElMessage.warning('请选择需要分配的检测分样')
     return
   }
-  if (detectorAssignForm.detectorId == null || detectorAssignForm.detectorId === '') {
+  const selectedDetectorId = toStableId(detectorAssignForm.detectorId)
+  const selectedOrgId = toStableId(detectorAssignForm.orgId)
+  if (selectedOrgId && detectorAssignmentTargetRows.value.some((row) => {
+    const rowOrgId = toStableId(row?.orgId ?? row?.org_id)
+    return rowOrgId && rowOrgId !== selectedOrgId
+  })) {
+    ElMessage.warning('检测人员所属机构与所选检测分样所属机构不一致')
+    return
+  }
+  const hasSelectedDetector = Boolean(selectedDetectorId)
+  if (!hasSelectedDetector && rows.some((row) => !toStableId(row?.detectorId))) {
     ElMessage.warning('请选择检测人员')
     return
   }
   detectorAssignSubmitting.value = true
   try {
-    await assignDetectionDetectorsApi(resultForm.recordId, {
-      items: [{
-        itemId: resultForm.id,
-        detectorId: detectorAssignForm.detectorId
-      }]
-    })
-    ElMessage.success('检测人员分配已保存')
+    const recordGroups = rows.reduce((groups, row) => {
+      if (!row?.recordId || !row?.id) {
+        return groups
+      }
+      const key = String(row.recordId)
+      const group = groups.get(key) || { recordId: row.recordId, items: [] }
+      group.items.push({
+        itemId: row.id,
+        detectorId: hasSelectedDetector ? selectedDetectorId : toStableId(row.detectorId)
+      })
+      groups.set(key, group)
+      return groups
+    }, new Map())
+    if (!recordGroups.size) {
+      ElMessage.warning('所选检测分样缺少必要信息')
+      return
+    }
+    await Promise.all(Array.from(recordGroups.values()).map((group) => assignDetectionDetectorsApi(group.recordId, {
+      items: group.items
+    })))
+    ElMessage.success(`检测人员分配已保存：${rows.length}项`)
+    selectedDetectionSplitRowKeys.value = []
     detectorAssignDialogVisible.value = false
     await reloadActiveAction()
   } finally {
@@ -2558,6 +2873,8 @@ function resetWorkbenchDialog() {
   activeAction.value = ''
   actionRows.value = []
   activeRow.value = null
+  detectionSplitPlanKeyword.value = ''
+  selectedDetectionSplitRowKeys.value = []
   detectorAssignDialogVisible.value = false
   resetDetectorAssignDialog()
   previewData.value = null
@@ -3052,6 +3369,17 @@ onUnmounted(() => {
   gap: 16px;
 }
 
+.detector-assign-form__selector {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  width: 100%;
+}
+
+.detector-assign-form__selector :deep(.el-form-item) {
+  margin-bottom: 0;
+}
+
 :deep(.detector-assign-dialog.el-dialog),
 :global(.detector-assign-dialog.el-dialog) {
   min-height: 0;
@@ -3069,14 +3397,15 @@ onUnmounted(() => {
 
 .detector-assign-form__summary {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: minmax(96px, 0.7fr) minmax(0, 1.45fr) minmax(0, 1.25fr);
   gap: 10px;
 }
 
 .detector-assign-form__summary span {
   display: grid;
+  align-content: start;
   gap: 4px;
-  min-height: 58px;
+  min-height: 68px;
   padding: 10px 12px;
   border: 1px solid rgba(214, 225, 241, 0.9);
   border-radius: 10px;
@@ -3087,11 +3416,11 @@ onUnmounted(() => {
 
 .detector-assign-form__summary strong {
   min-width: 0;
-  overflow: hidden;
   color: var(--text-main);
   font-size: 14px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .workbench-dialog {
@@ -3161,6 +3490,15 @@ onUnmounted(() => {
   font-weight: 800;
 }
 
+.workbench-dialog__side-filter {
+  margin-bottom: 10px;
+}
+
+.workbench-dialog__side-filter :deep(.el-input__wrapper) {
+  border-radius: 10px;
+  background: #ffffff;
+}
+
 .workbench-row-list {
   display: grid;
   align-content: start;
@@ -3217,6 +3555,12 @@ onUnmounted(() => {
   padding: 10px 12px;
 }
 
+.workbench-dialog--detection-split .workbench-row-card {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  column-gap: 8px;
+}
+
 .workbench-dialog--sample-login .workbench-row-card {
   min-height: 68px;
   padding: 10px 12px;
@@ -3245,6 +3589,21 @@ onUnmounted(() => {
 .workbench-row-card.is-active {
   border-color: rgba(22, 119, 255, 0.42);
   background: var(--brand-soft);
+}
+
+.workbench-row-card.is-selected {
+  border-color: rgba(22, 119, 255, 0.55);
+  background: #eaf3ff;
+}
+
+.workbench-row-card__check {
+  margin-top: 2px;
+}
+
+.workbench-row-card__content {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
 }
 
 .workbench-row-card strong {

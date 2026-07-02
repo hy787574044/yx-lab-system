@@ -107,6 +107,7 @@ public class ReportService {
                         .eq(StrUtil.isNotBlank(query.getReportType()), LabReport::getReportType, query.getReportType())
                         .eq(StrUtil.isNotBlank(query.getReportCategory()), LabReport::getReportCategory, query.getReportCategory())
                         .eq(StrUtil.isNotBlank(query.getReportStatus()), LabReport::getReportStatus, query.getReportStatus())
+                        .eq(query.getOrgId() != null, LabReport::getOrgId, query.getOrgId())
                         .in(scopedReportIds != null, LabReport::getId, scopedReportIds)
                         .orderByDesc(LabReport::getGeneratedTime));
         fillReportSampleInfo(page.getRecords());
@@ -160,7 +161,7 @@ public class ReportService {
 
     private Long countReportsByStatus(String reportStatus) {
         List<Long> scopedReportIds = resolveScopedReportIds();
-        Number count = labReportMapper.selectCount(new LambdaQueryWrapper<LabReport>()
+        Long count = labReportMapper.selectCount(new LambdaQueryWrapper<LabReport>()
                 .eq(StrUtil.isNotBlank(reportStatus), LabReport::getReportStatus, reportStatus)
                 .in(scopedReportIds != null, LabReport::getId, scopedReportIds));
         return count == null ? 0L : count.longValue();
@@ -478,6 +479,7 @@ public class ReportService {
         report.setGeneratedTime(LocalDateTime.now());
         report.setSampleId(sample.getId());
         report.setSampleNo(sample.getSampleNo());
+        report.setOrgId(sample.getOrgId() != null ? sample.getOrgId() : record.getOrgId());
         report.setDetectionRecordId(record.getId());
         report.setReportStatus(LabWorkflowConstants.ReportStatus.GENERATED);
         report.setContentSnapshot(buildReportContentSnapshot(sample, record, template, reportCategory));

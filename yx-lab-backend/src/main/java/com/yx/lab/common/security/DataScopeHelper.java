@@ -40,4 +40,9 @@ public class DataScopeHelper {
         CurrentUser currentUser = currentUser();
         return currentUser == null ? null : currentUser.getUserId();
     }
+
+    public Long currentOrgId() {
+        CurrentUser currentUser = currentUser();
+        return currentUser == null ? null : currentUser.getOrgId();
+    }
 }

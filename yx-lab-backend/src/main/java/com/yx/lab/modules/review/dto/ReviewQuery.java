@@ -13,4 +13,6 @@ public class ReviewQuery extends PageQuery {
     private String reviewResult;
 
     private Boolean mine;
+
+    private Long orgId;
 }

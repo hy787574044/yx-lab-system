@@ -1,5 +1,8 @@
 package com.yx.lab.modules.asset.entity;
 
+
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.yx.lab.common.model.BaseEntity;
@@ -20,6 +23,7 @@ public class InstrumentMaintenance extends BaseEntity {
 
     @Schema(description = "设备ID")
     @TableField("instrument_id")
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long instrumentId;
 
     @Schema(description = "设备名称")

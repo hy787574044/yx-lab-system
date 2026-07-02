@@ -1,5 +1,8 @@
 package com.yx.lab.common.model;
 
+
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
@@ -17,6 +20,7 @@ public class BaseEntity implements Serializable {
 
     @Schema(description = "主键ID")
     @TableId(value = "id", type = IdType.ASSIGN_ID)
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
     @Schema(description = "删除标记，0未删除，1已删除")
@@ -26,6 +30,7 @@ public class BaseEntity implements Serializable {
 
     @Schema(description = "创建人ID")
     @TableField(value = "created_by", fill = FieldFill.INSERT)
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long createdBy;
 
     @Schema(description = "创建人名称")
@@ -39,6 +44,7 @@ public class BaseEntity implements Serializable {
 
     @Schema(description = "更新人ID")
     @TableField(value = "updated_by", fill = FieldFill.INSERT_UPDATE)
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long updatedBy;
 
     @Schema(description = "更新人名称")

@@ -15,4 +15,6 @@ public class LabSampleQuery extends PageQuery {
     private String sampleType;
 
     private String sampleSourceMethod;
+
+    private Long orgId;
 }

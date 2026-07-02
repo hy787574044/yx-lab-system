@@ -24,6 +24,8 @@ public class SummaryReportQuery extends PageQuery {
 
     private String reportStatus;
 
+    private Long orgId;
+
     @DateTimeFormat(pattern = "yyyy-MM-dd")
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate dateFrom;

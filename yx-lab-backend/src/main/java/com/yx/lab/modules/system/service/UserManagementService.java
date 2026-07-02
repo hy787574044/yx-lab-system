@@ -142,7 +142,7 @@ public class UserManagementService {
     }
 
     private void validateUsernameUnique(String username, Long excludeId) {
-        Number count = labUserMapper.selectCount(new LambdaQueryWrapper<LabUser>()
+        Long count = labUserMapper.selectCount(new LambdaQueryWrapper<LabUser>()
                 .eq(LabUser::getUsername, username)
                 .ne(excludeId != null, LabUser::getId, excludeId));
         if (count != null && count.longValue() > 0L) {

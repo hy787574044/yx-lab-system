@@ -357,7 +357,6 @@ const mineOptions = [
 
 const statusKeyMap = {
   all: '',
-  waitAssign: WAIT_ASSIGN_STATUS,
   waitDetect: WAIT_DETECT_STATUS,
   pendingReview: reviewPendingDetectionStatus,
   approved: approvedDetectionStatus,
@@ -374,12 +373,6 @@ const currentStats = computed(() => [
     label: '子流程总量',
     value: summary.total,
     desc: '当前筛选范围内的全部检测子流程'
-  },
-  {
-    key: 'waitAssign',
-    label: '待分配',
-    value: summary.waitAssignCount,
-    desc: '尚未分配检测人员的检测子流程'
   },
   {
     key: 'waitDetect',
@@ -407,7 +400,9 @@ const currentStats = computed(() => [
   }
 ])
 
-const itemStatusOptions = computed(() => Object.entries(detectionStatusLabelMap).map(([value, label]) => ({ value, label })))
+const itemStatusOptions = computed(() => Object.entries(detectionStatusLabelMap)
+  .filter(([value]) => value !== WAIT_ASSIGN_STATUS)
+  .map(([value, label]) => ({ value, label })))
 
 const resultDialogReadonly = computed(() => ![WAIT_DETECT_STATUS, rejectedDetectionStatus].includes(resultForm.itemStatus))
 

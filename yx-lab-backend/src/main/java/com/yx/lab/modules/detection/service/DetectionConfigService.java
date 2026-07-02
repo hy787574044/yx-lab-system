@@ -396,12 +396,12 @@ public class DetectionConfigService {
      */
     public void deleteType(Long id) {
         DetectionType entity = requireType(id);
-        Number stepCount = detectionStepMapper.selectCount(new LambdaQueryWrapper<DetectionStep>()
+        Long stepCount = detectionStepMapper.selectCount(new LambdaQueryWrapper<DetectionStep>()
                 .eq(DetectionStep::getTypeId, entity.getId()));
         if (stepCount != null && stepCount.longValue() > 0L) {
             throw new BusinessException("当前检测套餐已配置检测步骤，不能删除");
         }
-        Number recordCount = detectionRecordMapper.selectCount(new LambdaQueryWrapper<DetectionRecord>()
+        Long recordCount = detectionRecordMapper.selectCount(new LambdaQueryWrapper<DetectionRecord>()
                 .eq(DetectionRecord::getDetectionTypeId, entity.getId()));
         if (recordCount != null && recordCount.longValue() > 0L) {
             throw new BusinessException("当前检测套餐已产生检测记录，不能删除");
@@ -494,12 +494,12 @@ public class DetectionConfigService {
         if (isParameterReferencedByType(entity.getId())) {
             throw new BusinessException("当前检测参数已被检测套餐引用，不能删除");
         }
-        Number methodCount = detectionMethodMapper.selectCount(new LambdaQueryWrapper<DetectionMethod>()
+        Long methodCount = detectionMethodMapper.selectCount(new LambdaQueryWrapper<DetectionMethod>()
                 .eq(DetectionMethod::getParameterId, entity.getId()));
         if (methodCount != null && methodCount.longValue() > 0L) {
             throw new BusinessException("当前检测参数已绑定检测方法，请先解除绑定后再删除");
         }
-        Number itemCount = detectionItemMapper.selectCount(new LambdaQueryWrapper<DetectionItem>()
+        Long itemCount = detectionItemMapper.selectCount(new LambdaQueryWrapper<DetectionItem>()
                 .eq(DetectionItem::getParameterId, entity.getId()));
         if (itemCount != null && itemCount.longValue() > 0L) {
             throw new BusinessException("当前检测参数已产生检测结果记录，不能删除");
@@ -777,14 +777,14 @@ public class DetectionConfigService {
         if (entity.getStepOrder() == null || entity.getStepOrder() <= 0) {
             throw new BusinessException("检测步骤顺序必须为正整数");
         }
-        Number duplicateOrderCount = detectionStepMapper.selectCount(new LambdaQueryWrapper<DetectionStep>()
+        Long duplicateOrderCount = detectionStepMapper.selectCount(new LambdaQueryWrapper<DetectionStep>()
                 .eq(DetectionStep::getTypeId, entity.getTypeId())
                 .eq(DetectionStep::getStepOrder, entity.getStepOrder())
                 .ne(selfId != null, DetectionStep::getId, selfId));
         if (duplicateOrderCount != null && duplicateOrderCount.longValue() > 0L) {
             throw new BusinessException("同一检测套餐下步骤顺序不能重复");
         }
-        Number duplicateNameCount = detectionStepMapper.selectCount(new LambdaQueryWrapper<DetectionStep>()
+        Long duplicateNameCount = detectionStepMapper.selectCount(new LambdaQueryWrapper<DetectionStep>()
                 .eq(DetectionStep::getTypeId, entity.getTypeId())
                 .eq(DetectionStep::getStepName, entity.getStepName())
                 .ne(selfId != null, DetectionStep::getId, selfId));
@@ -794,7 +794,7 @@ public class DetectionConfigService {
     }
 
     private void ensureTypeNameUnique(String typeName, Long selfId) {
-        Number duplicateCount = detectionTypeMapper.selectCount(new LambdaQueryWrapper<DetectionType>()
+        Long duplicateCount = detectionTypeMapper.selectCount(new LambdaQueryWrapper<DetectionType>()
                 .eq(DetectionType::getTypeName, typeName)
                 .ne(selfId != null, DetectionType::getId, selfId));
         if (duplicateCount != null && duplicateCount.longValue() > 0L) {
@@ -803,7 +803,7 @@ public class DetectionConfigService {
     }
 
     private void ensureProjectGroupNameUnique(String groupName, Long selfId) {
-        Number duplicateCount = detectionProjectGroupMapper.selectCount(new LambdaQueryWrapper<DetectionProjectGroup>()
+        Long duplicateCount = detectionProjectGroupMapper.selectCount(new LambdaQueryWrapper<DetectionProjectGroup>()
                 .eq(DetectionProjectGroup::getGroupName, groupName)
                 .ne(selfId != null, DetectionProjectGroup::getId, selfId));
         if (duplicateCount != null && duplicateCount.longValue() > 0L) {
@@ -812,7 +812,7 @@ public class DetectionConfigService {
     }
 
     private void ensureParameterNameUnique(String parameterName, Long selfId) {
-        Number duplicateCount = detectionParameterMapper.selectCount(new LambdaQueryWrapper<DetectionParameter>()
+        Long duplicateCount = detectionParameterMapper.selectCount(new LambdaQueryWrapper<DetectionParameter>()
                 .eq(DetectionParameter::getParameterName, parameterName)
                 .ne(selfId != null, DetectionParameter::getId, selfId));
         if (duplicateCount != null && duplicateCount.longValue() > 0L) {
@@ -821,7 +821,7 @@ public class DetectionConfigService {
     }
 
     private void ensureMethodNameUnique(String methodName, Long selfId) {
-        Number duplicateCount = detectionMethodMapper.selectCount(new LambdaQueryWrapper<DetectionMethod>()
+        Long duplicateCount = detectionMethodMapper.selectCount(new LambdaQueryWrapper<DetectionMethod>()
                 .eq(DetectionMethod::getMethodName, methodName)
                 .ne(selfId != null, DetectionMethod::getId, selfId));
         if (duplicateCount != null && duplicateCount.longValue() > 0L) {
@@ -833,7 +833,7 @@ public class DetectionConfigService {
         if (StrUtil.isBlank(methodCode)) {
             return;
         }
-        Number duplicateCount = detectionMethodMapper.selectCount(new LambdaQueryWrapper<DetectionMethod>()
+        Long duplicateCount = detectionMethodMapper.selectCount(new LambdaQueryWrapper<DetectionMethod>()
                 .eq(DetectionMethod::getMethodCode, methodCode)
                 .ne(selfId != null, DetectionMethod::getId, selfId));
         if (duplicateCount != null && duplicateCount.longValue() > 0L) {
@@ -1168,7 +1168,7 @@ public class DetectionConfigService {
         if (parameterId == null) {
             return false;
         }
-        Number typeCount = detectionTypeMapper.selectCount(new LambdaQueryWrapper<DetectionType>()
+        Long typeCount = detectionTypeMapper.selectCount(new LambdaQueryWrapper<DetectionType>()
                 .like(DetectionType::getParameterIds, String.valueOf(parameterId)));
         if (typeCount == null || typeCount.longValue() == 0L) {
             return false;
@@ -1342,7 +1342,7 @@ public class DetectionConfigService {
     }
 
     private boolean hasProcessingDetections(Long typeId) {
-        Number count = detectionRecordMapper.selectCount(new LambdaQueryWrapper<DetectionRecord>()
+        Long count = detectionRecordMapper.selectCount(new LambdaQueryWrapper<DetectionRecord>()
                 .eq(DetectionRecord::getDetectionTypeId, typeId)
                 .eq(DetectionRecord::getDetectionStatus, SUBMITTED_DETECTION_STATUS));
         return count != null && count.longValue() > 0L;

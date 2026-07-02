@@ -1,5 +1,8 @@
 package com.yx.lab.modules.asset.entity;
 
+
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.yx.lab.common.model.BaseEntity;
@@ -29,6 +32,7 @@ public class LabDocument extends BaseEntity {
 
     @Schema(description = "文件大小，单位字节")
     @TableField("file_size")
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long fileSize;
 
     @Schema(description = "文件地址")

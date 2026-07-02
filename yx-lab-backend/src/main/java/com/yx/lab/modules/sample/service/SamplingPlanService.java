@@ -73,7 +73,8 @@ public class SamplingPlanService {
         Long scopedSamplerId = resolveScopedSamplerId(query.getSamplerId());
         LambdaQueryWrapper<SamplingPlan> wrapper = new LambdaQueryWrapper<SamplingPlan>()
                 .like(StrUtil.isNotBlank(query.getKeyword()), SamplingPlan::getPlanName, query.getKeyword())
-                .eq(StrUtil.isNotBlank(query.getPlanStatus()), SamplingPlan::getPlanStatus, query.getPlanStatus());
+                .eq(StrUtil.isNotBlank(query.getPlanStatus()), SamplingPlan::getPlanStatus, query.getPlanStatus())
+                .eq(query.getOrgId() != null, SamplingPlan::getOrgId, query.getOrgId());
         applyPlanSamplerScope(wrapper, scopedSamplerId);
         wrapper.orderByDesc(SamplingPlan::getCreatedTime);
         Page<SamplingPlan> page = samplingPlanMapper.selectPage(PageUtils.buildPage(query), wrapper);
@@ -111,7 +112,7 @@ public class SamplingPlanService {
         LambdaQueryWrapper<SamplingPlan> wrapper = new LambdaQueryWrapper<SamplingPlan>()
                 .eq(StrUtil.isNotBlank(planStatus), SamplingPlan::getPlanStatus, planStatus);
         applyPlanSamplerScope(wrapper, resolveScopedSamplerId(null));
-        Number count = samplingPlanMapper.selectCount(wrapper);
+        Long count = samplingPlanMapper.selectCount(wrapper);
         return count == null ? 0L : count.longValue();
     }
 
@@ -125,7 +126,7 @@ public class SamplingPlanService {
                         .or()
                         .eq(SamplingPlan::getSamplerName, ""));
         applyPlanSamplerScope(wrapper, resolveScopedSamplerId(null));
-        Number count = samplingPlanMapper.selectCount(wrapper);
+        Long count = samplingPlanMapper.selectCount(wrapper);
         return count == null ? 0L : count.longValue();
     }
 
@@ -423,6 +424,7 @@ public class SamplingPlanService {
         task.setTaskNo(generateTaskNo());
         task.setSampleNo(sampleNoGeneratorService.ensureSampleNo(null));
         task.setPlanId(plan.getId());
+        task.setOrgId(plan.getOrgId());
         task.setPointId(plan.getPointId());
         task.setPointName(plan.getPointName());
         task.setAddress(plan.getAddress());
@@ -447,6 +449,10 @@ public class SamplingPlanService {
             boolean changed = false;
             if (StrUtil.isBlank(existingTask.getSampleNo())) {
                 existingTask.setSampleNo(sampleNoGeneratorService.ensureSampleNo(existingTask.getSampleNo()));
+                changed = true;
+            }
+            if (existingTask.getOrgId() == null && plan.getOrgId() != null) {
+                existingTask.setOrgId(plan.getOrgId());
                 changed = true;
             }
             if (existingTask.getPointId() == null && plan.getPointId() != null) {
@@ -497,6 +503,7 @@ public class SamplingPlanService {
 
     private void applyPlanCommand(SamplingPlan plan, SamplingPlanSaveCommand command) {
         plan.setPlanName(StrUtil.trim(command.getPlanName()));
+        plan.setOrgId(command.getOrgId());
         plan.setPointId(command.getPointId());
         plan.setPointName(StrUtil.trim(command.getPointName()));
         plan.setAddress(StrUtil.trim(command.getAddress()));
@@ -543,6 +550,9 @@ public class SamplingPlanService {
     }
 
     private void validatePlan(SamplingPlan plan) {
+        if (plan.getOrgId() == null) {
+            throw new BusinessException("所属机构不能为空");
+        }
         if (StrUtil.isBlank(plan.getPointName())) {
             throw new BusinessException("采样点位名称不能为空");
         }
@@ -575,6 +585,12 @@ public class SamplingPlanService {
         MonitoringPoint point = monitoringPointMapper.selectById(plan.getPointId());
         if (point == null) {
             throw new BusinessException("监测点位不存在");
+        }
+        if (point.getOrgId() != null) {
+            if (plan.getOrgId() != null && !point.getOrgId().equals(plan.getOrgId())) {
+                throw new BusinessException("监测点位与所属机构不一致");
+            }
+            plan.setOrgId(point.getOrgId());
         }
         plan.setPointName(StrUtil.trim(point.getPointName()));
         plan.setLatitude(StrUtil.trim(point.getLatitude()));
@@ -809,7 +825,7 @@ public class SamplingPlanService {
 
     private String generateTaskNo() {
         String prefix = "TASK" + LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMM"));
-        Number count = samplingTaskMapper.selectCount(new LambdaQueryWrapper<SamplingTask>()
+        Long count = samplingTaskMapper.selectCount(new LambdaQueryWrapper<SamplingTask>()
                 .likeRight(SamplingTask::getTaskNo, prefix));
         long next = count == null ? 1L : count.longValue() + 1L;
         return prefix + String.format("%04d", next);

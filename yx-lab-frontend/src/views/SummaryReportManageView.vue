@@ -400,6 +400,7 @@ function buildListParams() {
 function buildPreviewParams(row) {
   const params = {
     summaryType: currentSummaryType.value,
+    orgId: query.orgId?.trim() || '',
     regionName: row.regionName || '',
     periodStart: row.periodStart,
     periodEnd: row.periodEnd

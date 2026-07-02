@@ -241,7 +241,7 @@ public class DashboardService {
         if (detectorId == null || statuses == null || statuses.length == 0) {
             return 0L;
         }
-        Number count = detectionItemMapper.selectCount(new LambdaQueryWrapper<DetectionItem>()
+        Long count = detectionItemMapper.selectCount(new LambdaQueryWrapper<DetectionItem>()
                 .eq(DetectionItem::getDetectorId, detectorId)
                 .in(DetectionItem::getItemStatus, Arrays.asList(statuses))
                 .ge(startTime != null, DetectionItem::getUpdatedTime, startTime));

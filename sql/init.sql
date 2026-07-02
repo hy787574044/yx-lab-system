@@ -178,6 +178,7 @@ DROP TABLE IF EXISTS lab_sampling_plan;
 CREATE TABLE lab_sampling_plan (
     id BIGINT PRIMARY KEY,
     plan_name VARCHAR(128) NOT NULL,
+    org_id BIGINT,
     point_id BIGINT,
     point_name VARCHAR(128) NOT NULL,
     address VARCHAR(255),
@@ -202,7 +203,8 @@ CREATE TABLE lab_sampling_plan (
     created_time DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_by BIGINT,
     updated_name VARCHAR(64),
-    updated_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    updated_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    KEY idx_lab_sampling_plan_org_id (org_id)
 );
 
 DROP TABLE IF EXISTS lab_sampling_task;
@@ -211,6 +213,7 @@ CREATE TABLE lab_sampling_task (
     task_no VARCHAR(64) NOT NULL,
     sample_no VARCHAR(64),
     plan_id BIGINT,
+    org_id BIGINT,
     point_id BIGINT,
     point_name VARCHAR(128) NOT NULL,
     sampling_time DATETIME,
@@ -242,6 +245,7 @@ CREATE TABLE lab_sampling_task (
     updated_by BIGINT,
     updated_name VARCHAR(64),
     updated_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    KEY idx_lab_sampling_task_org_id (org_id),
     KEY idx_lab_sampling_task_no (task_no),
     KEY idx_lab_sampling_task_sample_no (sample_no)
 );
@@ -251,6 +255,7 @@ CREATE TABLE lab_sample (
     id BIGINT PRIMARY KEY,
     sample_no VARCHAR(64) NOT NULL,
     task_id BIGINT,
+    org_id BIGINT,
     point_id BIGINT,
     point_name VARCHAR(128) NOT NULL,
     sample_type VARCHAR(32),
@@ -279,6 +284,7 @@ CREATE TABLE lab_sample (
     updated_by BIGINT,
     updated_name VARCHAR(64),
     updated_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    KEY idx_lab_sample_org_id (org_id),
     KEY idx_lab_sample_no (sample_no),
     KEY idx_lab_sample_review_flow_id (review_flow_id)
 );
@@ -380,6 +386,7 @@ CREATE TABLE lab_detection_record (
     id BIGINT PRIMARY KEY,
     sample_id BIGINT NOT NULL,
     sample_no VARCHAR(64) NOT NULL,
+    org_id BIGINT,
     detection_type_id BIGINT,
     detection_type_name VARCHAR(64),
     detection_time DATETIME,
@@ -395,13 +402,15 @@ CREATE TABLE lab_detection_record (
     created_time DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_by BIGINT,
     updated_name VARCHAR(64),
-    updated_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    updated_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    KEY idx_lab_detection_record_org_id (org_id)
 );
 
 DROP TABLE IF EXISTS lab_detection_item;
 CREATE TABLE lab_detection_item (
     id BIGINT PRIMARY KEY,
     record_id BIGINT NOT NULL,
+    org_id BIGINT,
     parameter_id BIGINT,
     parameter_name VARCHAR(64),
     standard_min DECIMAL(10,2),
@@ -421,7 +430,27 @@ CREATE TABLE lab_detection_item (
     created_time DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_by BIGINT,
     updated_name VARCHAR(64),
-    updated_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    updated_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    KEY idx_lab_detection_item_org_id (org_id)
+);
+
+DROP TABLE IF EXISTS lab_detection_assignment_memory;
+CREATE TABLE lab_detection_assignment_memory (
+    id BIGINT PRIMARY KEY,
+    org_id BIGINT NOT NULL,
+    parameter_id BIGINT NOT NULL,
+    parameter_name VARCHAR(64),
+    detector_id BIGINT NOT NULL,
+    detector_name VARCHAR(64),
+    deleted TINYINT DEFAULT 0,
+    created_by BIGINT,
+    created_name VARCHAR(64),
+    created_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_by BIGINT,
+    updated_name VARCHAR(64),
+    updated_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_detection_assignment_memory_org_param (org_id, parameter_id),
+    KEY idx_detection_assignment_memory_detector (detector_id)
 );
 
 DROP TABLE IF EXISTS lab_review_record;
@@ -430,6 +459,7 @@ CREATE TABLE lab_review_record (
     detection_record_id BIGINT NOT NULL,
     sample_id BIGINT,
     sample_no VARCHAR(64),
+    org_id BIGINT,
     flow_id BIGINT,
     flow_node_id BIGINT,
     flow_node_name VARCHAR(128),
@@ -447,7 +477,8 @@ CREATE TABLE lab_review_record (
     created_time DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_by BIGINT,
     updated_name VARCHAR(64),
-    updated_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    updated_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    KEY idx_lab_review_record_org_id (org_id)
 );
 
 DROP TABLE IF EXISTS lab_report_template;
@@ -476,6 +507,7 @@ CREATE TABLE lab_report (
     generated_time DATETIME,
     sample_id BIGINT,
     sample_no VARCHAR(64),
+    org_id BIGINT,
     detection_record_id BIGINT,
     report_status VARCHAR(32),
     published_time DATETIME,
@@ -490,6 +522,7 @@ CREATE TABLE lab_report (
     updated_by BIGINT,
     updated_name VARCHAR(64),
     updated_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    KEY idx_lab_report_org_id (org_id),
     KEY idx_lab_report_category_status (report_category, report_status),
     KEY idx_lab_report_sample_no (sample_no)
 );
@@ -500,6 +533,7 @@ CREATE TABLE lab_report_push_record (
     report_id BIGINT NOT NULL,
     sample_id BIGINT,
     sample_no VARCHAR(64),
+    org_id BIGINT,
     recipient_user_id BIGINT,
     recipient_name VARCHAR(64),
     recipient_phone VARCHAR(32),
@@ -514,6 +548,7 @@ CREATE TABLE lab_report_push_record (
     updated_by BIGINT,
     updated_name VARCHAR(64),
     updated_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    KEY idx_lab_report_push_org_id (org_id),
     KEY idx_lab_report_push_report_id (report_id),
     KEY idx_lab_report_push_sample_id (sample_id)
 );

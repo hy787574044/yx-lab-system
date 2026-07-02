@@ -13,6 +13,8 @@ public class DetectionItemPageVO {
 
     private Long recordId;
 
+    private Long orgId;
+
     private Long sampleId;
 
     private String sampleNo;

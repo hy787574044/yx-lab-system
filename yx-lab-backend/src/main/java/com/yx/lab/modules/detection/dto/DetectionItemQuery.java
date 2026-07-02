@@ -13,4 +13,6 @@ public class DetectionItemQuery extends PageQuery {
     private String itemStatus;
 
     private Boolean mine;
+
+    private Long orgId;
 }

@@ -46,7 +46,8 @@ public class DashboardQueryService {
      * @return 样品总数
      */
     public long sampleTotal() {
-        return labSampleMapper.selectCount(new LambdaQueryWrapper<LabSample>());
+        Long count = labSampleMapper.selectCount(new LambdaQueryWrapper<LabSample>());
+        return toLong(count);
     }
 
     /**
@@ -55,8 +56,9 @@ public class DashboardQueryService {
      * @return 待审查数量
      */
     public long pendingReviewTotal() {
-        return detectionRecordMapper.selectCount(new LambdaQueryWrapper<DetectionRecord>()
+        Long count = detectionRecordMapper.selectCount(new LambdaQueryWrapper<DetectionRecord>()
                 .eq(DetectionRecord::getDetectionStatus, LabWorkflowConstants.DetectionStatus.SUBMITTED));
+        return toLong(count);
     }
 
     /**
@@ -65,8 +67,9 @@ public class DashboardQueryService {
      * @return 已通过数量
      */
     public long approvedDetectionTotal() {
-        return detectionRecordMapper.selectCount(new LambdaQueryWrapper<DetectionRecord>()
+        Long count = detectionRecordMapper.selectCount(new LambdaQueryWrapper<DetectionRecord>()
                 .eq(DetectionRecord::getDetectionStatus, LabWorkflowConstants.DetectionStatus.APPROVED));
+        return toLong(count);
     }
 
     /**
@@ -75,8 +78,9 @@ public class DashboardQueryService {
      * @return 已发布报告数量
      */
     public long publishedReportTotal() {
-        return labReportMapper.selectCount(new LambdaQueryWrapper<LabReport>()
+        Long count = labReportMapper.selectCount(new LambdaQueryWrapper<LabReport>()
                 .eq(LabReport::getReportStatus, LabWorkflowConstants.ReportStatus.PUBLISHED));
+        return toLong(count);
     }
 
     /**
@@ -85,8 +89,9 @@ public class DashboardQueryService {
      * @return 正常结果数量
      */
     public long normalResultTotal() {
-        return detectionRecordMapper.selectCount(new LambdaQueryWrapper<DetectionRecord>()
+        Long count = detectionRecordMapper.selectCount(new LambdaQueryWrapper<DetectionRecord>()
                 .eq(DetectionRecord::getDetectionResult, LabWorkflowConstants.DetectionResult.NORMAL));
+        return toLong(count);
     }
 
     /**
@@ -95,8 +100,9 @@ public class DashboardQueryService {
      * @return 异常结果数量
      */
     public long abnormalResultTotal() {
-        return detectionRecordMapper.selectCount(new LambdaQueryWrapper<DetectionRecord>()
+        Long count = detectionRecordMapper.selectCount(new LambdaQueryWrapper<DetectionRecord>()
                 .eq(DetectionRecord::getDetectionResult, LabWorkflowConstants.DetectionResult.ABNORMAL));
+        return toLong(count);
     }
 
     /**
@@ -106,8 +112,9 @@ public class DashboardQueryService {
      * @return 样品数量
      */
     public long sampleTotalFrom(LocalDateTime startTime) {
-        return labSampleMapper.selectCount(new LambdaQueryWrapper<LabSample>()
+        Long count = labSampleMapper.selectCount(new LambdaQueryWrapper<LabSample>()
                 .ge(startTime != null, LabSample::getCreatedTime, startTime));
+        return toLong(count);
     }
 
     /**
@@ -117,8 +124,9 @@ public class DashboardQueryService {
      * @return 报告数量
      */
     public long reportTotalFrom(LocalDateTime startTime) {
-        return labReportMapper.selectCount(new LambdaQueryWrapper<LabReport>()
+        Long count = labReportMapper.selectCount(new LambdaQueryWrapper<LabReport>()
                 .ge(startTime != null, LabReport::getCreatedTime, startTime));
+        return toLong(count);
     }
 
     /**
@@ -128,9 +136,10 @@ public class DashboardQueryService {
      * @return 检测数量
      */
     public long completedDetectionTotalFrom(LocalDateTime startTime) {
-        return detectionRecordMapper.selectCount(new LambdaQueryWrapper<DetectionRecord>()
+        Long count = detectionRecordMapper.selectCount(new LambdaQueryWrapper<DetectionRecord>()
                 .isNotNull(DetectionRecord::getDetectionResult)
                 .ge(startTime != null, DetectionRecord::getDetectionTime, startTime));
+        return toLong(count);
     }
 
     /**
@@ -139,12 +148,13 @@ public class DashboardQueryService {
      * @return 进行中样品数量
      */
     public long runningSampleTotal() {
-        return detectionRecordMapper.selectCount(new LambdaQueryWrapper<DetectionRecord>()
+        Long count = detectionRecordMapper.selectCount(new LambdaQueryWrapper<DetectionRecord>()
                 .in(DetectionRecord::getDetectionStatus,
                         LabWorkflowConstants.DetectionStatus.WAIT_ASSIGN,
                         LabWorkflowConstants.DetectionStatus.WAIT_DETECT,
                         LabWorkflowConstants.DetectionStatus.SUBMITTED,
                         LabWorkflowConstants.DetectionStatus.REJECTED));
+        return toLong(count);
     }
 
     /**
@@ -153,9 +163,10 @@ public class DashboardQueryService {
      * @return 超标预警数量
      */
     public long abnormalWarningTotal() {
-        return detectionRecordMapper.selectCount(new LambdaQueryWrapper<DetectionRecord>()
+        Long count = detectionRecordMapper.selectCount(new LambdaQueryWrapper<DetectionRecord>()
                 .eq(DetectionRecord::getDetectionResult, LabWorkflowConstants.DetectionResult.ABNORMAL)
                 .ne(DetectionRecord::getDetectionStatus, LabWorkflowConstants.DetectionStatus.APPROVED));
+        return toLong(count);
     }
 
     /**
@@ -165,8 +176,9 @@ public class DashboardQueryService {
      * @return 数量
      */
     public long sampleStatusTotal(String sampleStatus) {
-        return labSampleMapper.selectCount(new LambdaQueryWrapper<LabSample>()
+        Long count = labSampleMapper.selectCount(new LambdaQueryWrapper<LabSample>()
                 .eq(LabSample::getSampleStatus, sampleStatus));
+        return toLong(count);
     }
 
     /**
@@ -180,7 +192,7 @@ public class DashboardQueryService {
         if (taskStatuses != null && taskStatuses.length > 0) {
             wrapper.in(SamplingTask::getTaskStatus, Arrays.asList(taskStatuses));
         }
-        Number count = samplingTaskMapper.selectCount(wrapper);
+        Long count = samplingTaskMapper.selectCount(wrapper);
         return count == null ? 0L : count.longValue();
     }
 
@@ -190,7 +202,7 @@ public class DashboardQueryService {
      * @return 数量
      */
     public long unregisteredCompletedSamplingTaskTotal() {
-        Number count = samplingTaskMapper.selectCount(new LambdaQueryWrapper<SamplingTask>()
+        Long count = samplingTaskMapper.selectCount(new LambdaQueryWrapper<SamplingTask>()
                 .eq(SamplingTask::getTaskStatus, LabWorkflowConstants.SamplingTaskStatus.COMPLETED)
                 .isNull(SamplingTask::getSampleId)
                 .and(wrapper -> wrapper
@@ -207,8 +219,9 @@ public class DashboardQueryService {
      * @return 数量
      */
     public long detectionStatusTotal(String detectionStatus) {
-        return detectionRecordMapper.selectCount(new LambdaQueryWrapper<DetectionRecord>()
+        Long count = detectionRecordMapper.selectCount(new LambdaQueryWrapper<DetectionRecord>()
                 .eq(DetectionRecord::getDetectionStatus, detectionStatus));
+        return toLong(count);
     }
 
     /**
@@ -218,8 +231,9 @@ public class DashboardQueryService {
      * @return 数量
      */
     public long reportStatusTotal(String reportStatus) {
-        return labReportMapper.selectCount(new LambdaQueryWrapper<LabReport>()
+        Long count = labReportMapper.selectCount(new LambdaQueryWrapper<LabReport>()
                 .eq(LabReport::getReportStatus, reportStatus));
+        return toLong(count);
     }
 
     /**
@@ -231,10 +245,11 @@ public class DashboardQueryService {
      * @return 数量
      */
     public long detectionResultTotalBetween(String result, LocalDateTime startTime, LocalDateTime endTime) {
-        return detectionRecordMapper.selectCount(new LambdaQueryWrapper<DetectionRecord>()
+        Long count = detectionRecordMapper.selectCount(new LambdaQueryWrapper<DetectionRecord>()
                 .eq(DetectionRecord::getDetectionResult, result)
                 .ge(startTime != null, DetectionRecord::getDetectionTime, startTime)
                 .lt(endTime != null, DetectionRecord::getDetectionTime, endTime));
+        return toLong(count);
     }
 
     /**
@@ -244,9 +259,10 @@ public class DashboardQueryService {
      * @return 超时数量
      */
     public long pendingReviewTimeoutTotal(LocalDateTime deadline) {
-        return detectionRecordMapper.selectCount(new LambdaQueryWrapper<DetectionRecord>()
+        Long count = detectionRecordMapper.selectCount(new LambdaQueryWrapper<DetectionRecord>()
                 .eq(DetectionRecord::getDetectionStatus, LabWorkflowConstants.DetectionStatus.SUBMITTED)
                 .le(deadline != null, DetectionRecord::getUpdatedTime, deadline));
+        return toLong(count);
     }
 
     /**
@@ -256,12 +272,13 @@ public class DashboardQueryService {
      * @return 超时数量
      */
     public long abnormalUnhandledTotal(LocalDateTime deadline) {
-        return detectionRecordMapper.selectCount(new LambdaQueryWrapper<DetectionRecord>()
+        Long count = detectionRecordMapper.selectCount(new LambdaQueryWrapper<DetectionRecord>()
                 .eq(DetectionRecord::getDetectionResult, LabWorkflowConstants.DetectionResult.ABNORMAL)
                 .in(DetectionRecord::getDetectionStatus,
                         LabWorkflowConstants.DetectionStatus.SUBMITTED,
                         LabWorkflowConstants.DetectionStatus.REJECTED)
                 .le(deadline != null, DetectionRecord::getUpdatedTime, deadline));
+        return toLong(count);
     }
 
     /**
@@ -291,5 +308,9 @@ public class DashboardQueryService {
                         String.valueOf(row.get("name")),
                         ((Number) row.get("value")).longValue()))
                 .collect(Collectors.toList());
+    }
+
+    private long toLong(Long count) {
+        return count == null ? 0L : count.longValue();
     }
 }

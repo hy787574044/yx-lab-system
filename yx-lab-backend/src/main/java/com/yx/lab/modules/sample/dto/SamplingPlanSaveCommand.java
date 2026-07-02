@@ -14,6 +14,9 @@ public class SamplingPlanSaveCommand {
     @NotBlank(message = "计划名称不能为空")
     private String planName;
 
+    @NotNull(message = "所属机构不能为空")
+    private Long orgId;
+
     private Long pointId;
 
     @NotBlank(message = "采样点位名称不能为空")

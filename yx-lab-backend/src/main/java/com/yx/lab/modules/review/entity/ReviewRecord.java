@@ -1,5 +1,8 @@
 package com.yx.lab.modules.review.entity;
 
+
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.annotation.JsonFormat;
@@ -20,22 +23,31 @@ public class ReviewRecord extends BaseEntity {
 
     @Schema(description = "检测主流程ID")
     @TableField("detection_record_id")
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long detectionRecordId;
 
     @Schema(description = "样品ID")
     @TableField("sample_id")
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long sampleId;
 
     @Schema(description = "样品编号")
     @TableField("sample_no")
     private String sampleNo;
 
+    @Schema(description = "所属机构ID")
+    @TableField("org_id")
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long orgId;
+
     @Schema(description = "审核流程ID")
     @TableField("flow_id")
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long flowId;
 
     @Schema(description = "审核流程节点ID")
     @TableField("flow_node_id")
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long flowNodeId;
 
     @Schema(description = "审核流程节点名称")
@@ -68,6 +80,7 @@ public class ReviewRecord extends BaseEntity {
 
     @Schema(description = "审核人ID")
     @TableField("reviewer_id")
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long reviewerId;
 
     @Schema(description = "审核人名称")

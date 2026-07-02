@@ -66,6 +66,7 @@ public class SamplingTaskService {
                         .like(SamplingTask::getPointName, query.getKeyword())
                         .or()
                         .like(SamplingTask::getSampleNo, query.getKeyword()));
+        wrapper.eq(query.getOrgId() != null, SamplingTask::getOrgId, query.getOrgId());
         applyTaskStatusFilter(wrapper, query.getTaskStatus());
         applySampleRegisterStatusFilter(wrapper, query.getSampleRegisterStatus());
         applyTaskSamplerScope(wrapper, scopedSamplerId);
@@ -109,7 +110,7 @@ public class SamplingTaskService {
         LambdaQueryWrapper<SamplingTask> wrapper = new LambdaQueryWrapper<SamplingTask>()
                 .eq(StrUtil.isNotBlank(taskStatus), SamplingTask::getTaskStatus, taskStatus);
         applyTaskSamplerScope(wrapper, resolveScopedSamplerId(null));
-        Number count = samplingTaskMapper.selectCount(wrapper);
+        Long count = samplingTaskMapper.selectCount(wrapper);
         return count == null ? 0L : count.longValue();
     }
 
@@ -187,6 +188,7 @@ public class SamplingTaskService {
         String keyword = query == null ? null : StrUtil.trim(query.getKeyword());
         String taskStatus = query == null ? null : StrUtil.trim(query.getTaskStatus());
         String sampleRegisterStatus = query == null ? null : StrUtil.trim(query.getSampleRegisterStatus());
+        Long orgId = query == null ? null : query.getOrgId();
         Long scopedSamplerId = resolveScopedSamplerId(query == null ? null : query.getSamplerId());
         LambdaQueryWrapper<SamplingTask> wrapper = new LambdaQueryWrapper<SamplingTask>()
                 .and(StrUtil.isNotBlank(keyword), item -> item
@@ -200,6 +202,7 @@ public class SamplingTaskService {
                         LabWorkflowConstants.SamplingTaskStatus.IN_PROGRESS,
                         LabWorkflowConstants.SamplingTaskStatus.COMPLETED)
                 .orderByDesc(SamplingTask::getCreatedTime);
+        wrapper.eq(orgId != null, SamplingTask::getOrgId, orgId);
         if (!ignoreTaskStatus) {
             applyTaskStatusFilter(wrapper, taskStatus);
         }
@@ -526,7 +529,7 @@ public class SamplingTaskService {
                 || LabWorkflowConstants.SampleRegisterStatus.REGISTERED.equals(task.getSampleRegisterStatus())) {
             return true;
         }
-        Number sampleCount = labSampleMapper.selectCount(new LambdaQueryWrapper<LabSample>()
+        Long sampleCount = labSampleMapper.selectCount(new LambdaQueryWrapper<LabSample>()
                 .eq(LabSample::getTaskId, task.getId()));
         return sampleCount != null && sampleCount.longValue() > 0;
     }

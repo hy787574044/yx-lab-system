@@ -79,6 +79,7 @@ public class ReviewService {
                         .and(StrUtil.isNotBlank(query.getKeyword()), wrapper -> wrapper
                                 .like(ReviewRecord::getSampleNo, query.getKeyword()))
                         .eq(StrUtil.isNotBlank(query.getReviewResult()), ReviewRecord::getReviewResult, query.getReviewResult())
+                        .eq(query.getOrgId() != null, ReviewRecord::getOrgId, query.getOrgId())
                         .eq(scopedReviewerId != null, ReviewRecord::getReviewerId, scopedReviewerId)
                         .orderByDesc(ReviewRecord::getReviewTime));
         fillReviewRecordSummaries(page.getRecords());
@@ -139,7 +140,7 @@ public class ReviewService {
     }
 
     private long safeCount(Long count) {
-        return count == null ? 0L : count;
+        return count == null ? 0L : count.longValue();
     }
 
     private long countReviewsByResult(String reviewResult) {
@@ -211,6 +212,7 @@ public class ReviewService {
         reviewRecord.setDetectionRecordId(record.getId());
         reviewRecord.setSampleId(record.getSampleId());
         reviewRecord.setSampleNo(record.getSampleNo());
+        reviewRecord.setOrgId(record.getOrgId() != null ? record.getOrgId() : sample.getOrgId());
         fillReviewNodeInfo(reviewRecord, sample, currentReviewNode);
         reviewRecord.setReviewerId(currentUser.getUserId());
         reviewRecord.setReviewerName(currentUser.getRealName());
