@@ -1939,9 +1939,14 @@ function getPreviewRowTitle(key, row) {
 }
 
 function buildSampleContextTitle(row, suffix = '') {
-  const planName = firstNonBlank(row?.planName, row?.pointName, row?.monitoringPointName, row?.sampleNo, row?.parameterName) || '-'
+  const planName = firstNonBlank(row?.planName, row?.pointName, row?.monitoringPointName, row?.sampleNo) || '-'
   const sampleType = firstNonBlank(row?.sampleTypeLabel, getEnumLabel(sampleTypeLabelMap, row?.sampleType), row?.sampleType)
-  return `计划名称：${planName || '未填'}      样品类型：${sampleType || '未填'}`
+  const parameterName = row?.parameterName || ''
+  let title = `计划名称：${planName || '未填'}      样品类型：${sampleType || '未填'}`
+  if (parameterName) {
+    title += `      检测参数：${parameterName}`
+  }
+  return title
 }
 
 function firstNonBlank(...values) {
@@ -2731,6 +2736,7 @@ async function openReviewForm(row) {
     standardMin: item.standardMin,
     standardMax: item.standardMax,
     unit: item.unit || '',
+    optionValues: item.optionValues || '',
     resultValue: item.resultValue == null ? null : Number(item.resultValue),
     itemStatus: item.itemStatus || '',
     reviewResultDraft: item.itemStatus === approvedDetectionStatus ? approvedReviewResult : '',
