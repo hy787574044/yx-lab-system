@@ -36,7 +36,11 @@ import com.yx.lab.modules.review.entity.ReviewRecord;
 import com.yx.lab.modules.review.mapper.ReviewRecordMapper;
 import com.yx.lab.modules.sample.dto.SampleDetectionConfigItem;
 import com.yx.lab.modules.sample.entity.LabSample;
+import com.yx.lab.modules.sample.entity.SamplingPlan;
+import com.yx.lab.modules.sample.entity.SamplingTask;
 import com.yx.lab.modules.sample.mapper.LabSampleMapper;
+import com.yx.lab.modules.sample.mapper.SamplingPlanMapper;
+import com.yx.lab.modules.sample.mapper.SamplingTaskMapper;
 import com.yx.lab.modules.sample.service.LabSampleService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -75,6 +79,10 @@ public class DetectionWorkflowService {
     private final ReviewRecordMapper reviewRecordMapper;
 
     private final LabSampleService labSampleService;
+
+    private final SamplingTaskMapper samplingTaskMapper;
+
+    private final SamplingPlanMapper samplingPlanMapper;
 
     private final DetectionPendingFlowService detectionPendingFlowService;
 
@@ -485,6 +493,7 @@ public class DetectionWorkflowService {
         fillMethodBasis(items);
         Map<Long, DetectionRecord> recordMap = loadDetectionRecordMap(items);
         Map<Long, LabSample> sampleMap = loadSampleMap(recordMap.values());
+        Map<Long, String> planNameMap = loadPlanNameMap(sampleMap.values());
         return items.stream().map(item -> {
             DetectionRecord record = recordMap.get(item.getRecordId());
             LabSample sample = resolveRecordSample(record, sampleMap);
@@ -495,6 +504,7 @@ public class DetectionWorkflowService {
             vo.setSampleId(record == null ? null : record.getSampleId());
             vo.setSampleNo(record == null ? null : record.getSampleNo());
             vo.setPointName(sample == null ? null : sample.getPointName());
+            vo.setPlanName(resolvePlanName(sample, planNameMap));
             vo.setSampleType(sample == null ? null : sample.getSampleType());
             vo.setSampleTypeLabel(sample == null ? null : LabWorkflowConstants.getSampleTypeLabel(sample.getSampleType()));
             vo.setSampleSourceMethod(sample == null ? null : sample.getSampleSourceMethod());
@@ -523,6 +533,48 @@ public class DetectionWorkflowService {
             vo.setUpdatedTime(item.getUpdatedTime());
             return vo;
         }).collect(Collectors.toList());
+    }
+
+    private Map<Long, String> loadPlanNameMap(java.util.Collection<LabSample> samples) {
+        Set<Long> taskIds = samples.stream()
+                .map(LabSample::getTaskId)
+                .filter(id -> id != null)
+                .collect(Collectors.toSet());
+        if (taskIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        Map<Long, String> result = new LinkedHashMap<>();
+        // 从 SamplingTask 获取 planId，再从 SamplingPlan 获取 planName
+        List<SamplingTask> tasks = samplingTaskMapper.selectList(
+                new LambdaQueryWrapper<SamplingTask>().in(SamplingTask::getId, taskIds));
+        Set<Long> planIds = tasks.stream()
+                .map(SamplingTask::getPlanId)
+                .filter(id -> id != null)
+                .collect(Collectors.toSet());
+        if (!planIds.isEmpty()) {
+            Map<Long, String> planMap = samplingPlanMapper.selectList(
+                            new LambdaQueryWrapper<SamplingPlan>().in(SamplingPlan::getId, planIds))
+                    .stream()
+                    .collect(Collectors.toMap(SamplingPlan::getId, SamplingPlan::getPlanName, (l, r) -> l));
+            for (SamplingTask task : tasks) {
+                if (task.getPlanId() != null && planMap.containsKey(task.getPlanId())) {
+                    result.put(task.getId(), planMap.get(task.getPlanId()));
+                }
+            }
+        }
+        return result;
+    }
+
+    private String resolvePlanName(LabSample sample, Map<Long, String> planNameMap) {
+        if (sample == null) {
+            return null;
+        }
+        // 优先从 SamplingTask -> SamplingPlan 获取计划名称
+        if (sample.getTaskId() != null && planNameMap.containsKey(sample.getTaskId())) {
+            return planNameMap.get(sample.getTaskId());
+        }
+        // 兜底使用点位名称
+        return sample.getPointName();
     }
 
     private void fillRecordSampleInfo(List<DetectionRecord> records) {

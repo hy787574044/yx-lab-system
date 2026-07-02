@@ -199,7 +199,11 @@
             <span>检测步骤</span>
             <strong class="preserve-line-breaks">{{ resultForm.methodBasis || '-' }}</strong>
           </div>
-          <el-form-item label="检测结果" :required="!resultDialogReadonly" class="result-field-form-item">
+          <el-form-item
+            label="检测结果"
+            :required="!resultDialogReadonly"
+            :class="['result-field-form-item', { 'is-abnormal': isResultValueAbnormal(resultForm) }]"
+          >
             <div class="result-value-field">
               <span v-if="resultDialogReadonly" class="result-fixed-value">{{ getResultDisplayValue(resultForm) }}</span>
               <template v-else>
@@ -212,7 +216,7 @@
                 <el-select
                   v-if="resultForm.optionValues"
                   v-model="resultForm.resultValue"
-                  class="result-value-input result-value-select"
+                  :class="['result-value-input', 'result-value-select', { 'is-abnormal': isResultValueAbnormal(resultForm) }]"
                   placeholder="请选择"
                 >
                   <el-option
@@ -227,7 +231,7 @@
                   v-model="resultForm.resultValue"
                   :step="0.01"
                   controls-position="right"
-                  class="result-value-input"
+                  :class="['result-value-input', { 'is-abnormal': isResultValueAbnormal(resultForm) }]"
                 />
               </template>
               <span v-if="resultUnitVisible" class="result-value-unit">{{ resultForm.unit }}</span>
@@ -861,6 +865,22 @@ watch(() => route.fullPath, async () => {
 :deep(.result-field-form-item .el-form-item__label) {
   color: #d4380d;
   font-weight: 700;
+}
+
+.result-value-input.is-abnormal :deep(.el-input__wrapper),
+.result-value-input.is-abnormal :deep(.el-input-number__wrapper),
+.result-value-input.is-abnormal :deep(.el-select__wrapper) {
+  border-color: #f56c6c !important;
+  box-shadow: 0 0 0 1px #f56c6c inset !important;
+}
+
+:deep(.result-field-form-item.is-abnormal .el-form-item__label) {
+  color: #f56c6c;
+}
+
+.result-fixed-value.is-abnormal {
+  color: #f56c6c;
+  font-weight: 600;
 }
 
 .result-value-unit {

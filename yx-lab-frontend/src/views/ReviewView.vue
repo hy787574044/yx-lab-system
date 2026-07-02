@@ -838,6 +838,7 @@ async function openReviewDialog(row, readonly = false) {
     standardMax: item.standardMax,
     referenceStandard: item.referenceStandard || '',
     unit: item.unit || '',
+    optionValues: item.optionValues || '',
     resultValue: item.resultValue == null ? null : Number(item.resultValue),
     itemStatus: item.itemStatus || '',
     reviewResultDraft: item.itemStatus === approvedDetectionStatus

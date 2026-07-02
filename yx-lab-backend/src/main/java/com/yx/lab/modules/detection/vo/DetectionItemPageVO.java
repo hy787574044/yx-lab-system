@@ -15,6 +15,8 @@ public class DetectionItemPageVO {
 
     private Long orgId;
 
+    private String planName;
+
     private Long sampleId;
 
     private String sampleNo;

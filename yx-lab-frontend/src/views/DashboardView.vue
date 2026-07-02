@@ -321,9 +321,21 @@
         v-loading="actionLoading"
       >
         <aside class="workbench-dialog__side">
-          <div class="workbench-dialog__side-head">
+          <div v-if="activeAction !== 'detectionSplit'" class="workbench-dialog__side-head">
             <span>{{ activeActionSideTitle }}</span>
             <strong>{{ actionSideCountLabel }}</strong>
+          </div>
+          <div v-if="activeAction === 'detectionSplit'" class="detection-split-tabs">
+            <button
+              v-for="tab in detectionSplitTabs"
+              :key="tab.key"
+              type="button"
+              :class="['detection-split-tabs__item', { 'is-active': detectionSplitActiveTab === tab.key }]"
+              @click="switchDetectionSplitTab(tab.key)"
+            >
+              <span>{{ tab.label }}</span>
+              <strong>{{ tab.count }}</strong>
+            </button>
           </div>
           <div v-if="activeAction === 'detectionSplit'" class="workbench-dialog__side-filter">
             <el-input
@@ -522,7 +534,7 @@
               </div>
               <div class="summary-chips">
                 <span>检测参数<strong>{{ resultForm.parameterName || '-' }}</strong></span>
-                <span>检测人员<strong>{{ resultForm.detectorName || '-' }}</strong></span>
+                <span>检测人员<strong class="detector-name-text">{{ resultForm.detectorName || '-' }}</strong></span>
                 <span>检测套餐<strong>{{ resultForm.detectionTypeName || '-' }}</strong></span>
               </div>
               <div class="workbench-detail__grid">
@@ -551,7 +563,7 @@
             <div class="summary-chips">
               <span>样品编号<strong>{{ resultForm.sampleNo || '-' }}</strong></span>
               <span>检测参数<strong>{{ resultForm.parameterName || '-' }}</strong></span>
-              <span>检测人员<strong>{{ resultForm.detectorName || '-' }}</strong></span>
+              <span>检测人员<strong class="detector-name-text">{{ resultForm.detectorName || '-' }}</strong></span>
             </div>
             <div class="meta-grid">
               <div><span>检测方法</span><strong>{{ resultForm.methodName || '-' }}</strong></div>
@@ -564,7 +576,7 @@
               <p class="preserve-line-breaks">{{ resultForm.methodBasis || '-' }}</p>
             </div>
             <el-form label-position="top">
-              <el-form-item label="检测结果" required>
+              <el-form-item label="检测结果" required :class="{ 'is-abnormal': isResultValueAbnormal(resultForm) }">
                 <div class="result-value-field">
                   <el-button
                     class="ocr-trigger-btn"
@@ -575,7 +587,7 @@
                   <el-select
                     v-if="resultForm.optionValues"
                     v-model="resultForm.resultValue"
-                    class="result-value-input result-value-select"
+                    :class="['result-value-input', 'result-value-select', { 'is-abnormal': isResultValueAbnormal(resultForm) }]"
                     placeholder="请选择"
                   >
                     <el-option
@@ -589,7 +601,7 @@
                     v-else
                     v-model="resultForm.resultValue"
                     inputmode="decimal"
-                    class="result-value-input"
+                    :class="['result-value-input', { 'is-abnormal': isResultValueAbnormal(resultForm) }]"
                     @input="handleDetectionResultInput"
                   />
                   <span v-if="resultForm.unit" class="result-value-unit">{{ resultForm.unit }}</span>
@@ -892,6 +904,7 @@ const samplingPlanDetailVisible = ref(false)
 const actionRows = ref([])
 const activeRow = ref(null)
 const detectionSplitPlanKeyword = ref('')
+const detectionSplitActiveTab = ref('waitAssign')
 const selectedDetectionSplitRowKeys = ref([])
 const selectedSamplingPlan = ref(null)
 const planOrgOptions = ref([])
@@ -932,6 +945,10 @@ const previewTotals = reactive({
   detection: 0,
   review: 0,
   report: 0
+})
+const detectionSplitCounts = reactive({
+  waitAssign: 0,
+  waitDetect: 0
 })
 
 const samplingTask = ref(null)
@@ -1015,6 +1032,40 @@ const detectorAssignForm = reactive({
   orgId: '',
   detectorId: null
 })
+
+const detectionSplitTabs = computed(() => [
+  { key: 'waitAssign', label: '待处理列表', count: detectionSplitCounts.waitAssign },
+  { key: 'waitDetect', label: '待检测列表', count: detectionSplitCounts.waitDetect }
+])
+
+async function switchDetectionSplitTab(tabKey) {
+  if (detectionSplitActiveTab.value === tabKey) {
+    return
+  }
+  detectionSplitActiveTab.value = tabKey
+  detectionSplitPlanKeyword.value = ''
+  selectedDetectionSplitRowKeys.value = []
+  actionLoading.value = true
+  try {
+    await loadActionRows('detectionSplit')
+    if (actionRows.value.length) {
+      await selectActionRow(actionRows.value[0])
+    } else {
+      activeRow.value = null
+    }
+  } finally {
+    actionLoading.value = false
+  }
+}
+
+async function loadDetectionSplitCounts() {
+  const [waitAssignResult, waitDetectResult] = await Promise.all([
+    fetchDetectionItemsApi({ pageNum: 1, pageSize: 1, itemStatus: waitAssignDetectionStatus }),
+    fetchDetectionItemsApi({ pageNum: 1, pageSize: 1, itemStatus: waitDetectDetectionStatus })
+  ])
+  detectionSplitCounts.waitAssign = Number(waitAssignResult.total || 0)
+  detectionSplitCounts.waitDetect = Number(waitDetectResult.total || 0)
+}
 
 const filteredActionRows = computed(() => {
   if (activeAction.value !== 'detectionSplit') {
@@ -1692,6 +1743,7 @@ async function openWorkbenchAction(key, preferredRow = null) {
   activeAction.value = key
   if (key === 'detectionSplit') {
     detectionSplitPlanKeyword.value = ''
+    detectionSplitActiveTab.value = 'waitAssign'
   }
   workbenchDialogVisible.value = true
   actionLoading.value = true
@@ -1741,8 +1793,12 @@ async function loadActionRows(key) {
     return
   }
   if (key === 'detectionSplit') {
-    const result = await fetchDetectionItemsApi({ pageNum: 1, pageSize: actionPageSize, itemStatus: waitAssignDetectionStatus })
+    const currentTab = detectionSplitActiveTab.value
+    const itemStatus = currentTab === 'waitDetect' ? waitDetectDetectionStatus : waitAssignDetectionStatus
+    const result = await fetchDetectionItemsApi({ pageNum: 1, pageSize: actionPageSize, itemStatus })
     actionRows.value = mergeActionRows(result.records || [])
+    // 更新统计数量
+    await loadDetectionSplitCounts()
     return
   }
   if (key === 'detection') {
@@ -4055,6 +4111,10 @@ onUnmounted(() => {
   color: var(--text-main);
 }
 
+.summary-chips strong.detector-name-text {
+  color: #1d6ff2;
+}
+
 .meta-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -4099,6 +4159,17 @@ onUnmounted(() => {
 
 .result-value-unit {
   color: var(--text-sub);
+}
+
+.result-value-input.is-abnormal :deep(.el-input__wrapper),
+.result-value-input.is-abnormal :deep(.el-input-number__wrapper),
+.result-value-input.is-abnormal :deep(.el-select__wrapper) {
+  border-color: #f56c6c !important;
+  box-shadow: 0 0 0 1px #f56c6c inset !important;
+}
+
+:deep(.is-abnormal > .el-form-item__label) {
+  color: #f56c6c;
 }
 
 .compact-table {
@@ -4283,5 +4354,92 @@ onUnmounted(() => {
 .add-parameter-unit {
   font-size: 12px;
   color: var(--text-secondary);
+}
+
+.detection-split-tabs {
+  display: flex;
+  gap: 10px;
+  padding: 0 0 14px;
+}
+
+.detection-split-tabs__item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 12px 10px;
+  border: 2px solid #e8e8e8;
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 13px;
+  color: #999;
+}
+
+.detection-split-tabs__item:first-child {
+  border-color: #ffd666;
+  background: linear-gradient(135deg, #fffbe6 0%, #fff7d6 100%);
+  color: #d48806;
+}
+
+.detection-split-tabs__item:first-child:hover {
+  border-color: #ffc53d;
+  box-shadow: 0 2px 8px rgba(250, 173, 20, 0.2);
+}
+
+.detection-split-tabs__item:first-child.is-active {
+  border-color: #faad14;
+  background: linear-gradient(135deg, #fffbe6 0%, #ffe7ba 100%);
+  color: #d48806;
+  box-shadow: 0 3px 10px rgba(250, 173, 20, 0.25);
+}
+
+.detection-split-tabs__item:last-child {
+  border-color: #91d5ff;
+  background: linear-gradient(135deg, #e6f7ff 0%, #d6efff 100%);
+  color: #1890ff;
+}
+
+.detection-split-tabs__item:last-child:hover {
+  border-color: #69c0ff;
+  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.2);
+}
+
+.detection-split-tabs__item:last-child.is-active {
+  border-color: #1890ff;
+  background: linear-gradient(135deg, #e6f7ff 0%, #bae7ff 100%);
+  color: #096dd9;
+  box-shadow: 0 3px 10px rgba(24, 144, 255, 0.25);
+}
+
+.detection-split-tabs__item span {
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+}
+
+.detection-split-tabs__item.is-active span {
+  font-weight: 600;
+}
+
+.detection-split-tabs__item strong {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.detection-split-tabs__item:first-child strong {
+  color: #faad14;
+}
+
+.detection-split-tabs__item:last-child strong {
+  color: #1890ff;
+}
+
+.detection-split-tabs__item.is-active strong {
+  font-size: 24px;
 }
 </style>
