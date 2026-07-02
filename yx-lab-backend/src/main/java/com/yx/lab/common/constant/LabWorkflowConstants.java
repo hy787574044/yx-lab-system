@@ -313,7 +313,8 @@ public final class LabWorkflowConstants {
     public static final Set<String> ACTIVE_DETECTION_RECORD_STATUSES = unmodifiableSet(
             DetectionStatus.WAIT_ASSIGN,
             DetectionStatus.WAIT_DETECT,
-            DetectionStatus.SUBMITTED);
+            DetectionStatus.SUBMITTED,
+            DetectionStatus.REJECTED);
 
     public static boolean isKnownInstrumentStatus(String status) {
         return INSTRUMENT_STATUSES.contains(status);
@@ -361,7 +362,8 @@ public final class LabWorkflowConstants {
 
     public static boolean canAssignDetection(String detectionStatus) {
         return DetectionStatus.WAIT_ASSIGN.equals(detectionStatus)
-                || DetectionStatus.WAIT_DETECT.equals(detectionStatus);
+                || DetectionStatus.WAIT_DETECT.equals(detectionStatus)
+                || DetectionStatus.REJECTED.equals(detectionStatus);
     }
 
     public static boolean canEnterDetectionResult(String detectionStatus) {

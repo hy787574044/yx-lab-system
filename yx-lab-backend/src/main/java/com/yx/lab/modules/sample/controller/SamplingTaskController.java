@@ -78,7 +78,7 @@ public class SamplingTaskController {
 
     @GetMapping("/{id}")
     @Operation(summary = "采样任务详情")
-    public ApiResponse<SamplingTask> detail(@PathVariable Long id) {
+    public ApiResponse<SamplingTask> detail(@PathVariable("id") Long id) {
         return ApiResponse.success(samplingTaskService.detail(id));
     }
 
@@ -91,7 +91,7 @@ public class SamplingTaskController {
     @PostMapping("/{id}/start")
     @Operation(summary = "开始采样任务")
     @RequirePermission(PermissionConstants.SAMPLING_TASK_WRITE)
-    public ApiResponse<Void> start(@PathVariable Long id,
+    public ApiResponse<Void> start(@PathVariable("id") Long id,
                                    @RequestBody(required = false) SamplingTaskActionCommand command) {
         samplingTaskService.start(id, command);
         return ApiResponse.successMessage("任务已开始");
@@ -100,7 +100,7 @@ public class SamplingTaskController {
     @PostMapping("/{id}/abandon")
     @Operation(summary = "废弃采样任务")
     @RequirePermission(PermissionConstants.SAMPLING_TASK_WRITE)
-    public ApiResponse<Void> abandon(@PathVariable Long id,
+    public ApiResponse<Void> abandon(@PathVariable("id") Long id,
                                      @RequestBody(required = false) SamplingTaskActionCommand command) {
         samplingTaskService.abandon(id, command);
         return ApiResponse.successMessage("任务已废弃");
@@ -109,7 +109,7 @@ public class SamplingTaskController {
     @PostMapping("/{id}/resume")
     @Operation(summary = "恢复采样任务")
     @RequirePermission(PermissionConstants.SAMPLING_TASK_WRITE)
-    public ApiResponse<Void> resume(@PathVariable Long id,
+    public ApiResponse<Void> resume(@PathVariable("id") Long id,
                                     @RequestBody(required = false) SamplingTaskActionCommand command) {
         samplingTaskService.resume(id, command);
         return ApiResponse.successMessage("任务已恢复");

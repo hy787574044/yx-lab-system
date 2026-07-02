@@ -59,7 +59,7 @@ public class FlowConfigManagementController {
      */
     @GetMapping("/{id}")
     @Operation(summary = "获取流程配置详情")
-    public ApiResponse<FlowConfigVO> detail(@PathVariable Long id) {
+    public ApiResponse<FlowConfigVO> detail(@PathVariable("id") Long id) {
         return ApiResponse.success(flowConfigManagementService.detail(id));
     }
 
@@ -105,7 +105,7 @@ public class FlowConfigManagementController {
     @PostMapping("/{id}")
     @Operation(summary = "更新流程配置")
     @RequirePermission(PermissionConstants.SYSTEM_WRITE)
-    public ApiResponse<Void> update(@PathVariable Long id, @Valid @RequestBody FlowConfigSaveCommand command) {
+    public ApiResponse<Void> update(@PathVariable("id") Long id, @Valid @RequestBody FlowConfigSaveCommand command) {
         flowConfigManagementService.update(id, command);
         return ApiResponse.successMessage("更新成功");
     }
@@ -120,7 +120,7 @@ public class FlowConfigManagementController {
     @PostMapping("/{id}/nodes")
     @Operation(summary = "保存流程节点")
     @RequirePermission(PermissionConstants.SYSTEM_WRITE)
-    public ApiResponse<Void> saveNodes(@PathVariable Long id, @Valid @RequestBody List<FlowNodeCommand> nodes) {
+    public ApiResponse<Void> saveNodes(@PathVariable("id") Long id, @Valid @RequestBody List<FlowNodeCommand> nodes) {
         flowConfigManagementService.saveNodes(id, nodes);
         return ApiResponse.successMessage("节点保存成功");
     }
@@ -135,7 +135,7 @@ public class FlowConfigManagementController {
     @PostMapping("/{id}/status")
     @Operation(summary = "更新流程启停状态")
     @RequirePermission(PermissionConstants.SYSTEM_WRITE)
-    public ApiResponse<Void> updateStatus(@PathVariable Long id, @Valid @RequestBody FlowStatusCommand command) {
+    public ApiResponse<Void> updateStatus(@PathVariable("id") Long id, @Valid @RequestBody FlowStatusCommand command) {
         flowConfigManagementService.updateStatus(id, command.getStatus());
         return ApiResponse.successMessage("状态更新成功");
     }
@@ -149,7 +149,7 @@ public class FlowConfigManagementController {
     @PostMapping("/{id}/default")
     @Operation(summary = "设置默认流程")
     @RequirePermission(PermissionConstants.SYSTEM_WRITE)
-    public ApiResponse<Void> setDefault(@PathVariable Long id) {
+    public ApiResponse<Void> setDefault(@PathVariable("id") Long id) {
         flowConfigManagementService.setDefault(id);
         return ApiResponse.successMessage("默认流程设置成功");
     }
@@ -163,7 +163,7 @@ public class FlowConfigManagementController {
     @PostMapping("/{id}/delete")
     @Operation(summary = "删除流程配置")
     @RequirePermission(PermissionConstants.SYSTEM_WRITE)
-    public ApiResponse<Void> delete(@PathVariable Long id) {
+    public ApiResponse<Void> delete(@PathVariable("id") Long id) {
         flowConfigManagementService.delete(id);
         return ApiResponse.successMessage("删除成功");
     }

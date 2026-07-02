@@ -54,7 +54,7 @@
 
     <div class="signature-row">
       <span>检验人员：{{ previewData?.inspectorName || '' }}</span>
-      <span>审核人：{{ previewData?.principalName || '' }}</span>
+      <span>负责人：{{ previewData?.principalName || '' }}</span>
     </div>
   </div>
 </template>

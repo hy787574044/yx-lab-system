@@ -180,7 +180,6 @@
           <el-table-column prop="finishedTime" label="采样时间" width="170" />
           <el-table-column prop="weather" label="天气" width="110" />
           <el-table-column prop="temperature" label="温度" width="110" />
-          <el-table-column prop="abandonReason" label="废弃原因" min-width="160" show-overflow-tooltip />
           <el-table-column prop="remark" label="备注" min-width="180" show-overflow-tooltip />
           <el-table-column
             label="操作"

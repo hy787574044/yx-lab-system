@@ -101,7 +101,7 @@ public class ReportController {
      */
     @GetMapping("/{id}/preview")
     @Operation(summary = "预览正式报告")
-    public ResponseEntity<byte[]> preview(@PathVariable Long id) {
+    public ResponseEntity<byte[]> preview(@PathVariable("id") Long id) {
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION,
                         ContentDisposition.builder("inline")
@@ -120,7 +120,7 @@ public class ReportController {
      */
     @GetMapping("/{id}/downloadPdf")
     @Operation(summary = "下载正式报告PDF")
-    public ResponseEntity<byte[]> downloadPdf(@PathVariable Long id,
+    public ResponseEntity<byte[]> downloadPdf(@PathVariable("id") Long id,
                                               @RequestParam(required = false) Long pageHeightMm) throws UnsupportedEncodingException {
         String fileName = reportService.resolvePdfFileName(id);
         return ResponseEntity.ok()
@@ -141,7 +141,7 @@ public class ReportController {
      */
     @GetMapping("/{id}/previewData")
     @Operation(summary = "获取报告预览结构化数据")
-    public ApiResponse<ReportPreviewVO> previewData(@PathVariable Long id) {
+    public ApiResponse<ReportPreviewVO> previewData(@PathVariable("id") Long id) {
         return ApiResponse.success(reportService.previewData(id));
     }
 
@@ -181,7 +181,7 @@ public class ReportController {
     @PostMapping("/templates/{id}")
     @Operation(summary = "更新报告模板")
     @RequirePermission(PermissionConstants.REPORT_WRITE)
-    public ApiResponse<Void> updateTemplate(@PathVariable Long id, @Valid @RequestBody ReportTemplateSaveCommand command) {
+    public ApiResponse<Void> updateTemplate(@PathVariable("id") Long id, @Valid @RequestBody ReportTemplateSaveCommand command) {
         reportService.updateTemplate(id, command);
         return ApiResponse.successMessage("更新成功");
     }
@@ -195,7 +195,7 @@ public class ReportController {
     @PostMapping("/templates/{id}/delete")
     @Operation(summary = "删除报告模板")
     @RequirePermission(PermissionConstants.REPORT_WRITE)
-    public ApiResponse<Void> deleteTemplate(@PathVariable Long id) {
+    public ApiResponse<Void> deleteTemplate(@PathVariable("id") Long id) {
         reportService.deleteTemplate(id);
         return ApiResponse.successMessage("删除成功");
     }
@@ -209,7 +209,7 @@ public class ReportController {
     @PostMapping("/{id}/publish")
     @Operation(summary = "发布正式报告")
     @RequirePermission(PermissionConstants.REPORT_PUBLISH)
-    public ApiResponse<Void> publish(@PathVariable Long id) {
+    public ApiResponse<Void> publish(@PathVariable("id") Long id) {
         reportService.publish(id);
         return ApiResponse.successMessage("发布成功");
     }
@@ -223,7 +223,7 @@ public class ReportController {
     @PostMapping("/{id}/unpublish")
     @Operation(summary = "取消发布报告")
     @RequirePermission(PermissionConstants.REPORT_PUBLISH)
-    public ApiResponse<Void> unpublish(@PathVariable Long id) {
+    public ApiResponse<Void> unpublish(@PathVariable("id") Long id) {
         reportService.unpublish(id);
         return ApiResponse.successMessage("取消发布成功");
     }

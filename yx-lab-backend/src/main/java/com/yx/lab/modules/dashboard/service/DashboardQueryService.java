@@ -218,9 +218,12 @@ public class DashboardQueryService {
      * @param detectionStatus 检测状态
      * @return 数量
      */
-    public long detectionStatusTotal(String detectionStatus) {
-        Long count = detectionRecordMapper.selectCount(new LambdaQueryWrapper<DetectionRecord>()
-                .eq(DetectionRecord::getDetectionStatus, detectionStatus));
+    public long detectionStatusTotal(String... detectionStatuses) {
+        LambdaQueryWrapper<DetectionRecord> wrapper = new LambdaQueryWrapper<>();
+        if (detectionStatuses != null && detectionStatuses.length > 0) {
+            wrapper.in(DetectionRecord::getDetectionStatus, Arrays.asList(detectionStatuses));
+        }
+        Long count = detectionRecordMapper.selectCount(wrapper);
         return toLong(count);
     }
 

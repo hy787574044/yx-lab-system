@@ -131,7 +131,8 @@ public class DetectionWorkflowService {
             return true;
         }
         return LabWorkflowConstants.DetectionStatus.WAIT_ASSIGN.equals(status)
-                || LabWorkflowConstants.DetectionStatus.WAIT_DETECT.equals(status);
+                || LabWorkflowConstants.DetectionStatus.WAIT_DETECT.equals(status)
+                || LabWorkflowConstants.DetectionStatus.REJECTED.equals(status);
     }
 
     private boolean shouldSyncPendingFlows(DetectionItemQuery query) {
@@ -140,7 +141,8 @@ public class DetectionWorkflowService {
             return true;
         }
         return LabWorkflowConstants.DetectionStatus.WAIT_ASSIGN.equals(status)
-                || LabWorkflowConstants.DetectionStatus.WAIT_DETECT.equals(status);
+                || LabWorkflowConstants.DetectionStatus.WAIT_DETECT.equals(status)
+                || LabWorkflowConstants.DetectionStatus.REJECTED.equals(status);
     }
 
     public DetectionItemSummaryVO itemSummary(DetectionItemQuery query) {
@@ -357,7 +359,8 @@ public class DetectionWorkflowService {
             wrapper.in(DetectionRecord::getDetectionStatus,
                     LabWorkflowConstants.DetectionStatus.WAIT_ASSIGN,
                     LabWorkflowConstants.DetectionStatus.WAIT_DETECT,
-                    LabWorkflowConstants.DetectionStatus.SUBMITTED);
+                    LabWorkflowConstants.DetectionStatus.SUBMITTED,
+                    LabWorkflowConstants.DetectionStatus.REJECTED);
             return;
         }
         if (StrUtil.equals(scope, "detection-analysis")) {
@@ -365,7 +368,8 @@ public class DetectionWorkflowService {
             wrapper.in(DetectionRecord::getDetectionStatus,
                     LabWorkflowConstants.DetectionStatus.WAIT_ASSIGN,
                     LabWorkflowConstants.DetectionStatus.WAIT_DETECT,
-                    LabWorkflowConstants.DetectionStatus.SUBMITTED);
+                    LabWorkflowConstants.DetectionStatus.SUBMITTED,
+                    LabWorkflowConstants.DetectionStatus.REJECTED);
             return;
         }
         if (StrUtil.equals(scope, "detection-history")) {

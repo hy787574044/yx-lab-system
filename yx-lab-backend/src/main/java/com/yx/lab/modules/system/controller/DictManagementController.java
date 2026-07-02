@@ -81,7 +81,7 @@ public class DictManagementController {
      */
     @GetMapping("/{id}")
     @Operation(summary = "获取数据字典详情")
-    public ApiResponse<LabDictVO> detail(@PathVariable Long id) {
+    public ApiResponse<LabDictVO> detail(@PathVariable("id") Long id) {
         return ApiResponse.success(dictManagementService.detail(id));
     }
 
@@ -109,7 +109,7 @@ public class DictManagementController {
     @PostMapping("/{id}")
     @Operation(summary = "更新数据字典")
     @RequirePermission(PermissionConstants.SYSTEM_WRITE)
-    public ApiResponse<Void> update(@PathVariable Long id, @Valid @RequestBody DictSaveCommand command) {
+    public ApiResponse<Void> update(@PathVariable("id") Long id, @Valid @RequestBody DictSaveCommand command) {
         dictManagementService.update(id, command);
         return ApiResponse.successMessage("更新成功");
     }
@@ -123,7 +123,7 @@ public class DictManagementController {
     @PostMapping("/{id}/delete")
     @Operation(summary = "删除数据字典")
     @RequirePermission(PermissionConstants.SYSTEM_WRITE)
-    public ApiResponse<Void> delete(@PathVariable Long id) {
+    public ApiResponse<Void> delete(@PathVariable("id") Long id) {
         dictManagementService.delete(id);
         return ApiResponse.successMessage("删除成功");
     }

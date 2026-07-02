@@ -50,7 +50,10 @@
       </tbody>
     </table>
 
-    <div class="signature-row">检测人员：{{ previewData?.inspectorName || '' }}</div>
+    <div class="signature-row">
+      <span>检测人员：{{ previewData?.inspectorName || '' }}</span>
+      <span>负责人：{{ previewData?.principalName || '' }}</span>
+    </div>
   </div>
 </template>
 
@@ -234,8 +237,10 @@ function cell(row, key) {
 }
 
 .signature-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   margin-top: 12px;
-  text-align: center;
+  padding: 0 120px;
   font-size: 16px;
 }
 </style>

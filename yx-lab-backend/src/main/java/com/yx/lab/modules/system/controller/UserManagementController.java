@@ -83,7 +83,7 @@ public class UserManagementController {
      */
     @GetMapping("/{id}")
     @Operation(summary = "获取用户详情")
-    public ApiResponse<LabUserVO> detail(@PathVariable Long id) {
+    public ApiResponse<LabUserVO> detail(@PathVariable("id") Long id) {
         return ApiResponse.success(userManagementService.detail(id));
     }
 
@@ -111,7 +111,7 @@ public class UserManagementController {
     @PostMapping("/{id}")
     @Operation(summary = "更新用户")
     @RequirePermission(PermissionConstants.SYSTEM_WRITE)
-    public ApiResponse<Void> update(@PathVariable Long id, @Valid @RequestBody UserSaveCommand command) {
+    public ApiResponse<Void> update(@PathVariable("id") Long id, @Valid @RequestBody UserSaveCommand command) {
         userManagementService.update(id, command);
         return ApiResponse.successMessage("更新成功");
     }
@@ -125,7 +125,7 @@ public class UserManagementController {
     @PostMapping("/{id}/delete")
     @Operation(summary = "删除用户")
     @RequirePermission(PermissionConstants.SYSTEM_WRITE)
-    public ApiResponse<Void> delete(@PathVariable Long id) {
+    public ApiResponse<Void> delete(@PathVariable("id") Long id) {
         userManagementService.delete(id);
         return ApiResponse.successMessage("删除成功");
     }

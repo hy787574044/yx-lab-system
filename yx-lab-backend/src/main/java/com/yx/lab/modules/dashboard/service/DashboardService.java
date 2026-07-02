@@ -352,7 +352,9 @@ public class DashboardService {
         return Arrays.asList(
                 processNode(1, "样品登录", dashboardQueryService.sampleStatusTotal(LabWorkflowConstants.SampleStatus.LOGGED), "待进入检测", "/sample-login"),
                 processNode(2, "检测分样", dashboardQueryService.detectionStatusTotal(LabWorkflowConstants.DetectionStatus.WAIT_ASSIGN), "待分配检测人员", "/detection-split"),
-                processNode(3, "化验检测", dashboardQueryService.detectionStatusTotal(LabWorkflowConstants.DetectionStatus.WAIT_DETECT), "待检测录入", "/detection-analysis"),
+                processNode(3, "化验检测", dashboardQueryService.detectionStatusTotal(
+                        LabWorkflowConstants.DetectionStatus.WAIT_DETECT,
+                        LabWorkflowConstants.DetectionStatus.REJECTED), "待检测录入", "/detection-analysis"),
                 processNode(4, "结果审查", dashboardQueryService.detectionStatusTotal(LabWorkflowConstants.DetectionStatus.SUBMITTED), "待审核确认", "/review-result"),
                 processNode(5, "生成报告", dashboardQueryService.reportStatusTotal(LabWorkflowConstants.ReportStatus.DRAFT), "待生成正式报告", "/report-ledger"),
                 processNode(6, "报告审查", dashboardQueryService.reportStatusTotal(LabWorkflowConstants.ReportStatus.GENERATED), "待发布审批", "/report-ledger"),
@@ -380,12 +382,13 @@ public class DashboardService {
                                 "sampleRegisterStatus", LabWorkflowConstants.SampleRegisterStatus.UNREGISTERED,
                                 "autoOpen", "1")),
                 quickTodo("detection", "检测录入",
-                        dashboardQueryService.detectionStatusTotal(LabWorkflowConstants.DetectionStatus.WAIT_DETECT),
+                        dashboardQueryService.detectionStatusTotal(
+                                LabWorkflowConstants.DetectionStatus.WAIT_DETECT,
+                                LabWorkflowConstants.DetectionStatus.REJECTED),
                         "待录入检测结果的检测流程",
                         "warning",
                         "/detection-analysis",
-                        query("itemStatus", LabWorkflowConstants.DetectionStatus.WAIT_DETECT,
-                                "autoOpen", "1")),
+                        query("autoOpen", "1")),
                 quickTodo("review", "结果审核",
                         dashboardQueryService.detectionStatusTotal(LabWorkflowConstants.DetectionStatus.SUBMITTED),
                         "待审核确认的检测结果",

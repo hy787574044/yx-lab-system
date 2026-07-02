@@ -84,7 +84,7 @@ public class OrgManagementController {
      */
     @GetMapping("/{id}")
     @Operation(summary = "获取机构详情")
-    public ApiResponse<LabOrgVO> detail(@PathVariable Long id) {
+    public ApiResponse<LabOrgVO> detail(@PathVariable("id") Long id) {
         return ApiResponse.success(orgManagementService.detail(id));
     }
 
@@ -123,7 +123,7 @@ public class OrgManagementController {
     @PostMapping("/{id}")
     @Operation(summary = "更新机构")
     @RequirePermission(PermissionConstants.SYSTEM_WRITE)
-    public ApiResponse<Void> update(@PathVariable Long id, @Valid @RequestBody OrgSaveCommand command) {
+    public ApiResponse<Void> update(@PathVariable("id") Long id, @Valid @RequestBody OrgSaveCommand command) {
         orgManagementService.update(id, command);
         return ApiResponse.successMessage("更新成功");
     }
@@ -137,7 +137,7 @@ public class OrgManagementController {
     @PostMapping("/{id}/delete")
     @Operation(summary = "删除机构")
     @RequirePermission(PermissionConstants.SYSTEM_WRITE)
-    public ApiResponse<Void> delete(@PathVariable Long id) {
+    public ApiResponse<Void> delete(@PathVariable("id") Long id) {
         orgManagementService.delete(id);
         return ApiResponse.successMessage("删除成功");
     }

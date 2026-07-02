@@ -137,7 +137,7 @@ public class DetectionWorkflowController {
      */
     @GetMapping("/{id}")
     @Operation(summary = "检测主流程详情")
-    public ApiResponse<DetectionRecordDetailVO> detail(@PathVariable Long id) {
+    public ApiResponse<DetectionRecordDetailVO> detail(@PathVariable("id") Long id) {
         return ApiResponse.success(detectionWorkflowService.detail(id));
     }
 
@@ -147,7 +147,7 @@ public class DetectionWorkflowController {
     @PostMapping("/{id}/assignDetectors")
     @Operation(summary = "分配检测员")
     @RequirePermission(PermissionConstants.DETECTION_ASSIGN)
-    public ApiResponse<Void> assignDetectors(@PathVariable Long id, @Valid @RequestBody DetectionAssignCommand command) {
+    public ApiResponse<Void> assignDetectors(@PathVariable("id") Long id, @Valid @RequestBody DetectionAssignCommand command) {
         detectionWorkflowService.assignDetectors(id, command);
         return ApiResponse.successMessage("检测员分配成功");
     }

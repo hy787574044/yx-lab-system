@@ -85,15 +85,18 @@ public class DetectionPendingFlowService {
                 .map(LabSample::getId)
                 .filter(id -> id != null)
                 .collect(Collectors.toList());
-        Map<Long, List<DetectionRecord>> activeRecordGroup = sampleIds.isEmpty()
-                ? Collections.emptyMap()
-                : detectionRecordMapper.selectList(new LambdaQueryWrapper<DetectionRecord>()
-                        .in(DetectionRecord::getSampleId, sampleIds)
-                        .in(DetectionRecord::getDetectionStatus, LabWorkflowConstants.ACTIVE_DETECTION_RECORD_STATUSES))
-                .stream()
-                .collect(Collectors.groupingBy(DetectionRecord::getSampleId));
+        Map<Long, List<DetectionRecord>> activeRecordGroup;
+        if (sampleIds.isEmpty()) {
+            activeRecordGroup = Collections.emptyMap();
+        } else {
+            List<DetectionRecord> activeRecords = detectionRecordMapper.selectList(new LambdaQueryWrapper<DetectionRecord>()
+                    .in(DetectionRecord::getSampleId, sampleIds)
+                    .in(DetectionRecord::getDetectionStatus, LabWorkflowConstants.ACTIVE_DETECTION_RECORD_STATUSES));
+            activeRecordGroup = activeRecords.stream()
+                    .collect(Collectors.groupingBy(DetectionRecord::getSampleId));
+        }
         for (LabSample sample : samples) {
-            List<DetectionRecord> activeRecords = activeRecordGroup.getOrDefault(sample.getId(), Collections.emptyList());
+            List<DetectionRecord> activeRecords = activeRecordGroup.getOrDefault(sample.getId(), Collections.<DetectionRecord>emptyList());
             if (activeRecords.isEmpty()) {
                 createPendingFlowIfMissing(sample);
             } else if (activeRecords.size() > 1) {
@@ -429,6 +432,8 @@ public class DetectionPendingFlowService {
             detectionItemMapper.updateById(item);
         }
 
+        promoteDefaultAssignedItems(items);
+
         List<DetectionItem> latestItems = detectionItemMapper.selectList(new LambdaQueryWrapper<DetectionItem>()
                 .eq(DetectionItem::getRecordId, recordId)
                 .orderByAsc(DetectionItem::getCreatedTime));
@@ -522,6 +527,21 @@ public class DetectionPendingFlowService {
                         .eq(LabUser::getRoleCode, STAFF_ROLE_CODE))
                 .stream()
                 .collect(Collectors.toMap(LabUser::getId, user -> user));
+    }
+
+    private void promoteDefaultAssignedItems(List<DetectionItem> items) {
+        if (items == null || items.isEmpty()) {
+            return;
+        }
+        for (DetectionItem item : items) {
+            if (item == null
+                    || item.getDetectorId() == null
+                    || !LabWorkflowConstants.DetectionStatus.WAIT_ASSIGN.equals(item.getItemStatus())) {
+                continue;
+            }
+            item.setItemStatus(LabWorkflowConstants.DetectionStatus.WAIT_DETECT);
+            detectionItemMapper.updateById(item);
+        }
     }
 
     private void rememberAssignment(Long orgId, DetectionItem item, LabUser detector) {

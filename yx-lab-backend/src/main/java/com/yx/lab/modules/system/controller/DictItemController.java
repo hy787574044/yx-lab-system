@@ -42,7 +42,7 @@ public class DictItemController {
                     PermissionConstants.SYSTEM_VIEW
             },
             any = true)
-    public ApiResponse<List<DictItemVO>> items(@PathVariable String dictCode) {
+    public ApiResponse<List<DictItemVO>> items(@PathVariable("dictCode") String dictCode) {
         return ApiResponse.success(dictManagementService.items(dictCode));
     }
 }

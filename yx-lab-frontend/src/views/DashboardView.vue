@@ -1450,7 +1450,7 @@ async function loadWorkbenchPreviewRows() {
     fetchSamplingPlansApi({ pageNum: 1, pageSize: previewPageSize, planStatus: activePlanStatus }),
     fetchSamplingTasksApi({ pageNum: 1, pageSize: previewPageSize, sampleRegisterStatus: 'UNREGISTERED' }),
     fetchSamplingTasksApi({ pageNum: 1, pageSize: previewPageSize, sampleRegisterStatus: 'UNREGISTERED' }),
-    fetchDetectionItemsApi({ pageNum: 1, pageSize: previewPageSize, itemStatus: waitDetectDetectionStatus }),
+    loadWorkbenchDetectionRows(previewPageSize),
     fetchDetectionsApi({ pageNum: 1, pageSize: previewPageSize, detectionStatus: reviewPendingDetectionStatus }),
     loadWorkbenchSummaryReportRows(previewPageSize)
   ])
@@ -1488,6 +1488,39 @@ async function loadWorkbenchSummaryReportRows(pageSize) {
     .flatMap((result) => Array.isArray(result.records) ? result.records : [])
     .sort(compareSummaryReportRows)
     .slice(0, size)
+}
+
+async function loadWorkbenchDetectionRows(pageSize) {
+  const size = Number(pageSize || 12)
+  const [waitDetectResult, rejectedResult] = await Promise.all([
+    fetchDetectionItemsApi({ pageNum: 1, pageSize: size, itemStatus: waitDetectDetectionStatus }),
+    fetchDetectionItemsApi({ pageNum: 1, pageSize: size, itemStatus: rejectedDetectionStatus })
+  ])
+  const records = mergeActionRows([
+    ...(waitDetectResult.records || []),
+    ...(rejectedResult.records || [])
+  ])
+    .sort(compareWorkbenchDetectionRows)
+    .slice(0, size)
+  return {
+    records,
+    total: Number(waitDetectResult.total || 0) + Number(rejectedResult.total || 0)
+  }
+}
+
+function compareWorkbenchDetectionRows(left, right) {
+  const rightTime = getWorkbenchDetectionLatestTime(right)
+  const leftTime = getWorkbenchDetectionLatestTime(left)
+  if (rightTime !== leftTime) {
+    return rightTime - leftTime
+  }
+  return String(right?.id || '').localeCompare(String(left?.id || ''))
+}
+
+function getWorkbenchDetectionLatestTime(row) {
+  const rawTime = row?.updatedTime || row?.detectionTime || row?.createdTime || ''
+  const timestamp = Date.parse(rawTime)
+  return Number.isFinite(timestamp) ? timestamp : 0
 }
 
 function compareSummaryReportRows(left, right) {
@@ -1708,18 +1741,12 @@ async function loadActionRows(key) {
     return
   }
   if (key === 'detectionSplit') {
-    const [waitAssignResult, waitDetectResult] = await Promise.all([
-      fetchDetectionItemsApi({ pageNum: 1, pageSize: actionPageSize, itemStatus: waitAssignDetectionStatus }),
-      fetchDetectionItemsApi({ pageNum: 1, pageSize: actionPageSize, itemStatus: waitDetectDetectionStatus })
-    ])
-    actionRows.value = mergeActionRows([
-      ...(waitAssignResult.records || []),
-      ...(waitDetectResult.records || [])
-    ])
+    const result = await fetchDetectionItemsApi({ pageNum: 1, pageSize: actionPageSize, itemStatus: waitAssignDetectionStatus })
+    actionRows.value = mergeActionRows(result.records || [])
     return
   }
   if (key === 'detection') {
-    const result = await fetchDetectionItemsApi({ pageNum: 1, pageSize: actionPageSize, itemStatus: waitDetectDetectionStatus })
+    const result = await loadWorkbenchDetectionRows(actionPageSize)
     actionRows.value = result.records || []
     return
   }

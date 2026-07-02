@@ -115,7 +115,7 @@ public class AssetController {
      */
     @GetMapping("/instruments/{id}")
     @Operation(summary = "仪器台账详情")
-    public ApiResponse<Instrument> instrumentDetail(@PathVariable Long id) {
+    public ApiResponse<Instrument> instrumentDetail(@PathVariable("id") Long id) {
         return ApiResponse.success(instrumentAssetService.instrumentDetail(id));
     }
 
@@ -173,7 +173,7 @@ public class AssetController {
     @PostMapping("/instruments/{id}")
     @Operation(summary = "更新仪器台账")
     @RequirePermission(PermissionConstants.ASSET_WRITE)
-    public ApiResponse<Void> updateInstrument(@PathVariable Long id, @Valid @RequestBody InstrumentSaveCommand command) {
+    public ApiResponse<Void> updateInstrument(@PathVariable("id") Long id, @Valid @RequestBody InstrumentSaveCommand command) {
         instrumentAssetService.updateInstrument(id, command);
         return ApiResponse.successMessage("更新成功");
     }
@@ -187,7 +187,7 @@ public class AssetController {
     @PostMapping("/instruments/{id}/delete")
     @Operation(summary = "删除仪器台账")
     @RequirePermission(PermissionConstants.ASSET_WRITE)
-    public ApiResponse<Void> deleteInstrument(@PathVariable Long id) {
+    public ApiResponse<Void> deleteInstrument(@PathVariable("id") Long id) {
         instrumentAssetService.deleteInstrument(id);
         return ApiResponse.successMessage("删除成功");
     }
@@ -261,7 +261,7 @@ public class AssetController {
     @PostMapping("/maintenances/{id}")
     @Operation(summary = "更新维保记录")
     @RequirePermission(PermissionConstants.ASSET_WRITE)
-    public ApiResponse<Void> updateMaintenance(@PathVariable Long id, @Valid @RequestBody InstrumentMaintenanceSaveCommand command) {
+    public ApiResponse<Void> updateMaintenance(@PathVariable("id") Long id, @Valid @RequestBody InstrumentMaintenanceSaveCommand command) {
         instrumentAssetService.updateMaintenance(id, command);
         return ApiResponse.successMessage("更新成功");
     }
@@ -275,7 +275,7 @@ public class AssetController {
     @PostMapping("/maintenances/{id}/delete")
     @Operation(summary = "删除维保记录")
     @RequirePermission(PermissionConstants.ASSET_WRITE)
-    public ApiResponse<Void> deleteMaintenance(@PathVariable Long id) {
+    public ApiResponse<Void> deleteMaintenance(@PathVariable("id") Long id) {
         instrumentAssetService.deleteMaintenance(id);
         return ApiResponse.successMessage("删除成功");
     }
@@ -336,7 +336,7 @@ public class AssetController {
      */
     @GetMapping("/documents/{id}")
     @Operation(summary = "化验室文档详情")
-    public ApiResponse<LabDocumentVO> documentDetail(@PathVariable Long id) {
+    public ApiResponse<LabDocumentVO> documentDetail(@PathVariable("id") Long id) {
         return ApiResponse.success(assetDocumentService.documentDetail(id));
     }
 
@@ -348,7 +348,7 @@ public class AssetController {
      */
     @GetMapping("/documents/{id}/preview")
     @Operation(summary = "预览化验室文档")
-    public ResponseEntity<byte[]> previewDocument(@PathVariable Long id) {
+    public ResponseEntity<byte[]> previewDocument(@PathVariable("id") Long id) {
         DocumentPreviewFile previewFile = assetDocumentService.previewDocument(id);
         ContentDisposition contentDisposition = ContentDisposition.inline()
                 .filename(previewFile.getFileName(), StandardCharsets.UTF_8)
@@ -383,7 +383,7 @@ public class AssetController {
     @PostMapping("/documents/{id}")
     @Operation(summary = "更新化验室文档")
     @RequirePermission(PermissionConstants.ASSET_WRITE)
-    public ApiResponse<Void> updateDocument(@PathVariable Long id, @Valid @RequestBody DocumentSaveCommand command) {
+    public ApiResponse<Void> updateDocument(@PathVariable("id") Long id, @Valid @RequestBody DocumentSaveCommand command) {
         assetDocumentService.updateDocument(id, command);
         return ApiResponse.successMessage("更新成功");
     }
@@ -397,7 +397,7 @@ public class AssetController {
     @PostMapping("/documents/{id}/delete")
     @Operation(summary = "删除化验室文档")
     @RequirePermission(PermissionConstants.ASSET_WRITE)
-    public ApiResponse<Void> deleteDocument(@PathVariable Long id) {
+    public ApiResponse<Void> deleteDocument(@PathVariable("id") Long id) {
         assetDocumentService.deleteDocumentWithPermission(id);
         return ApiResponse.successMessage("删除成功");
     }

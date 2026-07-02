@@ -83,7 +83,7 @@ public class RoleManagementController {
      */
     @GetMapping("/{id}")
     @Operation(summary = "获取角色详情")
-    public ApiResponse<LabRoleVO> detail(@PathVariable Long id) {
+    public ApiResponse<LabRoleVO> detail(@PathVariable("id") Long id) {
         return ApiResponse.success(roleManagementService.detail(id));
     }
 
@@ -122,7 +122,7 @@ public class RoleManagementController {
     @PostMapping("/{id}")
     @Operation(summary = "更新角色")
     @RequirePermission(PermissionConstants.SYSTEM_WRITE)
-    public ApiResponse<Void> update(@PathVariable Long id, @Valid @RequestBody RoleSaveCommand command) {
+    public ApiResponse<Void> update(@PathVariable("id") Long id, @Valid @RequestBody RoleSaveCommand command) {
         roleManagementService.update(id, command);
         return ApiResponse.successMessage("更新成功");
     }
@@ -136,7 +136,7 @@ public class RoleManagementController {
     @PostMapping("/{id}/delete")
     @Operation(summary = "删除角色")
     @RequirePermission(PermissionConstants.SYSTEM_WRITE)
-    public ApiResponse<Void> delete(@PathVariable Long id) {
+    public ApiResponse<Void> delete(@PathVariable("id") Long id) {
         roleManagementService.delete(id);
         return ApiResponse.successMessage("删除成功");
     }

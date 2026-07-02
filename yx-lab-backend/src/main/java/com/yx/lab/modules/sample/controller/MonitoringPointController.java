@@ -47,6 +47,13 @@ public class MonitoringPointController {
 
     @GetMapping("/orgOptions")
     @Operation(summary = "获取一级机构选项")
+    @RequirePermission(any = true, value = {
+            PermissionConstants.SYSTEM_VIEW,
+            PermissionConstants.SAMPLE_VIEW,
+            PermissionConstants.SAMPLING_PLAN_VIEW,
+            PermissionConstants.DETECTION_VIEW,
+            PermissionConstants.STATISTICS_VIEW
+    })
     public ApiResponse<List<OrgOptionVO>> orgOptions() {
         return ApiResponse.success(orgManagementService.getFirstLevelOrgs());
     }
@@ -74,7 +81,7 @@ public class MonitoringPointController {
 
     @GetMapping("/{id}")
     @Operation(summary = "监测点位详情")
-    public ApiResponse<MonitoringPoint> detail(@PathVariable Long id) {
+    public ApiResponse<MonitoringPoint> detail(@PathVariable("id") Long id) {
         return ApiResponse.success(monitoringPointService.detail(id));
     }
 
@@ -89,7 +96,7 @@ public class MonitoringPointController {
     @PostMapping("/{id}")
     @Operation(summary = "更新监测点位")
     @RequirePermission(PermissionConstants.SYSTEM_WRITE)
-    public ApiResponse<Void> update(@PathVariable Long id, @Valid @RequestBody MonitoringPointSaveCommand command) {
+    public ApiResponse<Void> update(@PathVariable("id") Long id, @Valid @RequestBody MonitoringPointSaveCommand command) {
         monitoringPointService.update(id, command);
         return ApiResponse.successMessage("更新成功");
     }
@@ -97,7 +104,7 @@ public class MonitoringPointController {
     @PostMapping("/{id}/delete")
     @Operation(summary = "删除监测点位")
     @RequirePermission(PermissionConstants.SYSTEM_WRITE)
-    public ApiResponse<Void> delete(@PathVariable Long id) {
+    public ApiResponse<Void> delete(@PathVariable("id") Long id) {
         monitoringPointService.delete(id);
         return ApiResponse.successMessage("删除成功");
     }

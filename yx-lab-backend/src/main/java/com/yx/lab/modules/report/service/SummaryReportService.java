@@ -24,6 +24,8 @@ import com.yx.lab.modules.sample.mapper.LabSampleMapper;
 import com.yx.lab.modules.sample.mapper.MonitoringPointMapper;
 import com.yx.lab.modules.sample.mapper.SamplingPlanMapper;
 import com.yx.lab.modules.sample.mapper.SamplingTaskMapper;
+import com.yx.lab.modules.system.entity.LabUser;
+import com.yx.lab.modules.system.mapper.LabUserMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -66,6 +68,8 @@ public class SummaryReportService {
     private static final String PREVIEW_MODE_DAILY_EXTERNAL = "DAILY_EXTERNAL_TEMPLATE";
     private static final String PREVIEW_MODE_WEEKLY_FACTORY = "WEEKLY_FACTORY_TEMPLATE";
     private static final String PREVIEW_MODE_HALF_MONTHLY_TERMINAL = "HALF_MONTHLY_TERMINAL_TEMPLATE";
+    private static final String DIRECTOR_ROLE_CODE = "DIRECTOR";
+    private static final String COLLABORATIVE_DETECTION_NAME = "协同检测";
     private static final String REPORT_UNIT_NAME = "阳新县城发水务有限公司";
     private static final List<String> INTERNAL_TIME_BUCKETS = Arrays.asList("08:00", "10:00", "12:00", "14:00", "16:00");
     private static final List<String> DAILY_INTERNAL_COLUMNS = Arrays.asList(
@@ -114,6 +118,10 @@ public class SummaryReportService {
 
     private final DataScopeHelper dataScopeHelper;
 
+    private final LabUserMapper labUserMapper;
+
+    private final com.yx.lab.modules.system.service.OrgManagementService orgManagementService;
+
     public PageResult<SummaryReportListVO> page(SummaryReportQuery query) {
         validateSummaryType(query == null ? null : query.getSummaryType());
         validateSummaryAccess(query == null ? null : query.getSummaryType());
@@ -157,6 +165,7 @@ public class SummaryReportService {
                 query.getSummaryType(),
                 query.getDailyReportType(),
                 query.getRegionName(),
+                query.getOrgId(),
                 query.getPeriodStart(),
                 query.getPeriodEnd(),
                 bundles);
@@ -452,6 +461,7 @@ public class SummaryReportService {
     private SummaryReportPreviewVO buildPreview(String summaryType,
                                                 String dailyReportType,
                                                 String regionName,
+                                                Long orgId,
                                                 LocalDate periodStart,
                                                 LocalDate periodEnd,
                                                 List<SummaryTaskBundle> bundles) {
@@ -467,9 +477,10 @@ public class SummaryReportService {
         preview.setReportUnit(REPORT_UNIT_NAME);
         preview.setWeekdayLabel(resolveWeekdayLabel(periodStart));
         preview.setWeather(resolveWeather(bundles));
-        preview.setInspectorName(resolveInspectorName(bundles));
-        preview.setReporterName(resolveReporterName(bundles));
-        preview.setPrincipalName("");
+        String inspectorName = resolveConcreteInspectorName(bundles);
+        preview.setInspectorName(inspectorName);
+        preview.setReporterName(StrUtil.blankToDefault(inspectorName, resolveSamplerName(bundles)));
+        preview.setPrincipalName(resolvePrincipalName(bundles, orgId));
         preview.setPreviewMode(PREVIEW_MODE_GENERIC);
         preview.setReportName(buildReportName(summaryType, preview.getRegionName(), preview.getPeriodLabel(), preview.getDailyReportType()));
 
@@ -1034,7 +1045,26 @@ public class SummaryReportService {
     }
 
     private String resolveRegionName(MonitoringPoint point) {
-        return StrUtil.blankToDefault(point == null ? null : StrUtil.trim(point.getOrgName()), DEFAULT_REGION_NAME);
+        if (point == null) {
+            return DEFAULT_REGION_NAME;
+        }
+        // 优先使用点位已有的 orgName
+        String orgName = StrUtil.trim(point.getOrgName());
+        if (StrUtil.isNotBlank(orgName)) {
+            return orgName;
+        }
+        // 如果点位没有 orgName，则通过 orgId 查询机构名称
+        Long orgId = point.getOrgId();
+        if (orgId == null) {
+            return DEFAULT_REGION_NAME;
+        }
+        try {
+            java.util.Map<Long, String> orgNameMap = orgManagementService.getOrgNameMap(java.util.Collections.singletonList(orgId));
+            orgName = orgNameMap.get(orgId);
+        } catch (Exception e) {
+            orgName = null;
+        }
+        return StrUtil.blankToDefault(orgName, DEFAULT_REGION_NAME);
     }
 
     private List<String> parseExpectedParameters(String detectionItems) {
@@ -1190,6 +1220,96 @@ public class SummaryReportService {
                 .filter(StrUtil::isNotBlank)
                 .findFirst()
                 .orElse("");
+    }
+
+    private String resolveConcreteInspectorName(List<SummaryTaskBundle> bundles) {
+        LinkedHashSet<String> names = new LinkedHashSet<>();
+        if (bundles != null) {
+            for (SummaryTaskBundle bundle : bundles) {
+                if (bundle == null || bundle.items == null) {
+                    continue;
+                }
+                for (DetectionItem item : bundle.items) {
+                    addPersonNames(names, item == null ? null : item.getDetectorName(), true);
+                }
+            }
+            if (names.isEmpty()) {
+                for (SummaryTaskBundle bundle : bundles) {
+                    addPersonNames(names, bundle == null || bundle.record == null ? null : bundle.record.getDetectorName(), true);
+                }
+            }
+        }
+        return String.join("\u3001", names);
+    }
+
+    private String resolvePrincipalName(List<SummaryTaskBundle> bundles, Long requestedOrgId) {
+        Long orgId = requestedOrgId != null ? requestedOrgId : resolveFirstOrgId(bundles);
+        LabUser director = selectDirector(orgId);
+        if (director == null && orgId != null) {
+            director = selectDirector(null);
+        }
+        return director == null ? "" : StrUtil.blankToDefault(StrUtil.trim(director.getRealName()), StrUtil.trim(director.getUsername()));
+    }
+
+    private Long resolveFirstOrgId(List<SummaryTaskBundle> bundles) {
+        if (bundles == null) {
+            return null;
+        }
+        for (SummaryTaskBundle bundle : bundles) {
+            if (bundle == null) {
+                continue;
+            }
+            if (bundle.task != null && bundle.task.getOrgId() != null) {
+                return bundle.task.getOrgId();
+            }
+            if (bundle.sample != null && bundle.sample.getOrgId() != null) {
+                return bundle.sample.getOrgId();
+            }
+            if (bundle.record != null && bundle.record.getOrgId() != null) {
+                return bundle.record.getOrgId();
+            }
+            if (bundle.point != null && bundle.point.getOrgId() != null) {
+                return bundle.point.getOrgId();
+            }
+        }
+        return null;
+    }
+
+    private String resolveSamplerName(List<SummaryTaskBundle> bundles) {
+        LinkedHashSet<String> names = new LinkedHashSet<>();
+        if (bundles != null) {
+            for (SummaryTaskBundle bundle : bundles) {
+                addPersonNames(names, bundle == null || bundle.task == null ? null : bundle.task.getSamplerName(), false);
+            }
+        }
+        return String.join("\u3001", names);
+    }
+
+    private LabUser selectDirector(Long orgId) {
+        return labUserMapper.selectOne(new LambdaQueryWrapper<LabUser>()
+                .eq(LabUser::getRoleCode, DIRECTOR_ROLE_CODE)
+                .eq(LabUser::getStatus, 1)
+                .eq(orgId != null, LabUser::getOrgId, orgId)
+                .orderByAsc(LabUser::getRealName)
+                .orderByAsc(LabUser::getUsername)
+                .last("LIMIT 1"));
+    }
+
+    private void addPersonNames(LinkedHashSet<String> names, String rawName, boolean skipCollaborativeName) {
+        if (names == null || StrUtil.isBlank(rawName)) {
+            return;
+        }
+        String[] parts = StrUtil.trim(rawName).split("[,，;；/、\\s]+");
+        for (String part : parts) {
+            String name = StrUtil.trim(part);
+            if (StrUtil.isBlank(name) || "-".equals(name)) {
+                continue;
+            }
+            if (skipCollaborativeName && COLLABORATIVE_DETECTION_NAME.equals(name)) {
+                continue;
+            }
+            names.add(name);
+        }
     }
 
     private String resolveInspectorName(List<SummaryTaskBundle> bundles) {

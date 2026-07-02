@@ -101,7 +101,7 @@ public class LabSampleController {
      */
     @GetMapping("/{id}")
     @Operation(summary = "样品详情")
-    public ApiResponse<LabSample> detail(@PathVariable Long id) {
+    public ApiResponse<LabSample> detail(@PathVariable("id") Long id) {
         return ApiResponse.success(labSampleService.detail(id));
     }
 
