@@ -2695,8 +2695,6 @@ function resetPlanForm() {
 async function openPlanDialog() {
   resetPlanForm()
   planForm.planName = `采样计划`
-  planForm.startTime = dayjs().format('YYYY-MM-DD HH:mm:ss')
-  planForm.endTime = dayjs().add(24, 'hour').format('YYYY-MM-DD HH:mm:ss')
   monitoringPointOptions.value = []
   samplerOptions.value = []
   planDialogVisible.value = true
