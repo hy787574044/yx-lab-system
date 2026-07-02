@@ -26,6 +26,7 @@ import com.yx.lab.modules.sample.mapper.SamplingPlanMapper;
 import com.yx.lab.modules.sample.mapper.SamplingTaskMapper;
 import com.yx.lab.modules.system.entity.LabUser;
 import com.yx.lab.modules.system.mapper.LabUserMapper;
+import com.yx.lab.modules.system.service.OrgManagementService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -120,7 +121,7 @@ public class SummaryReportService {
 
     private final LabUserMapper labUserMapper;
 
-    private final com.yx.lab.modules.system.service.OrgManagementService orgManagementService;
+    private final OrgManagementService orgManagementService;
 
     public PageResult<SummaryReportListVO> page(SummaryReportQuery query) {
         validateSummaryType(query == null ? null : query.getSummaryType());
@@ -415,7 +416,7 @@ public class SummaryReportService {
             if (StrUtil.isBlank(parameterName)) {
                 continue;
             }
-            String valueText = formatResultValue(item.getResultValue(), item.getUnit());
+            String valueText = formatDetectionItemValue(item);
             if (StrUtil.isBlank(valueText)) {
                 continue;
             }
@@ -1059,7 +1060,7 @@ public class SummaryReportService {
             return DEFAULT_REGION_NAME;
         }
         try {
-            java.util.Map<Long, String> orgNameMap = orgManagementService.getOrgNameMap(java.util.Collections.singletonList(orgId));
+            Map<Long, String> orgNameMap = orgManagementService.getOrgNameMap(Collections.singletonList(orgId));
             orgName = orgNameMap.get(orgId);
         } catch (Exception e) {
             orgName = null;
@@ -1147,6 +1148,26 @@ public class SummaryReportService {
             return null;
         }
         return resultValue.stripTrailingZeros().toPlainString();
+    }
+
+    private String formatDetectionItemValue(DetectionItem item) {
+        if (item == null || item.getResultValue() == null) {
+            return null;
+        }
+        // 如果有文本选项，把数值索引转成对应的文本
+        String optionValues = item.getOptionValues();
+        if (StrUtil.isNotBlank(optionValues)) {
+            try {
+                com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                java.util.List<String> options = mapper.readValue(optionValues, new com.fasterxml.jackson.core.type.TypeReference<java.util.List<String>>() {});
+                int index = item.getResultValue().intValue();
+                if (index >= 0 && index < options.size()) {
+                    return options.get(index);
+                }
+            } catch (Exception ignored) {
+            }
+        }
+        return formatResultValue(item.getResultValue(), item.getUnit());
     }
 
     private int compareSample(LabSample left, LabSample right) {
