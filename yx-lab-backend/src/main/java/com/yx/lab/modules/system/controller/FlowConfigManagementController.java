@@ -71,6 +71,12 @@ public class FlowConfigManagementController {
      */
     @GetMapping("/options")
     @Operation(summary = "获取启用流程下拉选项")
+    @RequirePermission(value = {
+            PermissionConstants.SAMPLE_VIEW,
+            PermissionConstants.REVIEW_VIEW,
+            PermissionConstants.REPORT_VIEW,
+            PermissionConstants.SYSTEM_VIEW
+    }, any = true)
     public ApiResponse<List<FlowConfigOptionVO>> options(@RequestParam(required = false) String flowType) {
         return ApiResponse.success(flowConfigManagementService.options(flowType));
     }

@@ -1787,7 +1787,7 @@ function toggleDetectionSplitRow(row, checked) {
 
 function getActionRowTitle(row) {
   if (activeAction.value === 'samplingPlan') {
-    return row?.planName || row?.pointName || '-'
+    return formatPlanNameWithDate(row)
   }
   if (activeAction.value === 'sampling' || activeAction.value === 'sampleLogin') {
     return formatPlanNameWithDate(row)
@@ -1803,10 +1803,10 @@ function getActionRowTitle(row) {
 
 function getActionRowMeta(row) {
   if (activeAction.value === 'samplingPlan') {
-    return `${row?.pointName || '-'} / ${row?.cycleType || '-'}`
+    return row?.samplerName || ''
   }
   if (activeAction.value === 'sampling' || activeAction.value === 'sampleLogin') {
-    return `${row?.pointName || '-'}`
+    return row?.samplerName || ''
   }
   if (activeAction.value === 'detectionSplit' || activeAction.value === 'detection') {
     return `${row?.parameterName || '-'} / ${row?.methodName || '-'}`

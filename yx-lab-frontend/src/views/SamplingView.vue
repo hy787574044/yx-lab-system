@@ -2707,7 +2707,7 @@ async function openPlanEditDialog(row) {
   editingPlanId.value = row.id
   planForm.planName = row.planName || ''
   planForm.pointSource = row.pointId ? 'EXISTING' : 'CUSTOM'
-  planForm.orgId = ''
+  planForm.orgId = row.orgId ? String(row.orgId) : ''
   planForm.pointId = row.pointId || null
   planForm.pointName = row.pointName || ''
   planForm.address = row.address || ''
@@ -2732,6 +2732,10 @@ async function openPlanEditDialog(row) {
       await loadSamplersByOrg(planForm.orgId)
       ensureSelectedSamplerOptions(planForm.samplerIds, planForm.samplerName)
     }
+  } else if (planForm.orgId) {
+    // 手工填写点位但有机构时，也需要加载该机构下的人员
+    await loadSamplersByOrg(planForm.orgId)
+    ensureSelectedSamplerOptions(planForm.samplerIds, planForm.samplerName)
   }
   planDialogVisible.value = true
 }

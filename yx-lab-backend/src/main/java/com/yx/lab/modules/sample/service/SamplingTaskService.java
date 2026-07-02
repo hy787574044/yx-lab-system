@@ -456,7 +456,13 @@ public class SamplingTaskService {
         wrapper.and(item -> item
                 .eq(SamplingTask::getSamplerId, samplerId)
                 .or()
-                .like(SamplingTask::getSamplerIds, wrapSamplerId(samplerId)));
+                .eq(SamplingTask::getSamplerIds, String.valueOf(samplerId))
+                .or()
+                .like(SamplingTask::getSamplerIds, wrapSamplerId(samplerId))
+                .or()
+                .likeRight(SamplingTask::getSamplerIds, samplerId + ",")
+                .or()
+                .likeLeft(SamplingTask::getSamplerIds, "," + samplerId));
     }
 
     private void applyTaskStatusFilter(LambdaQueryWrapper<SamplingTask> wrapper, String taskStatus) {
@@ -508,7 +514,26 @@ public class SamplingTaskService {
         if (samplerId.equals(task.getSamplerId())) {
             return true;
         }
-        return StrUtil.contains(task.getSamplerIds(), wrapSamplerId(samplerId));
+        return containsSamplerId(task.getSamplerIds(), samplerId);
+    }
+
+    private boolean containsSamplerId(String samplerIds, Long samplerId) {
+        if (StrUtil.isBlank(samplerIds) || samplerId == null) {
+            return false;
+        }
+        String target = String.valueOf(samplerId);
+        if (StrUtil.equals(StrUtil.trim(samplerIds), target)
+                || StrUtil.contains(samplerIds, wrapSamplerId(samplerId))) {
+            return true;
+        }
+        String normalized = samplerIds
+                .replace("[", ",")
+                .replace("]", ",")
+                .replace("\"", "")
+                .replace("'", "");
+        return Arrays.stream(normalized.split(","))
+                .map(StrUtil::trim)
+                .anyMatch(target::equals);
     }
 
     private String wrapSamplerId(Long samplerId) {

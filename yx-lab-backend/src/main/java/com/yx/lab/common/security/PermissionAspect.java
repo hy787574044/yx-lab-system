@@ -28,8 +28,7 @@ public class PermissionAspect {
         }
         RequirePermission classPermission = joinPoint.getTarget().getClass().getAnnotation(RequirePermission.class);
         RequirePermission methodPermission = resolveMethodPermission(joinPoint);
-        checkDeclaredPermission(currentUser, classPermission);
-        checkDeclaredPermission(currentUser, methodPermission);
+        checkDeclaredPermission(currentUser, methodPermission == null ? classPermission : methodPermission);
         return joinPoint.proceed();
     }
 

@@ -64,6 +64,11 @@ public class DetectionConfigController {
      */
     @GetMapping("/types")
     @Operation(summary = "检测套餐分页")
+    @RequirePermission(value = {
+            PermissionConstants.SAMPLE_VIEW,
+            PermissionConstants.DETECTION_VIEW,
+            PermissionConstants.DETECTION_CONFIG_VIEW
+    }, any = true)
     public ApiResponse<PageResult<DetectionType>> typePage(@Validated DetectionTypeQuery query) {
         return ApiResponse.success(detectionConfigService.typePage(query));
     }
@@ -210,6 +215,11 @@ public class DetectionConfigController {
      */
     @GetMapping("/parameters")
     @Operation(summary = "检测参数分页")
+    @RequirePermission(value = {
+            PermissionConstants.SAMPLE_VIEW,
+            PermissionConstants.DETECTION_VIEW,
+            PermissionConstants.DETECTION_CONFIG_VIEW
+    }, any = true)
     public ApiResponse<PageResult<DetectionParameter>> parameterPage(@Validated DetectionParameterQuery query) {
         return ApiResponse.success(detectionConfigService.parameterPage(query));
     }
@@ -366,6 +376,11 @@ public class DetectionConfigController {
      */
     @GetMapping("/methods/options")
     @Operation(summary = "获取检测方法选项")
+    @RequirePermission(value = {
+            PermissionConstants.SAMPLE_VIEW,
+            PermissionConstants.DETECTION_VIEW,
+            PermissionConstants.DETECTION_CONFIG_VIEW
+    }, any = true)
     public ApiResponse<List<DetectionMethod>> methodOptions() {
         return ApiResponse.success(detectionConfigService.methodOptions());
     }

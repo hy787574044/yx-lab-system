@@ -698,7 +698,26 @@ public class LabSampleService {
         if (samplerId.equals(task.getSamplerId())) {
             return true;
         }
-        return StrUtil.contains(task.getSamplerIds(), "," + samplerId + ",");
+        return containsSamplerId(task.getSamplerIds(), samplerId);
+    }
+
+    private boolean containsSamplerId(String samplerIds, Long samplerId) {
+        if (StrUtil.isBlank(samplerIds) || samplerId == null) {
+            return false;
+        }
+        String target = String.valueOf(samplerId);
+        if (StrUtil.equals(StrUtil.trim(samplerIds), target)
+                || StrUtil.contains(samplerIds, "," + target + ",")) {
+            return true;
+        }
+        String normalized = samplerIds
+                .replace("[", ",")
+                .replace("]", ",")
+                .replace("\"", "")
+                .replace("'", "");
+        return Arrays.stream(normalized.split(","))
+                .map(StrUtil::trim)
+                .anyMatch(target::equals);
     }
 
     private boolean isAdmin(CurrentUser currentUser) {
