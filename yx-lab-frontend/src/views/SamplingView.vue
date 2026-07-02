@@ -551,10 +551,10 @@
               <button
                 ref="startPlanHourTriggerRef"
                 type="button"
-                class="plan-hour-picker__trigger"
+                :class="['plan-hour-picker__trigger', { 'is-placeholder': !getPlanDateTimeText('start') }]"
                 @click="togglePlanHourPanel('start')"
               >
-                {{ getPlanDateTimeText('start') }}
+                {{ getPlanDateTimeText('start') || '请选择开始时间' }}
               </button>
             </div>
           </el-form-item>
@@ -563,10 +563,10 @@
               <button
                 ref="endPlanHourTriggerRef"
                 type="button"
-                class="plan-hour-picker__trigger"
+                :class="['plan-hour-picker__trigger', { 'is-placeholder': !getPlanDateTimeText('end') }]"
                 @click="togglePlanHourPanel('end')"
               >
-                {{ getPlanDateTimeText('end') || '单次计划可不填，周期计划建议填写' }}
+                {{ getPlanDateTimeText('end') || '请选择截止时间' }}
               </button>
             </div>
           </el-form-item>
@@ -2209,6 +2209,10 @@ async function handleRouteAutoOpen() {
   }
   if (baseScene.value.key === 'sample-login') {
     await openLoginDialog()
+    return
+  }
+  if (baseScene.value.key === 'sampling-plan') {
+    await createPlan()
   }
 }
 
@@ -4341,7 +4345,7 @@ watch(() => route.fullPath, async () => {
   height: 34px;
   padding: 0 12px;
   border: 1px solid #cfd9e6;
-  border-radius: 3px;
+  border-radius: 6px;
   background: #ffffff;
   color: var(--text-main);
   font: inherit;
@@ -4354,6 +4358,10 @@ watch(() => route.fullPath, async () => {
 .plan-hour-picker__trigger:focus {
   border-color: var(--brand);
   outline: none;
+}
+
+.plan-hour-picker__trigger.is-placeholder {
+  color: #c0c4cc;
 }
 
 .plan-hour-picker__panel {

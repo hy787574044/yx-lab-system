@@ -190,46 +190,85 @@
 
     <el-dialog
       v-model="planCreateDialogVisible"
-      class="create-plan-dialog"
+      class="sampling-form-dialog sampling-plan-form-dialog"
       title="新增采样计划"
-      width="720px"
+      width="1080px"
       append-to-body
+      align-center
       destroy-on-close
       @closed="resetPlanCreateForm"
     >
       <el-form label-width="96px">
-        <div class="form-grid create-plan-grid">
+        <div class="plan-form-grid">
           <el-form-item label="计划名称" required>
             <el-input v-model="planCreateForm.planName" placeholder="请输入采样计划名称" />
+          </el-form-item>
+          <el-form-item label="点位来源">
+            <el-select v-model="planCreateForm.pointSource" style="width: 100%" @change="handlePlanCreatePointSourceChange">
+              <el-option label="监测点位选择" value="EXISTING" />
+              <el-option label="手工填写点位" value="CUSTOM" />
+            </el-select>
           </el-form-item>
           <el-form-item label="所属机构" required>
             <el-select
               v-model="planCreateForm.orgId"
-              clearable
               filterable
               style="width: 100%"
               placeholder="请选择所属机构"
               @change="handlePlanCreateOrgChange"
             >
-              <el-option v-for="option in planOrgOptions" :key="option.value" :label="option.label" :value="option.value" />
+              <el-option
+                v-for="option in planOrgOptions"
+                :key="option.value"
+                :label="option.label"
+                :value="option.value"
+              />
+            </el-select>
+          </el-form-item>
+          <el-form-item v-if="planCreateForm.pointSource === 'EXISTING'" label="监测点位" required>
+            <el-select
+              v-model="planCreateForm.pointId"
+              style="width: 100%"
+              :placeholder="planCreateForm.orgId ? '请选择已创建的监测点位' : '请先选择所属机构'"
+              :loading="monitoringPointLoading"
+              :disabled="!planCreateForm.orgId"
+              @change="handlePlanCreatePointChange"
+            >
+              <el-option
+                v-for="point in monitoringPointOptions"
+                :key="point.id"
+                :label="point.pointName"
+                :value="point.id"
+              />
             </el-select>
           </el-form-item>
           <el-form-item label="点位名称" required>
-            <el-input v-model="planCreateForm.pointName" placeholder="请输入采样点位名称" />
+            <el-input
+              v-model="planCreateForm.pointName"
+              :readonly="planCreateForm.pointSource === 'EXISTING'"
+              placeholder="请输入采样点位名称"
+            />
           </el-form-item>
-          <el-form-item label="所属地址" required>
-            <el-input v-model="planCreateForm.address" placeholder="请输入点位地址" />
+          <el-form-item label="点位坐标" required>
+            <div class="location-picker">
+              <el-input :model-value="formatPlanCreateCoordinateText()" readonly placeholder="请从地图选择点位" />
+              <el-button v-if="planCreateForm.pointSource === 'CUSTOM'" @click="openPlanCreateMapSelector">
+                {{ planCreateForm.latitude && planCreateForm.longitude ? '重新选点' : '地图选点' }}
+              </el-button>
+            </div>
+          </el-form-item>
+          <el-form-item class="plan-form-span-2" label="地图位置">
+            <el-input v-model="planCreateForm.address" readonly placeholder="地图选点后自动回填" />
           </el-form-item>
           <el-form-item label="样品类型" required>
-            <el-select v-model="planCreateForm.sampleType" style="width: 100%" placeholder="请选择样品类型">
-              <el-option v-for="option in sampleTypeOptions" :key="option.value" :label="option.label" :value="option.value" />
+            <el-select v-model="planCreateForm.sampleType" style="width: 100%" :disabled="planCreateForm.pointSource === 'EXISTING'">
+              <el-option
+                v-for="option in sampleTypeOptions"
+                :key="option.value"
+                :label="option.label"
+                :value="option.value"
+              />
             </el-select>
-          </el-form-item>
-          <el-form-item label="经度" required>
-            <el-input v-model="planCreateForm.longitude" placeholder="请输入经度" />
-          </el-form-item>
-          <el-form-item label="纬度" required>
-            <el-input v-model="planCreateForm.latitude" placeholder="请输入纬度" />
           </el-form-item>
           <el-form-item label="采样人员" required>
             <el-select
@@ -253,47 +292,81 @@
               />
             </el-select>
           </el-form-item>
-          <el-form-item label="采样周期" required>
+          <el-form-item label="周期类型" required>
             <el-select v-model="planCreateForm.cycleType" style="width: 100%">
-              <el-option v-for="option in cycleTypeOptions" :key="option.value" :label="option.label" :value="option.value" />
+              <el-option
+                v-for="option in cycleTypeOptions"
+                :key="option.value"
+                :label="option.label"
+                :value="option.value"
+              />
             </el-select>
           </el-form-item>
           <el-form-item label="开始时间" required>
-            <el-date-picker
-              v-model="planCreateForm.startTime"
-              type="datetime"
-              format="YYYY-MM-DD HH:mm:ss"
-              value-format="YYYY-MM-DD HH:mm:ss"
-              style="width: 100%"
-            />
+            <div class="plan-hour-picker" data-plan-hour-picker>
+              <button
+                ref="startPlanHourTriggerRef"
+                type="button"
+                :class="['plan-hour-picker__trigger', { 'is-placeholder': !getPlanCreateDateTimeText('start') }]"
+                @click="togglePlanCreateHourPanel('start')"
+              >
+                {{ getPlanCreateDateTimeText('start') || '请选择开始时间' }}
+              </button>
+            </div>
           </el-form-item>
-          <el-form-item label="结束时间" required>
-            <el-date-picker
-              v-model="planCreateForm.endTime"
-              type="datetime"
-              format="YYYY-MM-DD HH:mm:ss"
-              value-format="YYYY-MM-DD HH:mm:ss"
-              style="width: 100%"
-            />
+          <el-form-item label="截止时间">
+            <div class="plan-hour-picker" data-plan-hour-picker>
+              <button
+                ref="endPlanHourTriggerRef"
+                type="button"
+                :class="['plan-hour-picker__trigger', { 'is-placeholder': !getPlanCreateDateTimeText('end') }]"
+                @click="togglePlanCreateHourPanel('end')"
+              >
+                {{ getPlanCreateDateTimeText('end') || '请选择截止时间' }}
+              </button>
+            </div>
           </el-form-item>
-          <el-form-item class="form-span-2" label="备注">
-            <el-input v-model="planCreateForm.remark" type="textarea" :rows="3" placeholder="可补充执行说明" />
+          <el-form-item class="plan-form-span-2" label="备注">
+            <el-input v-model="planCreateForm.remark" type="textarea" :rows="3" placeholder="可补充客户要求、执行说明等信息" />
           </el-form-item>
         </div>
       </el-form>
       <template #footer>
-        <el-button :disabled="planCreateSubmitting" @click="planCreateDialogVisible = false">取消</el-button>
-        <el-button
-          v-permission="'samplingPlan:write'"
-          type="primary"
-          :loading="planCreateSubmitting"
-          :disabled="planCreateSubmitting"
-          @click="submitPlanCreateForm"
-        >
-          保存
-        </el-button>
+        <el-button @click="planCreateDialogVisible = false">取消</el-button>
+        <el-button v-permission="'samplingPlan:write'" type="primary" :loading="planCreateSubmitting" @click="submitPlanCreateForm">保存</el-button>
       </template>
     </el-dialog>
+
+    <Teleport to="body">
+      <div
+        v-if="activePlanCreateHourPanel"
+        class="plan-hour-picker__panel plan-hour-picker__panel--floating"
+        data-plan-hour-picker
+        :style="planCreateHourPanelStyle"
+      >
+        <div class="plan-hour-picker__body">
+          <el-date-picker-panel
+            :model-value="getPlanCreateDatePart(activePlanCreateHourPanel)"
+            type="date"
+            value-format="YYYY-MM-DD"
+            :show-footer="false"
+            @update:model-value="handlePlanCreateDateChange(activePlanCreateHourPanel, $event)"
+          />
+          <div class="plan-hour-picker__hours">
+            <span>选择小时</span>
+            <button
+              v-for="item in hourOptions"
+              :key="`${activePlanCreateHourPanel}-hour-${item}`"
+              type="button"
+              :class="['plan-hour-option', { 'is-active': getPlanCreateHourPart(activePlanCreateHourPanel) === item }]"
+              @click="handlePlanCreateHourChange(activePlanCreateHourPanel, item)"
+            >
+              {{ item }}:00
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
 
     <el-dialog
       v-model="workbenchDialogVisible"
@@ -810,10 +883,13 @@
 </template>
 
 <script setup>
+import dayjs from 'dayjs'
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElButton } from 'element-plus/es/components/button/index.mjs'
 import { ElCheckbox } from 'element-plus/es/components/checkbox/index.mjs'
 import { ElDatePicker } from 'element-plus/es/components/date-picker/index.mjs'
+import { ElDatePickerPanel } from 'element-plus/es/components/date-picker-panel/index.mjs'
 import { ElDialog } from 'element-plus/es/components/dialog/index.mjs'
 import { ElEmpty } from 'element-plus/es/components/empty/index.mjs'
 import { ElForm, ElFormItem } from 'element-plus/es/components/form/index.mjs'
@@ -837,6 +913,7 @@ import {
   fetchDictItemsApi,
   fetchFlowConfigOptionsApi,
   fetchMonitoringPointOrgOptionsApi,
+  fetchMonitoringPointsApi,
   fetchSamplingPlansApi,
   fetchSamplingTaskDetailApi,
   fetchSamplingTasksApi,
@@ -887,6 +964,7 @@ const FLOW_TYPE_REVIEW = 'REVIEW'
 const SUMMARY_TYPE_DAILY = 'DAILY'
 const SUMMARY_TYPE_WEEKLY = 'WEEKLY'
 const SUMMARY_TYPE_HALF_MONTHLY = 'HALF_MONTHLY'
+const router = useRouter()
 const vLoading = ElLoadingDirective
 const loading = ref(false)
 const actionLoading = ref(false)
@@ -894,6 +972,11 @@ const submitting = ref(false)
 const dispatchSubmitting = ref(false)
 const dispatchingPlanId = ref(null)
 const planCreateSubmitting = ref(false)
+const activePlanCreateHourPanel = ref('')
+const startPlanHourTriggerRef = ref(null)
+const endPlanHourTriggerRef = ref(null)
+const planCreateHourPanelStyle = ref({})
+const hourOptions = Array.from({ length: 24 }, (_, index) => String(index).padStart(2, '0'))
 const currentUser = ref(getUser() || {})
 const dispatchDialogVisible = ref(false)
 const planCreateDialogVisible = ref(false)
@@ -908,6 +991,8 @@ const detectionSplitActiveTab = ref('waitAssign')
 const selectedDetectionSplitRowKeys = ref([])
 const selectedSamplingPlan = ref(null)
 const planOrgOptions = ref([])
+const monitoringPointOptions = ref([])
+const monitoringPointLoading = ref(false)
 const samplerOptions = ref([])
 const samplerOptionsOrgId = ref('')
 const samplerLoading = ref(false)
@@ -964,7 +1049,9 @@ const dispatchForm = reactive({
 
 const planCreateForm = reactive({
   planName: '',
+  pointSource: 'CUSTOM',
   orgId: '',
+  pointId: null,
   pointName: '',
   address: '',
   latitude: '',
@@ -1400,7 +1487,9 @@ function resetDispatchForm() {
 
 function resetPlanCreateForm() {
   planCreateForm.planName = ''
+  planCreateForm.pointSource = 'CUSTOM'
   planCreateForm.orgId = ''
+  planCreateForm.pointId = null
   planCreateForm.pointName = ''
   planCreateForm.address = ''
   planCreateForm.latitude = ''
@@ -1414,6 +1503,51 @@ function resetPlanCreateForm() {
   planCreateForm.sampleType = ''
   planCreateForm.cycleType = dailyCycleType
   planCreateForm.remark = ''
+}
+
+function handlePlanCreatePointSourceChange(value) {
+  if (value === 'CUSTOM') {
+    planCreateForm.orgId = ''
+    planCreateForm.pointId = null
+    planCreateForm.pointName = ''
+    planCreateForm.address = ''
+    planCreateForm.latitude = ''
+    planCreateForm.longitude = ''
+    planCreateForm.sampleType = ''
+    monitoringPointOptions.value = []
+    return
+  }
+  planCreateForm.pointId = null
+  planCreateForm.pointName = ''
+  planCreateForm.address = ''
+  planCreateForm.latitude = ''
+  planCreateForm.longitude = ''
+  planCreateForm.sampleType = ''
+  monitoringPointOptions.value = []
+  if (planCreateForm.orgId) {
+    loadMonitoringPoints(planCreateForm.orgId)
+  }
+}
+
+function handlePlanCreatePointChange(pointId) {
+  const point = monitoringPointOptions.value.find((item) => item.id === pointId)
+  planCreateForm.pointId = point?.id || null
+  planCreateForm.pointName = point?.pointName || ''
+  planCreateForm.address = point?.address || point?.pointName || ''
+  planCreateForm.latitude = point?.latitude || ''
+  planCreateForm.longitude = point?.longitude || ''
+  planCreateForm.sampleType = point?.pointType || ''
+}
+
+function formatPlanCreateCoordinateText() {
+  if (planCreateForm.latitude && planCreateForm.longitude) {
+    return `${planCreateForm.latitude}, ${planCreateForm.longitude}`
+  }
+  return ''
+}
+
+function openPlanCreateMapSelector() {
+  ElMessage.info('地图选点功能开发中')
 }
 
 function handleDispatchSamplerChange(userIds) {
@@ -1471,13 +1605,41 @@ function handleSamplerDropdownVisible(visible) {
   }
 }
 
+async function loadMonitoringPoints(orgId) {
+  const normalizedOrgId = String(orgId || '').trim()
+  if (!normalizedOrgId) {
+    monitoringPointOptions.value = []
+    return
+  }
+  monitoringPointLoading.value = true
+  try {
+    const result = await fetchMonitoringPointsApi({
+      pageNum: 1,
+      pageSize: 500,
+      orgId: normalizedOrgId,
+      pointStatus: 'ENABLED'
+    })
+    monitoringPointOptions.value = result.records || []
+  } finally {
+    monitoringPointLoading.value = false
+  }
+}
+
 async function handlePlanCreateOrgChange(orgId) {
+  planCreateForm.pointId = null
+  planCreateForm.pointName = ''
+  planCreateForm.address = ''
+  planCreateForm.latitude = ''
+  planCreateForm.longitude = ''
+  planCreateForm.sampleType = ''
   planCreateForm.samplerIds = []
   planCreateForm.samplerId = null
   planCreateForm.samplerName = ''
   samplerOptions.value = []
   samplerOptionsOrgId.value = ''
+  monitoringPointOptions.value = []
   if (orgId) {
+    await loadMonitoringPoints(orgId)
     await loadSamplers(true, orgId)
   }
 }
@@ -1652,22 +1814,100 @@ async function dispatchSamplingPlanFromWorkbench(row) {
 }
 
 async function openPlanCreateDialog() {
-  await loadPlanOrgOptions()
   resetPlanCreateForm()
-  const startTime = nowDateTimeText()
-  const endDate = new Date()
-  endDate.setHours(endDate.getHours() + 24)
   planCreateForm.planName = '采样计划'
-  planCreateForm.startTime = startTime
-  planCreateForm.endTime = formatDateTimeText(endDate)
+  await loadPlanOrgOptions()
   planCreateDialogVisible.value = true
+}
+
+// 采样计划时间选择器相关函数
+function getPlanCreateDateTime(prefix) {
+  const value = planCreateForm[`${prefix}Time`]
+  const parsed = value ? dayjs(value) : null
+  return parsed?.isValid() ? parsed : null
+}
+
+function getPlanCreateDatePart(prefix) {
+  return getPlanCreateDateTime(prefix)?.format('YYYY-MM-DD') || ''
+}
+
+function getPlanCreateDateTimeText(prefix) {
+  return getPlanCreateDateTime(prefix)?.format('YYYY-MM-DD HH:mm:ss') || ''
+}
+
+function getPlanCreateHourPart(prefix) {
+  return getPlanCreateDateTime(prefix)?.format('HH') || '00'
+}
+
+function handlePlanCreateDateChange(prefix, value) {
+  const hour = getPlanCreateHourPart(prefix)
+  planCreateForm[`${prefix}Time`] = value ? `${value} ${hour}:00:00` : ''
+  if (prefix === 'start' && planCreateForm.startTime) {
+    planCreateForm.endTime = dayjs(planCreateForm.startTime).add(24, 'hour').format('YYYY-MM-DD HH:mm:ss')
+  }
+}
+
+function handlePlanCreateHourChange(prefix, value) {
+  const date = getPlanCreateDatePart(prefix) || dayjs().format('YYYY-MM-DD')
+  planCreateForm[`${prefix}Time`] = `${date} ${value}:00:00`
+  activePlanCreateHourPanel.value = ''
+  if (prefix === 'start' && planCreateForm.startTime) {
+    planCreateForm.endTime = dayjs(planCreateForm.startTime).add(24, 'hour').format('YYYY-MM-DD HH:mm:ss')
+  }
+}
+
+function updatePlanCreateHourPanelPosition(prefix = activePlanCreateHourPanel.value) {
+  if (!prefix) {
+    return
+  }
+  const trigger = prefix === 'start' ? startPlanHourTriggerRef.value : endPlanHourTriggerRef.value
+  if (!trigger) {
+    return
+  }
+  const rect = trigger.getBoundingClientRect()
+  const preferredWidth = 700
+  const viewportGap = 12
+  const panelWidth = Math.min(preferredWidth, window.innerWidth - viewportGap * 2)
+  const panelHeight = 430
+  const bottomTop = rect.bottom + 6
+  const topTop = rect.top - panelHeight - 6
+  const top = bottomTop + panelHeight + viewportGap > window.innerHeight
+    ? Math.max(viewportGap, topTop)
+    : bottomTop
+  const left = Math.min(Math.max(rect.left, viewportGap), window.innerWidth - panelWidth - viewportGap)
+  planCreateHourPanelStyle.value = {
+    top: `${top}px`,
+    left: `${left}px`,
+    width: `${panelWidth}px`
+  }
+}
+
+async function togglePlanCreateHourPanel(prefix) {
+  const nextPanel = activePlanCreateHourPanel.value === prefix ? '' : prefix
+  activePlanCreateHourPanel.value = nextPanel
+  if (!planCreateForm[`${prefix}Time`]) {
+    const now = new Date()
+    const date = dayjs().format('YYYY-MM-DD')
+    const hour = String(now.getHours()).padStart(2, '0')
+    planCreateForm[`${prefix}Time`] = `${date} ${hour}:00:00`
+  }
+  if (nextPanel) {
+    await nextTick()
+    updatePlanCreateHourPanelPosition(nextPanel)
+  }
+}
+
+function handlePlanCreateHourOutsideClick(event) {
+  if (!event.target?.closest?.('[data-plan-hour-picker]')) {
+    activePlanCreateHourPanel.value = ''
+  }
 }
 
 function buildPlanCreatePayload() {
   return {
     planName: String(planCreateForm.planName || '').trim(),
     orgId: planCreateForm.orgId || null,
-    pointId: null,
+    pointId: planCreateForm.pointSource === 'EXISTING' ? planCreateForm.pointId : null,
     pointName: String(planCreateForm.pointName || '').trim(),
     address: String(planCreateForm.address || '').trim(),
     latitude: String(planCreateForm.latitude || '').trim(),
@@ -2998,6 +3238,7 @@ function syncCurrentUser(event) {
 onMounted(async () => {
   currentUser.value = getUser() || {}
   window.addEventListener('yx-lab-user-updated', syncCurrentUser)
+  document.addEventListener('mousedown', handlePlanCreateHourOutsideClick)
   loading.value = true
   try {
     await Promise.all([refreshDashboard(), loadWorkbenchPreviewRows(), loadDictOptions()])
@@ -3011,6 +3252,7 @@ onMounted(async () => {
 
 onUnmounted(() => {
   window.removeEventListener('yx-lab-user-updated', syncCurrentUser)
+  document.removeEventListener('mousedown', handlePlanCreateHourOutsideClick)
 })
 </script>
 
@@ -4447,5 +4689,132 @@ onUnmounted(() => {
 
 .detection-split-tabs__item.is-active strong {
   font-size: 24px;
+}
+
+.plan-hour-picker {
+  position: relative;
+  width: 100%;
+}
+
+.plan-hour-picker__trigger {
+  width: 100%;
+  height: 34px;
+  padding: 0 12px;
+  border: 1px solid #cfd9e6;
+  border-radius: 6px;
+  background: #ffffff;
+  color: var(--text-main);
+  font: inherit;
+  line-height: 32px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.plan-hour-picker__trigger:hover,
+.plan-hour-picker__trigger:focus {
+  border-color: var(--brand);
+  outline: none;
+}
+
+.plan-hour-picker__trigger.is-placeholder {
+  color: #c0c4cc;
+}
+
+.plan-hour-picker__panel {
+  z-index: 4000;
+  border: 1px solid #d9e3ef;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 10px 28px rgba(31, 45, 61, 0.18);
+  overflow: hidden;
+}
+
+.plan-hour-picker__panel--floating {
+  position: fixed;
+}
+
+.plan-hour-picker__body {
+  display: grid;
+  grid-template-columns: minmax(320px, 1.2fr) minmax(300px, 1fr);
+  align-items: stretch;
+}
+
+.plan-hour-picker__body :deep(.el-date-picker) {
+  width: 100% !important;
+  box-shadow: none !important;
+}
+
+.plan-hour-picker__body :deep(.el-picker-panel__body-wrapper),
+.plan-hour-picker__body :deep(.el-picker-panel__body) {
+  min-width: 0;
+}
+
+.plan-hour-picker__hours {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  align-content: start;
+  gap: 12px;
+  padding: 18px;
+  border-left: 1px solid #eef2f6;
+}
+
+.plan-hour-picker__hours > span {
+  grid-column: 1 / -1;
+  color: var(--text-light);
+  font-size: 15px;
+  line-height: 24px;
+}
+
+.plan-hour-option {
+  height: 38px;
+  border: 0;
+  border-radius: 5px;
+  background: #ffffff;
+  color: var(--text-sub);
+  font-size: 16px;
+  line-height: 38px;
+  cursor: pointer;
+}
+
+.plan-hour-option:hover {
+  background: var(--brand-soft);
+  color: var(--brand);
+}
+
+.plan-hour-option.is-active {
+  background: color-mix(in srgb, var(--brand) 12%, #ffffff 88%);
+  color: var(--brand);
+  font-weight: 700;
+}
+
+@media (max-width: 760px) {
+  .plan-hour-picker__body {
+    grid-template-columns: 1fr;
+  }
+
+  .plan-hour-picker__hours {
+    border-top: 1px solid #eef2f6;
+    border-left: 0;
+  }
+}
+
+.plan-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 16px;
+}
+
+.plan-form-span-2 {
+  grid-column: 1 / -1;
+}
+
+.location-picker {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.location-picker .el-input {
+  flex: 1;
 }
 </style>
