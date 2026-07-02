@@ -548,6 +548,29 @@ public class DetectionPendingFlowService {
         if (orgId == null || item == null || item.getParameterId() == null || detector == null || detector.getId() == null) {
             return;
         }
+        int maxRetries = 3;
+        for (int attempt = 0; attempt < maxRetries; attempt++) {
+            try {
+                doRememberAssignment(orgId, item, detector);
+                return;
+            } catch (org.springframework.dao.DeadlockLoserDataAccessException e) {
+                if (attempt == maxRetries - 1) {
+                    log.warn("记录分配记忆失败（死锁重试耗尽）: orgId={}, parameterId={}", orgId, item.getParameterId());
+                    return;
+                }
+                try {
+                    Thread.sleep(50 * (attempt + 1));
+                } catch (InterruptedException ignored) {
+                    Thread.currentThread().interrupt();
+                }
+            } catch (Exception e) {
+                log.warn("记录分配记忆失败: {}", e.getMessage());
+                return;
+            }
+        }
+    }
+
+    private void doRememberAssignment(Long orgId, DetectionItem item, LabUser detector) {
         DetectionAssignmentMemory memory = detectionAssignmentMemoryMapper.selectOne(new LambdaQueryWrapper<DetectionAssignmentMemory>()
                 .eq(DetectionAssignmentMemory::getOrgId, orgId)
                 .eq(DetectionAssignmentMemory::getParameterId, item.getParameterId())
