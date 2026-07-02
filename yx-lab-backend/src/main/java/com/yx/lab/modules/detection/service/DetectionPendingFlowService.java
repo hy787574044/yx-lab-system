@@ -25,6 +25,7 @@ import com.yx.lab.modules.sample.mapper.MonitoringPointMapper;
 import com.yx.lab.modules.system.entity.LabUser;
 import com.yx.lab.modules.system.mapper.LabUserMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -45,6 +46,7 @@ import java.util.stream.Collectors;
  */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class DetectionPendingFlowService {
 
     private static final String STAFF_ROLE_CODE = "STAFF";
