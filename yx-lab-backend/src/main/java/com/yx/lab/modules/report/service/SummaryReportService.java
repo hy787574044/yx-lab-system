@@ -272,7 +272,7 @@ public class SummaryReportService {
         Map<Long, MonitoringPoint> pointMap = loadMonitoringPointMap(tasks);
         Map<Long, SamplingPlan> planMap = loadSamplingPlanMap(tasks);
         List<SamplingTask> filteredTasks = tasks.stream()
-                .filter(task -> filterTaskByRegion(task, pointMap.get(task.getPointId()), regionName))
+                .filter(task -> filterTaskByRegion(task, planMap.get(task.getPlanId()), pointMap.get(task.getPointId()), regionName))
                 .filter(task -> filterTaskByPoint(task, pointName))
                 .filter(task -> filterTaskBySummaryPlanCycle(task, planMap.get(task.getPlanId()), summaryType))
                 .filter(task -> filterTaskByExpectedPeriod(task, summaryType, expectedStart, expectedEnd))
@@ -406,7 +406,7 @@ public class SummaryReportService {
         bundle.sample = sample;
         bundle.record = record;
         bundle.items = items == null ? Collections.emptyList() : items;
-        bundle.regionName = resolveRegionName(point);
+        bundle.regionName = resolveRegionName(task, plan, point, sample, record);
         bundle.expectedParameterNames = parseExpectedParameters(task.getDetectionItems());
         bundle.parameterValueMap = new LinkedHashMap<>();
         bundle.approvedParameterValueMap = new LinkedHashMap<>();
@@ -470,7 +470,7 @@ public class SummaryReportService {
         preview.setSummaryTypeLabel(getSummaryTypeLabel(summaryType));
         preview.setDailyReportType(normalizeDailyReportType(dailyReportType));
         preview.setDailyReportTypeLabel(getDailyReportTypeLabel(dailyReportType));
-        preview.setRegionName(StrUtil.blankToDefault(StrUtil.trim(regionName), DEFAULT_REGION_NAME));
+        preview.setRegionName(resolvePreviewRegionName(regionName, orgId, bundles));
         preview.setPeriodStart(periodStart);
         preview.setPeriodEnd(periodEnd);
         preview.setPeriodLabel(buildPeriodLabel(periodStart, periodEnd));
@@ -997,11 +997,11 @@ public class SummaryReportService {
         }
     }
 
-    private boolean filterTaskByRegion(SamplingTask task, MonitoringPoint point, String regionName) {
+    private boolean filterTaskByRegion(SamplingTask task, SamplingPlan plan, MonitoringPoint point, String regionName) {
         if (StrUtil.isBlank(regionName)) {
             return true;
         }
-        return containsText(resolveRegionName(point), StrUtil.trim(regionName));
+        return containsText(resolveRegionName(task, plan, point, null, null), StrUtil.trim(regionName));
     }
 
     private boolean filterTaskByPoint(SamplingTask task, String pointName) {
@@ -1065,6 +1065,70 @@ public class SummaryReportService {
             orgName = null;
         }
         return StrUtil.blankToDefault(orgName, DEFAULT_REGION_NAME);
+    }
+
+    private String resolvePreviewRegionName(String regionName, Long orgId, List<SummaryTaskBundle> bundles) {
+        String resolvedName = StrUtil.trim(regionName);
+        if (StrUtil.isNotBlank(resolvedName) && !DEFAULT_REGION_NAME.equals(resolvedName)) {
+            return resolvedName;
+        }
+        resolvedName = resolveOrgName(orgId);
+        if (StrUtil.isNotBlank(resolvedName)) {
+            return resolvedName;
+        }
+        if (bundles != null) {
+            for (SummaryTaskBundle bundle : bundles) {
+                resolvedName = bundle == null ? null : StrUtil.trim(bundle.regionName);
+                if (StrUtil.isNotBlank(resolvedName) && !DEFAULT_REGION_NAME.equals(resolvedName)) {
+                    return resolvedName;
+                }
+            }
+        }
+        return DEFAULT_REGION_NAME;
+    }
+
+    private String resolveRegionName(SamplingTask task,
+                                     SamplingPlan plan,
+                                     MonitoringPoint point,
+                                     LabSample sample,
+                                     DetectionRecord record) {
+        Long orgId = firstNonNull(
+                record == null ? null : record.getOrgId(),
+                sample == null ? null : sample.getOrgId(),
+                task == null ? null : task.getOrgId(),
+                plan == null ? null : plan.getOrgId(),
+                point == null ? null : point.getOrgId());
+        String orgName = resolveOrgName(orgId);
+        if (StrUtil.isNotBlank(orgName)) {
+            return orgName;
+        }
+        return point == null
+                ? DEFAULT_REGION_NAME
+                : StrUtil.blankToDefault(StrUtil.trim(point.getOrgName()), DEFAULT_REGION_NAME);
+    }
+
+    private Long firstNonNull(Long... values) {
+        if (values == null) {
+            return null;
+        }
+        for (Long value : values) {
+            if (value != null) {
+                return value;
+            }
+        }
+        return null;
+    }
+
+    private String resolveOrgName(Long orgId) {
+        if (orgId == null) {
+            return null;
+        }
+        try {
+            Map<Long, String> orgNameMap = orgManagementService.getOrgNameMap(Collections.singletonList(orgId));
+            return StrUtil.trim(orgNameMap.get(orgId));
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     private List<String> parseExpectedParameters(String detectionItems) {
