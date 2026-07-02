@@ -33,9 +33,6 @@ public class MonitoringPoint extends BaseEntity {
     @Schema(description = "所属机构ID")
     @TableField("org_id")
     @JsonSerialize(using = ToStringSerializer.class)
-//    @JsonSerialize(using = com.fasterxml.jackson.databind.ser.std.ToStringSerializer.class)
-//    @JSONField(serializeUsing = ToStringSerializer.class)
-    @JsonSerialize(using = ToStringSerializer.class)
     private Long orgId;
 
     @Schema(description = "所属机构名称（关联查询）")

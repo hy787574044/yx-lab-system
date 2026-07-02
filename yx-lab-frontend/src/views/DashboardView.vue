@@ -798,7 +798,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { ElButton } from 'element-plus/es/components/button/index.mjs'
 import { ElCheckbox } from 'element-plus/es/components/checkbox/index.mjs'
 import { ElDatePicker } from 'element-plus/es/components/date-picker/index.mjs'
@@ -2815,10 +2815,31 @@ async function printWorkbenchReport() {
     return
   }
   document.body.classList.add('workbench-report-printing')
-  window.print()
-  setTimeout(() => {
+
+  let cleanupTimer = 0
+  let cleaned = false
+  const cleanupPrintMode = () => {
+    if (cleaned) {
+      return
+    }
+    cleaned = true
+    window.removeEventListener('afterprint', cleanupPrintMode)
+    if (cleanupTimer) {
+      window.clearTimeout(cleanupTimer)
+    }
     document.body.classList.remove('workbench-report-printing')
-  }, 300)
+  }
+
+  window.addEventListener('afterprint', cleanupPrintMode, { once: true })
+  cleanupTimer = window.setTimeout(cleanupPrintMode, 30000)
+  await nextTick()
+
+  try {
+    window.print()
+  } catch (error) {
+    cleanupPrintMode()
+    throw error
+  }
 }
 
 function buildSummaryPreviewParams(row) {
@@ -3782,19 +3803,46 @@ onUnmounted(() => {
     visibility: hidden !important;
   }
 
+  body.workbench-report-printing .workbench-dialog__side,
+  body.workbench-report-printing .workbench-dialog__footer,
+  body.workbench-report-printing .el-dialog__header {
+    display: none !important;
+  }
+
+  body.workbench-report-printing .el-overlay,
+  body.workbench-report-printing .el-overlay-dialog,
+  body.workbench-report-printing .el-dialog,
+  body.workbench-report-printing .el-dialog__body,
+  body.workbench-report-printing .workbench-dialog,
+  body.workbench-report-printing .workbench-dialog__main {
+    position: static !important;
+    display: block !important;
+    width: auto !important;
+    max-width: none !important;
+    height: auto !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+    box-shadow: none !important;
+    transform: none !important;
+  }
+
   body.workbench-report-printing .workbench-report-preview,
   body.workbench-report-printing .workbench-report-preview * {
     visibility: visible !important;
   }
 
   body.workbench-report-printing .workbench-report-preview {
-    position: absolute !important;
-    inset: 0 auto auto 0 !important;
-    width: auto !important;
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100% !important;
     height: auto !important;
     overflow: visible !important;
     padding: 0 !important;
     background: #ffffff !important;
+    box-shadow: none !important;
   }
 
   body.workbench-report-printing .workbench-report-preview__scale {
