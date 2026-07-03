@@ -252,7 +252,7 @@
           <el-form-item label="点位坐标" required>
             <div class="location-picker">
               <el-input :model-value="formatPlanCreateCoordinateText()" readonly placeholder="请从地图选择点位" />
-              <el-button v-if="planCreateForm.pointSource === 'CUSTOM'" @click="openPlanCreateMapSelector">
+              <el-button v-if="planCreateForm.pointSource === 'CUSTOM'" @click="openPlanCreateMapDialog">
                 {{ planCreateForm.latitude && planCreateForm.longitude ? '重新选点' : '地图选点' }}
               </el-button>
             </div>
@@ -334,6 +334,24 @@
       <template #footer>
         <el-button @click="planCreateDialogVisible = false">取消</el-button>
         <el-button v-permission="'samplingPlan:write'" type="primary" :loading="planCreateSubmitting" @click="submitPlanCreateForm">保存</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog
+      v-model="planCreateMapSelectorVisible"
+      title="选择采样点位"
+      width="960px"
+      align-center
+      append-to-body
+      destroy-on-close
+    >
+      <TiandituPointSelector
+        :model-value="planCreateMapSelectorValue"
+        @update:model-value="syncPlanCreateMapSelectorValue"
+      />
+      <template #footer>
+        <el-button @click="planCreateMapSelectorVisible = false">取消</el-button>
+        <el-button type="primary" @click="confirmPlanCreateMapSelection">确认选点</el-button>
       </template>
     </el-dialog>
 
@@ -905,6 +923,7 @@ import {
   createSamplingPlanApi,
   dispatchSamplingPlanApi,
   fetchDetectionDetailApi,
+  fetchDetectionDetectorsApi,
   fetchDetectionItemsApi,
   fetchDetectionMethodOptionsApi,
   fetchDetectionParametersApi,
@@ -928,6 +947,7 @@ import {
 import DailyExternalSummaryTemplate from '../components/report/DailyExternalSummaryTemplate.vue'
 import DailyInternalSummaryTemplate from '../components/report/DailyInternalSummaryTemplate.vue'
 import HalfMonthlyTerminalSummaryTemplate from '../components/report/HalfMonthlyTerminalSummaryTemplate.vue'
+import TiandituPointSelector from '../components/TiandituPointSelector.vue'
 import WeeklyFactorySummaryTemplate from '../components/report/WeeklyFactorySummaryTemplate.vue'
 import {
   approvedDetectionStatus,
@@ -964,6 +984,9 @@ const FLOW_TYPE_REVIEW = 'REVIEW'
 const SUMMARY_TYPE_DAILY = 'DAILY'
 const SUMMARY_TYPE_WEEKLY = 'WEEKLY'
 const SUMMARY_TYPE_HALF_MONTHLY = 'HALF_MONTHLY'
+const YANZHEN_WATER_PLANT_NAME = '\u6cbf\u9547\u6c34\u5382'
+const STAFF_ROLE_CODE = 'STAFF'
+const DIRECTOR_ROLE_CODE = 'DIRECTOR'
 const router = useRouter()
 const vLoading = ElLoadingDirective
 const loading = ref(false)
@@ -980,6 +1003,7 @@ const hourOptions = Array.from({ length: 24 }, (_, index) => String(index).padSt
 const currentUser = ref(getUser() || {})
 const dispatchDialogVisible = ref(false)
 const planCreateDialogVisible = ref(false)
+const planCreateMapSelectorVisible = ref(false)
 const dashboard = ref({})
 const activeAction = ref('')
 const workbenchDialogVisible = ref(false)
@@ -1036,11 +1060,19 @@ const detectionSplitCounts = reactive({
   waitDetect: 0
 })
 
+const planCreateMapSelectorValue = reactive({
+  pointName: '',
+  address: '',
+  latitude: '',
+  longitude: ''
+})
+
 const samplingTask = ref(null)
 const loginTask = ref(null)
 
 const dispatchForm = reactive({
   planId: null,
+  orgId: '',
   samplingTime: '',
   samplerIds: [],
   samplerId: null,
@@ -1420,6 +1452,48 @@ function dedupeSamplerOptions(options) {
   return result
 }
 
+function getRoleCode(item) {
+  return String(item?.roleCode || item?.role_code || '').trim().toUpperCase()
+}
+
+function isYanzhenOrgId(orgId) {
+  const normalizedOrgId = toStableId(orgId)
+  if (!normalizedOrgId) {
+    return false
+  }
+  const option = planOrgOptions.value.find((item) => String(item.value) === normalizedOrgId)
+  return String(option?.label || '').trim() === YANZHEN_WATER_PLANT_NAME
+}
+
+function isSamplerCandidateForOrg(item, orgId) {
+  const roleCode = getRoleCode(item)
+  if (roleCode === STAFF_ROLE_CODE) {
+    return true
+  }
+  return isYanzhenOrgId(orgId) && roleCode === DIRECTOR_ROLE_CODE
+}
+
+function filterSamplerCandidates(records, orgId) {
+  return (records || []).filter((item) => isSamplerCandidateForOrg(item, orgId))
+}
+
+function getRequiredSamplerIdsForOrg(orgId) {
+  if (!isYanzhenOrgId(orgId)) {
+    return []
+  }
+  return samplerOptions.value
+    .filter((item) => getRoleCode(item) === DIRECTOR_ROLE_CODE)
+    .map((item) => getSamplerOptionId(item))
+    .filter(Boolean)
+}
+
+function includeRequiredSamplerIds(ids, orgId) {
+  return normalizeSamplerIdList([
+    ...normalizeSamplerIdList(ids),
+    ...getRequiredSamplerIdsForOrg(orgId)
+  ])
+}
+
 function ensureSelectedSamplerOptions(ids, samplerNameText) {
   const selectedIds = normalizeSamplerIdList(ids)
   if (!selectedIds.length) {
@@ -1479,6 +1553,7 @@ function resolveRowSamplerOptionIds(row) {
 
 function resetDispatchForm() {
   dispatchForm.planId = null
+  dispatchForm.orgId = ''
   dispatchForm.samplingTime = ''
   dispatchForm.samplerIds = []
   dispatchForm.samplerId = null
@@ -1503,6 +1578,8 @@ function resetPlanCreateForm() {
   planCreateForm.sampleType = ''
   planCreateForm.cycleType = dailyCycleType
   planCreateForm.remark = ''
+  planCreateMapSelectorVisible.value = false
+  syncPlanCreateMapSelectorValue(null)
 }
 
 function handlePlanCreatePointSourceChange(value) {
@@ -1546,8 +1623,34 @@ function formatPlanCreateCoordinateText() {
   return ''
 }
 
-function openPlanCreateMapSelector() {
-  ElMessage.info('地图选点功能开发中')
+function syncPlanCreateMapSelectorValue(source) {
+  planCreateMapSelectorValue.pointName = source?.pointName || ''
+  planCreateMapSelectorValue.address = source?.address || source?.pointName || ''
+  planCreateMapSelectorValue.latitude = source?.latitude || source?.x_coordinate || ''
+  planCreateMapSelectorValue.longitude = source?.longitude || source?.y_coordinate || ''
+}
+
+function openPlanCreateMapDialog() {
+  syncPlanCreateMapSelectorValue(planCreateForm)
+  planCreateMapSelectorVisible.value = true
+}
+
+function confirmPlanCreateMapSelection() {
+  if (!planCreateMapSelectorValue.latitude || !planCreateMapSelectorValue.longitude) {
+    ElMessage.warning('请先在地图上选择点位')
+    return
+  }
+  planCreateForm.address = planCreateMapSelectorValue.address || planCreateMapSelectorValue.pointName || ''
+  planCreateForm.latitude = planCreateMapSelectorValue.latitude
+  planCreateForm.longitude = planCreateMapSelectorValue.longitude
+  if (planCreateForm.pointSource === 'CUSTOM') {
+    const pointName = planCreateMapSelectorValue.pointName || planCreateMapSelectorValue.address || planCreateForm.pointName
+    planCreateForm.pointName = pointName
+    if (pointName && (!String(planCreateForm.planName || '').trim() || planCreateForm.planName === '采样计划')) {
+      planCreateForm.planName = pointName
+    }
+  }
+  planCreateMapSelectorVisible.value = false
 }
 
 function handleDispatchSamplerChange(userIds) {
@@ -1584,15 +1687,19 @@ async function loadSamplers(force = false, orgId = '') {
     const params = {
       pageNum: 1,
       pageSize: 500,
-      roleCode: 'STAFF',
       status: 1
     }
     if (normalizedOrgId) {
       params.orgId = normalizedOrgId
     }
+    if (!normalizedOrgId || !isYanzhenOrgId(normalizedOrgId)) {
+      params.roleCode = STAFF_ROLE_CODE
+    }
     const result = await fetchSystemUsersApi(params)
     const records = Array.isArray(result.records) ? result.records : []
-    samplerOptions.value = dedupeSamplerOptions(records.map(normalizeSamplerOption).filter((item) => item.id))
+    samplerOptions.value = dedupeSamplerOptions(
+      filterSamplerCandidates(records, normalizedOrgId).map(normalizeSamplerOption).filter((item) => item.id)
+    )
     samplerOptionsOrgId.value = normalizedOrgId
   } finally {
     samplerLoading.value = false
@@ -1641,6 +1748,7 @@ async function handlePlanCreateOrgChange(orgId) {
   if (orgId) {
     await loadMonitoringPoints(orgId)
     await loadSamplers(true, orgId)
+    handlePlanCreateSamplerChange(samplerOptions.value.map((item) => getSamplerOptionId(item)))
   }
 }
 
@@ -1803,10 +1911,13 @@ async function dispatchSamplingPlanFromWorkbench(row) {
   if (!row || dispatchSubmitting.value) {
     return
   }
-  await loadSamplers(true)
+  await loadPlanOrgOptions()
+  const rowOrgId = row?.orgId || row?.org_id || ''
+  await loadSamplers(true, rowOrgId)
   resetDispatchForm()
-  const samplerIds = resolveRowSamplerOptionIds(row)
+  const samplerIds = includeRequiredSamplerIds(resolveRowSamplerOptionIds(row), rowOrgId)
   dispatchForm.planId = row.id
+  dispatchForm.orgId = rowOrgId
   dispatchForm.samplingTime = row.startTime || nowDateTimeText()
   ensureSelectedSamplerOptions(samplerIds, row.samplerName || row.sampler_name)
   handleDispatchSamplerChange(samplerIds)
@@ -1904,6 +2015,8 @@ function handlePlanCreateHourOutsideClick(event) {
 }
 
 function buildPlanCreatePayload() {
+  const samplerIds = includeRequiredSamplerIds(planCreateForm.samplerIds, planCreateForm.orgId)
+  const samplerName = resolveSamplerNames(samplerIds)
   return {
     planName: String(planCreateForm.planName || '').trim(),
     orgId: planCreateForm.orgId || null,
@@ -1914,9 +2027,9 @@ function buildPlanCreatePayload() {
     longitude: String(planCreateForm.longitude || '').trim(),
     startTime: planCreateForm.startTime || '',
     endTime: planCreateForm.endTime || '',
-    samplerIds: normalizeSamplerIdList(planCreateForm.samplerIds),
-    samplerId: planCreateForm.samplerId,
-    samplerName: String(planCreateForm.samplerName || '').trim(),
+    samplerIds,
+    samplerId: samplerIds[0] || null,
+    samplerName,
     samplingType: planCreateForm.samplingType || routineSamplingType,
     sampleType: planCreateForm.sampleType || '',
     cycleType: planCreateForm.cycleType || dailyCycleType,
@@ -1955,7 +2068,9 @@ async function submitDispatchForm() {
   if (dispatchSubmitting.value) {
     return
   }
-  if (!dispatchForm.planId || !dispatchForm.samplerIds.length || !dispatchForm.samplerId || !dispatchForm.samplerName) {
+  const samplerIds = includeRequiredSamplerIds(dispatchForm.samplerIds, dispatchForm.orgId)
+  const samplerName = resolveSamplerNames(samplerIds)
+  if (!dispatchForm.planId || !samplerIds.length || !samplerIds[0] || !samplerName) {
     ElMessage.warning('派发任务前必须指定采样员')
     return
   }
@@ -1965,9 +2080,9 @@ async function submitDispatchForm() {
     await dispatchSamplingPlanApi({
       planId: dispatchForm.planId,
       samplingTime: dispatchForm.samplingTime || nowDateTimeText(),
-      samplerIds: normalizeSamplerIdList(dispatchForm.samplerIds),
-      samplerId: dispatchForm.samplerId,
-      samplerName: dispatchForm.samplerName
+      samplerIds,
+      samplerId: samplerIds[0],
+      samplerName
     })
     dispatchDialogVisible.value = false
     ElMessage.success('采样计划已派发，并已同步生成采样任务。')
@@ -2684,23 +2799,23 @@ async function loadDetectorOptions(force = false, orgId = '') {
   }
   detectorOptionsLoading.value = true
   try {
-    const params = {
-      pageNum: 1,
-      pageSize: 500,
-      roleCode: 'STAFF',
-      status: 1
-    }
-    if (normalizedOrgId) {
-      params.orgId = normalizedOrgId
-    }
-    const result = await fetchSystemUsersApi(params)
-    const records = Array.isArray(result.records) ? result.records : []
+    const params = normalizedOrgId ? { orgId: normalizedOrgId } : undefined
+    const result = await fetchDetectionDetectorsApi(params)
+    const records = Array.isArray(result) ? result : []
     detectorOptions.value = records.map(normalizeDetectorOption).filter((item) => item.id)
     detectorOptionsOrgId.value = normalizedOrgId
     detectorOptionsLoaded.value = true
   } finally {
     detectorOptionsLoading.value = false
   }
+}
+
+function getDefaultDetectorIdForOrg(orgId) {
+  if (!isYanzhenOrgId(orgId)) {
+    return null
+  }
+  const director = detectorOptions.value.find((item) => getRoleCode(item) === DIRECTOR_ROLE_CODE)
+  return director?.id || null
 }
 
 function ensureSelectedDetectorOptions(rows) {
@@ -2768,7 +2883,7 @@ async function openDetectorAssignDialog() {
   detectorAssignForm.orgId = getCommonOrgId(detectorAssignmentTargetRows.value)
   await loadDetectorOptions(true, detectorAssignForm.orgId)
   ensureSelectedDetectorOptions(detectorAssignmentTargetRows.value)
-  detectorAssignForm.detectorId = getCommonDetectorId(detectorAssignmentTargetRows.value)
+  detectorAssignForm.detectorId = getCommonDetectorId(detectorAssignmentTargetRows.value) || getDefaultDetectorIdForOrg(detectorAssignForm.orgId)
   detectorAssignDialogVisible.value = true
 }
 
@@ -2778,8 +2893,8 @@ function resetDetectorAssignDialog() {
 }
 
 async function handleDetectorAssignOrgChange(orgId) {
-  detectorAssignForm.detectorId = null
   await loadDetectorOptions(true, orgId)
+  detectorAssignForm.detectorId = getDefaultDetectorIdForOrg(orgId)
 }
 
 function getDetectorAssignSummaryTitle() {
