@@ -412,9 +412,21 @@
         v-loading="actionLoading"
       >
         <aside class="workbench-dialog__side">
-          <div v-if="activeAction !== 'detectionSplit'" class="workbench-dialog__side-head">
+          <div v-if="activeAction !== 'detectionSplit' && activeAction !== 'detection'" class="workbench-dialog__side-head">
             <span>{{ activeActionSideTitle }}</span>
             <strong>{{ actionSideCountLabel }}</strong>
+          </div>
+          <div v-if="activeAction === 'detection'" class="detection-split-tabs">
+            <button
+              v-for="tab in detectionWorkbenchTabs"
+              :key="tab.key"
+              type="button"
+              :class="['detection-split-tabs__item', { 'is-active': detectionWorkbenchActiveTab === tab.key }]"
+              @click="switchDetectionWorkbenchTab(tab.key)"
+            >
+              <span>{{ tab.label }}</span>
+              <strong>{{ tab.count }}</strong>
+            </button>
           </div>
           <div v-if="activeAction === 'detectionSplit'" class="detection-split-tabs">
             <button
@@ -1012,6 +1024,7 @@ const actionRows = ref([])
 const activeRow = ref(null)
 const detectionSplitPlanKeyword = ref('')
 const detectionSplitActiveTab = ref('waitAssign')
+const detectionWorkbenchActiveTab = ref('pending')
 const selectedDetectionSplitRowKeys = ref([])
 const selectedSamplingPlan = ref(null)
 const planOrgOptions = ref([])
@@ -1058,6 +1071,10 @@ const previewTotals = reactive({
 const detectionSplitCounts = reactive({
   waitAssign: 0,
   waitDetect: 0
+})
+const detectionWorkbenchCounts = reactive({
+  pending: 0,
+  mine: 0
 })
 
 const planCreateMapSelectorValue = reactive({
@@ -1156,6 +1173,29 @@ const detectionSplitTabs = computed(() => [
   { key: 'waitAssign', label: '待处理列表', count: detectionSplitCounts.waitAssign },
   { key: 'waitDetect', label: '待检测列表', count: detectionSplitCounts.waitDetect }
 ])
+
+const detectionWorkbenchTabs = computed(() => [
+  { key: 'pending', label: '待处理列表', count: detectionWorkbenchCounts.pending },
+  { key: 'mine', label: '我的待办', count: detectionWorkbenchCounts.mine }
+])
+
+async function switchDetectionWorkbenchTab(tabKey) {
+  if (detectionWorkbenchActiveTab.value === tabKey) {
+    return
+  }
+  detectionWorkbenchActiveTab.value = tabKey
+  actionLoading.value = true
+  try {
+    await loadActionRows('detection')
+    if (actionRows.value.length) {
+      await selectActionRow(actionRows.value[0])
+    } else {
+      activeRow.value = null
+    }
+  } finally {
+    actionLoading.value = false
+  }
+}
 
 async function switchDetectionSplitTab(tabKey) {
   if (detectionSplitActiveTab.value === tabKey) {
@@ -1782,7 +1822,7 @@ async function loadWorkbenchPreviewRows() {
     fetchSamplingPlansApi({ pageNum: 1, pageSize: previewPageSize, planStatus: activePlanStatus }),
     fetchSamplingTasksApi({ pageNum: 1, pageSize: previewPageSize, sampleRegisterStatus: 'UNREGISTERED' }),
     fetchSamplingTasksApi({ pageNum: 1, pageSize: previewPageSize, sampleRegisterStatus: 'UNREGISTERED' }),
-    loadWorkbenchDetectionRows(previewPageSize),
+    loadWorkbenchDetectionRows(previewPageSize, 'pending'),
     fetchDetectionsApi({ pageNum: 1, pageSize: previewPageSize, detectionStatus: reviewPendingDetectionStatus }),
     loadWorkbenchSummaryReportRows(previewPageSize)
   ])
@@ -1822,8 +1862,21 @@ async function loadWorkbenchSummaryReportRows(pageSize) {
     .slice(0, size)
 }
 
-async function loadWorkbenchDetectionRows(pageSize) {
+async function loadWorkbenchDetectionRows(pageSize, tabKey = detectionWorkbenchActiveTab.value) {
   const size = Number(pageSize || 12)
+  await loadDetectionWorkbenchCounts()
+  if (tabKey === 'mine') {
+    const mineResult = await fetchDetectionItemsApi({
+      pageNum: 1,
+      pageSize: size,
+      itemStatus: waitDetectDetectionStatus,
+      mine: true
+    })
+    return {
+      records: mergeActionRows(mineResult.records || []).sort(compareWorkbenchDetectionRows).slice(0, size),
+      total: Number(mineResult.total || 0)
+    }
+  }
   const [waitDetectResult, rejectedResult] = await Promise.all([
     fetchDetectionItemsApi({ pageNum: 1, pageSize: size, itemStatus: waitDetectDetectionStatus }),
     fetchDetectionItemsApi({ pageNum: 1, pageSize: size, itemStatus: rejectedDetectionStatus })
@@ -1838,6 +1891,16 @@ async function loadWorkbenchDetectionRows(pageSize) {
     records,
     total: Number(waitDetectResult.total || 0) + Number(rejectedResult.total || 0)
   }
+}
+
+async function loadDetectionWorkbenchCounts() {
+  const [waitDetectResult, rejectedResult, mineResult] = await Promise.all([
+    fetchDetectionItemsApi({ pageNum: 1, pageSize: 1, itemStatus: waitDetectDetectionStatus }),
+    fetchDetectionItemsApi({ pageNum: 1, pageSize: 1, itemStatus: rejectedDetectionStatus }),
+    fetchDetectionItemsApi({ pageNum: 1, pageSize: 1, itemStatus: waitDetectDetectionStatus, mine: true })
+  ])
+  detectionWorkbenchCounts.pending = Number(waitDetectResult.total || 0) + Number(rejectedResult.total || 0)
+  detectionWorkbenchCounts.mine = Number(mineResult.total || 0)
 }
 
 function compareWorkbenchDetectionRows(left, right) {
@@ -2110,6 +2173,9 @@ async function openWorkbenchAction(key, preferredRow = null) {
   if (key === 'detectionSplit') {
     detectionSplitPlanKeyword.value = ''
     detectionSplitActiveTab.value = 'waitAssign'
+  }
+  if (key === 'detection') {
+    detectionWorkbenchActiveTab.value = 'pending'
   }
   workbenchDialogVisible.value = true
   actionLoading.value = true
