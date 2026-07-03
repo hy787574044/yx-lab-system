@@ -1024,7 +1024,7 @@ const actionRows = ref([])
 const activeRow = ref(null)
 const detectionSplitPlanKeyword = ref('')
 const detectionSplitActiveTab = ref('waitAssign')
-const detectionWorkbenchActiveTab = ref('pending')
+const detectionWorkbenchActiveTab = ref('mine')
 const selectedDetectionSplitRowKeys = ref([])
 const selectedSamplingPlan = ref(null)
 const planOrgOptions = ref([])
@@ -1175,8 +1175,8 @@ const detectionSplitTabs = computed(() => [
 ])
 
 const detectionWorkbenchTabs = computed(() => [
-  { key: 'pending', label: '待处理列表', count: detectionWorkbenchCounts.pending },
-  { key: 'mine', label: '我的待办', count: detectionWorkbenchCounts.mine }
+  { key: 'mine', label: '我的待办', count: detectionWorkbenchCounts.mine },
+  { key: 'pending', label: '待处理列表', count: detectionWorkbenchCounts.pending }
 ])
 
 async function switchDetectionWorkbenchTab(tabKey) {
@@ -2175,7 +2175,7 @@ async function openWorkbenchAction(key, preferredRow = null) {
     detectionSplitActiveTab.value = 'waitAssign'
   }
   if (key === 'detection') {
-    detectionWorkbenchActiveTab.value = 'pending'
+    detectionWorkbenchActiveTab.value = 'mine'
   }
   workbenchDialogVisible.value = true
   actionLoading.value = true
