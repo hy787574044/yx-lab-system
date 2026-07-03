@@ -24,6 +24,7 @@ import com.yx.lab.modules.sample.mapper.LabSampleMapper;
 import com.yx.lab.modules.sample.mapper.MonitoringPointMapper;
 import com.yx.lab.modules.system.entity.LabUser;
 import com.yx.lab.modules.system.mapper.LabUserMapper;
+import com.yx.lab.modules.system.service.BusinessParticipantService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -49,8 +50,6 @@ import java.util.stream.Collectors;
 @Slf4j
 public class DetectionPendingFlowService {
 
-    private static final String STAFF_ROLE_CODE = "STAFF";
-
     /**
      * 按样品维度保存并发锁，避免页面派发与自动补偿同时生成重复主流程。
      */
@@ -69,6 +68,8 @@ public class DetectionPendingFlowService {
     private final MonitoringPointMapper monitoringPointMapper;
 
     private final LabUserMapper labUserMapper;
+
+    private final BusinessParticipantService businessParticipantService;
 
     private final ObjectMapper objectMapper;
 
@@ -141,8 +142,8 @@ public class DetectionPendingFlowService {
             }
             Long orgId = resolveSampleOrgId(sample);
             Map<Long, DetectionAssignmentMemory> memoryMap = loadAssignmentMemoryMap(orgId, configItems);
-            Map<Long, LabUser> memoryDetectorMap = loadMemoryDetectorMap(memoryMap);
-            LabUser fallbackDetector = findFirstEnabledStaff(orgId);
+            Map<Long, LabUser> memoryDetectorMap = loadMemoryDetectorMap(memoryMap, orgId);
+            LabUser fallbackDetector = businessParticipantService.findDefaultDetectionAssignee(orgId);
             DetectionRecord record = new DetectionRecord();
             record.setSampleId(sample.getId());
             record.setSampleNo(sample.getSampleNo());
@@ -247,14 +248,22 @@ public class DetectionPendingFlowService {
         if (parameterIds.isEmpty()) {
             return Collections.emptyMap();
         }
-        return detectionAssignmentMemoryMapper.selectList(new LambdaQueryWrapper<DetectionAssignmentMemory>()
-                        .eq(DetectionAssignmentMemory::getOrgId, orgId)
-                        .in(DetectionAssignmentMemory::getParameterId, parameterIds))
-                .stream()
-                .collect(Collectors.toMap(DetectionAssignmentMemory::getParameterId, item -> item, (left, right) -> left));
+        try {
+            return detectionAssignmentMemoryMapper.selectList(new LambdaQueryWrapper<DetectionAssignmentMemory>()
+                            .eq(DetectionAssignmentMemory::getOrgId, orgId)
+                            .in(DetectionAssignmentMemory::getParameterId, parameterIds))
+                    .stream()
+                    .collect(Collectors.toMap(DetectionAssignmentMemory::getParameterId, item -> item, (left, right) -> left));
+        } catch (Exception ex) {
+            if (isMissingAssignmentMemoryTable(ex)) {
+                log.warn("检测分配记忆表不存在，已跳过记忆分配读取: {}", ex.getMessage());
+                return Collections.emptyMap();
+            }
+            throw ex;
+        }
     }
 
-    private Map<Long, LabUser> loadMemoryDetectorMap(Map<Long, DetectionAssignmentMemory> memoryMap) {
+    private Map<Long, LabUser> loadMemoryDetectorMap(Map<Long, DetectionAssignmentMemory> memoryMap, Long orgId) {
         if (memoryMap == null || memoryMap.isEmpty()) {
             return Collections.emptyMap();
         }
@@ -268,22 +277,10 @@ public class DetectionPendingFlowService {
         }
         return labUserMapper.selectList(new LambdaQueryWrapper<LabUser>()
                         .in(LabUser::getId, detectorIds)
-                        .eq(LabUser::getStatus, 1)
-                        .eq(LabUser::getRoleCode, STAFF_ROLE_CODE))
+                        .eq(LabUser::getStatus, 1))
                 .stream()
+                .filter(user -> businessParticipantService.isDetectionAssignee(user, orgId))
                 .collect(Collectors.toMap(LabUser::getId, user -> user, (left, right) -> left));
-    }
-
-    private LabUser findFirstEnabledStaff(Long orgId) {
-        if (orgId == null) {
-            return null;
-        }
-        return labUserMapper.selectOne(new LambdaQueryWrapper<LabUser>()
-                .eq(LabUser::getOrgId, orgId)
-                .eq(LabUser::getStatus, 1)
-                .eq(LabUser::getRoleCode, STAFF_ROLE_CODE)
-                .orderByAsc(LabUser::getId)
-                .last("limit 1"));
     }
 
     private LabUser resolveInitialDetector(Long orgId,
@@ -291,21 +288,24 @@ public class DetectionPendingFlowService {
                                            Map<Long, DetectionAssignmentMemory> memoryMap,
                                            Map<Long, LabUser> memoryDetectorMap,
                                            LabUser fallbackDetector) {
+        if (businessParticipantService.isYanzhenWaterPlant(orgId)
+                && fallbackDetector != null
+                && StrUtil.equalsIgnoreCase(BusinessParticipantService.DIRECTOR_ROLE_CODE, fallbackDetector.getRoleCode())
+                && isUsableDetectionAssignee(fallbackDetector, orgId)) {
+            return fallbackDetector;
+        }
         DetectionAssignmentMemory memory = memoryMap == null ? null : memoryMap.get(parameterId);
         if (memory != null && memory.getDetectorId() != null) {
             LabUser detector = memoryDetectorMap == null ? null : memoryDetectorMap.get(memory.getDetectorId());
-            if (isUsableOrgStaff(detector, orgId)) {
+            if (isUsableDetectionAssignee(detector, orgId)) {
                 return detector;
             }
         }
-        return isUsableOrgStaff(fallbackDetector, orgId) ? fallbackDetector : null;
+        return isUsableDetectionAssignee(fallbackDetector, orgId) ? fallbackDetector : null;
     }
 
-    private boolean isUsableOrgStaff(LabUser user, Long orgId) {
-        if (user == null || !Integer.valueOf(1).equals(user.getStatus()) || !STAFF_ROLE_CODE.equalsIgnoreCase(user.getRoleCode())) {
-            return false;
-        }
-        return orgId == null || orgId.equals(user.getOrgId());
+    private boolean isUsableDetectionAssignee(LabUser user, Long orgId) {
+        return businessParticipantService.isDetectionAssignee(user, orgId);
     }
 
     /**
@@ -393,7 +393,10 @@ public class DetectionPendingFlowService {
         }
 
         LabSample sample = record.getSampleId() == null ? null : labSampleMapper.selectById(record.getSampleId());
-        Long orgId = resolveSampleOrgId(sample);
+        Long orgId = sample == null ? null : resolveSampleOrgId(sample);
+        if (orgId == null) {
+            orgId = record.getOrgId();
+        }
         Map<Long, DetectionItem> itemMap = items.stream()
                 .collect(Collectors.toMap(DetectionItem::getId, item -> item));
         List<Long> detectorIds = command.getItems().stream()
@@ -403,7 +406,7 @@ public class DetectionPendingFlowService {
                 .collect(Collectors.toList());
 
         // 子流程支持逐项派人或清空人员，主流程状态会根据全部子流程重新汇总。
-        Map<Long, LabUser> detectorMap = loadDetectors(detectorIds);
+        Map<Long, LabUser> detectorMap = loadDetectors(detectorIds, orgId);
         for (DetectionItemAssignCommand itemCommand : command.getItems()) {
             DetectionItem item = itemMap.get(itemCommand.getItemId());
             if (item == null) {
@@ -423,7 +426,7 @@ public class DetectionPendingFlowService {
                 if (detector == null) {
                     throw new BusinessException("检测员不存在或已停用：" + itemCommand.getDetectorId());
                 }
-                if (orgId != null && !orgId.equals(detector.getOrgId())) {
+                if (!businessParticipantService.isDetectionAssignee(detector, orgId)) {
                     throw new BusinessException("检测人员不属于当前样品所属机构，不能分配");
                 }
                 item.setDetectorId(detector.getId());
@@ -519,15 +522,15 @@ public class DetectionPendingFlowService {
         detectionRecordMapper.updateById(record);
     }
 
-    private Map<Long, LabUser> loadDetectors(List<Long> detectorIds) {
+    private Map<Long, LabUser> loadDetectors(List<Long> detectorIds, Long orgId) {
         if (detectorIds == null || detectorIds.isEmpty()) {
             return Collections.emptyMap();
         }
         return labUserMapper.selectList(new LambdaQueryWrapper<LabUser>()
                         .in(LabUser::getId, detectorIds)
-                        .eq(LabUser::getStatus, 1)
-                        .eq(LabUser::getRoleCode, STAFF_ROLE_CODE))
+                        .eq(LabUser::getStatus, 1))
                 .stream()
+                .filter(user -> businessParticipantService.isDetectionAssignee(user, orgId))
                 .collect(Collectors.toMap(LabUser::getId, user -> user));
     }
 
@@ -566,6 +569,10 @@ public class DetectionPendingFlowService {
                     Thread.currentThread().interrupt();
                 }
             } catch (Exception e) {
+                if (isMissingAssignmentMemoryTable(e)) {
+                    log.warn("检测分配记忆表不存在，已跳过记忆分配写入: {}", e.getMessage());
+                    return;
+                }
                 log.warn("记录分配记忆失败: {}", e.getMessage());
                 return;
             }
@@ -591,6 +598,23 @@ public class DetectionPendingFlowService {
         memory.setDetectorId(detector.getId());
         memory.setDetectorName(resolveDetectorName(detector));
         detectionAssignmentMemoryMapper.updateById(memory);
+    }
+
+    private boolean isMissingAssignmentMemoryTable(Throwable throwable) {
+        Throwable current = throwable;
+        while (current != null) {
+            String message = current.getMessage();
+            String normalized = message == null ? "" : message.toLowerCase();
+            if (normalized.contains("lab_detection_assignment_memory")
+                    && (normalized.contains("doesn't exist")
+                    || normalized.contains("does not exist")
+                    || normalized.contains("not exist")
+                    || normalized.contains("\u4e0d\u5b58\u5728"))) {
+                return true;
+            }
+            current = current.getCause();
+        }
+        return false;
     }
 
     private List<SampleDetectionConfigItem> parseSampleConfigItems(String snapshotText) {
@@ -642,8 +666,8 @@ public class DetectionPendingFlowService {
             return configItem;
         }).collect(Collectors.toList());
         Map<Long, DetectionAssignmentMemory> memoryMap = loadAssignmentMemoryMap(orgId, configItems);
-        Map<Long, LabUser> memoryDetectorMap = loadMemoryDetectorMap(memoryMap);
-        LabUser fallbackDetector = findFirstEnabledStaff(orgId);
+        Map<Long, LabUser> memoryDetectorMap = loadMemoryDetectorMap(memoryMap, orgId);
+        LabUser fallbackDetector = businessParticipantService.findDefaultDetectionAssignee(orgId);
         boolean changed = false;
         for (DetectionItem item : items) {
             if (item.getDetectorId() != null

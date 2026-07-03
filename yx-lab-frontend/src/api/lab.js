@@ -218,7 +218,7 @@ export const deleteDetectionParameterApi = (id) => request.post(`/api/detectionC
  *
  * @returns {Promise<any>} 检测员列表。
  */
-export const fetchDetectionDetectorsApi = () => request.get('/api/detectionConfig/detectors')
+export const fetchDetectionDetectorsApi = (params) => request.get('/api/detectionConfig/detectors', { params })
 /**
  * 获取检测项目组分页。
  *

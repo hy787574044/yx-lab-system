@@ -270,6 +270,7 @@ CREATE TABLE lab_sample (
     sample_total_volume VARCHAR(64),
     sample_bottle_count VARCHAR(32),
     sampler_id BIGINT,
+    sampler_ids VARCHAR(255),
     sampler_name VARCHAR(64),
     weather VARCHAR(32),
     storage_condition VARCHAR(64),

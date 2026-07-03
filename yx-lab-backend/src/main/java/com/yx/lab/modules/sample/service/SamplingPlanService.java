@@ -24,6 +24,7 @@ import com.yx.lab.modules.sample.mapper.MonitoringPointMapper;
 import com.yx.lab.modules.sample.mapper.SamplingPlanMapper;
 import com.yx.lab.modules.sample.mapper.SamplingTaskMapper;
 import com.yx.lab.modules.sample.vo.StatusCountVO;
+import com.yx.lab.modules.system.service.BusinessParticipantService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -60,6 +61,8 @@ public class SamplingPlanService {
     private final DataScopeHelper dataScopeHelper;
 
     private final SampleNoGeneratorService sampleNoGeneratorService;
+
+    private final BusinessParticipantService businessParticipantService;
 
     private final ConcurrentMap<Long, ReentrantLock> dispatchLocks = new ConcurrentHashMap<>();
 
@@ -375,8 +378,12 @@ public class SamplingPlanService {
                 return false;
             }
             List<Long> targetSamplerIds = normalizeSamplerIds(samplerIds, samplerId);
-            if (!targetSamplerIds.isEmpty()) {
-                applySamplerSnapshot(plan, targetSamplerIds, samplerName);
+            if (targetSamplerIds.isEmpty()) {
+                targetSamplerIds = resolvePlanSamplerIds(plan);
+            }
+            List<Long> effectiveSamplerIds = businessParticipantService.includeRequiredSamplers(plan.getOrgId(), targetSamplerIds);
+            if (!effectiveSamplerIds.isEmpty()) {
+                applySamplerSnapshot(plan, effectiveSamplerIds, StrUtil.blankToDefault(StrUtil.trim(samplerName), plan.getSamplerName()));
                 samplingPlanMapper.updateById(plan);
             }
             return dispatchPlanTask(plan, samplingTime, manualDispatch);
@@ -813,14 +820,46 @@ public class SamplingPlanService {
     }
 
     private void applySamplerSnapshot(SamplingPlan plan, List<Long> samplerIds, String samplerName) {
-        List<Long> ids = normalizeSamplerIds(samplerIds, null);
+        List<Long> ids = businessParticipantService.includeRequiredSamplers(
+                plan == null ? null : plan.getOrgId(),
+                normalizeSamplerIds(samplerIds, null));
         plan.setSamplerId(ids.isEmpty() ? null : ids.get(0));
         plan.setSamplerIds(ids.isEmpty() ? null : "," + ids.stream().map(String::valueOf).collect(Collectors.joining(",")) + ",");
-        plan.setSamplerName(StrUtil.trim(samplerName));
+        plan.setSamplerName(businessParticipantService.resolveUserNames(ids, samplerName));
     }
 
     private String wrapSamplerId(Long samplerId) {
         return samplerId == null ? null : "," + samplerId + ",";
+    }
+
+    private List<Long> resolvePlanSamplerIds(SamplingPlan plan) {
+        if (plan == null) {
+            return Collections.emptyList();
+        }
+        List<Long> ids = parseSamplerIds(plan.getSamplerIds());
+        if (ids.isEmpty() && plan.getSamplerId() != null && plan.getSamplerId() > 0) {
+            ids = Collections.singletonList(plan.getSamplerId());
+        }
+        return ids;
+    }
+
+    private List<Long> parseSamplerIds(String samplerIdsText) {
+        if (StrUtil.isBlank(samplerIdsText)) {
+            return Collections.emptyList();
+        }
+        return StrUtil.split(samplerIdsText, ',').stream()
+                .map(StrUtil::trim)
+                .filter(StrUtil::isNotBlank)
+                .map(text -> {
+                    try {
+                        return Long.valueOf(text);
+                    } catch (NumberFormatException ex) {
+                        return null;
+                    }
+                })
+                .filter(id -> id != null && id > 0)
+                .distinct()
+                .collect(Collectors.toList());
     }
 
     private String generateTaskNo() {

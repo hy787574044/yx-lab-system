@@ -1466,9 +1466,13 @@ function isYanzhenOrgId(orgId) {
 }
 
 function isSamplerCandidateForOrg(item, orgId) {
+  const normalizedOrgId = toStableId(orgId)
   const roleCode = getRoleCode(item)
   if (roleCode === STAFF_ROLE_CODE) {
-    return true
+    if (!normalizedOrgId) {
+      return true
+    }
+    return toStableId(item?.orgId ?? item?.org_id) === normalizedOrgId
   }
   return isYanzhenOrgId(orgId) && roleCode === DIRECTOR_ROLE_CODE
 }
@@ -1684,19 +1688,26 @@ async function loadSamplers(force = false, orgId = '') {
   }
   samplerLoading.value = true
   try {
-    const params = {
+    const staffParams = {
       pageNum: 1,
       pageSize: 500,
+      roleCode: STAFF_ROLE_CODE,
       status: 1
     }
     if (normalizedOrgId) {
-      params.orgId = normalizedOrgId
+      staffParams.orgId = normalizedOrgId
     }
-    if (!normalizedOrgId || !isYanzhenOrgId(normalizedOrgId)) {
-      params.roleCode = STAFF_ROLE_CODE
+    const requests = [fetchSystemUsersApi(staffParams)]
+    if (isYanzhenOrgId(normalizedOrgId)) {
+      requests.push(fetchSystemUsersApi({
+        pageNum: 1,
+        pageSize: 500,
+        roleCode: DIRECTOR_ROLE_CODE,
+        status: 1
+      }))
     }
-    const result = await fetchSystemUsersApi(params)
-    const records = Array.isArray(result.records) ? result.records : []
+    const results = await Promise.all(requests)
+    const records = results.flatMap((result) => Array.isArray(result.records) ? result.records : [])
     samplerOptions.value = dedupeSamplerOptions(
       filterSamplerCandidates(records, normalizedOrgId).map(normalizeSamplerOption).filter((item) => item.id)
     )

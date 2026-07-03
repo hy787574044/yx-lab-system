@@ -1270,6 +1270,9 @@ import {
 
 const route = useRoute()
 const FLOW_TYPE_REVIEW = 'REVIEW'
+const YANZHEN_WATER_PLANT_NAME = '\u6cbf\u9547\u6c34\u5382'
+const STAFF_ROLE_CODE = 'STAFF'
+const DIRECTOR_ROLE_CODE = 'DIRECTOR'
 
 const planQuery = reactive({
   keyword: '',
@@ -2323,7 +2326,7 @@ async function loadSamplers(force = false) {
     const result = await fetchSystemUsersApi({
       pageNum: 1,
       pageSize: 500,
-      roleCode: 'STAFF',
+      roleCode: STAFF_ROLE_CODE,
       status: 1
     })
     const records = Array.isArray(result.records) ? result.records : []
@@ -2337,14 +2340,14 @@ function handleSamplerDropdownVisible(visible) {
   if (visible) {
     // 如果已选择机构，按机构加载人员；否则加载所有人员
     if (planForm.orgId) {
-      loadSamplersByOrg(planForm.orgId)
+      loadSamplersByOrg(planForm.orgId, false)
     } else {
       loadSamplers(true)
     }
   }
 }
 
-async function loadSamplersByOrg(orgId) {
+async function loadSamplersByOrg(orgId, applyToPlanForm = true) {
   const normalizedOrgId = String(orgId || '').trim()
   if (!normalizedOrgId) {
     samplerOptions.value = []
@@ -2352,16 +2355,29 @@ async function loadSamplersByOrg(orgId) {
   }
   samplerLoading.value = true
   try {
-    const result = await fetchSystemUsersApi({
+    const staffParams = {
       pageNum: 1,
       pageSize: 500,
       orgId: normalizedOrgId,
+      roleCode: STAFF_ROLE_CODE,
       status: 1
-    })
-    const records = Array.isArray(result.records) ? result.records : []
-    samplerOptions.value = dedupeSamplerOptions(records.map(normalizeSamplerOption).filter((item) => item.id))
+    }
+    const requests = [fetchSystemUsersApi(staffParams)]
+    if (isYanzhenOrgId(normalizedOrgId)) {
+      requests.push(fetchSystemUsersApi({
+        pageNum: 1,
+        pageSize: 500,
+        roleCode: DIRECTOR_ROLE_CODE,
+        status: 1
+      }))
+    }
+    const results = await Promise.all(requests)
+    const records = results.flatMap((result) => Array.isArray(result.records) ? result.records : [])
+    samplerOptions.value = dedupeSamplerOptions(
+      filterSamplerCandidates(records, normalizedOrgId).map(normalizeSamplerOption).filter((item) => item.id)
+    )
     // 自动选中所有人员（如果只有一个则选中，多个则全部选中）
-    if (samplerOptions.value.length > 0) {
+    if (applyToPlanForm && samplerOptions.value.length > 0) {
       const samplerIds = samplerOptions.value.map((item) => getSamplerOptionId(item))
       const samplerNames = samplerOptions.value.map((item) => getSamplerDisplayName(item)).filter(Boolean)
       planForm.samplerIds = samplerIds
@@ -2458,6 +2474,52 @@ function dedupeSamplerOptions(options) {
     result.push(item)
   })
   return result
+}
+
+function getRoleCode(item) {
+  return String(item?.roleCode || item?.role_code || '').trim().toUpperCase()
+}
+
+function isYanzhenOrgId(orgId) {
+  const normalizedOrgId = String(orgId || '').trim()
+  if (!normalizedOrgId) {
+    return false
+  }
+  const option = orgOptions.value.find((item) => String(item.value) === normalizedOrgId)
+  return String(option?.label || '').trim() === YANZHEN_WATER_PLANT_NAME
+}
+
+function isSamplerCandidateForOrg(item, orgId) {
+  const normalizedOrgId = String(orgId || '').trim()
+  const roleCode = getRoleCode(item)
+  if (roleCode === STAFF_ROLE_CODE) {
+    if (!normalizedOrgId) {
+      return true
+    }
+    return String(item?.orgId || item?.org_id || '').trim() === normalizedOrgId
+  }
+  return isYanzhenOrgId(orgId) && roleCode === DIRECTOR_ROLE_CODE
+}
+
+function filterSamplerCandidates(records, orgId) {
+  return (records || []).filter((item) => isSamplerCandidateForOrg(item, orgId))
+}
+
+function getRequiredSamplerIdsForOrg(orgId) {
+  if (!isYanzhenOrgId(orgId)) {
+    return []
+  }
+  return samplerOptions.value
+    .filter((item) => getRoleCode(item) === DIRECTOR_ROLE_CODE)
+    .map((item) => getSamplerOptionId(item))
+    .filter(Boolean)
+}
+
+function includeRequiredSamplerIds(ids, orgId) {
+  return normalizeSamplerIdList([
+    ...normalizeSamplerIdList(ids),
+    ...getRequiredSamplerIdsForOrg(orgId)
+  ])
 }
 
 function ensureSelectedSamplerOptions(ids, samplerNameText) {
@@ -2570,6 +2632,12 @@ function handleDispatchSamplerChange(userIds) {
   dispatchForm.samplerIds = ids
   dispatchForm.samplerId = ids[0] || null
   dispatchForm.samplerName = resolveSamplerNames(ids)
+}
+
+function getDispatchPlanOrgId() {
+  const planId = String(dispatchForm.planId || '')
+  const plan = plans.value.find((item) => String(item.id) === planId)
+  return plan?.orgId || plan?.org_id || ''
 }
 
 function getPlanDateTime(prefix) {
@@ -2730,12 +2798,12 @@ async function openPlanEditDialog(row) {
     planForm.planName = savedPlanName || planForm.planName
     // 根据机构加载人员
     if (planForm.orgId) {
-      await loadSamplersByOrg(planForm.orgId)
+      await loadSamplersByOrg(planForm.orgId, false)
       ensureSelectedSamplerOptions(planForm.samplerIds, planForm.samplerName)
     }
   } else if (planForm.orgId) {
     // 手工填写点位但有机构时，也需要加载该机构下的人员
-    await loadSamplersByOrg(planForm.orgId)
+    await loadSamplersByOrg(planForm.orgId, false)
     ensureSelectedSamplerOptions(planForm.samplerIds, planForm.samplerName)
   }
   planDialogVisible.value = true
@@ -2832,6 +2900,8 @@ async function loadMonitoringPointForEdit(row) {
 }
 
 function buildPlanPayload() {
+  const samplerIds = includeRequiredSamplerIds(planForm.samplerIds, planForm.orgId)
+  const samplerName = resolveSamplerNames(samplerIds)
   return {
     planName: planForm.planName?.trim() || '',
     orgId: planForm.orgId || null,
@@ -2842,9 +2912,9 @@ function buildPlanPayload() {
     longitude: planForm.longitude?.trim() || '',
     startTime: planForm.startTime || '',
     endTime: planForm.endTime || '',
-    samplerIds: normalizeSamplerIdList(planForm.samplerIds),
-    samplerId: planForm.samplerId,
-    samplerName: planForm.samplerName?.trim() || '',
+    samplerIds,
+    samplerId: samplerIds[0] || planForm.samplerId,
+    samplerName: samplerName || planForm.samplerName?.trim() || '',
     samplingType: planForm.samplingType || routineSamplingType,
     sampleType: planForm.sampleType || '',
     cycleType: planForm.cycleType || dailyCycleType,
@@ -2905,11 +2975,16 @@ async function openDispatchDialog(row) {
   if (dispatchSubmitting.value) {
     return
   }
-  await loadSamplers(true)
+  const rowOrgId = row?.orgId || row?.org_id || ''
+  if (rowOrgId) {
+    await loadSamplersByOrg(rowOrgId, false)
+  } else {
+    await loadSamplers(true)
+  }
   resetDispatchForm()
   dispatchForm.planId = row.id
   dispatchForm.samplingTime = row.startTime || dayjs().format('YYYY-MM-DD HH:mm:ss')
-  const samplerIds = resolveRowSamplerOptionIds(row)
+  const samplerIds = includeRequiredSamplerIds(resolveRowSamplerOptionIds(row), rowOrgId)
   ensureSelectedSamplerOptions(samplerIds, row.samplerName || row.sampler_name)
   handleDispatchSamplerChange(samplerIds)
   dispatchDialogVisible.value = true
@@ -2919,7 +2994,9 @@ async function submitDispatchForm() {
   if (dispatchSubmitting.value) {
     return
   }
-  if (!dispatchForm.planId || !dispatchForm.samplerIds.length || !dispatchForm.samplerId || !dispatchForm.samplerName) {
+  const samplerIds = includeRequiredSamplerIds(dispatchForm.samplerIds, getDispatchPlanOrgId())
+  const samplerName = resolveSamplerNames(samplerIds)
+  if (!dispatchForm.planId || !samplerIds.length || !samplerIds[0] || !samplerName) {
     ElMessage.warning('派发任务前必须指定采样员')
     return
   }
@@ -2928,9 +3005,9 @@ async function submitDispatchForm() {
     await dispatchSamplingPlanApi({
       planId: dispatchForm.planId,
       samplingTime: dispatchForm.samplingTime || dayjs().format('YYYY-MM-DD HH:mm:ss'),
-      samplerIds: normalizeSamplerIdList(dispatchForm.samplerIds),
-      samplerId: dispatchForm.samplerId,
-      samplerName: dispatchForm.samplerName
+      samplerIds,
+      samplerId: samplerIds[0],
+      samplerName
     })
     dispatchDialogVisible.value = false
     ElMessage.success('采样计划已派发，并已同步生成采样任务。')

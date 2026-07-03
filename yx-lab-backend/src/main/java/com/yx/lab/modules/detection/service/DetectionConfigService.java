@@ -48,6 +48,7 @@ import com.yx.lab.modules.detection.vo.DetectionParameterMethodBindingVO;
 import com.yx.lab.modules.detection.vo.InstrumentModelOptionVO;
 import com.yx.lab.modules.system.entity.LabUser;
 import com.yx.lab.modules.system.mapper.LabUserMapper;
+import com.yx.lab.modules.system.service.BusinessParticipantService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -89,6 +90,8 @@ public class DetectionConfigService {
     private final DetectionItemMapper detectionItemMapper;
 
     private final LabUserMapper labUserMapper;
+
+    private final BusinessParticipantService businessParticipantService;
 
     private final InstrumentMapper instrumentMapper;
 
@@ -145,12 +148,8 @@ public class DetectionConfigService {
      *
      * @return 检测员选项列表
      */
-    public List<DetectionDetectorOptionVO> detectorOptions() {
-        return labUserMapper.selectList(new LambdaQueryWrapper<LabUser>()
-                        .eq(LabUser::getStatus, 1)
-                        .eq(LabUser::getRoleCode, STAFF_ROLE_CODE)
-                        .orderByAsc(LabUser::getRealName)
-                        .orderByAsc(LabUser::getUsername))
+    public List<DetectionDetectorOptionVO> detectorOptions(Long orgId) {
+        return businessParticipantService.listDetectionCandidates(orgId)
                 .stream()
                 .map(this::toDetectorOption)
                 .collect(Collectors.toList());

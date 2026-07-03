@@ -91,6 +91,10 @@ public class LabSample extends BaseEntity {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long samplerId;
 
+    @Schema(description = "采样员ID集合")
+    @TableField("sampler_ids")
+    private String samplerIds;
+
     @Schema(description = "采样员名称")
     @TableField("sampler_name")
     private String samplerName;

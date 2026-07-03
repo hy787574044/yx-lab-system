@@ -38,6 +38,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.Valid;
@@ -148,8 +149,8 @@ public class DetectionConfigController {
      */
     @GetMapping("/detectors")
     @Operation(summary = "获取检测员选项")
-    public ApiResponse<List<DetectionDetectorOptionVO>> detectorOptions() {
-        return ApiResponse.success(detectionConfigService.detectorOptions());
+    public ApiResponse<List<DetectionDetectorOptionVO>> detectorOptions(@RequestParam(required = false) Long orgId) {
+        return ApiResponse.success(detectionConfigService.detectorOptions(orgId));
     }
 
     /**

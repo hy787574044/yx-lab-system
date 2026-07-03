@@ -71,20 +71,20 @@ public class LabSampleService {
      * @return 样品分页结果
      */
     public PageResult<LabSample> page(LabSampleQuery query) {
-        Page<LabSample> page = labSampleMapper.selectPage(
-                PageUtils.buildPage(query),
-                new LambdaQueryWrapper<LabSample>()
-                        .and(StrUtil.isNotBlank(query.getKeyword()), wrapper -> wrapper
-                                .like(LabSample::getSampleNo, query.getKeyword())
-                                .or()
-                                .like(LabSample::getPointName, query.getKeyword()))
-                        .eq(StrUtil.isNotBlank(query.getSampleStatus()), LabSample::getSampleStatus, query.getSampleStatus())
-                        .eq(StrUtil.isNotBlank(query.getSampleType()), LabSample::getSampleType, query.getSampleType())
-                        .eq(StrUtil.isNotBlank(query.getSampleSourceMethod()), LabSample::getSampleSourceMethod, query.getSampleSourceMethod())
-                        .eq(query.getOrgId() != null, LabSample::getOrgId, query.getOrgId())
-                        .eq(resolveScopedSamplerId() != null, LabSample::getSamplerId, resolveScopedSamplerId())
-                        .eq(dataScopeHelper.onlySelfScope(), LabSample::getCreatedBy, dataScopeHelper.currentUserId())
-                        .orderByDesc(LabSample::getCreatedTime));
+        Long scopedSamplerId = resolveScopedSamplerId();
+        LambdaQueryWrapper<LabSample> wrapper = new LambdaQueryWrapper<LabSample>()
+                .and(StrUtil.isNotBlank(query.getKeyword()), item -> item
+                        .like(LabSample::getSampleNo, query.getKeyword())
+                        .or()
+                        .like(LabSample::getPointName, query.getKeyword()))
+                .eq(StrUtil.isNotBlank(query.getSampleStatus()), LabSample::getSampleStatus, query.getSampleStatus())
+                .eq(StrUtil.isNotBlank(query.getSampleType()), LabSample::getSampleType, query.getSampleType())
+                .eq(StrUtil.isNotBlank(query.getSampleSourceMethod()), LabSample::getSampleSourceMethod, query.getSampleSourceMethod())
+                .eq(query.getOrgId() != null, LabSample::getOrgId, query.getOrgId())
+                .eq(dataScopeHelper.onlySelfScope(), LabSample::getCreatedBy, dataScopeHelper.currentUserId())
+                .orderByDesc(LabSample::getCreatedTime);
+        applySampleSamplerScope(wrapper, scopedSamplerId);
+        Page<LabSample> page = labSampleMapper.selectPage(PageUtils.buildPage(query), wrapper);
         page.getRecords().forEach(this::enrichSampleDetectionConfigSnapshotForView);
         return new PageResult<>(page.getTotal(), page.getRecords());
     }
@@ -115,10 +115,11 @@ public class LabSampleService {
     }
 
     private Long countSamplesByStatus(String sampleStatus) {
-        Long count = labSampleMapper.selectCount(new LambdaQueryWrapper<LabSample>()
+        LambdaQueryWrapper<LabSample> wrapper = new LambdaQueryWrapper<LabSample>()
                 .eq(StrUtil.isNotBlank(sampleStatus), LabSample::getSampleStatus, sampleStatus)
-                .eq(resolveScopedSamplerId() != null, LabSample::getSamplerId, resolveScopedSamplerId())
-                .eq(dataScopeHelper.onlySelfScope(), LabSample::getCreatedBy, dataScopeHelper.currentUserId()));
+                .eq(dataScopeHelper.onlySelfScope(), LabSample::getCreatedBy, dataScopeHelper.currentUserId());
+        applySampleSamplerScope(wrapper, resolveScopedSamplerId());
+        Long count = labSampleMapper.selectCount(wrapper);
         return count == null ? 0L : count.longValue();
     }
 
@@ -184,7 +185,9 @@ public class LabSampleService {
         sample.setSamplingTime(command.getSamplingTime());
         sample.setSampleTotalVolume(task.getSampleTotalVolume());
         sample.setSampleBottleCount(task.getSampleBottleCount());
-        sample.setSamplerId(resolveSamplerId(command, task, currentUser));
+        Long resolvedSamplerId = resolveSamplerId(command, task, currentUser);
+        sample.setSamplerId(resolvedSamplerId);
+        sample.setSamplerIds(resolveSamplerIds(task, resolvedSamplerId));
         sample.setSamplerName(resolveSamplerName(command, task, currentUser));
         sample.setWeather(command.getWeather());
         sample.setStorageCondition(command.getStorageCondition());
@@ -679,16 +682,26 @@ public class LabSampleService {
     }
 
     private String resolveSamplerName(SampleLoginCommand command, SamplingTask task, CurrentUser currentUser) {
-        if (!isAdmin(currentUser)) {
-            return StrUtil.isNotBlank(currentUser.getRealName()) ? currentUser.getRealName() : currentUser.getUsername();
+        if (task != null && StrUtil.isNotBlank(task.getSamplerName())) {
+            return task.getSamplerName();
         }
         if (isSamplerAssigned(task, command.getSamplerId())) {
             return command.getSamplerName();
         }
-        if (task != null && StrUtil.isNotBlank(task.getSamplerName())) {
-            return task.getSamplerName();
+        if (!isAdmin(currentUser)) {
+            return StrUtil.isNotBlank(currentUser.getRealName()) ? currentUser.getRealName() : currentUser.getUsername();
         }
         return command.getSamplerName();
+    }
+
+    private String resolveSamplerIds(SamplingTask task, Long samplerId) {
+        if (task != null && StrUtil.isNotBlank(task.getSamplerIds())) {
+            return task.getSamplerIds();
+        }
+        if (samplerId != null && samplerId > 0) {
+            return "," + samplerId + ",";
+        }
+        return null;
     }
 
     private boolean isSamplerAssigned(SamplingTask task, Long samplerId) {
@@ -718,6 +731,22 @@ public class LabSampleService {
         return Arrays.stream(normalized.split(","))
                 .map(StrUtil::trim)
                 .anyMatch(target::equals);
+    }
+
+    private void applySampleSamplerScope(LambdaQueryWrapper<LabSample> wrapper, Long samplerId) {
+        if (wrapper == null || samplerId == null) {
+            return;
+        }
+        wrapper.and(item -> item
+                .eq(LabSample::getSamplerId, samplerId)
+                .or()
+                .eq(LabSample::getSamplerIds, String.valueOf(samplerId))
+                .or()
+                .like(LabSample::getSamplerIds, "," + samplerId + ",")
+                .or()
+                .likeRight(LabSample::getSamplerIds, samplerId + ",")
+                .or()
+                .likeLeft(LabSample::getSamplerIds, "," + samplerId));
     }
 
     private boolean isAdmin(CurrentUser currentUser) {

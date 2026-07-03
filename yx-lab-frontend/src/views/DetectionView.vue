@@ -505,6 +505,7 @@ const total = ref(0)
 let loadDataVersion = 0
 const detectorOptions = ref([])
 const detectorOptionsLoaded = ref(false)
+const detectorOptionsOrgId = ref('')
 const detectorKeyword = ref('')
 const activeStatKey = ref('all')
 const summary = reactive({
@@ -1179,19 +1180,21 @@ function isSubflowItemSelected(itemId) {
 }
 
 async function showDetectorAssignPanel() {
-  await loadDetectorOptions()
+  await loadDetectorOptions(false, currentSubflowRecord.value?.orgId || currentSubflowRecord.value?.org_id || '')
 }
 
-async function loadDetectorOptions(force = false) {
-  if (!force && detectorOptionsLoaded.value) {
+async function loadDetectorOptions(force = false, orgId = '') {
+  const normalizedOrgId = toStableId(orgId)
+  if (!force && detectorOptionsLoaded.value && detectorOptionsOrgId.value === normalizedOrgId) {
     return
   }
-  const result = await fetchDetectionDetectorsApi()
+  const result = await fetchDetectionDetectorsApi(normalizedOrgId ? { orgId: normalizedOrgId } : undefined)
   detectorOptions.value = (result || []).map((item) => ({
     ...item,
     id: toStableId(item.userId ?? item.id),
     userId: toStableId(item.userId ?? item.id)
   }))
+  detectorOptionsOrgId.value = normalizedOrgId
   detectorOptionsLoaded.value = true
 }
 
@@ -1413,7 +1416,7 @@ async function openSubflowDialog(row) {
   }
   await loadRecordDetail(row.id)
   if (canAssignRow(row)) {
-    await loadDetectorOptions()
+    await loadDetectorOptions(false, row?.orgId || row?.org_id || '')
   }
 }
 
