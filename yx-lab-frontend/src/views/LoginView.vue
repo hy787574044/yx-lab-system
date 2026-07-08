@@ -45,7 +45,6 @@
           <el-button type="primary" class="submit-btn" :loading="submitting" @click="submit">登录</el-button>
         </el-form>
 
-        <div class="tips">默认账号：admin / Admin@123</div>
       </div>
     </div>
   </div>
@@ -65,8 +64,8 @@ const router = useRouter()
 const submitting = ref(false)
 const captchaImage = ref('')
 const form = reactive({
-  username: 'admin',
-  password: 'Admin@123',
+  username: '',
+  password: '',
   captchaId: '',
   captchaCode: ''
 })
@@ -347,13 +346,6 @@ onMounted(loadCaptcha)
   width: 100%;
   height: 42px;
   margin-top: 4px;
-}
-
-.tips {
-  margin-top: 16px;
-  color: #6f8199;
-  font-size: 13px;
-  text-align: center;
 }
 
 @media (max-width: 1200px) {
