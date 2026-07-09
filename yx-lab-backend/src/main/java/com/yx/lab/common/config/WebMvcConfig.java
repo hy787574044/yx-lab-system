@@ -22,6 +22,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
                         "/api/auth/embedLogin",
                         "/api/auth/accessCheckLogin",
                         "/api/auth/captcha",
+                        "/api/third-party-gis/**",
                         "/api/storage/file",
                         "/error",
                         "/swagger-ui/**",
